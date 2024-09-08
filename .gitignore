@@ -1,0 +1,26 @@
+# Ignore build directory
+build/
+build2/
+out/
+.vs/
+.git/
+
+# Ignore CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# Ignore executables and libraries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ignore generated files
+*.o
+*.obj
+
+# Ignore macOS specific files
+.DS_Store
