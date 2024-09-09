@@ -6,6 +6,7 @@ set(assimp_include "${third_party_dir}/assimp/include")
 set(glm_include "${third_party_dir}/glm")
 set(glfw_include "${third_party_dir}/glfw/include")
 set(glad_include "${third_party_dir}/glad/include")
+set(spdlog_include "${third_party_dir}/spdlog/include")
 set(stbimage_include "${third_party_dir}/stb_image")
 
 # 设置编译选项

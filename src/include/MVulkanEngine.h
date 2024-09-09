@@ -1,8 +1,39 @@
-﻿// MVulkanEngine.h: 标准系统包含文件的包含文件
-// 或项目特定的包含文件。
+﻿#pragma once
+#include <cstdint>
+#include <vulkan\vulkan_core.h>
+#include "MVulkanInstance.h"
+#include "MVulkanDevice.h"
+#ifndef MVULKANENGINE_H
+#define MVULKANENGINE_H
 
-#pragma once
+class MWindow;
 
-#include <iostream>
+class MVulkanEngine {
+public:
+    MVulkanEngine();
+    ~MVulkanEngine();
 
-// TODO: 在此处引用程序需要的其他标头。
+    void Init();
+    void Clean();
+
+    void Run();
+    void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
+private:
+    void initVulkan();
+    void renderLoop();
+
+    void createInstance();
+    void createDevice();
+
+    uint16_t windowWidth = 800, windowHeight = 600;
+
+    MWindow* window = nullptr;
+
+    bool enableValidationLayer;
+    
+    MVulkanInstance instance;
+    MVulkanDevice device;
+    //VkInstance instance;
+};
+
+#endif

@@ -1,61 +1,61 @@
-﻿#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#include <iostream>
+﻿#include"MWindow.h"
+#include"MVulkanEngine.h"
 #include <stdexcept>
-#include <cstdlib>
 
-const uint32_t WIDTH = 1280;
-const uint32_t HEIGHT = 960;
+MVulkanEngine::MVulkanEngine()
+{
+    window = new MWindow();
+}
 
-class HelloTriangleApplication {
-public:
-    void run() {
-        initWindow();
-        initVulkan();
-        mainLoop();
-        cleanup();
+MVulkanEngine::~MVulkanEngine()
+{
+    delete window;
+}
+
+void MVulkanEngine::Init()
+{
+    window->Init(windowWidth, windowHeight);
+
+    initVulkan();
+}
+
+void MVulkanEngine::Clean()
+{
+    window->Clean();
+}
+
+void MVulkanEngine::Run()
+{
+    while (!window->WindowShouldClose()) {
+        renderLoop();
     }
+}
 
-private:
-    GLFWwindow* window;
+void MVulkanEngine::SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight)
+{
+    windowWidth = _windowWidth;
+    windowHeight = _windowHeight;
+}
 
-    void initWindow() {
-        glfwInit();
+void MVulkanEngine::initVulkan()
+{
+    createInstance();
+    createDevice();
+}
 
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+void MVulkanEngine::renderLoop()
+{
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-    }
+    window->WindowPollEvents();
+}
 
-    void initVulkan() {
+void MVulkanEngine::createInstance()
+{
+    instance.Create();
+    instance.SetupDebugMessenger();
+}
 
-    }
-
-    void mainLoop() {
-        while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
-        }
-    }
-
-    void cleanup() {
-        glfwDestroyWindow(window);
-
-        glfwTerminate();
-    }
-};
-
-int main() {
-    HelloTriangleApplication app;
-
-    try {
-        app.run();
-    }
-    catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
+void MVulkanEngine::createDevice()
+{
+    device.Create(instance.GetInstance());
 }
