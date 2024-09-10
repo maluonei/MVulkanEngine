@@ -12,6 +12,8 @@ find_package(Vulkan REQUIRED)
 message(STATUS "Vulkan_INCLUDE_DIRS: ${Vulkan_INCLUDE_DIRS}")
 message(STATUS "Vulkan_LIBRARIES: ${Vulkan_LIBRARIES}")
 
+#find_package(glfw REQUIRED)
+
 file(GLOB_RECURSE MVULKANENGINE_HEADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 file(GLOB_RECURSE MVULKANENGINE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
@@ -30,7 +32,8 @@ add_executable(MVulkanEngine ${MVULKANENGINE_HEADERS} ${MVULKANENGINE_SOURCES})
 #target_link_libraries(OptixRayTracer PRIVATE mylib)
 #target_link_libraries(OptixRayTracer PRIVATE ${OptiX_LIBRARIES})
 #target_link_libraries(OptixRayTracer PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
-target_link_libraries(MVulkanEngine ${Vulkan_LIBRARIES})
+target_compile_definitions(MVulkanEngine PRIVATE GLFW_STATIC)
+target_link_libraries(MVulkanEngine glfw ${Vulkan_LIBRARIES})
 
 # Ìí¼Ó°üº¬Ä¿Â¼
 target_include_directories(MVulkanEngine PRIVATE 
@@ -41,6 +44,13 @@ target_include_directories(MVulkanEngine PRIVATE
 												${stbimage_include}
 												${spdlog_include}
 )
+
+set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/Debug/glfw3d.dll")
+
+add_custom_command(TARGET MVulkanEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${GLFW_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine>)
+
 
 #target_include_directories(MVulkanEngine PUBLIC ${Vulkan_INCLUDE_DIRS})
 

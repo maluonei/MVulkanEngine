@@ -2,6 +2,7 @@
 #define MVULKANUTILE_H
 
 #include "vector"
+#include "vulkan/vulkan_core.h"
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;

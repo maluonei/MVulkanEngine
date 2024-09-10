@@ -1,11 +1,12 @@
 #pragma once
-
-#include <cstdint>
 #ifndef MWINDOW_H
 #define MWINDOW_H
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include "Utils/VulkanUtil.h"
+
+#include <cstdint>
+
+class GLFWwindow;
 
 class MWindow {
 public:
