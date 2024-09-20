@@ -8,6 +8,7 @@
 #include "MVulkanRenderPass.h"
 #include "MVulkanFrameBuffer.h"
 #include "MVulkanCommand.h"
+#include "MVulkanBuffer.h"
 #ifndef MVULKANENGINE_H
 #define MVULKANENGINE_H
 
@@ -34,7 +35,10 @@ private:
     void createRenderPass();
     void createPipeline();
     void createFrameBuffers();
+    void createCommandQueue();
     void createCommandAllocator();
+    void createCommandList();
+    void createBufferAndLoadData();
 
     uint16_t windowWidth = 800, windowHeight = 600;
 
@@ -49,7 +53,15 @@ private:
     MVulkanrRenderPass renderPass;
     std::vector<MVulkanFrameBuffer> frameBuffers;
     VkSurfaceKHR surface;
+    MVulkanCommandQueue graphicsQueue;
     MVulkanCommandAllocator commandAllocator;
+    MVulkanCommandList commandList;
+
+    ShaderInputBuffer vertexBuffer;
+    ShaderInputBuffer indexBuffer;
+
+    VkFence fence;
+
     //VkInstance instance;
 };
 

@@ -84,5 +84,7 @@ void Shader::compile(std::string shaderPath)
 		}
 
 		compiledShaderCode = readFile(outputShader.string());
+		compiledShaderPath = outputShader.string();
+		//compiledShaderCode_ui32 = readFileToUnsignedInt(outputShader.string());
 	}
 }

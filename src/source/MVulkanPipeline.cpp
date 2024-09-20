@@ -15,7 +15,8 @@ void MVulkanPipeline::Clean(VkDevice device)
     vkDestroyPipeline(device, pipeline, nullptr);
 }
 
-void MVulkanGraphicsPipeline::Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass)
+void MVulkanGraphicsPipeline::Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+    PipelineVertexInputStateInfo vertexStateInfo)
 {
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -33,8 +34,10 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, VkShaderModule vertShaderM
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.pVertexBindingDescriptions = &vertexStateInfo.bindingDesc;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexAttributeDescriptions = vertexStateInfo.attribDesc.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = vertexStateInfo.attribDesc.size();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

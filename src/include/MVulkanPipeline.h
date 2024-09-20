@@ -3,6 +3,8 @@
 #define MVULKANPIPELINE_H
 
 #include "vulkan/vulkan_core.h"
+#include "Utils/VulkanUtil.h"
+#include <vector>
 
 class MVulkanPipeline {
 public:
@@ -14,7 +16,6 @@ public:
 protected:
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
-
 };
 
 
@@ -22,7 +23,8 @@ class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
 
-	void Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass);
+	void Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+		PipelineVertexInputStateInfo vertexStateInfo);
 
 private:
 

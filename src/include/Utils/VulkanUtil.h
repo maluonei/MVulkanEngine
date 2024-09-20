@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <glm/glm.hpp>
+#include <cstdint>
 
 #include "spdlog/spdlog.h"
 
@@ -17,6 +19,22 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+#define VK_CHECK_RESULT(f)                 \
+    {                                      \
+        VkResult res = (f);                \
+                                           \
+        if (res != VK_SUCCESS) {           \
+            std::stringstream ss;          \
+            ss << "Fatal : VkResult is \"" \
+               << res                      \
+               << "\" in " << __FILE__     \
+               << " at line " << __LINE__  \
+               << "\n";                    \
+            spdlog::error(ss.str());        \
+            assert(false);                 \
+        }                                  \
+    }
+
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -25,11 +43,43 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
+struct Vertex {
+    glm::vec3 position;  // R32G32B32_SFLOAT
+    glm::vec3 normal;    // R32G32B32_SFLOAT
+    glm::vec2 texcoord;  // R32G32_SFLOAT
+};
+
+static size_t VertexSize[] = {
+    sizeof(Vertex::position),
+    sizeof(Vertex::normal),
+    sizeof(Vertex::texcoord),
+};
+
+struct PipelineVertexInputStateInfo {
+    VkVertexInputBindingDescription bindingDesc;
+    std::vector<VkVertexInputAttributeDescription> attribDesc;
+};
+
 enum QueueType {
     GRAPHICS_QUEUE,
     COMPUTE_QUEUE,
     TRANSFER_QUEUE,
     PRESENT_QUEUE
+};
+
+enum BufferType {
+    CBV,
+    UAV,
+    SRV,
+    SHADER_INPUT,
+    STAGING,
+};
+
+enum ShaderStageFlagBits {
+    VERTEX = 0x01,
+    FRAGMENT = 0x02,
+    GEOMETRY = 0x04,
+    COMPUTE = 0x08,
 };
 
 inline VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type) {
@@ -42,12 +92,16 @@ inline VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type) {
     }
 }
 
-enum ShaderStageFlagBits {
-    VERTEX = 0x01,
-    FRAGMENT = 0x02,
-    GEOMETRY = 0x04,
-    COMPUTE = 0x08,
-};
+inline VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type){
+    switch (type) {
+    case SHADER_INPUT:
+        return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    case STAGING:
+        return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    default:
+        return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    }
+}
 
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -93,5 +147,16 @@ static std::string readFileToString(const std::string& path) {
     buffer << file.rdbuf();  // 将文件流内容复制到缓冲区
     std::string fileContents = buffer.str();  // 转换为 std::string
 }
+
+static std::vector<uint32_t> loadSPIRV(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    std::ifstream::pos_type fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
+    file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
+    return buffer;
+}
+
 
 #endif

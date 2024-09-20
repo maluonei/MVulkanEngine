@@ -6,11 +6,21 @@
 #include "MVulkanDevice.h"
 #include "map"
 
+struct VkCommandListCreateInfo {
+	VkCommandPool commandPool;
+	VkCommandBufferLevel level;
+	uint32_t commandBufferCount;
+};
+
 class MVulkanCommandAllocator {
 public:
 	MVulkanCommandAllocator();
 	void Create(MVulkanDevice device);
 	void Clean(VkDevice device);
+
+	inline VkCommandPool Get(QueueType type) {
+		return commandPools[type];
+	}
 
 private:
 	//VkCommandPool commandPool;
@@ -20,18 +30,40 @@ private:
 class MVulkanCommandList {
 public:
 	MVulkanCommandList();
+	MVulkanCommandList(VkDevice device, const VkCommandListCreateInfo& info);
 
-	void Create(VkDevice _device);
+	void Begin();
+	void End();
+	void Reset();
+	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+	void Create(VkDevice device, const VkCommandListCreateInfo& info);
 	void Clean(VkDevice _device);
 
+	inline VkCommandBuffer& GetBuffer() {
+		return commandBuffer;
+	};
+
 private:
+	VkCommandPool		 commandPool;
 	VkCommandBuffer      commandBuffer;
 	VkCommandBufferLevel level;
 };
 
 class MVulkanCommandQueue {
+public:
+	MVulkanCommandQueue();
+	void SetQueue(VkQueue queue);
+	
+	void SubmitCommands(
+		uint32_t submitCount,
+		const VkSubmitInfo* pSubmits,
+		VkFence fence);
 
+	void WaitForQueueComplete();
 
+private:
+	VkQueue queue;
 };
 
 

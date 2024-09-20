@@ -19,11 +19,12 @@ public:
 	void Compile();
 	inline ShaderStageFlagBits GetShaderStage()const { return shaderStage; }
 	inline std::vector<char> GetCompiledShaderCode() const { return compiledShaderCode; }
-
+	inline std::string GetCompiledShaderPath() const { return compiledShaderPath; };
 private:
 	void compile(std::string shaderPath);
 	ShaderStageFlagBits shaderStage;
 	std::string shaderPath;
+	std::string compiledShaderPath;
 	std::vector<char> compiledShaderCode;
 };
 

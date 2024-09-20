@@ -38,7 +38,8 @@ message(${CMAKE_SOURCE_DIR})
 target_compile_options(MVulkanEngine PRIVATE -DRESOURCE_PATH="${RESOURCE_PATH}")
 
 target_compile_definitions(MVulkanEngine PRIVATE GLFW_STATIC)
-target_link_libraries(MVulkanEngine glfw ${vulkan_lib} assimp)
+target_link_libraries(MVulkanEngine glfw ${vulkan_lib} assimp spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv-cross-reflect)
+
 
 # Ìí¼Ó°üº¬Ä¿Â¼
 target_include_directories(MVulkanEngine PRIVATE 
@@ -49,18 +50,11 @@ target_include_directories(MVulkanEngine PRIVATE
 												${assimp_include}
 												${stbimage_include}
 												${spdlog_include}
+												${spirv_cross_include}
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(GLFW_DEBUG_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/Debug/glfw3d.dll")
-	add_custom_command(TARGET MVulkanEngine POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		${GLFW_DEBUG_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine>)
-endif()
+set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-	set(GLFW_RELEASE_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/Release/glfw3.dll")
-	add_custom_command(TARGET MVulkanEngine POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		${GLFW_RELEASE_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine>)
-endif()
+add_custom_command(TARGET MVulkanEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${GLFW_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine>)

@@ -30,6 +30,8 @@ void MVulkanEngine::Clean()
 
     //SpirvHelper::Finalize();
 
+    commandAllocator.Clean(device.GetDevice());
+
     for (auto i = 0; i < frameBuffers.size(); i++) {
         frameBuffers[i].Clean(device.GetDevice());
     }
@@ -66,6 +68,11 @@ void MVulkanEngine::initVulkan()
     createRenderPass();
     createPipeline();
     createFrameBuffers();
+    createCommandQueue();
+    createCommandAllocator();
+    createCommandList();
+
+    createBufferAndLoadData();
 }
 
 void MVulkanEngine::renderLoop()
@@ -104,7 +111,6 @@ void MVulkanEngine::createRenderPass()
 
 void MVulkanEngine::createPipeline()
 {
-
     std::string vertPath = "test.vert.glsl";
     std::string fragPath = "test.frag.glsl";
 
@@ -114,7 +120,10 @@ void MVulkanEngine::createPipeline()
     vert.Create(device.GetDevice());
     frag.Create(device.GetDevice());
 
-    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get());
+    MVulkanShaderReflector reflector(vert.GetShader());
+    PipelineVertexInputStateInfo info = reflector.GenerateVertexInputAttributes();
+
+    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info);
 
     vert.Clean(device.GetDevice());
     frag.Clean(device.GetDevice());
@@ -137,8 +146,48 @@ void MVulkanEngine::createFrameBuffers()
     }
 }
 
+void MVulkanEngine::createCommandQueue()
+{
+    graphicsQueue.SetQueue(device.GetQueue(QueueType::GRAPHICS_QUEUE));
+}
+
 void MVulkanEngine::createCommandAllocator()
 {
     commandAllocator.Create(device);
 }
+
+void MVulkanEngine::createCommandList()
+{
+    VkCommandListCreateInfo info;
+    info.commandPool = commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
+    info.commandBufferCount = 1;
+    info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    commandList.Create(device.GetDevice(), info);
+}
+
+void MVulkanEngine::createBufferAndLoadData()
+{
+    float verteices[] = {
+        0.f, 1.f, 0.f,
+        -1.f, -1.f, 0.f,
+        1.f, -1.f, 0.f
+    };
+
+    BufferCreateInfo info;
+    info.size = sizeof(verteices);
+    
+    commandList.Begin();
+    vertexBuffer.CreateAndLoadData(commandList, device, info, verteices);
+    commandList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //vertexBuffer.LoadData(device.GetDevice(), verteices);
+}
+
 

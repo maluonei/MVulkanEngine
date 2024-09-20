@@ -16,7 +16,7 @@ set(glad_include "${third_party_dir}/glad/include")
 set(spdlog_include "${third_party_dir}/spdlog/include")
 set(stbimage_include "${third_party_dir}/stb_image")
 set(vulkan_include "${third_party_dir}/VulkanSDK/include")
-set(shaderc_SOURCE_DIR "${third_party_dir}/shaderc")
+set(spirv_cross_include "${third_party_dir}/SPIRV-CROSS/include")
 #set(shaderc_include "${shaderc_SOURCE_DIR}/libshaderc/include"
 #					"${shaderc_SOURCE_DIR}/third_party/glslang"
 #					"${shaderc_SOURCE_DIR}/third_party/spirc-tools/include")
