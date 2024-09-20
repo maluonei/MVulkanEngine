@@ -3,6 +3,11 @@
 #include <vulkan\vulkan_core.h>
 #include "MVulkanInstance.h"
 #include "MVulkanDevice.h"
+#include "MVulkanSwapchain.h"
+#include "MVulkanPipeline.h"
+#include "MVulkanRenderPass.h"
+#include "MVulkanFrameBuffer.h"
+#include "MVulkanCommand.h"
 #ifndef MVULKANENGINE_H
 #define MVULKANENGINE_H
 
@@ -24,6 +29,12 @@ private:
 
     void createInstance();
     void createDevice();
+    void createSurface();
+    void createSwapChain();
+    void createRenderPass();
+    void createPipeline();
+    void createFrameBuffers();
+    void createCommandAllocator();
 
     uint16_t windowWidth = 800, windowHeight = 600;
 
@@ -33,6 +44,12 @@ private:
     
     MVulkanInstance instance;
     MVulkanDevice device;
+    MVulkanSwapchain swapChain;
+    MVulkanGraphicsPipeline pipeline;
+    MVulkanrRenderPass renderPass;
+    std::vector<MVulkanFrameBuffer> frameBuffers;
+    VkSurfaceKHR surface;
+    MVulkanCommandAllocator commandAllocator;
     //VkInstance instance;
 };
 

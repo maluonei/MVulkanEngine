@@ -12,6 +12,7 @@ public:
     MVulkanInstance();
 
     void Create();
+    void Clean();
     void SetupDebugMessenger();
     inline VkInstance GetInstance()const { return instance; }
 

@@ -63,6 +63,11 @@ void MVulkanInstance::Create()
     }
 }
 
+void MVulkanInstance::Clean()
+{
+    vkDestroyInstance(instance, nullptr);
+}
+
 void MVulkanInstance::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
