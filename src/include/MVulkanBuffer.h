@@ -45,13 +45,11 @@ class CBV :public MVulkanBuffer {
 
 };
 
-
-
 class ShaderInputBuffer {
 public:
 	ShaderInputBuffer();
 	void CreateAndLoadData(MVulkanCommandList commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
-
+	inline VkBuffer GetBuffer() { return dataBuffer.GetBuffer(); }
 private:
 	MVulkanBuffer dataBuffer;
 	MVulkanBuffer stagingBuffer;

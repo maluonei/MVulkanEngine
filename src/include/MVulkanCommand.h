@@ -62,6 +62,8 @@ public:
 
 	void WaitForQueueComplete();
 
+	inline VkQueue Get() const { return queue; }
+
 private:
 	VkQueue queue;
 };

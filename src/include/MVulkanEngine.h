@@ -1,4 +1,7 @@
 ﻿#pragma once
+#ifndef MVULKANENGINE_H
+#define MVULKANENGINE_H
+
 #include <cstdint>
 #include <vulkan\vulkan_core.h>
 #include "MVulkanInstance.h"
@@ -9,8 +12,8 @@
 #include "MVulkanFrameBuffer.h"
 #include "MVulkanCommand.h"
 #include "MVulkanBuffer.h"
-#ifndef MVULKANENGINE_H
-#define MVULKANENGINE_H
+
+#define MAX_FRAMES_IN_FLIGHT 2
 
 class MWindow;
 
@@ -27,6 +30,7 @@ public:
 private:
     void initVulkan();
     void renderLoop();
+    void drawFrame();
 
     void createInstance();
     void createDevice();
@@ -39,6 +43,8 @@ private:
     void createCommandAllocator();
     void createCommandList();
     void createBufferAndLoadData();
+    void createSyncObjects();
+    void recordCommandBuffer(uint32_t imageIndex);
 
     uint16_t windowWidth = 800, windowHeight = 600;
 
@@ -54,13 +60,20 @@ private:
     std::vector<MVulkanFrameBuffer> frameBuffers;
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
+    MVulkanCommandQueue presentQueue;
+    MVulkanCommandQueue transferQueue;
     MVulkanCommandAllocator commandAllocator;
-    MVulkanCommandList commandList;
+    std::vector<MVulkanCommandList> graphicsLists;
+    MVulkanCommandList presentList;
+    MVulkanCommandList transferList;
 
     ShaderInputBuffer vertexBuffer;
     ShaderInputBuffer indexBuffer;
 
-    VkFence fence;
+    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkFence> inFlightFences;
+    uint32_t currentFrame = 0;
 
     //VkInstance instance;
 };

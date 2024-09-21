@@ -127,7 +127,7 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
         location++;
     }
 
-    attribute_descriptions[0].offset = offsetof(Vertex, position);
+    if (attribute_descriptions.size() >= 1) attribute_descriptions[0].offset = offsetof(Vertex, position);
     if (attribute_descriptions.size() >= 2) attribute_descriptions[1].offset = offsetof(Vertex, normal);
     if (attribute_descriptions.size() >= 3) attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
 
@@ -145,7 +145,10 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = 0 * sizeof(float);
+    if (attribute_descriptions.size() == 1) bindingDescription.stride += 3 * sizeof(float);
+    if (attribute_descriptions.size() == 2) bindingDescription.stride += 3 * sizeof(float);
+    if (attribute_descriptions.size() == 3) bindingDescription.stride += 2 * sizeof(float);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     info.attribDesc = attribute_descriptions;

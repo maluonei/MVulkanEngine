@@ -19,7 +19,7 @@ public:
 	void Create(VkDevice device, FrameBufferCreateInfo creatInfo);
 	void Clean(VkDevice device);
 
-
+	inline VkFramebuffer Get() const { return frameBuffer; }
 
 private:
 	VkFramebuffer frameBuffer;

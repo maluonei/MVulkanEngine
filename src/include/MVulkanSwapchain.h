@@ -25,6 +25,8 @@ public:
 	inline VkExtent2D GetSwapChainExtent() const {
 		return swapChainExtent;
 	}
+
+	inline VkSwapchainKHR Get()const { return swapChain; }
 private:
 	VkSwapchainKHR swapChain;
 

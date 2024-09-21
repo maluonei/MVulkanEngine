@@ -12,7 +12,7 @@ public:
 
 	void Create();
 	void Clean(VkDevice device);
-
+	inline VkPipeline Get() const { return pipeline; }
 protected:
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -22,7 +22,6 @@ protected:
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
-
 	void Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
 		PipelineVertexInputStateInfo vertexStateInfo);
 

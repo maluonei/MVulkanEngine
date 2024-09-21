@@ -16,6 +16,7 @@ uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, Vk
 
 MVulkanBuffer::MVulkanBuffer(BufferType _type):type(_type)
 {
+
 }
 
 void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
@@ -62,6 +63,7 @@ void MVulkanBuffer::Clean(VkDevice device)
 
 ShaderInputBuffer::ShaderInputBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
 {
+
 }
 
 void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
@@ -75,5 +77,4 @@ void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList commandList, MVulka
     stagingBuffer.LoadData(device.GetDevice(), data);
 
     commandList.CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
-
 }
