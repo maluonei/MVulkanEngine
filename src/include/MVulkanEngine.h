@@ -36,6 +36,7 @@ private:
     void createDevice();
     void createSurface();
     void createSwapChain();
+    void RecreateSwapChain();
     void createRenderPass();
     void createPipeline();
     void createFrameBuffers();
@@ -63,9 +64,9 @@ private:
     MVulkanCommandQueue presentQueue;
     MVulkanCommandQueue transferQueue;
     MVulkanCommandAllocator commandAllocator;
-    std::vector<MVulkanCommandList> graphicsLists;
-    MVulkanCommandList presentList;
-    MVulkanCommandList transferList;
+    std::vector<MGraphicsCommandList> graphicsLists;
+    MGraphicsCommandList presentList;
+    MGraphicsCommandList transferList;
 
     ShaderInputBuffer vertexBuffer;
     ShaderInputBuffer indexBuffer;
@@ -74,8 +75,12 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+    //bool framebufferResized = false;
 
     //VkInstance instance;
+
+    //VkBuffer vertexBuffer;
+    //VkDeviceMemory vertexBufferMemory;
 };
 
 #endif

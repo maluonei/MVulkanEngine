@@ -73,6 +73,7 @@ enum BufferType {
     SRV,
     SHADER_INPUT,
     STAGING,
+    TEST
 };
 
 enum ShaderStageFlagBits {
@@ -137,8 +138,6 @@ static std::string readFileToString(const std::string& path) {
 
     // 检查文件是否成功打开
     if (!file.is_open()) {
-        //std::cerr << "Unable to open file!" << std::endl;
-        //spdlog::error("fail to open file: {}", path);
         throw std::runtime_error("fail to open file!");
     }
 

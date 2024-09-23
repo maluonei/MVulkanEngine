@@ -23,8 +23,8 @@ public:
 
 	void Clean(VkDevice device);
 
-	inline VkBuffer GetBuffer() { return buffer; }
-
+	inline VkBuffer& GetBuffer() { return buffer; }
+	inline VkDeviceMemory& GetBufferMemory() { return bufferMemory; }
 protected:
 	BufferType type;
 	VkDeviceSize bufferSize;
@@ -48,8 +48,10 @@ class CBV :public MVulkanBuffer {
 class ShaderInputBuffer {
 public:
 	ShaderInputBuffer();
-	void CreateAndLoadData(MVulkanCommandList commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
-	inline VkBuffer GetBuffer() { return dataBuffer.GetBuffer(); }
+	void Clean(VkDevice device);
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
+	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
+	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
 private:
 	MVulkanBuffer dataBuffer;
 	MVulkanBuffer stagingBuffer;

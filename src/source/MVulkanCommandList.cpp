@@ -31,6 +31,16 @@ void MVulkanCommandList::Reset()
     vkResetCommandBuffer(commandBuffer, 0);
 }
 
+void MVulkanCommandList::BeginRenderPass(VkRenderPassBeginInfo* info)
+{
+    vkCmdBeginRenderPass(commandBuffer, info, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void MVulkanCommandList::EndRenderPass()
+{
+    vkCmdEndRenderPass(commandBuffer);
+}
+
 void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     VkBufferCopy copyRegion{};
@@ -67,4 +77,33 @@ void MVulkanCommandList::Clean(VkDevice _device)
 {
 
 }
+
+void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+}
+
+void MGraphicsCommandList::SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport)
+{
+    vkCmdSetViewport(commandBuffer, firstViewport, viewportNum, viewport);
+}
+
+void MGraphicsCommandList::SetScissor(uint32_t firstScissor, uint32_t scissorNum, VkRect2D* scissor)
+{
+    vkCmdSetScissor(commandBuffer, firstScissor, scissorNum, scissor);
+}
+
+void MGraphicsCommandList::BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffer, const VkDeviceSize* offset)
+{
+    vkCmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, buffer, offset);;
+}
+
+void MGraphicsCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+{
+    vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void MComputeCommandList::BindPipeline(VkPipeline pipeline) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+}
+
 

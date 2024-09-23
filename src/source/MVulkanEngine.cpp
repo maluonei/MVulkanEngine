@@ -65,15 +65,15 @@ void MVulkanEngine::drawFrame()
     VK_CHECK_RESULT(vkWaitForFences(device.GetDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX));
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device.GetDevice(), swapChain.Get(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = swapChain.AcquireNextImage(device.GetDevice(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    //if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    //    recreateSwapChain();
-    //    return;
-    //}
-    //else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-    //    throw std::runtime_error("failed to acquire swap chain image!");
-    //}
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        RecreateSwapChain();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
 
     VK_CHECK_RESULT(vkResetFences(device.GetDevice(), 1, &inFlightFences[currentFrame]));
 
@@ -114,15 +114,15 @@ void MVulkanEngine::drawFrame()
 
     presentInfo.pImageIndices = &imageIndex;
 
-    result = vkQueuePresentKHR(presentQueue.Get(), &presentInfo);
+    result = presentQueue.Present(&presentInfo);
 
-    //if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-    //    framebufferResized = false;
-    //    recreateSwapChain();
-    //}
-    //else if (result != VK_SUCCESS) {
-    //    throw std::runtime_error("failed to present swap chain image!");
-    //}
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window->GetWindowResized()) {
+        window->SetWindowResized(false);
+        RecreateSwapChain();
+    }
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
@@ -140,7 +140,7 @@ void MVulkanEngine::initVulkan()
     createDevice();
     createSwapChain();
     createRenderPass();
-    createPipeline();
+
     createFrameBuffers();
     createCommandQueue();
     createCommandAllocator();
@@ -148,13 +148,15 @@ void MVulkanEngine::initVulkan()
     createSyncObjects();
 
     createBufferAndLoadData();
+
+    createPipeline();
 }
 
 void MVulkanEngine::renderLoop()
 {
     window->WindowPollEvents();
     drawFrame();
-
+    //spdlog::info("running");
 }
 
 void MVulkanEngine::createInstance()
@@ -178,6 +180,19 @@ void MVulkanEngine::createSurface()
 void MVulkanEngine::createSwapChain()
 {
     swapChain.Create(device, window->GetWindow(), surface);
+}
+
+void MVulkanEngine::RecreateSwapChain()
+{
+
+    if (swapChain.Recreate(device, window->GetWindow(), surface)) {
+        
+        for (auto frameBuffer : frameBuffers) {
+            frameBuffer.Clean(device.GetDevice());
+        }
+
+        createFrameBuffers();
+    }
 }
 
 void MVulkanEngine::createRenderPass()
@@ -260,16 +275,16 @@ void MVulkanEngine::createBufferAndLoadData()
     
     transferList.Reset();
     transferList.Begin();
-    vertexBuffer.CreateAndLoadData(transferList, device, info, verteices);
+    vertexBuffer.CreateAndLoadData(&transferList, device, info, verteices);
     transferList.End();
-
+    
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &transferList.GetBuffer();
-
+    
     transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    //vertexBuffer.LoadData(device.GetDevice(), verteices);
+    transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -296,11 +311,7 @@ void MVulkanEngine::createSyncObjects()
 
 void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    //graphicsLists[currentFrame].Reset();
-    VK_CHECK_RESULT(vkBeginCommandBuffer(graphicsLists[currentFrame].GetBuffer(), &beginInfo));
+    graphicsLists[currentFrame].Begin();
 
     VkExtent2D swapChainExtent = swapChain.GetSwapChainExtent();
 
@@ -315,9 +326,9 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
-    vkCmdBeginRenderPass(graphicsLists[currentFrame].GetBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    graphicsLists[currentFrame].BeginRenderPass(&renderPassInfo);
 
-    vkCmdBindPipeline(graphicsLists[currentFrame].GetBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.Get());
+    graphicsLists[currentFrame].BindPipeline(pipeline.Get());
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -326,23 +337,23 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     viewport.height = (float)swapChainExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(graphicsLists[currentFrame].GetBuffer(), 0, 1, &viewport);
+    graphicsLists[currentFrame].SetViewport(0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = swapChainExtent;
-    vkCmdSetScissor(graphicsLists[currentFrame].GetBuffer(), 0, 1, &scissor);
+    graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
     VkBuffer vertexBuffers[] = { vertexBuffer.GetBuffer()};
+    //VkBuffer vertexBuffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(graphicsLists[currentFrame].GetBuffer(), 0, 1, vertexBuffers, offsets);
+    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(graphicsLists[currentFrame].GetBuffer(), 3, 1, 0, 0);
-    //vkCmdDraw(graphicsLists[currentFrame].GetBuffer(), static_cast<uint32_t>(sizeof(verteices)/(3*sizeof(float))), 1, 0, 0);
+    graphicsLists[currentFrame].Draw(3, 1, 0, 0);
 
-    vkCmdEndRenderPass(graphicsLists[currentFrame].GetBuffer());
+    graphicsLists[currentFrame].EndRenderPass();
 
-    VK_CHECK_RESULT(vkEndCommandBuffer(graphicsLists[currentFrame].GetBuffer()));
+    graphicsLists[currentFrame].End();
 }
 
 

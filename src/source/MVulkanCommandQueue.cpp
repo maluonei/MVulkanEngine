@@ -19,3 +19,8 @@ void MVulkanCommandQueue::WaitForQueueComplete()
 {
 	vkQueueWaitIdle(queue);
 }
+
+VkResult MVulkanCommandQueue::Present(VkPresentInfoKHR* presentInfo)
+{
+	return vkQueuePresentKHR(queue, presentInfo);
+}

@@ -35,6 +35,9 @@ public:
 	void Begin();
 	void End();
 	void Reset();
+	void BeginRenderPass(VkRenderPassBeginInfo* info);
+	void EndRenderPass();
+	virtual void BindPipeline(VkPipeline pipeline) = 0;
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	void Create(VkDevice device, const VkCommandListCreateInfo& info);
@@ -44,10 +47,24 @@ public:
 		return commandBuffer;
 	};
 
-private:
+protected:
 	VkCommandPool		 commandPool;
 	VkCommandBuffer      commandBuffer;
 	VkCommandBufferLevel level;
+};
+
+class MGraphicsCommandList :public MVulkanCommandList {
+public:
+	void BindPipeline(VkPipeline pipeline);
+	void SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport);
+	void SetScissor(uint32_t firstScissor, uint32_t scissorNum, VkRect2D* scissor);
+	void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffer, const VkDeviceSize* offset);
+	void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+};
+
+class MComputeCommandList :public MVulkanCommandList {
+public:
+	void BindPipeline(VkPipeline pipeline);
 };
 
 class MVulkanCommandQueue {
@@ -61,6 +78,8 @@ public:
 		VkFence fence);
 
 	void WaitForQueueComplete();
+
+	VkResult Present(VkPresentInfoKHR* presentInfo);
 
 	inline VkQueue Get() const { return queue; }
 

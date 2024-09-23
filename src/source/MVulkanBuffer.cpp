@@ -52,13 +52,13 @@ void MVulkanBuffer::LoadData(VkDevice device, void* data)
 {
     void* _data;
     vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &_data);
-    memcpy(data, data, bufferSize);
+    memcpy(_data, data, bufferSize);
     vkUnmapMemory(device, bufferMemory);
 }
 
 void MVulkanBuffer::Clean(VkDevice device)
 {
-
+    
 }
 
 ShaderInputBuffer::ShaderInputBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
@@ -66,7 +66,12 @@ ShaderInputBuffer::ShaderInputBuffer():dataBuffer(BufferType::SHADER_INPUT), sta
 
 }
 
-void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+void ShaderInputBuffer::Clean(VkDevice device)
+{
+    dataBuffer.Clean(device);
+}
+
+void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
 {
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     dataBuffer.Create(device, info);
@@ -76,5 +81,7 @@ void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList commandList, MVulka
 
     stagingBuffer.LoadData(device.GetDevice(), data);
 
-    commandList.CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+
+    stagingBuffer.Clean(device.GetDevice());
 }

@@ -13,12 +13,51 @@ MVulkanSwapchain::MVulkanSwapchain()
 
 void MVulkanSwapchain::Create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface)
 {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device.GetPhysicalDevice(), surface);
+    swapChainSupport = querySwapChainSupport(device.GetPhysicalDevice(), surface);
+    surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+    presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    swapChainExtent = chooseSwapExtent(window, swapChainSupport.capabilities);
 
-    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(window, swapChainSupport.capabilities);
+    create(device, window, surface);
+}
 
+bool MVulkanSwapchain::Recreate(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface)
+{
+    VkExtent2D swapExtent = getCurrentSwapExtent(window, swapChainSupport.capabilities);
+    if (swapExtent.width == swapChainExtent.width  && swapExtent.height == swapChainExtent.height) {
+        return false;
+    }
+
+    vkDeviceWaitIdle(device.GetDevice());
+
+    swapChainExtent = swapExtent;
+    
+    Clean(device.GetDevice());
+    Create(device, window, surface);
+    return true;
+}
+
+void MVulkanSwapchain::Clean(VkDevice device)
+{
+    swapChainImages.clear();
+    swapChainImageViews.clear();
+
+    for (int i = 0; i < swapChainImages.size(); i++) {
+        vkDestroyImage(device, swapChainImages[i], nullptr);
+        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    }
+
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
+}
+
+VkResult MVulkanSwapchain::AcquireNextImage(VkDevice device, VkSemaphore semephore, VkFence fence, uint32_t* imageIndex)
+{
+    return vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, semephore, fence, imageIndex);
+}
+
+
+void MVulkanSwapchain::create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface)
+{
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
@@ -31,7 +70,7 @@ void MVulkanSwapchain::Create(MVulkanDevice device, GLFWwindow* window, VkSurfac
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
+    createInfo.imageExtent = swapChainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -63,17 +102,8 @@ void MVulkanSwapchain::Create(MVulkanDevice device, GLFWwindow* window, VkSurfac
     spdlog::info("imageCount:{0}", imageCount);
     vkGetSwapchainImagesKHR(device.GetDevice(), swapChain, &imageCount, swapChainImages.data());
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = extent;
-
     createImageViews(device.GetDevice());
 }
-
-void MVulkanSwapchain::Clean(VkDevice device)
-{
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
-}
-
 
 void MVulkanSwapchain::createImageViews(VkDevice device)
 {
@@ -84,7 +114,7 @@ void MVulkanSwapchain::createImageViews(VkDevice device)
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = swapChainImages[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = swapChainImageFormat;
+        createInfo.format = surfaceFormat.format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -121,19 +151,29 @@ VkPresentModeKHR MVulkanSwapchain::chooseSwapPresentMode(const std::vector<VkPre
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
+VkExtent2D MVulkanSwapchain::getCurrentSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities)
+{
+    int width = 0, height = 0;
+
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwPollEvents();
+    }
+
+    VkExtent2D actualExtent = {
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
+    };
+
+    return actualExtent;
+}
+
 VkExtent2D MVulkanSwapchain::chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }
     else {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-
-        VkExtent2D actualExtent = {
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
-
+        VkExtent2D actualExtent = getCurrentSwapExtent(window, capabilities);
         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
         actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 

@@ -13,9 +13,12 @@ public:
 	MVulkanSwapchain();
 
 	void Create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
-	void Clean(VkDevice device);
+	bool Recreate(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
 
-	inline VkFormat GetSwapChainImageFormat() const { return swapChainImageFormat; }
+	void Clean(VkDevice device);
+	VkResult AcquireNextImage(VkDevice device, VkSemaphore semephore, VkFence fence, uint32_t* imageIndex);
+
+	inline VkFormat GetSwapChainImageFormat() const { return surfaceFormat.format; }
 	inline std::vector<VkImage> GetSwapChainImages() const {
 		return swapChainImages;
 	};
@@ -30,11 +33,15 @@ public:
 private:
 	VkSwapchainKHR swapChain;
 
+	SwapChainSupportDetails swapChainSupport;
+	VkSurfaceFormatKHR surfaceFormat;
+	VkPresentModeKHR presentMode;
+
 	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
 
+	void create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
 	void createImageViews(VkDevice device);
 
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -42,6 +49,7 @@ private:
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 
     VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
+	VkExtent2D getCurrentSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 };
 
 #endif

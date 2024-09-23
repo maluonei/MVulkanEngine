@@ -21,8 +21,10 @@ public:
 
     bool WindowShouldClose();
     void WindowPollEvents();
+    inline bool GetWindowResized() const { return windowResized; }
+    inline void SetWindowResized(bool flag) { windowResized = flag; }
 private:
-
+    bool windowResized = false;
     GLFWwindow* window = nullptr;
 };
 
