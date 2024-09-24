@@ -8,9 +8,15 @@
 #include "MVulkanShader.h"
 
 float verteices[] = {
-    0.f, 1.f, 0.f,
+    1.f, 1.f, 0.f,
     -1.f, -1.f, 0.f,
-    1.f, -1.f, 0.f
+    1.f, -1.f, 0.f,
+    -1.f, 1.f, 0.f
+};
+
+uint32_t indices[] = {
+    0, 1, 2,
+    0, 3, 1
 };
 
 
@@ -276,6 +282,7 @@ void MVulkanEngine::createBufferAndLoadData()
     transferList.Reset();
     transferList.Begin();
     vertexBuffer.CreateAndLoadData(&transferList, device, info, verteices);
+    indexBuffer.CreateAndLoadData(&transferList, device, info, indices);
     transferList.End();
     
     VkSubmitInfo submitInfo{};
@@ -348,8 +355,9 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     //VkBuffer vertexBuffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
     graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    graphicsLists[currentFrame].BindIndexBuffers(0, 1, indexBuffer.GetBuffer(), offsets);
 
-    graphicsLists[currentFrame].Draw(3, 1, 0, 0);
+    graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
 
     graphicsLists[currentFrame].EndRenderPass();
 

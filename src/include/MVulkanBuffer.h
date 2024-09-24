@@ -45,9 +45,21 @@ class CBV :public MVulkanBuffer {
 
 };
 
-class ShaderInputBuffer {
+class VertexBuffer {
 public:
-	ShaderInputBuffer();
+	VertexBuffer();
+	void Clean(VkDevice device);
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
+	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
+	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
+private:
+	MVulkanBuffer dataBuffer;
+	MVulkanBuffer stagingBuffer;
+};
+
+class IndexBuffer {
+public:
+	IndexBuffer();
 	void Clean(VkDevice device);
 	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
 	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }

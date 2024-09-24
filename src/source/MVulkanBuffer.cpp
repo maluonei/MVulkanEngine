@@ -29,9 +29,7 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     bufferInfo.usage = info.usage;
     bufferInfo.sharingMode = info.sharingMode;
 
-    if (vkCreateBuffer(device.GetDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex buffer!");
-    }
+    VK_CHECK_RESULT(vkCreateBuffer(device.GetDevice(), &bufferInfo, nullptr, &buffer));
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device.GetDevice(), buffer, &memRequirements);
@@ -41,9 +39,7 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(device.GetPhysicalDevice(), memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
 
-    if (vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
-    }
+    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory));
 
     vkBindBufferMemory(device.GetDevice(), buffer, bufferMemory, 0);
 }
@@ -61,19 +57,44 @@ void MVulkanBuffer::Clean(VkDevice device)
     
 }
 
-ShaderInputBuffer::ShaderInputBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
+VertexBuffer::VertexBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
 {
 
 }
 
-void ShaderInputBuffer::Clean(VkDevice device)
+void VertexBuffer::Clean(VkDevice device)
 {
     dataBuffer.Clean(device);
 }
 
-void ShaderInputBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+void VertexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
 {
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    dataBuffer.Create(device, info);
+
+    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    stagingBuffer.Create(device, info);
+
+    stagingBuffer.LoadData(device.GetDevice(), data);
+
+    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+
+    stagingBuffer.Clean(device.GetDevice());
+}
+
+IndexBuffer::IndexBuffer() :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
+{
+
+}
+
+void IndexBuffer::Clean(VkDevice device)
+{
+    dataBuffer.Clean(device);
+}
+
+void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+{
+    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     dataBuffer.Create(device, info);
 
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;

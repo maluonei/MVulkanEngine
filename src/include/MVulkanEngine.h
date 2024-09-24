@@ -68,8 +68,8 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    ShaderInputBuffer vertexBuffer;
-    ShaderInputBuffer indexBuffer;
+    VertexBuffer vertexBuffer;
+    IndexBuffer indexBuffer;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;

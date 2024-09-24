@@ -83,6 +83,11 @@ enum ShaderStageFlagBits {
     COMPUTE = 0x08,
 };
 
+enum DescriptorType {
+    UNIFORM_BUFFER = 0,
+    DESCRIPORTYPE_NUM = 1
+};
+
 inline VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type) {
     switch (type) {
     case GRAPHICS_QUEUE: return VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
@@ -101,6 +106,15 @@ inline VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type){
         return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     default:
         return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    }
+}
+
+inline VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type) {
+    switch (type) {
+    case UNIFORM_BUFFER:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    default:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }
 }
 
