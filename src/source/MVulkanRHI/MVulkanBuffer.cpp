@@ -1,18 +1,18 @@
 #include "MVulkanRHI/MVulkanBuffer.h"
 #include <stdexcept>
 
-uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("failed to find suitable memory type!");
-}
+//uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+//    VkPhysicalDeviceMemoryProperties memProperties;
+//    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+//
+//    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+//        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+//            return i;
+//        }
+//    }
+//
+//    throw std::runtime_error("failed to find suitable memory type!");
+//}
 
 MVulkanBuffer::MVulkanBuffer(BufferType _type):type(_type)
 {
@@ -37,7 +37,7 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(device.GetPhysicalDevice(), memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
+    allocInfo.memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
 
     VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory));
 
@@ -46,9 +46,8 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 
 void MVulkanBuffer::LoadData(VkDevice device, void* data)
 {
-    void* _data;
-    vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &_data);
-    memcpy(_data, data, bufferSize);
+    vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
+    memcpy(mappedData, data, bufferSize);
     vkUnmapMemory(device, bufferMemory);
 }
 
@@ -105,4 +104,58 @@ void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevi
     commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
 
     stagingBuffer.Clean(device.GetDevice());
+}
+
+void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
+{
+    // 创建 Image
+    VkImageCreateInfo imageInfo = {};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = info.width;
+    imageInfo.extent.height = info.height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = info.format; //显存中数据存储格式
+    imageInfo.tiling = info.tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = info.usage;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    // 设置 image 格式、尺寸等
+    vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &image);
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device.GetDevice(), image, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits, info.properties);
+
+    if (vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate image memory!");
+    }
+
+    vkBindImageMemory(device.GetDevice(), image, imageMemory, 0);
+
+
+    // 创建 ImageView
+    VkImageViewCreateInfo viewInfo = {};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = info.format; //gpu中数据访问格式
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view);
+}
+
+void MVulkanImage::Clean(VkDevice deivce)
+{
 }

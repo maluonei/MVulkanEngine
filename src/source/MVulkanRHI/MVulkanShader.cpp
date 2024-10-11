@@ -157,6 +157,75 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
     return info;
 }
 
+MVulkanDescriptorSet MVulkanShaderReflector::GenerateDescriptorSet()
+{
+    for (const auto& ub : resources.uniform_buffers) {
+        auto& type = compiler.get_type(ub.type_id);
+        // 获取 Descriptor Set 和绑定点
+        uint32_t set = compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
+        size_t size = compiler.get_declared_struct_size(type);
+        std::cout << "Uniform Buffer: " << ub.name << " - Set: " << set << ", Binding: " << binding << ", size: "<< size <<std::endl;
+        //compiler.get_decoration(ub.id, )
+        
+    }
+
+    // 处理 sampled images (纹理)
+    for (const auto& image : resources.sampled_images) {
+        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+        std::cout << "Sampled Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+    }
+
+    return MVulkanDescriptorSet();
+}
+
+ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
+{
+    ShaderStageFlagBits stage;
+    std::string entryPointName;
+
+    ShaderReflectorOut out;
+    auto shader_stage = compiler.get_entry_points_and_stages();
+    for (const auto& _stage : shader_stage) {
+        switch (_stage.execution_model) {
+        case spv::ExecutionModel::ExecutionModelVertex:
+            stage = ShaderStageFlagBits::VERTEX;
+            break;
+        case spv::ExecutionModelFragment:
+            stage = ShaderStageFlagBits::FRAGMENT;
+            break;
+        default:
+            stage = ShaderStageFlagBits::VERTEX;
+            break;
+        }
+        entryPointName = _stage.name;
+    }
+
+
+    for (const auto& ub : resources.uniform_buffers) {
+        auto& type = compiler.get_type(ub.type_id);
+        // 获取 Descriptor Set 和绑定点
+        uint32_t set = compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
+        size_t size = compiler.get_declared_struct_size(type);
+        std::cout << "Uniform Buffer: " << ub.name << " - Set: " << set << ", Binding: " << binding << ", size: " << size << std::endl;
+        //compiler.get_decoration(ub.id, )
+
+        out.uniformBuffers.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0});
+    }
+
+    // 处理 sampled images (纹理)
+    for (const auto& image : resources.sampled_images) {
+        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+        std::cout << "Sampled Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+    }
+
+
+    return out;
+}
+
 void MVulkanShaderReflector::test(Shader shader)
 {
     // 加载 SPIR-V 文件
@@ -176,4 +245,20 @@ void MVulkanShaderReflector::test(Shader shader)
 
     // 输出 GLSL 代码
     std::cout << glslCode << std::endl;
+}
+
+std::vector<VkDescriptorSetLayoutBinding> ShaderReflectorOut::GetUniformBufferBindings()
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    for (const auto& info : uniformBuffers) {
+        VkDescriptorSetLayoutBinding binding;
+        binding.binding = info.binding;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    return bindings;
 }

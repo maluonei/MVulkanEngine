@@ -102,6 +102,11 @@ void MGraphicsCommandList::BindIndexBuffers(uint32_t firstBinding, uint32_t bind
     vkCmdBindIndexBuffer(commandBuffer, buffer, 0, VK_INDEX_TYPE_UINT32);
 }
 
+void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+{
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+}
+
 void MGraphicsCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);

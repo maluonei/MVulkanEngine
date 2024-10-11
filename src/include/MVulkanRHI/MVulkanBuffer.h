@@ -6,7 +6,7 @@
 #include "MVulkanDevice.h"
 #include "MVulkanCommand.h"
 
-uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+//uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 struct BufferCreateInfo {
 	VkBufferUsageFlagBits usage;
@@ -26,6 +26,7 @@ public:
 	inline VkBuffer& GetBuffer() { return buffer; }
 	inline VkDeviceMemory& GetBufferMemory() { return bufferMemory; }
 protected:
+	void* mappedData;
 	BufferType type;
 	VkDeviceSize bufferSize;
 	VkBuffer buffer;
@@ -42,6 +43,10 @@ class UAV :public MVulkanBuffer {
 };
 
 class CBV :public MVulkanBuffer {
+
+};
+
+class UBO :public MVulkanBuffer {
 
 };
 
@@ -67,6 +72,27 @@ public:
 private:
 	MVulkanBuffer dataBuffer;
 	MVulkanBuffer stagingBuffer;
+};
+
+struct ImageCreatInfo {
+	uint32_t width, height;
+	VkFormat format;
+	VkImageTiling tiling;
+	VkImageUsageFlags usage;
+	VkMemoryPropertyFlags properties;
+};
+
+class MVulkanImage {
+public:
+
+	void Create(MVulkanDevice device, ImageCreatInfo info);
+	void Clean(VkDevice deivce);
+
+
+private:
+	VkImage image;
+	VkDeviceMemory imageMemory;
+	VkImageView view;
 };
 
 #endif

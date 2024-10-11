@@ -5,6 +5,7 @@
 #include "vulkan/vulkan_core.h"
 #include "Utils/VulkanUtil.h"
 #include <vector>
+#include "MVulkanDescriptor.h"
 
 class MVulkanPipeline {
 public:
@@ -13,6 +14,7 @@ public:
 	void Create();
 	void Clean(VkDevice device);
 	inline VkPipeline Get() const { return pipeline; }
+	inline VkPipelineLayout GetLayout() const { return pipelineLayout; }
 protected:
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -23,7 +25,7 @@ class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
 	void Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
-		PipelineVertexInputStateInfo vertexStateInfo);
+		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout);
 
 private:
 

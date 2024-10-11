@@ -6,12 +6,16 @@
 #include <vulkan\vulkan_core.h>
 #include "MVulkanInstance.h"
 #include "MVulkanDevice.h"
+#include "MVulkanDescriptor.h"
 #include "MVulkanSwapchain.h"
 #include "MVulkanPipeline.h"
 #include "MVulkanRenderPass.h"
 #include "MVulkanFrameBuffer.h"
 #include "MVulkanCommand.h"
 #include "MVulkanBuffer.h"
+#include "Shaders/ShaderResourceMap.h"
+#include "Shaders/ShaderModule.h"
+#include "MVulkanShader.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -38,6 +42,8 @@ private:
     void createSwapChain();
     void RecreateSwapChain();
     void createRenderPass();
+    void resolveDescriptorSet();
+    void createDescriptorSetAllocator();
     void createPipeline();
     void createFrameBuffers();
     void createCommandQueue();
@@ -46,6 +52,8 @@ private:
     void createBufferAndLoadData();
     void createSyncObjects();
     void recordCommandBuffer(uint32_t imageIndex);
+
+    std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 
     uint16_t windowWidth = 800, windowHeight = 600;
 
@@ -59,6 +67,11 @@ private:
     MVulkanGraphicsPipeline pipeline;
     MVulkanrRenderPass renderPass;
     std::vector<MVulkanFrameBuffer> frameBuffers;
+
+    MVulkanDescriptorSetAllocator allocator;
+    MVulkanDescriptorSetLayouts layouts;
+    MVulkanDescriptorSet descriptorSet;
+    
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
     MVulkanCommandQueue presentQueue;
@@ -75,6 +88,8 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+
+    TestFrag testFrag;
     //bool framebufferResized = false;
 
     //VkInstance instance;

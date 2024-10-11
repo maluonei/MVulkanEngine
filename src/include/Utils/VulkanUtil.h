@@ -88,6 +88,16 @@ enum DescriptorType {
     DESCRIPORTYPE_NUM = 1
 };
 
+inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit) {
+    switch (bit) {
+    case VERTEX: return VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+    case FRAGMENT: return VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+    case GEOMETRY: return VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT;
+    case COMPUTE: return VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
+    default: return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
+    }
+}
+
 inline VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type) {
     switch (type) {
     case GRAPHICS_QUEUE: return VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;

@@ -42,6 +42,15 @@ public:
 
     VkQueue GetQueue(QueueType type);
 
+    inline VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const{
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+
+        return deviceProperties;
+    }
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;

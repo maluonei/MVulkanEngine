@@ -8,10 +8,10 @@
 #include "MVulkanRHI/MVulkanShader.h"
 
 float verteices[] = {
-    1.f, 1.f, 0.f,
-    -1.f, -1.f, 0.f,
-    1.f, -1.f, 0.f,
-    -1.f, 1.f, 0.f
+    1.f, 1.f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
+    -1.f, -1.f, 0.f, 0.f, 0.f, 1.f,   0.f, 0.f,
+    1.f, -1.f, 0.f,  0.f, 0.f, 1.f,   1.f, 0.f,
+    -1.f, 1.f, 0.f,  0.f, 0.f, 1.f,   0.f, 1.f,
 };
 
 uint32_t indices[] = {
@@ -147,6 +147,8 @@ void MVulkanEngine::initVulkan()
     createSwapChain();
     createRenderPass();
 
+    createDescriptorSetAllocator();
+
     createFrameBuffers();
     createCommandQueue();
     createCommandAllocator();
@@ -206,6 +208,16 @@ void MVulkanEngine::createRenderPass()
     renderPass.Create(device.GetDevice(), swapChain.GetSwapChainImageFormat());
 }
 
+void MVulkanEngine::resolveDescriptorSet()
+{
+
+}
+
+void MVulkanEngine::createDescriptorSetAllocator()
+{
+    allocator.Create(device.GetDevice());
+}
+
 void MVulkanEngine::createPipeline()
 {
     std::string vertPath = "test.vert.glsl";
@@ -217,10 +229,21 @@ void MVulkanEngine::createPipeline()
     vert.Create(device.GetDevice());
     frag.Create(device.GetDevice());
 
-    MVulkanShaderReflector reflector(vert.GetShader());
-    PipelineVertexInputStateInfo info = reflector.GenerateVertexInputAttributes();
+    MVulkanShaderReflector vertReflector(vert.GetShader());
+    MVulkanShaderReflector fragReflector(frag.GetShader());
+    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+    fragReflector.GenerateDescriptorSet();
 
-    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info);
+    ShaderReflectorOut resourceOut = fragReflector.GenerateShaderReflactorOut();
+    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOut.GetUniformBufferBindings();
+    layouts.Create(device.GetDevice(), bindings);
+    descriptorSet.Create(device.GetDevice(), allocator.Get(UNIFORM_BUFFER), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
+
+    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
+
+    glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
+    glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
+    testFrag.SetUBO(color0, color1);
 
     vert.Clean(device.GetDevice());
     frag.Clean(device.GetDevice());
@@ -354,14 +377,34 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     VkBuffer vertexBuffers[] = { vertexBuffer.GetBuffer()};
     //VkBuffer vertexBuffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
+
     graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
     graphicsLists[currentFrame].BindIndexBuffers(0, 1, indexBuffer.GetBuffer(), offsets);
+
+    auto descriptorSets = descriptorSet.Get();
+    graphicsLists[currentFrame].BindDescriptorSet(pipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
 
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
 
     graphicsLists[currentFrame].EndRenderPass();
 
     graphicsLists[currentFrame].End();
+}
+
+std::vector<VkDescriptorBufferInfo> MVulkanEngine::generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos)
+{
+    std::vector<VkDescriptorBufferInfo> bufferInfos;
+
+    for (auto i = 0; i < resourceInfos.size(); i++) {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = buffers[i];
+        bufferInfo.offset = resourceInfos[i].offset;
+        bufferInfo.range = resourceInfos[i].size;
+
+        bufferInfos.push_back(bufferInfo);
+    }
+
+    return bufferInfos;
 }
 
 
