@@ -1,4 +1,4 @@
-#include "Shaders/ShaderModule.h"
+#include "Shaders/ShaderModule.hpp"
 
 void TestFrag::SetUBO(glm::vec3 color0, glm::vec3 color1)
 {

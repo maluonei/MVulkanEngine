@@ -3,8 +3,8 @@
 #define MVULKANBUFFER_H
 
 #include "vulkan/vulkan_core.h"
-#include "MVulkanDevice.h"
-#include "MVulkanCommand.h"
+#include "MVulkanDevice.hpp"
+#include "MVulkanCommand.hpp"
 
 //uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

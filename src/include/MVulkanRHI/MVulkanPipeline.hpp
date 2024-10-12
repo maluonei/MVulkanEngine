@@ -3,9 +3,9 @@
 #define MVULKANPIPELINE_H
 
 #include "vulkan/vulkan_core.h"
-#include "Utils/VulkanUtil.h"
+#include "Utils/VulkanUtil.hpp"
 #include <vector>
-#include "MVulkanDescriptor.h"
+#include "MVulkanDescriptor.hpp"
 
 class MVulkanPipeline {
 public:

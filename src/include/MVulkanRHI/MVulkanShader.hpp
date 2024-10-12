@@ -2,12 +2,12 @@
 #ifndef MVULKANSHADER_H
 #define MVULKANSHADER_H
 
-#include "Shaders/Shader.h"
-#include "MVulkanDescriptor.h"
+#include "Shaders/Shader.hpp"
+#include "MVulkanDescriptor.hpp"
 #include "vulkan/vulkan_core.h"
 #include <spirv_glsl.hpp>
 #include <vector>
-#include <singleton.h>
+#include <singleton.hpp>
 
 
 class MVulkanShader {

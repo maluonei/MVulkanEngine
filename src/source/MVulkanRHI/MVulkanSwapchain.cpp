@@ -1,8 +1,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "MVulkanRHI/MVulkanSwapchain.h"
-#include "MVulkanRHI/MVulkanDevice.h"
+#include "MVulkanRHI/MVulkanSwapchain.hpp"
+#include "MVulkanRHI/MVulkanDevice.hpp"
 #include <stdexcept>
 #include <algorithm>
 #include "spdlog/spdlog.h"

@@ -1,4 +1,4 @@
-#include "MVulkanRHI/MVulkanSampler.h"
+#include "MVulkanRHI/MVulkanSampler.hpp"
 
 
 void MVulkanSampler::Create(MVulkanDevice device)

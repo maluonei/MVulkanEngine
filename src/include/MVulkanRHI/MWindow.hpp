@@ -2,7 +2,7 @@
 #ifndef MWINDOW_H
 #define MWINDOW_H
 
-#include "Utils/VulkanUtil.h"
+#include "Utils/VulkanUtil.hpp"
 
 #include <cstdint>
 

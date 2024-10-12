@@ -5,7 +5,7 @@
 #include "vulkan/vulkan_core.h"
 #include <optional>
 
-#include "Utils/VulkanUtil.h"
+#include "Utils/VulkanUtil.hpp"
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;

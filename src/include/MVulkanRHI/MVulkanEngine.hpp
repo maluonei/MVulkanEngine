@@ -4,18 +4,18 @@
 
 #include <cstdint>
 #include <vulkan\vulkan_core.h>
-#include "MVulkanInstance.h"
-#include "MVulkanDevice.h"
-#include "MVulkanDescriptor.h"
-#include "MVulkanSwapchain.h"
-#include "MVulkanPipeline.h"
-#include "MVulkanRenderPass.h"
-#include "MVulkanFrameBuffer.h"
-#include "MVulkanCommand.h"
-#include "MVulkanBuffer.h"
-#include "Shaders/ShaderResourceMap.h"
-#include "Shaders/ShaderModule.h"
-#include "MVulkanShader.h"
+#include "MVulkanInstance.hpp"
+#include "MVulkanDevice.hpp"
+#include "MVulkanDescriptor.hpp"
+#include "MVulkanSwapchain.hpp"
+#include "MVulkanPipeline.hpp"
+#include "MVulkanRenderPass.hpp"
+#include "MVulkanFrameBuffer.hpp"
+#include "MVulkanCommand.hpp"
+#include "MVulkanBuffer.hpp"
+#include "Shaders/ShaderResourceMap.hpp"
+#include "Shaders/ShaderModule.hpp"
+#include "MVulkanShader.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 

@@ -3,7 +3,7 @@
 #define MVULKANCOMMAND_H
 
 #include "vulkan/vulkan_core.h"
-#include "MVulkanDevice.h"
+#include "MVulkanDevice.hpp"
 #include "map"
 
 struct VkCommandListCreateInfo {

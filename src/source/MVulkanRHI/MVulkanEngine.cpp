@@ -1,11 +1,11 @@
 ﻿#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include"MVulkanRHI/MWindow.h"
-#include"MVulkanRHI/MVulkanEngine.h"
+#include"MVulkanRHI/MWindow.hpp"
+#include"MVulkanRHI/MVulkanEngine.hpp"
 #include <stdexcept>
 
-#include "MVulkanRHI/MVulkanShader.h"
+#include "MVulkanRHI/MVulkanShader.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,

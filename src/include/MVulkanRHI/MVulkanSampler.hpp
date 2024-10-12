@@ -1,5 +1,5 @@
 #pragma once
-#include "MVulkanDevice.h"
+#include "MVulkanDevice.hpp"
 
 class MVulkanSampler {
 public:

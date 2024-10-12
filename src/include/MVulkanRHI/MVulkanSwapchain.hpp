@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_core.h>
 #include <vector>
-#include "MVulkanDevice.h"
+#include "MVulkanDevice.hpp"
 
 class GLFWwindow;
 

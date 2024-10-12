@@ -1,9 +1,9 @@
-#include "utils/VulkanUtil.h"
+#include "utils/VulkanUtil.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "MVulkanRHI/MVulkanInstance.h"
+#include "MVulkanRHI/MVulkanInstance.hpp"
 #include <stdexcept>
 #include <iostream>
 #include "spdlog/spdlog.h"
