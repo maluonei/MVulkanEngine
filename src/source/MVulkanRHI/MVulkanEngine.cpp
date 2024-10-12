@@ -8,11 +8,18 @@
 #include "MVulkanRHI/MVulkanShader.h"
 
 float verteices[] = {
-    1.f, 1.f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
-    -1.f, -1.f, 0.f, 0.f, 0.f, 1.f,   0.f, 0.f,
-    1.f, -1.f, 0.f,  0.f, 0.f, 1.f,   1.f, 0.f,
-    -1.f, 1.f, 0.f,  0.f, 0.f, 1.f,   0.f, 1.f,
+    0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
+    -0.8f, -0.8f, 0.f, 0.f, 0.f, 1.f,   0.f, 0.f,
+    0.8f, -0.8f, 0.f,  0.f, 0.f, 1.f,   1.f, 0.f,
+    -0.8f, 0.8f, 0.f,  0.f, 0.f, 1.f,   0.f, 1.f,
 };
+
+//float verteices2[] = {
+//    1.f, 1.f, 0.f,   
+//    -1.f, -1.f, 0.f, 
+//    1.f, -1.f, 0.f,  
+//    -1.f, 1.f, 0.f,  
+//};
 
 uint32_t indices[] = {
     0, 1, 2,
@@ -232,18 +239,41 @@ void MVulkanEngine::createPipeline()
     MVulkanShaderReflector vertReflector(vert.GetShader());
     MVulkanShaderReflector fragReflector(frag.GetShader());
     PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
-    fragReflector.GenerateDescriptorSet();
+    //fragReflector.GenerateDescriptorSet();
 
     ShaderReflectorOut resourceOut = fragReflector.GenerateShaderReflactorOut();
     std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOut.GetUniformBufferBindings();
     layouts.Create(device.GetDevice(), bindings);
     descriptorSet.Create(device.GetDevice(), allocator.Get(UNIFORM_BUFFER), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
-    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
-
     glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
     glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
     testFrag.SetUBO(color0, color1);
+    
+    cbvs.resize(MAX_FRAMES_IN_FLIGHT);
+    BufferCreateInfo _info;
+    _info.size = testFrag.GetBufferSize();
+
+    transferList.Reset();
+    transferList.Begin();
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        //cbvs[i].CreateAndLoadData(&transferList, device, _info, testFrag.GetData());
+        cbvs[i].Create(&transferList, device, _info);
+    }
+    transferList.End();
+    
+    MVulkanDescriptorSetWrite write;
+
+    std::vector<VkDescriptorBufferInfo> bufferInfos(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        bufferInfos[i].buffer = cbvs[i].GetBuffer();
+        bufferInfos[i].offset = 0;
+        bufferInfos[i].range = testFrag.GetBufferSize();
+    }
+
+    write.Update(device.GetDevice(), descriptorSet.Get(), bufferInfos, MAX_FRAMES_IN_FLIGHT);
+
+    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
 
     vert.Clean(device.GetDevice());
     frag.Clean(device.GetDevice());
@@ -299,13 +329,16 @@ void MVulkanEngine::createCommandList()
 
 void MVulkanEngine::createBufferAndLoadData()
 {
-    BufferCreateInfo info;
-    info.size = sizeof(verteices);
+    BufferCreateInfo vertexInfo;
+    vertexInfo.size = sizeof(verteices);
+
+    BufferCreateInfo indexInfo;
+    indexInfo.size = sizeof(indices);
     
     transferList.Reset();
     transferList.Begin();
-    vertexBuffer.CreateAndLoadData(&transferList, device, info, verteices);
-    indexBuffer.CreateAndLoadData(&transferList, device, info, indices);
+    vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, verteices);
+    indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, indices);
     transferList.End();
     
     VkSubmitInfo submitInfo{};
@@ -383,6 +416,10 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
 
     auto descriptorSets = descriptorSet.Get();
     graphicsLists[currentFrame].BindDescriptorSet(pipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
+
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        cbvs[i].UpdateData(device, testFrag.GetData());
+    }
 
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
 

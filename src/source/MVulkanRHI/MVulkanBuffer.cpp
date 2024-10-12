@@ -42,18 +42,33 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory));
 
     vkBindBufferMemory(device.GetDevice(), buffer, bufferMemory, 0);
+
+    //vkMapMemory(device.GetDevice(), bufferMemory, 0, bufferSize, 0, &mappedData);
+    //Map(device.GetDevice());
 }
 
 void MVulkanBuffer::LoadData(VkDevice device, void* data)
 {
-    vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
+    //vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
     memcpy(mappedData, data, bufferSize);
+    //vkUnmapMemory(device, bufferMemory);
+}
+
+void MVulkanBuffer::Map(VkDevice device)
+{
+    vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
+}
+
+void MVulkanBuffer::UnMap(VkDevice device)
+{
     vkUnmapMemory(device, bufferMemory);
 }
 
 void MVulkanBuffer::Clean(VkDevice device)
 {
-    
+    //UnMap(device);
+    vkDestroyBuffer(device, buffer, nullptr);
+    //vkDestroyBufferView(device, bufferView, nullptr);
 }
 
 VertexBuffer::VertexBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
@@ -74,7 +89,9 @@ void VertexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDev
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     stagingBuffer.Create(device, info);
 
+    stagingBuffer.Map(device.GetDevice());
     stagingBuffer.LoadData(device.GetDevice(), data);
+    stagingBuffer.UnMap(device.GetDevice());
 
     commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
 
@@ -99,11 +116,49 @@ void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevi
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     stagingBuffer.Create(device, info);
 
+    stagingBuffer.Map(device.GetDevice());
     stagingBuffer.LoadData(device.GetDevice(), data);
+    stagingBuffer.UnMap(device.GetDevice());
 
     commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
 
     stagingBuffer.Clean(device.GetDevice());
+}
+
+MCBV::MCBV():dataBuffer(BufferType::CBV)
+{
+
+}
+
+void MCBV::Clean(VkDevice device)
+{
+    dataBuffer.UnMap(device);
+    dataBuffer.Clean(device);
+}
+
+void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+{
+    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    dataBuffer.Create(device, info);
+
+    dataBuffer.Map(device.GetDevice());
+    dataBuffer.LoadData(device.GetDevice(), data);
+
+}
+
+void MCBV::Create(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info)
+{
+    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    dataBuffer.Create(device, info);
+
+    dataBuffer.Map(device.GetDevice());
+}
+
+void MCBV::UpdateData(MVulkanDevice device, void* data)
+{
+    dataBuffer.LoadData(device.GetDevice(), data);
 }
 
 void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
@@ -159,3 +214,4 @@ void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
 void MVulkanImage::Clean(VkDevice deivce)
 {
 }
+

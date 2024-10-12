@@ -83,6 +83,7 @@ private:
 
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
+    std::vector<MCBV> cbvs;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;

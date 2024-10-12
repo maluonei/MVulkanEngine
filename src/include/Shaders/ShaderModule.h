@@ -23,6 +23,8 @@ private:
 
 public:
 	void SetUBO(glm::vec3 color0, glm::vec3 color1);
+	inline size_t GetBufferSize() const { return sizeof(ubo); }
+	inline void* GetData() { return &ubo; }
 };
 
 

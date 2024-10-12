@@ -49,9 +49,11 @@ void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDesc
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, sets.data()));
 }
 
-void MVulkanDescriptorSetWrite::Create(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT)
+void MVulkanDescriptorSetWrite::Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT)
 {
     for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+
+
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite.dstSet = sets[i];
@@ -59,7 +61,7 @@ void MVulkanDescriptorSetWrite::Create(VkDevice device, std::vector<VkDescriptor
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = infos.data();
+        descriptorWrite.pBufferInfo = &(infos[i]);
 
         vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
     }

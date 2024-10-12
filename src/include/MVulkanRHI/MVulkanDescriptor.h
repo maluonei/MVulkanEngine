@@ -43,7 +43,7 @@ private:
 class MVulkanDescriptorSetWrite {
 public:
 	
-	void Create(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT);
+	void Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT);
 
 private:
 	VkWriteDescriptorSet write;

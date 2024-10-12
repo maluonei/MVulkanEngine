@@ -20,6 +20,8 @@ public:
 
 	void Create(MVulkanDevice device, BufferCreateInfo info);
 	void LoadData(VkDevice device, void* data);
+	void Map(VkDevice device);
+	void UnMap(VkDevice device);
 
 	void Clean(VkDevice device);
 
@@ -34,21 +36,32 @@ protected:
 	VkDeviceMemory bufferMemory;
 };
 
-class SRV :public MVulkanBuffer {
+class MSRV :public MVulkanBuffer {
 
 };
 
-class UAV :public MVulkanBuffer {
+class MUAV :public MVulkanBuffer {
 
 };
 
-class CBV :public MVulkanBuffer {
-
+class MCBV {
+public:
+	MCBV();
+	void Clean(VkDevice device);
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
+	void Create(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info);
+	void UpdateData(MVulkanDevice device, void* data);
+	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
+	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
+private:
+	MVulkanBuffer dataBuffer;
+	//MVulkanBuffer stagingBuffer;
 };
 
-class UBO :public MVulkanBuffer {
-
-};
+//class UBO :public MVulkanBuffer {
+//public:
+//	UBO();
+//};
 
 class VertexBuffer {
 public:

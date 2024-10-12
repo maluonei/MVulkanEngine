@@ -89,6 +89,10 @@ void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;  // 每实例
 }
 
+bool compVkVertexInputAttributeDescription(const VkVertexInputAttributeDescription& d0, const VkVertexInputAttributeDescription& d1) {
+    return d0.location < d1.location;
+}
+
 PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttributes()
 {
     PipelineVertexInputStateInfo info;
@@ -103,6 +107,7 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
         // 创建 VkVertexInputAttributeDescription 并设置属性
         VkVertexInputAttributeDescription attribute_description = {};
         attribute_description.location = compiler.get_decoration(input.id, spv::DecorationLocation);
+        //attribute_description.location = location;
         attribute_description.binding = 0;  // 绑定点，通常为 0，具体根据你的需求调整
         attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;  // 默认假设是 float3 类型
         attribute_description.offset = 0;  // 这里需要根据顶点结构体计算
@@ -127,6 +132,8 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
         location++;
     }
 
+    std::sort(attribute_descriptions.begin(), attribute_descriptions.end(), compVkVertexInputAttributeDescription);
+
     if (attribute_descriptions.size() >= 1) attribute_descriptions[0].offset = offsetof(Vertex, position);
     if (attribute_descriptions.size() >= 2) attribute_descriptions[1].offset = offsetof(Vertex, normal);
     if (attribute_descriptions.size() >= 3) attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
@@ -146,9 +153,9 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
     bindingDescription.stride = 0 * sizeof(float);
-    if (attribute_descriptions.size() == 1) bindingDescription.stride += 3 * sizeof(float);
-    if (attribute_descriptions.size() == 2) bindingDescription.stride += 3 * sizeof(float);
-    if (attribute_descriptions.size() == 3) bindingDescription.stride += 2 * sizeof(float);
+    if (attribute_descriptions.size() >= 1) bindingDescription.stride += 3 * sizeof(float);
+    if (attribute_descriptions.size() >= 2) bindingDescription.stride += 3 * sizeof(float);
+    if (attribute_descriptions.size() >= 3) bindingDescription.stride += 2 * sizeof(float);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     info.attribDesc = attribute_descriptions;
