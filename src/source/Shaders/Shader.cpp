@@ -55,7 +55,8 @@ void Shader::Compile() {
 
 void Shader::compile(std::string shaderPath)
 {
-	fs::path shaderRootPath = fs::current_path().parent_path().append("resources").append("shaders");
+	fs::path shaderRootPath = fs::current_path().parent_path().parent_path().append("resources").append("shaders");
+	//spdlog::info("shaderRootPath:", shaderRootPath.string());
 	fs::path compilerPath = fs::current_path().parent_path().append("ShaderCompilers").append("glslangValidator.exe");
 
 	if (shaderPath.ends_with("glsl")) {

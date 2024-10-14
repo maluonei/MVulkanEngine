@@ -6,9 +6,19 @@ layout(location = 2)in vec2 Coord;
 
 layout(location = 0)out vec2 texCoord;
 
+//layout(binding = 0) uniform UniformBufferObject{
+//	mat4 Model;
+//	mat4 View;
+//	mat4 Projection;
+//} ubo;
+
 void main(){
 	texCoord = Coord;
-	gl_Position = vec4(Position, 1.0f);
+	//vec4 worldSpacePosition = ubo.Model * vec4(Position, 1.f);
+	//vec4 screenSpacePosition = ubo.Projection * ubo.View * worldSpacePosition;
+
+	//gl_Position = screenSpacePosition;
+	gl_Position = vec4(Position, 1.f);
 }
 
 

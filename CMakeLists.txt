@@ -26,7 +26,7 @@ set(stbimage_src "${third_party_dir}/stb_image/stb_image.h" "${third_party_dir}/
 
 add_subdirectory("src")
 
-file(COPY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/3rdParty/VulkanSDK/binary/Windows/glslangValidator.exe DESTINATION ${CMAKE_BINARY_DIR}/ShaderCompilers)
 #set(cmakeconfig_dir ${PROJECT_SOURCE_DIR}/cmakeconfig/)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${cmakeconfig_dir}")
