@@ -224,9 +224,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
 
     // ¥¶¿Ì sampled images (Œ∆¿Ì)
     for (const auto& image : resources.sampled_images) {
+        //auto& type = compiler.get_type(image.type_id);
         uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+        //size_t size = compiler.get_declared_struct_size(type);
         std::cout << "Sampled Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        out.samplers.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0 });
     }
 
 
@@ -263,6 +267,48 @@ std::vector<VkDescriptorSetLayoutBinding> ShaderReflectorOut::GetUniformBufferBi
         binding.binding = info.binding;
         binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         binding.descriptorCount = 1;
+        binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    return bindings;
+}
+
+std::vector<VkDescriptorSetLayoutBinding> ShaderReflectorOut::GetSamplers()
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    for (const auto& info : samplers) {
+        VkDescriptorSetLayoutBinding binding;
+        binding.binding = info.binding;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    return bindings;
+}
+
+std::vector<VkDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    for (const auto& info : uniformBuffers) {
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = info.binding;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    for (const auto& info : samplers) {
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = info.binding;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.descriptorCount = 1;
+        binding.pImmutableSamplers = nullptr;
         binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
         bindings.push_back(binding);
     }

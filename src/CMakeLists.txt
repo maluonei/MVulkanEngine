@@ -22,7 +22,11 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${MVULKANENGINE_HEADERS} $
 #source_group("resources\\shaders" FILES ${MVULKANENGINE_SHAEDRS})
 
 # 添加可执行文件
-add_executable(MVulkanEngine ${MVULKANENGINE_HEADERS} ${MVULKANENGINE_SOURCES} "source/Utils/MImage.cpp")
+add_executable(MVulkanEngine 
+	${MVULKANENGINE_HEADERS} 
+	${MVULKANENGINE_SOURCES}
+	${stbimage_src}
+	"source/Utils/MImage.cpp")
 
 
 set(RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources")

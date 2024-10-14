@@ -40,6 +40,9 @@ public:
 	virtual void BindPipeline(VkPipeline pipeline) = 0;
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
+	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height);
+
 	void Create(VkDevice device, const VkCommandListCreateInfo& info);
 	void Clean(VkDevice _device);
 
@@ -48,6 +51,8 @@ public:
 	};
 
 protected:
+	//void endSingleTimeCommands(VkDevice device);
+
 	VkCommandPool		 commandPool;
 	VkCommandBuffer      commandBuffer;
 	VkCommandBufferLevel level;

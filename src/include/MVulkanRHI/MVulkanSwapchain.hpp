@@ -6,7 +6,7 @@
 #include <vector>
 #include "MVulkanDevice.hpp"
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class MVulkanSwapchain {
 public:

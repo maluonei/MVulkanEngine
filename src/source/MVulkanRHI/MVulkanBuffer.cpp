@@ -147,7 +147,7 @@ void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice devi
 
 }
 
-void MCBV::Create(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info)
+void MCBV::Create( MVulkanDevice device, BufferCreateInfo info)
 {
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
@@ -161,8 +161,24 @@ void MCBV::UpdateData(MVulkanDevice device, void* data)
     dataBuffer.LoadData(device.GetDevice(), data);
 }
 
-void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
+void MVulkanImage::Create(MVulkanDevice device, ImageCreateInfo info)
 {
+    //VkImageFormatProperties formatProperties;
+    //VkResult result = vkGetPhysicalDeviceImageFormatProperties(
+    //    device.GetPhysicalDevice(),
+    //    VK_FORMAT_R8G8B8_UINT,
+    //    VK_IMAGE_TYPE_2D,
+    //    VK_IMAGE_TILING_OPTIMAL,
+    //    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    //    0,  // flags
+    //    &formatProperties
+    //);
+    //
+    //if (result != VK_SUCCESS) {
+    //    // 该格式或配置不被支持
+    //    std::cerr << "Format not supported!" << std::endl;
+    //}
+
     // 创建 Image
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -179,7 +195,7 @@ void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // 设置 image 格式、尺寸等
-    vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &image);
+    VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &image));
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.GetDevice(), image, &memRequirements);
@@ -189,9 +205,7 @@ void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits, info.properties);
 
-    if (vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
+    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory));
 
     vkBindImageMemory(device.GetDevice(), image, imageMemory, 0);
 
@@ -208,10 +222,17 @@ void MVulkanImage::Create(MVulkanDevice device, ImageCreatInfo info)
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view);
+    VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view));
 }
 
 void MVulkanImage::Clean(VkDevice deivce)
 {
 }
 
+MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING)
+{
+}
+
+void MVulkanTexture::Clean(VkDevice device)
+{
+}

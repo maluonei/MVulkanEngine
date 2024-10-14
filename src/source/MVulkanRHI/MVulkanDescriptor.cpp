@@ -20,9 +20,10 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(32);
 
-    descriptorPools.resize(DescriptorType::DESCRIPORTYPE_NUM);
+    //descriptorPools.resize(DescriptorType::DESCRIPORTYPE_NUM);
 
-    VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, descriptorPools.data()));
+    //VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, descriptorPools.data()));
+    VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
 
 void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings)
@@ -49,20 +50,41 @@ void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDesc
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, sets.data()));
 }
 
-void MVulkanDescriptorSetWrite::Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT)
+void MVulkanDescriptorSetWrite::Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> bufferInfos, std::vector<VkDescriptorImageInfo> imageInfos, int _MAX_FRAMES_IN_FLIGHT)
 {
+    auto bufferInfoCount = bufferInfos.size();
+    auto imageInfosCount = imageInfos.size();
+
+    std::vector<std::vector<VkDescriptorBufferInfo>> fullBufferInfos(_MAX_FRAMES_IN_FLIGHT);
+    std::vector<std::vector<VkDescriptorImageInfo>> fullImageInfos(_MAX_FRAMES_IN_FLIGHT);
+
+    for (int i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+        fullBufferInfos[i] = bufferInfos;
+        fullImageInfos[i] = imageInfos;
+    }
+
     for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+        std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
+        for (int j = 0; j < bufferInfoCount; j++) {
+            descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[j].dstSet = sets[i];
+            descriptorWrite[j].dstBinding = j;
+            descriptorWrite[j].dstArrayElement = 0;
+            descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite[j].descriptorCount = 1;
+            descriptorWrite[j].pBufferInfo = &(fullBufferInfos[i][j]);
+        }
 
+        for (int j = bufferInfoCount; j < bufferInfoCount + imageInfosCount; j++) {
+            descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[j].dstSet = sets[i];
+            descriptorWrite[j].dstBinding = j;
+            descriptorWrite[j].dstArrayElement = 0;
+            descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[j].descriptorCount = 1;
+            descriptorWrite[j].pImageInfo = &(fullImageInfos[i][j - bufferInfoCount]);
+        }
 
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = sets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &(infos[i]);
-
-        vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+        vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
     }
 }

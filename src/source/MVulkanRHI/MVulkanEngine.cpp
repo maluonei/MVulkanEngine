@@ -242,9 +242,10 @@ void MVulkanEngine::createPipeline()
     //fragReflector.GenerateDescriptorSet();
 
     ShaderReflectorOut resourceOut = fragReflector.GenerateShaderReflactorOut();
-    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOut.GetUniformBufferBindings();
+    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOut.GetBindings();
+
     layouts.Create(device.GetDevice(), bindings);
-    descriptorSet.Create(device.GetDevice(), allocator.Get(UNIFORM_BUFFER), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
+    descriptorSet.Create(device.GetDevice(), allocator.Get(), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
     glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
     glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
@@ -254,24 +255,48 @@ void MVulkanEngine::createPipeline()
     BufferCreateInfo _info;
     _info.size = testFrag.GetBufferSize();
 
-    transferList.Reset();
-    transferList.Begin();
+    //transferList.Reset();
+    //transferList.Begin();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         //cbvs[i].CreateAndLoadData(&transferList, device, _info, testFrag.GetData());
-        cbvs[i].Create(&transferList, device, _info);
+        cbvs[i].Create(device, _info);
     }
-    transferList.End();
+
+    createTexture();
+    createSampler();
+
+    //fs::path resourcePath = "F:/MVulkanEngine/resources/textures";
+    //fs::path imagePath = resourcePath / "test.jpg";
+    //image.Load(imagePath);
+    //
+    //ImageCreateInfo imageCreateInfo;
+    //imageCreateInfo.width = image.Width();
+    //imageCreateInfo.height = image.Height();
+    //imageCreateInfo.format = image.Format();
+    //imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    //imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    //imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    //
+    //testTexture.CreateAndLoadData(&transferList, device, imageCreateInfo, &image);
+    //transferList.End();
     
     MVulkanDescriptorSetWrite write;
 
-    std::vector<VkDescriptorBufferInfo> bufferInfos(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    std::vector<VkDescriptorBufferInfo> bufferInfos(1);
+    for (int i = 0; i < 1; i++) {
         bufferInfos[i].buffer = cbvs[i].GetBuffer();
         bufferInfos[i].offset = 0;
         bufferInfos[i].range = testFrag.GetBufferSize();
     }
 
-    write.Update(device.GetDevice(), descriptorSet.Get(), bufferInfos, MAX_FRAMES_IN_FLIGHT);
+    std::vector<VkDescriptorImageInfo> imageInfos(1);
+    for (int i = 0; i < 1; i++) {
+        imageInfos[i].sampler = sampler.GetSampler();
+        imageInfos[i].imageView = testTexture.GetImageView();
+        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    write.Update(device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
 
     pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
 
@@ -320,6 +345,8 @@ void MVulkanEngine::createCommandList()
         graphicsLists[i].Create(device.GetDevice(), info);
     }
 
+    shaderList.Create(device.GetDevice(), info);
+
     info.commandPool = commandAllocator.Get(QueueType::TRANSFER_QUEUE);
     transferList.Create(device.GetDevice(), info);
 
@@ -348,6 +375,41 @@ void MVulkanEngine::createBufferAndLoadData()
     
     transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::createTexture()
+{
+    fs::path resourcePath = "F:/MVulkanEngine/resources/textures";
+    fs::path imagePath = resourcePath / "texture.jpg";
+    image.Load(imagePath);
+
+    ImageCreateInfo info;
+    info.width = image.Width();
+    info.height = image.Height();
+    info.format = image.Format();
+    info.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    shaderList.Reset();
+    shaderList.Begin();
+    testTexture.CreateAndLoadData(&shaderList, device, info, &image);
+    shaderList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &shaderList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.WaitForQueueComplete();
+    ///Submit
+    //testTexture.Create(device, info);
+}
+
+void MVulkanEngine::createSampler()
+{
+    sampler.Create(device);
 }
 
 void MVulkanEngine::createSyncObjects()

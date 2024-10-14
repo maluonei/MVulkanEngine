@@ -45,6 +45,9 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> samplers;
 
 	std::vector<VkDescriptorSetLayoutBinding> GetUniformBufferBindings();
+	std::vector<VkDescriptorSetLayoutBinding> GetSamplers();
+	std::vector<VkDescriptorSetLayoutBinding> GetBindings();
+
 };
 
 class MVulkanShaderReflector {

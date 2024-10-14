@@ -10,15 +10,17 @@ class MVulkanDescriptorSetAllocator {
 public:
 	MVulkanDescriptorSetAllocator();
 	void Create(VkDevice device);
-	inline VkDescriptorPool Get(DescriptorType type) {
+	inline VkDescriptorPool Get() {
 		//if (type >= descriptorPools.size()) {
 		//	return nullptr;
 		//}
-		return descriptorPools[type];
+		//return descriptorPools[type];
+		return descriptorPool;
 	}
 
 private:
-	std::vector<VkDescriptorPool> descriptorPools;
+	//std::vector<VkDescriptorPool> descriptorPools;
+	VkDescriptorPool descriptorPool;
 };
 
 
@@ -43,7 +45,7 @@ private:
 class MVulkanDescriptorSetWrite {
 public:
 	
-	void Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> infos, int _MAX_FRAMES_IN_FLIGHT);
+	void Update(VkDevice device, std::vector<VkDescriptorSet> sets, std::vector<VkDescriptorBufferInfo> bufferInfos, std::vector<VkDescriptorImageInfo> imageInfos, int _MAX_FRAMES_IN_FLIGHT);
 
 private:
 	VkWriteDescriptorSet write;

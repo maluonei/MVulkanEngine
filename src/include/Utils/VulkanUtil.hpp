@@ -60,6 +60,16 @@ struct PipelineVertexInputStateInfo {
     std::vector<VkVertexInputAttributeDescription> attribDesc;
 };
 
+//struct MDescriptorBufferInfo {
+//    VkDescriptorBufferInfo bufferInfo;
+//    uint32_t binding;
+//};
+//
+//struct MDescriptorImageInfo {
+//    VkDescriptorImageInfo imageInfo;
+//    uint32_t binding;
+//};
+
 enum QueueType {
     GRAPHICS_QUEUE,
     COMPUTE_QUEUE,
@@ -85,7 +95,8 @@ enum ShaderStageFlagBits {
 
 enum DescriptorType {
     UNIFORM_BUFFER = 0,
-    DESCRIPORTYPE_NUM = 1
+    COMBINED_IMAGE_SAMPLER = 1,
+    DESCRIPORTYPE_NUM = 2
 };
 
 inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit) {
@@ -125,6 +136,8 @@ inline VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type) {
     switch (type) {
     case UNIFORM_BUFFER:
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case COMBINED_IMAGE_SAMPLER:
+        return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     default:
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }

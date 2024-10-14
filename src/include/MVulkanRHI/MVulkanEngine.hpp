@@ -13,9 +13,11 @@
 #include "MVulkanFrameBuffer.hpp"
 #include "MVulkanCommand.hpp"
 #include "MVulkanBuffer.hpp"
+#include "MVulkanSampler.hpp"
 #include "Shaders/ShaderResourceMap.hpp"
 #include "Shaders/ShaderModule.hpp"
 #include "MVulkanShader.hpp"
+#include "Utils/MImage.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -49,7 +51,11 @@ private:
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
+
     void createBufferAndLoadData();
+    void createTexture();
+    void createSampler();
+    
     void createSyncObjects();
     void recordCommandBuffer(uint32_t imageIndex);
 
@@ -77,13 +83,18 @@ private:
     MVulkanCommandQueue presentQueue;
     MVulkanCommandQueue transferQueue;
     MVulkanCommandAllocator commandAllocator;
+
     std::vector<MGraphicsCommandList> graphicsLists;
+    MGraphicsCommandList shaderList;
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
     std::vector<MCBV> cbvs;
+    MVulkanSampler sampler;
+    MVulkanTexture testTexture;
+    MImage<unsigned char> image;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
