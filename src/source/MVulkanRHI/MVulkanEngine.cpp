@@ -379,7 +379,7 @@ void MVulkanEngine::createBufferAndLoadData()
 
 void MVulkanEngine::createTexture()
 {
-    fs::path resourcePath = "F:/MVulkanEngine/resources/textures";
+    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("textures");
     fs::path imagePath = resourcePath / "texture.jpg";
     image.Load(imagePath);
 
@@ -410,6 +410,16 @@ void MVulkanEngine::createTexture()
 void MVulkanEngine::createSampler()
 {
     sampler.Create(device);
+}
+
+void MVulkanEngine::loadModel()
+{
+    model = std::make_shared<Model>();
+    
+    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
+    fs::path modelPath = resourcePath / "suzanne.obj";
+
+    model->Load(modelPath.string());
 }
 
 void MVulkanEngine::createSyncObjects()

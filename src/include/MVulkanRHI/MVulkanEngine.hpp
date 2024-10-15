@@ -18,6 +18,7 @@
 #include "Shaders/ShaderModule.hpp"
 #include "MVulkanShader.hpp"
 #include "Utils/MImage.hpp"
+#include "Scene/Model.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -51,10 +52,11 @@ private:
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
-
+    
     void createBufferAndLoadData();
     void createTexture();
     void createSampler();
+    void loadModel();
     
     void createSyncObjects();
     void recordCommandBuffer(uint32_t imageIndex);
@@ -100,6 +102,8 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+
+    std::shared_ptr<Model> model;
 
     TestFrag testFrag;
     //bool framebufferResized = false;
