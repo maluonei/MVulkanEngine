@@ -25,6 +25,7 @@
 
 class MWindow;
 class Camera;
+class Model;
 
 class MVulkanEngine {
 public:
@@ -59,6 +60,7 @@ private:
     void createBufferAndLoadData();
     void createTexture();
     void createSampler();
+    void loadModel();
     
     void createSyncObjects();
     void recordCommandBuffer(uint32_t imageIndex);
@@ -108,6 +110,7 @@ private:
 
     TestShader testShader;
     std::shared_ptr<Camera> camera;
+    std::shared_ptr<Model> model;
     //bool framebufferResized = false;
 
     //VkInstance instance;

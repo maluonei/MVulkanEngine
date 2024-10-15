@@ -43,17 +43,17 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-struct Vertex {
-    glm::vec3 position;  // R32G32B32_SFLOAT
-    glm::vec3 normal;    // R32G32B32_SFLOAT
-    glm::vec2 texcoord;  // R32G32_SFLOAT
-};
-
-static size_t VertexSize[] = {
-    sizeof(Vertex::position),
-    sizeof(Vertex::normal),
-    sizeof(Vertex::texcoord),
-};
+//struct Vertex {
+//    glm::vec3 position;  // R32G32B32_SFLOAT
+//    glm::vec3 normal;    // R32G32B32_SFLOAT
+//    glm::vec2 texcoord;  // R32G32_SFLOAT
+//};
+//
+//static size_t VertexSize[] = {
+//    sizeof(Vertex::position),
+//    sizeof(Vertex::normal),
+//    sizeof(Vertex::texcoord),
+//};
 
 struct PipelineVertexInputStateInfo {
     VkVertexInputBindingDescription bindingDesc;

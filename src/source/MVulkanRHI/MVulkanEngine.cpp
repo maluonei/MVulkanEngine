@@ -5,6 +5,7 @@
 #include"MVulkanRHI/MVulkanEngine.hpp"
 #include <stdexcept>
 #include "Camera.hpp"
+#include "Scene/Model.hpp"
 
 #include "MVulkanRHI/MVulkanShader.hpp"
 
@@ -408,21 +409,26 @@ void MVulkanEngine::createBufferAndLoadData()
 
 void MVulkanEngine::createTexture()
 {
-    fs::path resourcePath = "F:/MVulkanEngine/resources/textures";
+    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("textures");
     fs::path imagePath = resourcePath / "texture.jpg";
     image.Load(imagePath);
 
-    ImageCreateInfo info;
-    info.width = image.Width();
-    info.height = image.Height();
-    info.format = image.Format();
-    info.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ImageCreateInfo imageinfo{};
+    imageinfo.width = image.Width();
+    imageinfo.height = image.Height();
+    imageinfo.format = image.Format();
+    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    ImageViewCreateInfo viewInfo{};
+    viewInfo.format = image.Format();
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 
     shaderList.Reset();
     shaderList.Begin();
-    testTexture.CreateAndLoadData(&shaderList, device, info, &image);
+    testTexture.CreateAndLoadData(&shaderList, device, imageinfo, viewInfo, &image);
     shaderList.End();
 
     VkSubmitInfo submitInfo{};
@@ -439,6 +445,16 @@ void MVulkanEngine::createTexture()
 void MVulkanEngine::createSampler()
 {
     sampler.Create(device);
+}
+
+void MVulkanEngine::loadModel()
+{
+    model = std::make_shared<Model>();
+    
+    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
+    fs::path modelPath = resourcePath / "suzanne.obj";
+
+    model->Load(modelPath.string());
 }
 
 void MVulkanEngine::createSyncObjects()

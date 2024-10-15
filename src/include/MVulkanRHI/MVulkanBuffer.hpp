@@ -124,18 +124,13 @@ public:
 	void Clean(VkDevice device);
 
 	template<typename T>
-	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo info, MImage<T>* imageData)
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, MImage<T>* imageData)
 	{
-		info.usage = VkBufferUsageFlagBits(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		info.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		info.format = imageData->Format();
-		info.width = imageData->Width();
-		info.height = imageData->Height();
-		info.channels = imageData->Channels();
-		image.Create(device, info);
+		image.CreateImage(device, imageInfo);
+		image.CreateImageView(device, viewInfo);
 
 		BufferCreateInfo binfo;
-		binfo.size = info.width * info.height * 4;
+		binfo.size = imageInfo.width * imageInfo.height * 4;
 		binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		stagingBuffer.Create(device, binfo);
 
@@ -144,7 +139,7 @@ public:
 		stagingBuffer.UnMap(device.GetDevice());
 
 		commandList->TransitionImageLayout(image.GetImage(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(info.width), static_cast<uint32_t>(info.height));
+		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height));
 		commandList->TransitionImageLayout(image.GetImage(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		//stagingBuffer.Clean(device.GetDevice());
