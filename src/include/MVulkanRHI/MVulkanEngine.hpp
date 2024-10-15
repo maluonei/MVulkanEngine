@@ -18,10 +18,13 @@
 #include "Shaders/ShaderModule.hpp"
 #include "MVulkanShader.hpp"
 #include "Utils/MImage.hpp"
+#include <memory>
+//#include "Camera.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
 class MWindow;
+class Camera;
 
 class MVulkanEngine {
 public:
@@ -51,6 +54,7 @@ private:
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
+    void createCamera();
 
     void createBufferAndLoadData();
     void createTexture();
@@ -91,7 +95,8 @@ private:
 
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
-    std::vector<MCBV> cbvs;
+    std::vector<MCBV> cbvs0;
+    std::vector<MCBV> cbvs1;
     MVulkanSampler sampler;
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
@@ -101,7 +106,8 @@ private:
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
-    TestFrag testFrag;
+    TestShader testShader;
+    std::shared_ptr<Camera> camera;
     //bool framebufferResized = false;
 
     //VkInstance instance;

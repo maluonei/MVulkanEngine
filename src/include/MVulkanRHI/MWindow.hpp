@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class MWindow {
 public:

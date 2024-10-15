@@ -15,22 +15,29 @@ private:
 
 };
 
-class TestFrag : public ShaderModule {
+class TestShader : public ShaderModule {
 private:
-	struct UniformBufferObject {
+	struct UniformBufferObjectVert {
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+	} ubo0;
+
+	struct UniformBufferObjectFrag {
 		glm::vec3 color0;
 		float padding0;
 		glm::vec3 color1;
 		float padding1;
-	} ubo;
+	} ubo1;
 
-	std::unordered_map<std::string, uint32_t> bindings;
+	std::vector<uint32_t> sizes;
 
 public:
-	TestFrag();
-	void SetUBO(glm::vec3 color0, glm::vec3 color1);
-	inline size_t GetBufferSize() const { return sizeof(ubo); }
-	inline void* GetData() { return &ubo; }
+	TestShader();
+	void SetUBO0(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
+	void SetUBO1(glm::vec3 color0, glm::vec3 color1);
+	inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
+	void* GetData(uint32_t binding);
 };
 
 

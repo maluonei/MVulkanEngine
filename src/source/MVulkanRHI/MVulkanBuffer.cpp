@@ -161,24 +161,8 @@ void MCBV::UpdateData(MVulkanDevice device, void* data)
     dataBuffer.LoadData(device.GetDevice(), data);
 }
 
-void MVulkanImage::Create(MVulkanDevice device, ImageCreateInfo info)
+void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
 {
-    //VkImageFormatProperties formatProperties;
-    //VkResult result = vkGetPhysicalDeviceImageFormatProperties(
-    //    device.GetPhysicalDevice(),
-    //    VK_FORMAT_R8G8B8_UINT,
-    //    VK_IMAGE_TYPE_2D,
-    //    VK_IMAGE_TILING_OPTIMAL,
-    //    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-    //    0,  // flags
-    //    &formatProperties
-    //);
-    //
-    //if (result != VK_SUCCESS) {
-    //    // 该格式或配置不被支持
-    //    std::cerr << "Format not supported!" << std::endl;
-    //}
-
     // 创建 Image
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -208,15 +192,17 @@ void MVulkanImage::Create(MVulkanDevice device, ImageCreateInfo info)
     VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory));
 
     vkBindImageMemory(device.GetDevice(), image, imageMemory, 0);
+}
 
-
+void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo info)
+{
     // 创建 ImageView
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.viewType = info.viewType;
     viewInfo.format = info.format; //gpu中数据访问格式
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.aspectMask = info.flag;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;

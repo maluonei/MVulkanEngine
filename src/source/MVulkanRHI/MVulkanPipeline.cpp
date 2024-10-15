@@ -37,7 +37,7 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, VkShaderModule vertShaderM
     vertexInputInfo.pVertexBindingDescriptions = &vertexStateInfo.bindingDesc;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexAttributeDescriptions = vertexStateInfo.attribDesc.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = vertexStateInfo.attribDesc.size();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexStateInfo.attribDesc.size());
 
     //VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     //vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

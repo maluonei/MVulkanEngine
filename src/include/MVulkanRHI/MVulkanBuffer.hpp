@@ -89,15 +89,22 @@ private:
 
 struct ImageCreateInfo {
 	uint32_t width, height, channels;
-	VkFormat format;
-	VkImageTiling tiling;
-	VkImageUsageFlags usage;
-	VkMemoryPropertyFlags properties;
+	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
+	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+	VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+};
+
+struct ImageViewCreateInfo {
+	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
+	VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+	VkImageAspectFlagBits flag = VK_IMAGE_ASPECT_COLOR_BIT;
 };
 
 class MVulkanImage {
 public:
-	void Create(MVulkanDevice device, ImageCreateInfo info);
+	void CreateImage(MVulkanDevice device, ImageCreateInfo info);
+	void CreateImageView(MVulkanDevice device, ImageViewCreateInfo info);
 	void Clean(VkDevice deivce);
 
 	inline VkImage GetImage()const { return image; }

@@ -1,4 +1,4 @@
-#include"Camera.h"
+#include"Camera.hpp"
 
 Camera::Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar)
 	:fov(_fov), aspect_ratio(_aspect_ratio), zNear(_zNear), zFar(_zFar), position(_position), direction(_direction)

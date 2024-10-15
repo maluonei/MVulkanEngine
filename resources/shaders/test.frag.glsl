@@ -2,14 +2,14 @@
 
 layout(location = 0)out vec4 color;
 
-layout(binding = 0) uniform UniformBufferObject{
+layout(std140, binding = 1) uniform UniformBufferObject{
 	vec3 color0;
 	float padding0;
 	vec3 color1;
 	float padding1;
 } ubo;
 
-layout(binding = 1) uniform sampler2D texSampler;
+layout(binding = 2) uniform sampler2D texSampler;
 
 layout(location = 0)in vec2 texCoord;
 

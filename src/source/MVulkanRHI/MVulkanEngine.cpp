@@ -4,6 +4,7 @@
 #include"MVulkanRHI/MWindow.hpp"
 #include"MVulkanRHI/MVulkanEngine.hpp"
 #include <stdexcept>
+#include "Camera.hpp"
 
 #include "MVulkanRHI/MVulkanShader.hpp"
 
@@ -41,6 +42,7 @@ void MVulkanEngine::Init()
 {
     window->Init(windowWidth, windowHeight);
 
+    createCamera();
     initVulkan();
 }
 
@@ -241,25 +243,30 @@ void MVulkanEngine::createPipeline()
     PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
     //fragReflector.GenerateDescriptorSet();
 
-    ShaderReflectorOut resourceOut = fragReflector.GenerateShaderReflactorOut();
-    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOut.GetBindings();
+    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
+    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
+    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
+    std::vector<VkDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
+    bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
 
     layouts.Create(device.GetDevice(), bindings);
     descriptorSet.Create(device.GetDevice(), allocator.Get(), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
     glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
     glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
-    testFrag.SetUBO(color0, color1);
+    testShader.SetUBO0(glm::mat4(1.f), camera->getViewMatrix(), camera->getProjMatrix());
+    testShader.SetUBO1(color0, color1);
     
-    cbvs.resize(MAX_FRAMES_IN_FLIGHT);
-    BufferCreateInfo _info;
-    _info.size = testFrag.GetBufferSize();
+    cbvs0.resize(MAX_FRAMES_IN_FLIGHT);
+    cbvs1.resize(MAX_FRAMES_IN_FLIGHT);
+    BufferCreateInfo _infoUBO0;
+    _infoUBO0.size = testShader.GetBufferSizeBinding(0);
+    BufferCreateInfo _infoUBO1;
+    _infoUBO1.size = testShader.GetBufferSizeBinding(1);
 
-    //transferList.Reset();
-    //transferList.Begin();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        //cbvs[i].CreateAndLoadData(&transferList, device, _info, testFrag.GetData());
-        cbvs[i].Create(device, _info);
+        cbvs0[i].Create(device, _infoUBO0);
+        cbvs1[i].Create(device, _infoUBO1);
     }
 
     createTexture();
@@ -282,18 +289,26 @@ void MVulkanEngine::createPipeline()
     
     MVulkanDescriptorSetWrite write;
 
-    std::vector<VkDescriptorBufferInfo> bufferInfos(1);
-    for (int i = 0; i < 1; i++) {
-        bufferInfos[i].buffer = cbvs[i].GetBuffer();
-        bufferInfos[i].offset = 0;
-        bufferInfos[i].range = testFrag.GetBufferSize();
+    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        bufferInfos[i].resize(2);
+
+        bufferInfos[i][0].buffer = cbvs0[i].GetBuffer();
+        bufferInfos[i][0].offset = 0;
+        bufferInfos[i][0].range = testShader.GetBufferSizeBinding(0);
+
+        bufferInfos[i][1].buffer = cbvs1[i].GetBuffer();
+        bufferInfos[i][1].offset = 0;
+        bufferInfos[i][1].range = testShader.GetBufferSizeBinding(1);
     }
 
-    std::vector<VkDescriptorImageInfo> imageInfos(1);
-    for (int i = 0; i < 1; i++) {
-        imageInfos[i].sampler = sampler.GetSampler();
-        imageInfos[i].imageView = testTexture.GetImageView();
-        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        imageInfos[i].resize(1);
+
+        imageInfos[i][0].sampler = sampler.GetSampler();
+        imageInfos[i][0].imageView = testTexture.GetImageView();
+        imageInfos[i][0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
     write.Update(device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
@@ -352,6 +367,20 @@ void MVulkanEngine::createCommandList()
 
     info.commandPool = commandAllocator.Get(QueueType::PRESENT_QUEUE);
     presentList.Create(device.GetDevice(), info);
+}
+
+void MVulkanEngine::createCamera()
+{
+    glm::vec3 position(-1.f, 0.f, 2.f);
+    glm::vec3 center(0.f);
+    glm::vec3 direction = glm::normalize(center - position);
+
+    float fov = 60;
+    float aspectRatio = (float)windowWidth / (float)windowHeight;
+    float zNear = 0.01f;
+    float zFar = 1000.f;
+
+    camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
 }
 
 void MVulkanEngine::createBufferAndLoadData()
@@ -480,7 +509,8 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     graphicsLists[currentFrame].BindDescriptorSet(pipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        cbvs[i].UpdateData(device, testFrag.GetData());
+        cbvs0[i].UpdateData(device, testShader.GetData(0));
+        cbvs1[i].UpdateData(device, testShader.GetData(1));
     }
 
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
