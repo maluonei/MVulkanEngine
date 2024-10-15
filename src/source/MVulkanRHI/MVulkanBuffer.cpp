@@ -37,7 +37,7 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
 
     VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory));
 
@@ -187,7 +187,7 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits, info.properties);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, info.properties);
 
     VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory));
 
@@ -211,8 +211,11 @@ void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo inf
     VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view));
 }
 
-void MVulkanImage::Clean(VkDevice deivce)
+void MVulkanImage::Clean(VkDevice device)
 {
+    vkDestroyImageView(device, view, nullptr);
+    vkDestroyImage(device, image, nullptr);
+    vkFreeMemory(device, imageMemory, nullptr);
 }
 
 MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING)

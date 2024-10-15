@@ -55,41 +55,41 @@ public:
 		return position;
 	}
 
-	inline glm::mat4 getProjMatrix()const {
-		if (isOrtho()) return orthoMatrix;
+	inline glm::mat4 GetProjMatrix()const {
+		if (IsOrtho()) return orthoMatrix;
 		else return projMatrix;
 	}
 
-	inline glm::mat4 getViewMatrix() {
+	inline glm::mat4 GetViewMatrix() {
 		UpdateViewMatrix();
 		return viewMatrix;
 	}
 
-	inline glm::mat4 getOrthoMatrix() const {
+	inline glm::mat4 GetOrthoMatrix() const {
 		return orthoMatrix;
 	}
 
-	inline glm::mat4* getProjMatrixPtr() {
+	inline glm::mat4* GetProjMatrixPtr() {
 		return &projMatrix;
 	}
 
-	inline glm::mat4* getViewMatrixPtr() {
+	inline glm::mat4* GetViewMatrixPtr() {
 		return &viewMatrix;
 	}
 
-	inline bool isOrtho() const {
+	inline bool IsOrtho() const {
 		return useOrtho;
 	}
 
-	inline void setOrtho(bool flag) {
+	inline void SetOrtho(bool flag) {
 		useOrtho = flag;
 	}
 
-	inline glm::vec3 getUp() {
+	inline glm::vec3 GetUp() {
 		return up;
 	}
 
-	inline glm::vec3 getRight() {
+	inline glm::vec3 GetRight() {
 		return right;
 	}
 };

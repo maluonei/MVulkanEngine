@@ -20,3 +20,8 @@ void MVulkanDepthBuffer::Create(MVulkanDevice device, VkExtent2D extent, VkForma
 	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	depthImage.CreateImageView(device, viewInfo);
 }
+
+void MVulkanDepthBuffer::Clean(VkDevice device)
+{
+	depthImage.Clean(device);
+}

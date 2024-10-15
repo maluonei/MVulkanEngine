@@ -14,6 +14,10 @@ float verteices[] = {
     -0.8f, -0.8f, 0.f, 0.f, 0.f, 1.f,   0.f, 0.f,
     0.8f, -0.8f, 0.f,  0.f, 0.f, 1.f,   1.f, 0.f,
     -0.8f, 0.8f, 0.f,  0.f, 0.f, 1.f,   0.f, 1.f,
+    1.8f, 1.8f, 0.f,   0.f, 0.f, -1.f,   1.f, 1.f,
+    -1.8f, -1.8f, 0.f, 0.f, 0.f, -1.f,   0.f, 0.f,
+    1.8f, -1.8f, 0.f,  0.f, 0.f, -1.f,   1.f, 0.f,
+    -1.8f, 1.8f, 0.f,  0.f, 0.f, -1.f,   0.f, 1.f,
 };
 
 //float verteices2[] = {
@@ -25,7 +29,9 @@ float verteices[] = {
 
 uint32_t indices[] = {
     0, 1, 2,
-    0, 3, 1
+    0, 3, 1,
+    4, 5, 6,
+    4, 7, 5
 };
 
 
@@ -155,11 +161,13 @@ void MVulkanEngine::initVulkan()
     createSurface();
     createDevice();
     createSwapChain();
-    createRenderPass();
 
     createDescriptorSetAllocator();
 
+    createDepthBuffer();
+    createRenderPass();
     createFrameBuffers();
+
     createCommandQueue();
     createCommandAllocator();
     createCommandList();
@@ -208,14 +216,16 @@ void MVulkanEngine::RecreateSwapChain()
         for (auto frameBuffer : frameBuffers) {
             frameBuffer.Clean(device.GetDevice());
         }
+        depthBuffer.Clean(device.GetDevice());
 
         createFrameBuffers();
+        createDepthBuffer();
     }
 }
 
 void MVulkanEngine::createRenderPass()
 {
-    renderPass.Create(device.GetDevice(), swapChain.GetSwapChainImageFormat());
+    renderPass.Create(device.GetDevice(), swapChain.GetSwapChainImageFormat(), device.FindDepthFormat());
 }
 
 void MVulkanEngine::resolveDescriptorSet()
@@ -255,7 +265,7 @@ void MVulkanEngine::createPipeline()
 
     glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
     glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
-    testShader.SetUBO0(glm::mat4(1.f), camera->getViewMatrix(), camera->getProjMatrix());
+    testShader.SetUBO0(glm::mat4(1.f), camera->GetViewMatrix(), camera->GetProjMatrix());
     testShader.SetUBO1(color0, color1);
     
     cbvs0.resize(MAX_FRAMES_IN_FLIGHT);
@@ -320,15 +330,25 @@ void MVulkanEngine::createPipeline()
     frag.Clean(device.GetDevice());
 }
 
+void MVulkanEngine::createDepthBuffer()
+{
+    VkExtent2D extent = swapChain.GetSwapChainExtent(); 
+    VkFormat format = device.FindDepthFormat();
+
+    depthBuffer.Create(device, extent, format);
+}
+
 void MVulkanEngine::createFrameBuffers()
 {
     std::vector<VkImageView> imageViews = swapChain.GetSwapChainImageViews();
+    VkImageView depthImageView = depthBuffer.GetImageView();
 
     frameBuffers.resize(imageViews.size());
     for (auto i = 0; i < imageViews.size(); i++) {
         FrameBufferCreateInfo info;
 
-        info.attachments = &imageViews[i];
+        info.swapChainImageViews = imageViews[i];
+        info.depthImageView = depthImageView;
         info.numAttachments = 1;
         info.renderPass = renderPass.Get();
         info.extent = swapChain.GetSwapChainExtent();
@@ -372,7 +392,7 @@ void MVulkanEngine::createCommandList()
 
 void MVulkanEngine::createCamera()
 {
-    glm::vec3 position(-1.f, 0.f, 2.f);
+    glm::vec3 position(-1.f, 0.f, 4.f);
     glm::vec3 center(0.f);
     glm::vec3 direction = glm::normalize(center - position);
 
@@ -492,10 +512,12 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = swapChainExtent;
 
-    VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[1].depthStencil = { 1.0f, 0 };
 
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
     graphicsLists[currentFrame].BeginRenderPass(&renderPassInfo);
 
     graphicsLists[currentFrame].BindPipeline(pipeline.Get());
@@ -524,12 +546,19 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     auto descriptorSets = descriptorSet.Get();
     graphicsLists[currentFrame].BindDescriptorSet(pipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
 
+    testShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         cbvs0[i].UpdateData(device, testShader.GetData(0));
         cbvs1[i].UpdateData(device, testShader.GetData(1));
     }
+    graphicsLists[currentFrame].DrawIndexed(sizeof(indices) / sizeof(uint32_t), 1, 0, 0, 0);
 
-    graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
+    //testShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -1.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
+    //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    //    cbvs0[i].UpdateData(device, testShader.GetData(0));
+    //    cbvs1[i].UpdateData(device, testShader.GetData(1));
+    //}
+    //graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
 
     graphicsLists[currentFrame].EndRenderPass();
 

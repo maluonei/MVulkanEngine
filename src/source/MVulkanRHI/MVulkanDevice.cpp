@@ -196,7 +196,7 @@ bool MVulkanDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surfa
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-VkFormat MVulkanDevice::findDepthFormat()
+VkFormat MVulkanDevice::FindDepthFormat()
 {
     return findSupportedFormat(
         { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
@@ -260,7 +260,7 @@ VkQueue MVulkanDevice::GetQueue(QueueType type)
     }
 }
 
-uint32_t MVulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t MVulkanDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);

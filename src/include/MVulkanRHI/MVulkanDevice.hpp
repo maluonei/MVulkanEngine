@@ -49,8 +49,8 @@ public:
         return deviceProperties;
     }
 
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-
+    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    VkFormat FindDepthFormat();
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;
@@ -70,7 +70,6 @@ private:
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
-    VkFormat findDepthFormat();
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 };
 

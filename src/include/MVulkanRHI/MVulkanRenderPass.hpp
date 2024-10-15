@@ -8,7 +8,7 @@ class MVulkanrRenderPass {
 public:
 	MVulkanrRenderPass();
 
-	void Create(VkDevice device, VkFormat imageFormat);
+	void Create(VkDevice device, VkFormat imageFormat, VkFormat depthFormat);
 	void Clean(VkDevice device);
 
 	inline VkRenderPass Get() const { return renderPass; }

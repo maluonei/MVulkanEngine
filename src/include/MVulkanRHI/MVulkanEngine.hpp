@@ -14,6 +14,7 @@
 #include "MVulkanCommand.hpp"
 #include "MVulkanBuffer.hpp"
 #include "MVulkanSampler.hpp"
+#include "MVulkanDepthBuffer.hpp"
 #include "Shaders/ShaderResourceMap.hpp"
 #include "Shaders/ShaderModule.hpp"
 #include "MVulkanShader.hpp"
@@ -51,6 +52,7 @@ private:
     void resolveDescriptorSet();
     void createDescriptorSetAllocator();
     void createPipeline();
+    void createDepthBuffer();
     void createFrameBuffers();
     void createCommandQueue();
     void createCommandAllocator();
@@ -78,6 +80,7 @@ private:
     MVulkanSwapchain swapChain;
     MVulkanGraphicsPipeline pipeline;
     MVulkanrRenderPass renderPass;
+    MVulkanDepthBuffer depthBuffer;
     std::vector<MVulkanFrameBuffer> frameBuffers;
 
     MVulkanDescriptorSetAllocator allocator;

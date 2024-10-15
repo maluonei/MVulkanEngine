@@ -1,5 +1,6 @@
 #include "MVulkanRHI/MVulkanFrameBuffer.hpp"
 #include <stdexcept>
+#include <array>
 
 MVulkanFrameBuffer::MVulkanFrameBuffer()
 {
@@ -7,11 +8,16 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 
 void MVulkanFrameBuffer::Create(VkDevice device, FrameBufferCreateInfo creatInfo)
 {
+    std::array<VkImageView, 2> attachments = {
+        creatInfo.swapChainImageViews,
+        creatInfo.depthImageView
+    };
+
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = creatInfo.renderPass;
-    framebufferInfo.attachmentCount = creatInfo.numAttachments;
-    framebufferInfo.pAttachments = creatInfo.attachments;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
     framebufferInfo.width = creatInfo.extent.width;
     framebufferInfo.height = creatInfo.extent.height;
     framebufferInfo.layers = 1;

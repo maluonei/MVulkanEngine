@@ -6,7 +6,8 @@
 #include <vector>
 
 struct FrameBufferCreateInfo {
-	VkImageView* attachments;
+	VkImageView swapChainImageViews;
+	VkImageView depthImageView;
 	uint16_t numAttachments;
 	VkRenderPass renderPass;
 	VkExtent2D extent;
