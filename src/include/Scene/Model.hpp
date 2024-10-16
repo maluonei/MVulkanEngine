@@ -24,6 +24,7 @@ static size_t VertexSize[] = {
 };
 
 struct Mesh {
+    //glm::mat4 transform;
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 };
@@ -31,6 +32,12 @@ struct Mesh {
 class Model {
 public:
     void Load(const std::string& path);
+    inline uint32_t VertexSize()const { return static_cast<uint32_t>(sizeof(Vertex) * vertices.size()); }
+    inline uint32_t IndexSize()const { return static_cast<uint32_t>(sizeof(uint32_t) * indices.size()); }
+    std::vector<Vertex> GetVertices() const { return vertices; }
+    std::vector<uint32_t> GetIndices() const { return indices; }
+    const Vertex* GetVerticesData() const { return vertices.data(); }
+    const uint32_t* GetIndicesData() const { return indices.data(); }
 private:
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;

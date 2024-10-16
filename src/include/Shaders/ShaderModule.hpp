@@ -40,6 +40,29 @@ public:
 	void* GetData(uint32_t binding);
 };
 
+class PhongShader : public ShaderModule {
+private:
+	struct UniformBufferObjectVert {
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+	} ubo0;
+
+	struct UniformBufferObjectFrag {
+		glm::vec3 cameraPosition;
+		float padding0;
+	} ubo1;
+
+	std::vector<uint32_t> sizes;
+
+public:
+	PhongShader();
+	void SetUBO0(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
+	void SetUBO1(glm::vec3 cameraPosition);
+	inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
+	void* GetData(uint32_t binding);
+};
+
 
 
 #endif

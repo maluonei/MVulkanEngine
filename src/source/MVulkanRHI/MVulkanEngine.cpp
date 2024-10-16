@@ -228,10 +228,10 @@ void MVulkanEngine::createRenderPass()
     renderPass.Create(device.GetDevice(), swapChain.GetSwapChainImageFormat(), device.FindDepthFormat());
 }
 
-void MVulkanEngine::resolveDescriptorSet()
-{
-
-}
+//void MVulkanEngine::resolveDescriptorSet()
+//{
+//
+//}
 
 void MVulkanEngine::createDescriptorSetAllocator()
 {
@@ -240,8 +240,8 @@ void MVulkanEngine::createDescriptorSetAllocator()
 
 void MVulkanEngine::createPipeline()
 {
-    std::string vertPath = "test.vert.glsl";
-    std::string fragPath = "test.frag.glsl";
+    std::string vertPath = "phong.vert.glsl";
+    std::string fragPath = "phong.frag.glsl";
 
     MVulkanShader vert(vertPath, ShaderStageFlagBits::VERTEX);
     MVulkanShader frag(fragPath, ShaderStageFlagBits::FRAGMENT);
@@ -263,17 +263,17 @@ void MVulkanEngine::createPipeline()
     layouts.Create(device.GetDevice(), bindings);
     descriptorSet.Create(device.GetDevice(), allocator.Get(), layouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
-    glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
-    glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
-    testShader.SetUBO0(glm::mat4(1.f), camera->GetViewMatrix(), camera->GetProjMatrix());
-    testShader.SetUBO1(color0, color1);
+    //glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
+    //glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
+    phongShader.SetUBO0(glm::mat4(1.f), camera->GetViewMatrix(), camera->GetProjMatrix());
+    phongShader.SetUBO1(camera->GetPosition());
     
     cbvs0.resize(MAX_FRAMES_IN_FLIGHT);
     cbvs1.resize(MAX_FRAMES_IN_FLIGHT);
     BufferCreateInfo _infoUBO0;
-    _infoUBO0.size = testShader.GetBufferSizeBinding(0);
+    _infoUBO0.size = phongShader.GetBufferSizeBinding(0);
     BufferCreateInfo _infoUBO1;
-    _infoUBO1.size = testShader.GetBufferSizeBinding(1);
+    _infoUBO1.size = phongShader.GetBufferSizeBinding(1);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         cbvs0[i].Create(device, _infoUBO0);
@@ -306,11 +306,11 @@ void MVulkanEngine::createPipeline()
 
         bufferInfos[i][0].buffer = cbvs0[i].GetBuffer();
         bufferInfos[i][0].offset = 0;
-        bufferInfos[i][0].range = testShader.GetBufferSizeBinding(0);
+        bufferInfos[i][0].range = phongShader.GetBufferSizeBinding(0);
 
         bufferInfos[i][1].buffer = cbvs1[i].GetBuffer();
         bufferInfos[i][1].offset = 0;
-        bufferInfos[i][1].range = testShader.GetBufferSizeBinding(1);
+        bufferInfos[i][1].range = phongShader.GetBufferSizeBinding(1);
     }
 
     std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(MAX_FRAMES_IN_FLIGHT);
@@ -406,16 +406,22 @@ void MVulkanEngine::createCamera()
 
 void MVulkanEngine::createBufferAndLoadData()
 {
+    loadModel();
+
     BufferCreateInfo vertexInfo;
-    vertexInfo.size = sizeof(verteices);
+    //vertexInfo.size = sizeof(verteices);
+    vertexInfo.size = model->VertexSize();
 
     BufferCreateInfo indexInfo;
-    indexInfo.size = sizeof(indices);
+    //indexInfo.size = sizeof(indices);
+    indexInfo.size = model->IndexSize();
     
     transferList.Reset();
     transferList.Begin();
-    vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, verteices);
-    indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, indices);
+    //vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, verteices);
+    //indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, indices)
+    vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, (void*)(model->GetVerticesData()));
+    indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, (void*)model->GetIndicesData());
     transferList.End();
     
     VkSubmitInfo submitInfo{};
@@ -524,9 +530,9 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.y = (float)swapChainExtent.height;
     viewport.width = (float)swapChainExtent.width;
-    viewport.height = (float)swapChainExtent.height;
+    viewport.height = -(float)swapChainExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     graphicsLists[currentFrame].SetViewport(0, 1, &viewport);
@@ -546,12 +552,13 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex)
     auto descriptorSets = descriptorSet.Get();
     graphicsLists[currentFrame].BindDescriptorSet(pipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
 
-    testShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
+    phongShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        cbvs0[i].UpdateData(device, testShader.GetData(0));
-        cbvs1[i].UpdateData(device, testShader.GetData(1));
+        cbvs0[i].UpdateData(device, phongShader.GetData(0));
+        cbvs1[i].UpdateData(device, phongShader.GetData(1));
     }
-    graphicsLists[currentFrame].DrawIndexed(sizeof(indices) / sizeof(uint32_t), 1, 0, 0, 0);
+    //graphicsLists[currentFrame].DrawIndexed(sizeof(indices) / sizeof(uint32_t), 1, 0, 0, 0);
+    graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(model->GetIndices().size()), 1, 0, 0, 0);
 
     //testShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -1.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
     //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {

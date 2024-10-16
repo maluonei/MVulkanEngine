@@ -49,7 +49,7 @@ private:
     void createSwapChain();
     void RecreateSwapChain();
     void createRenderPass();
-    void resolveDescriptorSet();
+    //void resolveDescriptorSet();
     void createDescriptorSetAllocator();
     void createPipeline();
     void createDepthBuffer();
@@ -111,7 +111,8 @@ private:
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
-    TestShader testShader;
+    //TestShader testShader;
+    PhongShader phongShader;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Model> model;
     //bool framebufferResized = false;
