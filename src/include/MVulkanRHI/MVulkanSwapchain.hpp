@@ -22,6 +22,11 @@ public:
 	inline std::vector<VkImage> GetSwapChainImages() const {
 		return swapChainImages;
 	};
+
+	inline VkImage GetImage(int i) {
+		return swapChainImages[i];
+	}
+
 	inline std::vector<VkImageView> GetSwapChainImageViews() const {
 		return swapChainImageViews;
 	};

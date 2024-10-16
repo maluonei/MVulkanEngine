@@ -104,31 +104,67 @@ void MVulkanEngine::drawFrame()
     
     recordCommandBuffer(imageIndex);
 
+    transferList.Reset();
+    transferList.Begin();
+    //spdlog::info("a");
+    //transferList.TransitionImageLayout(frameBuffers[imageIndex].GetImage(0), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    //spdlog::info("b");
+    //transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //spdlog::info("c");
+    transferList.CopyImage(frameBuffers[imageIndex].GetImage(0), swapChain.GetImage(imageIndex), swapChain.GetSwapChainExtent().width, swapChain.GetSwapChainExtent().height);
+    //spdlog::info("d");
+    //transferList.TransitionImageLayout(frameBuffers[imageIndex].GetImage(0), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    //spdlog::info("e");
+    transferList.End();
+ 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
 
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore waitSemaphores0[] = { imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages0[] = { VK_PIPELINE_STAGE_TRANSFER_BIT };
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.pWaitSemaphores = waitSemaphores0;
+    submitInfo.pWaitDstStageMask = waitStages0;
+
+    VkSemaphore signalSemaphores0[] = { transferFinishedSemaphores[currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores0;
+
+    //spdlog::info("f");
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
+
+    //VkSubmitInfo submitInfo{};
+    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores1[] = { transferFinishedSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores1;
+    submitInfo.pWaitDstStageMask = waitStages1;
+
+    //spdlog::info("g");
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
 
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+    VkSemaphore signalSemaphores1[] = { renderFinishedSemaphores[currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = signalSemaphores1;
 
-    //spdlog::info("aaaaaaaaaaaaaaaaaaaaa");
     VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue.Get(), 1, &submitInfo, inFlightFences[currentFrame]));
-    //spdlog::info("bbbbbbbbbbbbbbbbbbbbb");
+
+    //spdlog::info("h");
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = signalSemaphores1;
 
     VkSwapchainKHR swapChains[] = { swapChain.Get()};
     presentInfo.swapchainCount = 1;
@@ -160,18 +196,19 @@ void MVulkanEngine::initVulkan()
     createInstance();
     createSurface();
     createDevice();
-    createSwapChain();
-
-    createDescriptorSetAllocator();
-
-    createDepthBuffer();
-    createRenderPass();
-    createFrameBuffers();
 
     createCommandQueue();
     createCommandAllocator();
     createCommandList();
     createSyncObjects();
+
+    createSwapChain();
+
+    createDescriptorSetAllocator();
+
+    //createDepthBuffer();
+    createRenderPass();
+    createFrameBuffers();
 
     createBufferAndLoadData();
 
@@ -206,21 +243,43 @@ void MVulkanEngine::createSurface()
 void MVulkanEngine::createSwapChain()
 {
     swapChain.Create(device, window->GetWindow(), surface);
+
+    transitionSwapchainImageFormat();
 }
 
 void MVulkanEngine::RecreateSwapChain()
 {
 
     if (swapChain.Recreate(device, window->GetWindow(), surface)) {
-        
+        transitionSwapchainImageFormat();
+
         for (auto frameBuffer : frameBuffers) {
             frameBuffer.Clean(device.GetDevice());
         }
-        depthBuffer.Clean(device.GetDevice());
 
         createFrameBuffers();
-        createDepthBuffer();
     }
+}
+
+void MVulkanEngine::transitionSwapchainImageFormat()
+{
+    transferList.Reset();
+    transferList.Begin();
+
+    std::vector<VkImage> images = swapChain.GetSwapChainImages();
+    for (auto i = 0; i < images.size(); i++) {
+        transferList.TransitionImageLayout(images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    }
+
+    transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::createRenderPass()
@@ -330,31 +389,48 @@ void MVulkanEngine::createPipeline()
     frag.Clean(device.GetDevice());
 }
 
-void MVulkanEngine::createDepthBuffer()
-{
-    VkExtent2D extent = swapChain.GetSwapChainExtent(); 
-    VkFormat format = device.FindDepthFormat();
-
-    depthBuffer.Create(device, extent, format);
-}
+//void MVulkanEngine::createDepthBuffer()
+//{
+//    VkExtent2D extent = swapChain.GetSwapChainExtent(); 
+//    VkFormat format = device.FindDepthFormat();
+//
+//    depthBuffer.Create(device, extent, format);
+//}
 
 void MVulkanEngine::createFrameBuffers()
 {
     std::vector<VkImageView> imageViews = swapChain.GetSwapChainImageViews();
-    VkImageView depthImageView = depthBuffer.GetImageView();
+    //VkImageView depthImageView = depthBuffer.GetImageView();
+
+    transferList.Reset();
+    transferList.Begin();
 
     frameBuffers.resize(imageViews.size());
     for (auto i = 0; i < imageViews.size(); i++) {
-        FrameBufferCreateInfo info;
+        std::vector<VkFormat> formats(1);
+        formats[0] = swapChain.GetSwapChainImageFormat();
 
-        info.swapChainImageViews = imageViews[i];
-        info.depthImageView = depthImageView;
-        info.numAttachments = 1;
+        FrameBufferCreateInfo info{};
+
         info.renderPass = renderPass.Get();
         info.extent = swapChain.GetSwapChainExtent();
+        info.imageAttachmentFormats = formats.data();
+        info.numAttachments = static_cast<uint32_t>(formats.size());
 
-        frameBuffers[i].Create(device.GetDevice(), info);
+        frameBuffers[i].Create(device, info);
+
+        transferList.TransitionImageLayout(frameBuffers[i].GetImage(0), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     }
+
+    transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::createCommandQueue()
@@ -487,6 +563,7 @@ void MVulkanEngine::createSyncObjects()
 {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    transferFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
@@ -499,6 +576,7 @@ void MVulkanEngine::createSyncObjects()
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         if (vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &transferFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(device.GetDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }

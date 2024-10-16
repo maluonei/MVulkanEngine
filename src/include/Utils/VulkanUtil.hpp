@@ -100,6 +100,11 @@ enum DescriptorType {
     DESCRIPORTYPE_NUM = 2
 };
 
+enum AttachmentType {
+    COLOR_ATTACHMENT = 0,
+    DEPTH_STENCIL_ATTACHMENT = 1
+};
+
 inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit) {
     switch (bit) {
     case VERTEX: return VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;

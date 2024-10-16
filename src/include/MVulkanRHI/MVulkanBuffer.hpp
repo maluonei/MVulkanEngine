@@ -99,6 +99,8 @@ struct ImageViewCreateInfo {
 	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 	VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
 	VkImageAspectFlagBits flag = VK_IMAGE_ASPECT_COLOR_BIT;
+	VkComponentMapping components;
+	VkImageSubresourceRange subresourceRange;
 };
 
 class MVulkanImage {
@@ -138,9 +140,9 @@ public:
 		stagingBuffer.LoadData(device.GetDevice(), imageData->GetData());
 		stagingBuffer.UnMap(device.GetDevice());
 
-		commandList->TransitionImageLayout(image.GetImage(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height));
-		commandList->TransitionImageLayout(image.GetImage(), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		//stagingBuffer.Clean(device.GetDevice());
 	}

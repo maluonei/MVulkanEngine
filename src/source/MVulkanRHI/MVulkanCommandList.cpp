@@ -55,7 +55,7 @@ void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDe
     );
 }
 
-void MVulkanCommandList::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout)
+void MVulkanCommandList::TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout)
 {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -86,6 +86,34 @@ void MVulkanCommandList::TransitionImageLayout(VkImage image, VkFormat format, V
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (srcLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && dstLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+
+        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (srcLayout == VK_IMAGE_LAYOUT_UNDEFINED && dstLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (srcLayout == VK_IMAGE_LAYOUT_UNDEFINED && dstLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else {
         throw std::invalid_argument("unsupported layout transition!");
@@ -122,6 +150,34 @@ void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage,
     };
 
     vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+}
+
+void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height)
+{
+    VkImageCopy copyRegion = {};
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcOffset = { 0, 0, 0 };
+
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstOffset = { 0, 0, 0 };
+
+    copyRegion.extent.width = width;  // 复制的宽度
+    copyRegion.extent.height = height;  // 复制的高度
+    copyRegion.extent.depth = 1;
+
+    vkCmdCopyImage(
+        commandBuffer,
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  // 源image和其布局
+        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // 目标image和其布局
+        1,
+        &copyRegion
+    );
 }
 
 void MVulkanCommandList::Create(VkDevice device, const VkCommandListCreateInfo& info)

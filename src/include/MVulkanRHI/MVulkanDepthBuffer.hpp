@@ -7,21 +7,33 @@
 #include <MVulkanRHI/MVulkanDevice.hpp>
 #include <MVulkanRHI/MVulkanBuffer.hpp>
 
-class MVulkanDepthBuffer {
+class MVulkanAttachmentBuffer {
 public:
-
-	void Create(MVulkanDevice device, VkExtent2D extent, VkFormat depthFormat);
+	void Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format);
 	void Clean(VkDevice device);
 
-	inline VkImage GetImage()const { return depthImage.GetImage(); }
-	inline VkImageView GetImageView()const { return depthImage.GetImageView(); }
-	//static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	inline VkImage GetImage()const { return image.GetImage(); }
+	inline VkImageView GetImageView()const { return image.GetImageView(); }
+
 private:
-	MVulkanImage depthImage;
-	//VkImage depthImage;
-	//VkDeviceMemory depthImageMemory;
-	//VkImageView depthImageView;
+	AttachmentType attachmentType;
+	MVulkanImage image;
 };
+
+//class MVulkanDepthBuffer {
+//public:
+//	void Create(MVulkanDevice device, VkExtent2D extent, VkFormat depthFormat);
+//	void Clean(VkDevice device);
+//
+//	inline VkImage GetImage()const { return depthImage.GetImage(); }
+//	inline VkImageView GetImageView()const { return depthImage.GetImageView(); }
+//	//static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+//private:
+//	MVulkanImage depthImage;
+//	//VkImage depthImage;
+//	//VkDeviceMemory depthImageMemory;
+//	//VkImageView depthImageView;
+//};
 
 
 

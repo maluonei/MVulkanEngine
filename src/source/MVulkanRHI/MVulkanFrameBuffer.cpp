@@ -6,12 +6,18 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 {
 }
 
-void MVulkanFrameBuffer::Create(VkDevice device, FrameBufferCreateInfo creatInfo)
+void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo creatInfo)
 {
-    std::array<VkImageView, 2> attachments = {
-        creatInfo.swapChainImageViews,
-        creatInfo.depthImageView
-    };
+    colorBuffers.resize(creatInfo.numAttachments);
+    std::vector<VkImageView> attachments;
+    attachments.resize(creatInfo.numAttachments + 1);
+
+    for (auto i = 0; i < creatInfo.numAttachments; i++) {
+        colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
+        attachments[i] = colorBuffers[i].GetImageView();
+    }
+    depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, device.FindDepthFormat());
+    attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
 
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -22,12 +28,16 @@ void MVulkanFrameBuffer::Create(VkDevice device, FrameBufferCreateInfo creatInfo
     framebufferInfo.height = creatInfo.extent.height;
     framebufferInfo.layers = 1;
 
-    if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+    if (vkCreateFramebuffer(device.GetDevice(), &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
     }
 }
 
 void MVulkanFrameBuffer::Clean(VkDevice device)
 {
+    for (auto i = 0; i < colorBuffers.size(); i++) {
+        colorBuffers[i].Clean(device);
+    }
+    depthBuffer.Clean(device);
     vkDestroyFramebuffer(device, frameBuffer, nullptr);
 }

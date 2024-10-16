@@ -48,11 +48,12 @@ private:
     void createSurface();
     void createSwapChain();
     void RecreateSwapChain();
+    void transitionSwapchainImageFormat();
     void createRenderPass();
     //void resolveDescriptorSet();
     void createDescriptorSetAllocator();
     void createPipeline();
-    void createDepthBuffer();
+    //void createDepthBuffer();
     void createFrameBuffers();
     void createCommandQueue();
     void createCommandAllocator();
@@ -80,7 +81,7 @@ private:
     MVulkanSwapchain swapChain;
     MVulkanGraphicsPipeline pipeline;
     MVulkanrRenderPass renderPass;
-    MVulkanDepthBuffer depthBuffer;
+    //MVulkanDepthBuffer depthBuffer;
     std::vector<MVulkanFrameBuffer> frameBuffers;
 
     MVulkanDescriptorSetAllocator allocator;
@@ -108,6 +109,7 @@ private:
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkSemaphore> transferFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
