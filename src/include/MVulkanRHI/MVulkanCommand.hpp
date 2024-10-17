@@ -40,9 +40,14 @@ public:
 	virtual void BindPipeline(VkPipeline pipeline) = 0;
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	void TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout);
+	void TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout, uint32_t mipLevels = 1);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height);
 	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height);
+
+	void BlitImage(
+		VkImage srcImage, VkImageLayout srcLayout,
+		VkImage dstImage, VkImageLayout dstLayout, 
+		std::vector<VkImageBlit> blits, VkFilter filter);
 
 	void Create(VkDevice device, const VkCommandListCreateInfo& info);
 	void Clean(VkDevice _device);

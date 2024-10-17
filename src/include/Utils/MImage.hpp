@@ -37,6 +37,8 @@ public:
         }
         //stbi_image_free(pixels);
 
+        mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
         data = static_cast<T*>(pixels);
 
         return true;
@@ -44,11 +46,13 @@ public:
 
 	inline T* GetData() { return data; }
 
-	inline int Width() const { return texWidth; }
-	inline int Height() const { return texHeight; }
-	inline int Channels() const { return texChannels; }
-	inline VkFormat Format() const { return format; }
+	inline const int Width() const { return texWidth; }
+	inline const int Height() const { return texHeight; }
+	inline const int Channels() const { return texChannels; }
+    inline const uint32_t MipLevels() const { return mipLevels; }
+	inline const VkFormat Format() const { return format; }
 private:
+    uint32_t mipLevels = 1;
 	int texWidth, texHeight, texChannels;
 	VkFormat format;
 

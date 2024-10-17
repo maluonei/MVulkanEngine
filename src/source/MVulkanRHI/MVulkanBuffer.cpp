@@ -170,7 +170,7 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.extent.width = info.width;
     imageInfo.extent.height = info.height;
     imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
+    imageInfo.mipLevels = info.mipLevels;
     imageInfo.arrayLayers = 1;
     imageInfo.format = info.format; //显存中数据存储格式
     imageInfo.tiling = info.tiling;
@@ -180,6 +180,8 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // 设置 image 格式、尺寸等
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &image));
+
+    mipLevel = info.mipLevels;
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.GetDevice(), image, &memRequirements);
@@ -203,10 +205,10 @@ void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo inf
     viewInfo.viewType = info.viewType;
     viewInfo.format = info.format; //gpu中数据访问格式
     viewInfo.subresourceRange.aspectMask = info.flag;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+    viewInfo.subresourceRange.baseMipLevel = info.baseMipLevel;
+    viewInfo.subresourceRange.levelCount = info.levelCount;
+    viewInfo.subresourceRange.baseArrayLayer = info.baseArrayLayer;
+    viewInfo.subresourceRange.layerCount = info.layerCount;
 
     VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view));
 }

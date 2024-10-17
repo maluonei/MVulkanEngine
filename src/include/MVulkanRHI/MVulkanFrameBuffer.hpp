@@ -4,7 +4,7 @@
 
 #include "vulkan/vulkan_core.h"
 #include <vector>
-#include <MVulkanRHI/MVulkanDepthBuffer.hpp>
+#include <MVulkanRHI/MVulkanAttachmentBuffer.hpp>
 
 struct FrameBufferCreateInfo {
 	//VkImageView colorImageView;

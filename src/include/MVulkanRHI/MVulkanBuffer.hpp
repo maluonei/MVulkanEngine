@@ -88,7 +88,7 @@ private:
 };
 
 struct ImageCreateInfo {
-	uint32_t width, height, channels;
+	uint32_t width, height, channels, mipLevels=1;
 	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -99,8 +99,12 @@ struct ImageViewCreateInfo {
 	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 	VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
 	VkImageAspectFlagBits flag = VK_IMAGE_ASPECT_COLOR_BIT;
+	uint32_t baseMipLevel = 0;
+	uint32_t levelCount = 1;
+	uint32_t baseArrayLayer = 0;
+	uint32_t layerCount = 1;
 	VkComponentMapping components;
-	VkImageSubresourceRange subresourceRange;
+	//VkImageSubresourceRange subresourceRange;
 };
 
 class MVulkanImage {
@@ -113,7 +117,12 @@ public:
 	inline VkDeviceMemory GetImageMemory() const { return imageMemory; }
 	inline VkImageView GetImageView()const { return view; }
 
+	inline uint32_t GetMipLevel()const {
+		return mipLevel;
+	};
+
 private:
+	uint32_t mipLevel = 1;
 	VkImage image;
 	VkDeviceMemory imageMemory;
 	VkImageView view;
@@ -140,9 +149,9 @@ public:
 		stagingBuffer.LoadData(device.GetDevice(), imageData->GetData());
 		stagingBuffer.UnMap(device.GetDevice());
 
-		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image.GetMipLevel());
 		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height));
-		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image.GetMipLevel());
 
 		//stagingBuffer.Clean(device.GetDevice());
 	}
@@ -152,6 +161,7 @@ public:
 	inline VkDeviceMemory GetImageMemory() { return image.GetImageMemory(); }
 
 private:
+	uint32_t mipLevels;
 	MVulkanImage image;
 	MVulkanBuffer stagingBuffer;
 };

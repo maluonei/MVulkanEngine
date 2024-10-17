@@ -519,6 +519,7 @@ void MVulkanEngine::createTexture()
     imageinfo.width = image.Width();
     imageinfo.height = image.Height();
     imageinfo.format = image.Format();
+    imageinfo.mipLevels = image.MipLevels();
     imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -527,6 +528,7 @@ void MVulkanEngine::createTexture()
     viewInfo.format = image.Format();
     viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.levelCount = image.MipLevels();
 
     shaderList.Reset();
     shaderList.Begin();

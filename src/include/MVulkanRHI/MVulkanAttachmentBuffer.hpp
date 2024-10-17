@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MVULKANDEPTHBUFFER_H
-#define MVULKANDEPTHBUFFER_H
+#ifndef MVULKANATTACHMENTBUFFER_H
+#define MVULKANATTACHMENTBUFFER_H
 
 #include <vulkan/vulkan_core.h>
 #include <vector>

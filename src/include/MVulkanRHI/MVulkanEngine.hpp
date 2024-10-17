@@ -14,7 +14,7 @@
 #include "MVulkanCommand.hpp"
 #include "MVulkanBuffer.hpp"
 #include "MVulkanSampler.hpp"
-#include "MVulkanDepthBuffer.hpp"
+#include "MVulkanAttachmentBuffer.hpp"
 #include "Shaders/ShaderResourceMap.hpp"
 #include "Shaders/ShaderModule.hpp"
 #include "MVulkanShader.hpp"

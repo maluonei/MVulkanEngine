@@ -55,7 +55,7 @@ void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDe
     );
 }
 
-void MVulkanCommandList::TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout)
+void MVulkanCommandList::TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout, uint32_t mipLevels)
 {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -66,7 +66,7 @@ void MVulkanCommandList::TransitionImageLayout(VkImage image, VkImageLayout srcL
     barrier.image = image;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
 
@@ -178,6 +178,15 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
         1,
         &copyRegion
     );
+}
+
+void MVulkanCommandList::BlitImage(VkImage srcImage, VkImageLayout srcLayout, VkImage dstImage, VkImageLayout dstLayout, std::vector<VkImageBlit> blits, VkFilter filter)
+{
+    vkCmdBlitImage(commandBuffer,
+        srcImage, srcLayout,
+        dstImage, dstLayout,
+        static_cast<uint32_t>(blits.size()), blits.data(),
+        filter);
 }
 
 void MVulkanCommandList::Create(VkDevice device, const VkCommandListCreateInfo& info)
