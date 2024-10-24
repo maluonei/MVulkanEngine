@@ -27,6 +27,21 @@ private:
 	std::map<QueueType, VkCommandPool> commandPools;
 };
 
+struct MVulkanImageMemoryBarrier {
+	VkAccessFlags              srcAccessMask = 0;
+	VkAccessFlags              dstAccessMask = 0;
+	VkImageLayout              oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImageLayout              newLayout = VK_IMAGE_LAYOUT_GENERAL;
+	uint32_t                   srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	uint32_t                   dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	VkImage                    image;
+	VkImageAspectFlags		   aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	uint32_t				   baseMipLevel = 0;
+	uint32_t				   levelCount = 1;
+	uint32_t				   baseArrayLayer = 0;
+	uint32_t				   layerCount = 1;
+};
+
 class MVulkanCommandList {
 public:
 	MVulkanCommandList();
@@ -40,7 +55,7 @@ public:
 	virtual void BindPipeline(VkPipeline pipeline) = 0;
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	void TransitionImageLayout(VkImage image, VkImageLayout srcLayout, VkImageLayout dstLayout, uint32_t mipLevels = 1);
+	void TransitionImageLayout(MVulkanImageMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height);
 	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height);
 

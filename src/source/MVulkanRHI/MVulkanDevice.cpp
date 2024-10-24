@@ -63,10 +63,12 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
     for (const auto& device : devices) {
         if (isDeviceSuitable(device, surface)) {
             physicalDevice = device;
+            maxSmaaFlag = getMaxUsableSampleCount();
             
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
+            spdlog::info("maxSmaaFlag: ", int(maxSmaaFlag));
 
             break;
         }
@@ -222,6 +224,22 @@ VkFormat MVulkanDevice::findSupportedFormat(const std::vector<VkFormat>& candida
     throw std::runtime_error("failed to find supported format!");
 }
 
+VkSampleCountFlagBits MVulkanDevice::getMaxUsableSampleCount()
+{
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+    return VK_SAMPLE_COUNT_1_BIT;
+}
+
 MVulkanDevice::MVulkanDevice()
 {
 
@@ -231,7 +249,6 @@ void MVulkanDevice::Create(VkInstance instance, VkSurfaceKHR surface)
 {
     pickPhysicalDevice(instance, surface);
     createLogicalDevice(instance, surface);
-
 }
 
 void MVulkanDevice::Clean()

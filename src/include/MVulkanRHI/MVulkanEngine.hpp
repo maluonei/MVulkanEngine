@@ -38,6 +38,8 @@ public:
 
     void Run();
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
+
+    void GenerateMipMap(MVulkanTexture texture);
 private:
     void initVulkan();
     void renderLoop();

@@ -37,6 +37,7 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	imageInfo.format = format;
 	imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	imageInfo.samples = device.GetMaxSmaaFlag();
 
 	ImageViewCreateInfo viewInfo{};
 	viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -52,11 +53,11 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 		viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
-		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
+		//viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.baseMipLevel = 0;
+		viewInfo.levelCount = 1;
+		viewInfo.baseArrayLayer = 0;
+		viewInfo.layerCount = 1;
 		viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		break;
 	case DEPTH_STENCIL_ATTACHMENT:
