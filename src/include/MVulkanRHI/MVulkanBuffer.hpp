@@ -93,6 +93,7 @@ struct ImageCreateInfo {
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
 };
 
 struct ImageViewCreateInfo {
@@ -137,6 +138,9 @@ public:
 	template<typename T>
 	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, MImage<T>* imageData)
 	{
+		this->imageInfo = imageInfo;
+		this->viewInfo = viewInfo;
+
 		image.CreateImage(device, imageInfo);
 		image.CreateImageView(device, viewInfo);
 
@@ -149,18 +153,36 @@ public:
 		stagingBuffer.LoadData(device.GetDevice(), imageData->GetData());
 		stagingBuffer.UnMap(device.GetDevice());
 
-		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image.GetMipLevel());
+		MVulkanImageMemoryBarrier barrier{};
+		barrier.image = image.GetImage();
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.levelCount = image.GetMipLevel();
+
+		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height));
-		commandList->TransitionImageLayout(image.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image.GetMipLevel());
+		
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 		//stagingBuffer.Clean(device.GetDevice());
 	}
 
-	inline VkImage GetImage() { return image.GetImage(); }
-	inline VkImageView GetImageView() { return image.GetImageView(); }
-	inline VkDeviceMemory GetImageMemory() { return image.GetImageMemory(); }
+	inline VkImage GetImage() const { return image.GetImage(); }
+	inline VkImageView GetImageView() const { return image.GetImageView(); }
+	inline VkDeviceMemory GetImageMemory() const { return image.GetImageMemory(); }
 
+	inline VkFormat GetFormat() const { return imageInfo.format; }
+	inline ImageCreateInfo GetImageInfo() const { return imageInfo; }
 private:
+	ImageCreateInfo imageInfo;
+	ImageViewCreateInfo viewInfo;
+
 	uint32_t mipLevels;
 	MVulkanImage image;
 	MVulkanBuffer stagingBuffer;

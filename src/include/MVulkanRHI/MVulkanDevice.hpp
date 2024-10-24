@@ -51,10 +51,13 @@ public:
 
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     VkFormat FindDepthFormat();
+
+    inline const VkSampleCountFlagBits GetMaxSmaaFlag() const { return maxSmaaFlag; }
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;
     QueueFamilyIndices indices;
+    VkSampleCountFlagBits maxSmaaFlag;
 
     VkQueue graphicsQueue;
     VkQueue computeQueue;
@@ -71,6 +74,7 @@ private:
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkSampleCountFlagBits getMaxUsableSampleCount();
 };
 
 

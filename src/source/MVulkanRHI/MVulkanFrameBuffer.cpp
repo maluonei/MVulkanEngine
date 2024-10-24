@@ -10,7 +10,7 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
 {
     colorBuffers.resize(creatInfo.numAttachments);
     std::vector<VkImageView> attachments;
-    attachments.resize(creatInfo.numAttachments + 1);
+    attachments.resize(creatInfo.numAttachments + 2);
 
     for (auto i = 0; i < creatInfo.numAttachments; i++) {
         colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
@@ -18,6 +18,8 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     }
     depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, device.FindDepthFormat());
     attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
+
+    attachments[creatInfo.numAttachments+1] = creatInfo.swapChainImageView;
 
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

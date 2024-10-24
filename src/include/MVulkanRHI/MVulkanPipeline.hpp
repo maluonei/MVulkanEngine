@@ -6,6 +6,7 @@
 #include "Utils/VulkanUtil.hpp"
 #include <vector>
 #include "MVulkanDescriptor.hpp"
+#include "MVulkanDevice.hpp"
 
 class MVulkanPipeline {
 public:
@@ -24,7 +25,7 @@ protected:
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
-	void Create(VkDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+	void Create(MVulkanDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
 		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout);
 
 private:

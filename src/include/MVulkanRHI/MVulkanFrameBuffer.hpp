@@ -16,6 +16,7 @@ struct FrameBufferCreateInfo {
 	VkExtent2D extent;
 	uint16_t numAttachments;
 	VkFormat* imageAttachmentFormats = nullptr;
+	VkImageView swapChainImageView;
 };
 
 class MVulkanFrameBuffer {

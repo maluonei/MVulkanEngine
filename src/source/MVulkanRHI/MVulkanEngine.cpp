@@ -104,18 +104,33 @@ void MVulkanEngine::drawFrame()
     
     recordCommandBuffer(imageIndex);
 
-    transferList.Reset();
-    transferList.Begin();
+    //transferList.Reset();
+    //transferList.Begin();
+
+    /*
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = swapChain.GetImage(imageIndex);
+    barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     //spdlog::info("a");
     //transferList.TransitionImageLayout(frameBuffers[imageIndex].GetImage(0), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     //spdlog::info("b");
     //transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     //spdlog::info("c");
     transferList.CopyImage(frameBuffers[imageIndex].GetImage(0), swapChain.GetImage(imageIndex), swapChain.GetSwapChainExtent().width, swapChain.GetSwapChainExtent().height);
     //spdlog::info("d");
+    // 
+    //barrier.image = 
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = 0;
     //transferList.TransitionImageLayout(frameBuffers[imageIndex].GetImage(0), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    transferList.TransitionImageLayout(swapChain.GetImage(imageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
     //spdlog::info("e");
     transferList.End();
  
@@ -138,10 +153,14 @@ void MVulkanEngine::drawFrame()
     transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     transferQueue.WaitForQueueComplete();
 
-    //VkSubmitInfo submitInfo{};
-    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            */
 
-    VkSemaphore waitSemaphores1[] = { transferFinishedSemaphores[currentFrame] };
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores1[] = { imageAvailableSemaphores[currentFrame] };
     VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores1;
@@ -189,6 +208,107 @@ void MVulkanEngine::SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight)
 {
     windowWidth = _windowWidth;
     windowHeight = _windowHeight;
+}
+
+void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
+{
+    VkFormatProperties formatProperties;
+    vkGetPhysicalDeviceFormatProperties(device.GetPhysicalDevice(), texture.GetImageInfo().format, &formatProperties);
+
+    if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+        throw std::runtime_error("texture image format does not support linear blitting!");
+    }
+
+    //VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+    transferList.Reset();
+    transferList.Begin();
+
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = texture.GetImage();
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    
+    int32_t mipWidth = texture.GetImageInfo().width;
+    int32_t mipHeight = texture.GetImageInfo().height;
+
+    for (uint32_t i = 1; i < texture.GetImageInfo().mipLevels; i++) {
+        barrier.baseMipLevel = i - 1;
+
+        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        //vkCmdPipelineBarrier(commandBuffer,
+        //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+        //    0, nullptr,
+        //    0, nullptr,
+        //    1, &barrier);
+
+        std::vector<VkImageBlit> blits(1);
+        blits[0] = VkImageBlit();
+        blits[0].srcOffsets[0] = { 0, 0, 0 };
+        blits[0].srcOffsets[1] = { mipWidth, mipHeight, 1 };
+        blits[0].srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blits[0].srcSubresource.mipLevel = i - 1;
+        blits[0].srcSubresource.baseArrayLayer = 0;
+        blits[0].srcSubresource.layerCount = 1;
+        blits[0].dstOffsets[0] = { 0, 0, 0 };
+        blits[0].dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+        blits[0].dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blits[0].dstSubresource.mipLevel = i;
+        blits[0].dstSubresource.baseArrayLayer = 0;
+        blits[0].dstSubresource.layerCount = 1;
+    
+        transferList.BlitImage(
+            texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            blits,
+            VK_FILTER_LINEAR);
+        //vkCmdBlitImage(commandBuffer,
+        //    image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        //    image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        //    1, &blit,
+        //    VK_FILTER_LINEAR);
+    
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    
+        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        //vkCmdPipelineBarrier(commandBuffer,
+        //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+        //    0, nullptr,
+        //    0, nullptr,
+        //    1, &barrier);
+    
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+    }
+    //
+    barrier.baseMipLevel = texture.GetImageInfo().mipLevels - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    
+    transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    //vkCmdPipelineBarrier(commandBuffer,
+    //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+    //    0, nullptr,
+    //    0, nullptr,
+    //    1, &barrier);
+    
+
+    transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
+    //endSingleTimeCommands(commandBuffer);
 }
 
 void MVulkanEngine::initVulkan()
@@ -266,9 +386,16 @@ void MVulkanEngine::transitionSwapchainImageFormat()
     transferList.Reset();
     transferList.Begin();
 
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
     std::vector<VkImage> images = swapChain.GetSwapChainImages();
     for (auto i = 0; i < images.size(); i++) {
-        transferList.TransitionImageLayout(images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        barrier.image = images[i];
+        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
 
     transferList.End();
@@ -284,7 +411,7 @@ void MVulkanEngine::transitionSwapchainImageFormat()
 
 void MVulkanEngine::createRenderPass()
 {
-    renderPass.Create(device.GetDevice(), swapChain.GetSwapChainImageFormat(), device.FindDepthFormat());
+    renderPass.Create(device, swapChain.GetSwapChainImageFormat(), device.FindDepthFormat(),swapChain.GetSwapChainImageFormat());
 }
 
 //void MVulkanEngine::resolveDescriptorSet()
@@ -383,7 +510,7 @@ void MVulkanEngine::createPipeline()
 
     write.Update(device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
 
-    pipeline.Create(device.GetDevice(), vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
+    pipeline.Create(device, vert.GetShaderModule(), frag.GetShaderModule(), renderPass.Get(), info, layouts.Get());
 
     vert.Clean(device.GetDevice());
     frag.Clean(device.GetDevice());
@@ -405,6 +532,12 @@ void MVulkanEngine::createFrameBuffers()
     transferList.Reset();
     transferList.Begin();
 
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
     frameBuffers.resize(imageViews.size());
     for (auto i = 0; i < imageViews.size(); i++) {
         std::vector<VkFormat> formats(1);
@@ -416,10 +549,12 @@ void MVulkanEngine::createFrameBuffers()
         info.extent = swapChain.GetSwapChainExtent();
         info.imageAttachmentFormats = formats.data();
         info.numAttachments = static_cast<uint32_t>(formats.size());
+        info.swapChainImageView = imageViews[i];
 
         frameBuffers[i].Create(device, info);
 
-        transferList.TransitionImageLayout(frameBuffers[i].GetImage(0), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        barrier.image = frameBuffers[i].GetImage(0);
+        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
 
     transferList.End();
