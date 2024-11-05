@@ -70,76 +70,6 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
     barrier.subresourceRange.baseArrayLayer = _barrier.baseArrayLayer;
     barrier.subresourceRange.layerCount = _barrier.layerCount;
 
-    //VkPipelineStageFlags sourceStage;
-    //VkPipelineStageFlags destinationStage;
-    //
-    //if (barrier.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && barrier.newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && dstLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = 0;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_UNDEFINED && dstLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_UNDEFINED && dstLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    //}
-    //else if (srcLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && dstLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    //}
-    //else {
-    //    throw std::invalid_argument("unsupported layout transition!");
-    //}
-
     vkCmdPipelineBarrier(
         commandBuffer,
         sourceStage, destinationStage,
@@ -188,14 +118,14 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
     copyRegion.dstSubresource.layerCount = 1;
     copyRegion.dstOffset = { 0, 0, 0 };
 
-    copyRegion.extent.width = width;  // ¸´ÖÆµÄ¿í¶È
-    copyRegion.extent.height = height;  // ¸´ÖÆµÄ¸ß¶È
+    copyRegion.extent.width = width;  // ï¿½ï¿½ï¿½ÆµÄ¿ï¿½ï¿½ï¿½
+    copyRegion.extent.height = height;  // ï¿½ï¿½ï¿½ÆµÄ¸ß¶ï¿½
     copyRegion.extent.depth = 1;
 
     vkCmdCopyImage(
         commandBuffer,
-        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  // Ô´imageºÍÆä²¼¾Ö
-        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // Ä¿±êimageºÍÆä²¼¾Ö
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  // Ô´imageï¿½ï¿½ï¿½ä²¼ï¿½ï¿½
+        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // Ä¿ï¿½ï¿½imageï¿½ï¿½ï¿½ä²¼ï¿½ï¿½
         1,
         &copyRegion
     );
@@ -285,6 +215,11 @@ void MGraphicsCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, ui
 void MGraphicsCommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 {
     vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
+void MGraphicsCommandList::DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+{
+    vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
 }
 
 void MComputeCommandList::BindPipeline(VkPipeline pipeline) {

@@ -84,6 +84,7 @@ enum BufferType {
     SRV,
     SHADER_INPUT,
     STAGING,
+    INDIRECT,
     TEST
 };
 

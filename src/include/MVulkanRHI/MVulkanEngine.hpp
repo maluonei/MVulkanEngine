@@ -51,11 +51,15 @@ private:
     void createSwapChain();
     void RecreateSwapChain();
     void transitionSwapchainImageFormat();
+    void createGbufferRenderPass();
     void createRenderPass();
     //void resolveDescriptorSet();
     void createDescriptorSetAllocator();
+    void createGbufferPipeline();
+    void createSquadPipeline();
     void createPipeline();
     //void createDepthBuffer();
+    void createGbufferFrameBuffers();
     void createFrameBuffers();
     void createCommandQueue();
     void createCommandAllocator();
@@ -68,7 +72,8 @@ private:
     void loadModel();
     
     void createSyncObjects();
-    void recordCommandBuffer(uint32_t imageIndex);
+    void recordGbufferCommandBuffer(uint32_t imageIndex);
+    void recordFinalCommandBuffer(uint32_t imageIndex);
 
     std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 
@@ -81,14 +86,24 @@ private:
     MVulkanInstance instance;
     MVulkanDevice device;
     MVulkanSwapchain swapChain;
-    MVulkanGraphicsPipeline pipeline;
-    MVulkanrRenderPass renderPass;
-    //MVulkanDepthBuffer depthBuffer;
-    std::vector<MVulkanFrameBuffer> frameBuffers;
+
+    //MVulkanGraphicsPipeline pipeline;
+    //MVulkanRenderPass renderPass;
+    //std::vector<MVulkanFrameBuffer> frameBuffers;
+    MVulkanGraphicsPipeline gbufferPipeline;
+    MVulkanGraphicsPipeline finalPipeline;
+    MVulkanRenderPass gbufferRenderPass;
+    MVulkanRenderPass finalRenderPass;
+    std::vector<MVulkanFrameBuffer> gbufferFrameBuffers;
+    std::vector<MVulkanFrameBuffer> finalFrameBuffers;
 
     MVulkanDescriptorSetAllocator allocator;
     MVulkanDescriptorSetLayouts layouts;
+    MVulkanDescriptorSetLayouts gbufferDescriptorLayouts;
+    MVulkanDescriptorSetLayouts finalDescriptorLayouts;
     MVulkanDescriptorSet descriptorSet;
+    MVulkanDescriptorSet gbufferDescriptorSet;
+    MVulkanDescriptorSet finalDescriptorSet;
     
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
@@ -103,6 +118,9 @@ private:
 
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
+    VertexBuffer sqadVertexBuffer;
+    IndexBuffer sqadIndexBuffer;
+    std::vector<MCBV> gbufferCbvs0;
     std::vector<MCBV> cbvs0;
     std::vector<MCBV> cbvs1;
     MVulkanSampler sampler;
@@ -111,12 +129,17 @@ private:
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkSemaphore> gbufferRenderFinishedSemaphores;
+    std::vector<VkSemaphore> finalRenderFinishedSemaphores;
+    std::vector<VkSemaphore> gbufferTransferFinishedSemaphores;
     std::vector<VkSemaphore> transferFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
     //TestShader testShader;
     PhongShader phongShader;
+    GbufferShader gbufferShader;
+    SquadPhongShader squadPhongShader;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Model> model;
     //bool framebufferResized = false;

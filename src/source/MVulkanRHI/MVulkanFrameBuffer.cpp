@@ -10,17 +10,29 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
 {
     colorBuffers.resize(creatInfo.numAttachments);
     std::vector<VkImageView> attachments;
-    attachments.resize(creatInfo.numAttachments + 2);
+    attachments.resize(creatInfo.numAttachments + 1);
 
-    for (auto i = 0; i < creatInfo.numAttachments; i++) {
-        colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
-        attachments[i] = colorBuffers[i].GetImageView();
+    if (creatInfo.finalFrameBuffer && !creatInfo.useAttachmentResolve) {
+        for (auto i = 0; i < creatInfo.numAttachments; i++) {
+            attachments[i] = creatInfo.colorAttachmentResolvedViews[i];
+        }
     }
+    else {
+        for (auto i = 0; i < creatInfo.numAttachments; i++) {
+            colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
+            attachments[i] = colorBuffers[i].GetImageView();
+        }
+    }
+
     depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, device.FindDepthFormat());
     attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
 
-    attachments[creatInfo.numAttachments+1] = creatInfo.swapChainImageView;
-
+    if(creatInfo.useAttachmentResolve)
+    {
+        for(auto i=0;i<creatInfo.numAttachments;i++)
+            attachments.push_back(creatInfo.colorAttachmentResolvedViews[i]);
+    }
+        
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = creatInfo.renderPass;

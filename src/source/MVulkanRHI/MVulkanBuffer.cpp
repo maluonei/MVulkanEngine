@@ -227,3 +227,22 @@ MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING)
 void MVulkanTexture::Clean(VkDevice device)
 {
 }
+
+void IndirectBuffer::Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+{
+    drawCommand.indexCount = indexCount;
+    drawCommand.instanceCount = instanceCount;
+    drawCommand.firstIndex = firstIndex;
+    drawCommand.vertexOffset = vertexOffset;
+    drawCommand.firstInstance = firstInstance;
+
+    BufferCreateInfo info;
+    info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    info.size = sizeof(drawCommand);
+
+    indirectBuffer.Create(device, info);
+
+    indirectBuffer.Map(device.GetDevice());
+    indirectBuffer.LoadData(device.GetDevice(), &drawCommand);
+    indirectBuffer.UnMap(device.GetDevice());
+}

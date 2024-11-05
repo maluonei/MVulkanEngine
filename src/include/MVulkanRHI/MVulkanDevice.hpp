@@ -52,7 +52,10 @@ public:
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     VkFormat FindDepthFormat();
 
-    inline const VkSampleCountFlagBits GetMaxSmaaFlag() const { return maxSmaaFlag; }
+    inline const VkSampleCountFlagBits GetMaxSmaaFlag() const {
+        //return maxSmaaFlag; 
+        return VK_SAMPLE_COUNT_1_BIT;
+    }
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;

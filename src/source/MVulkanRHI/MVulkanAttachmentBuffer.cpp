@@ -37,6 +37,7 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	imageInfo.format = format;
 	imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	//imageInfo.samples = device.GetMaxSmaaFlag();
 	imageInfo.samples = device.GetMaxSmaaFlag();
 
 	ImageViewCreateInfo viewInfo{};
@@ -47,7 +48,7 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 	switch (type) {
 	case COLOR_ATTACHMENT:
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 		viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;

@@ -66,3 +66,8 @@ void* PhongShader::GetData(uint32_t binding)
 		return nullptr;
 	}
 }
+
+void* GbufferShader::GetData(uint32_t binding)
+{
+	return &ubo0;
+}

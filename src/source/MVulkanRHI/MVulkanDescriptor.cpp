@@ -57,15 +57,15 @@ void MVulkanDescriptorSetWrite::Update(
     std::vector<std::vector<VkDescriptorImageInfo>> imageInfos, 
     int _MAX_FRAMES_IN_FLIGHT)
 {
-    auto bufferInfoCount = bufferInfos[0].size();
-    auto imageInfosCount = imageInfos[0].size();
+    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos[0].size();
+    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos[0].size();
 
     std::vector<std::vector<VkDescriptorBufferInfo>> fullBufferInfos(_MAX_FRAMES_IN_FLIGHT);
     std::vector<std::vector<VkDescriptorImageInfo>> fullImageInfos(_MAX_FRAMES_IN_FLIGHT);
 
     for (int i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
-        fullBufferInfos[i] = bufferInfos[i];
-        fullImageInfos[i] = imageInfos[i];
+        if (bufferInfoCount > 0) fullBufferInfos[i] = bufferInfos[i];
+        if (imageInfosCount > 0) fullImageInfos[i] = imageInfos[i];
     }
 
     for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {

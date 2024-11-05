@@ -4,11 +4,20 @@
 
 #include "MVulkanDevice.hpp"
 
-class MVulkanrRenderPass {
-public:
-	MVulkanrRenderPass();
+struct RenderPassFormatsInfo {
+	bool useResolvedRef = false;
+	bool isFinalRenderPass = false;
+	std::vector<VkFormat> imageFormats;
+	VkFormat depthFormat;
+	VkFormat resolvedFormat;
+};
 
-	void Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat);
+class MVulkanRenderPass {
+public:
+	MVulkanRenderPass();
+
+	void Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, bool isFinalRenderPass = false);
+	void Create(MVulkanDevice device, RenderPassFormatsInfo formats);
 	void Clean(VkDevice device);
 
 	inline VkRenderPass Get() const { return renderPass; }
