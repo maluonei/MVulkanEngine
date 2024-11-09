@@ -55,6 +55,37 @@ void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDe
     );
 }
 
+void MVulkanCommandList::TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> _barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    std::vector<VkImageMemoryBarrier> barriers;
+
+    for (auto i = 0; i < _barriers.size(); i++) {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = _barriers[i].oldLayout;
+        barrier.newLayout = _barriers[i].newLayout;
+        barrier.srcQueueFamilyIndex = _barriers[i].srcQueueFamilyIndex;
+        barrier.dstQueueFamilyIndex = _barriers[i].dstQueueFamilyIndex;
+        barrier.image = _barriers[i].image;
+        barrier.subresourceRange.aspectMask = _barriers[i].aspectMask;
+        barrier.subresourceRange.baseMipLevel = _barriers[i].baseMipLevel;
+        barrier.subresourceRange.levelCount = _barriers[i].levelCount;
+        barrier.subresourceRange.baseArrayLayer = _barriers[i].baseArrayLayer;
+        barrier.subresourceRange.layerCount = _barriers[i].layerCount;
+
+        barriers.push_back(barrier);
+    }
+
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        sourceStage, destinationStage,
+        0,
+        0, nullptr,
+        0, nullptr,
+        barriers.size(), barriers.data()
+    );
+}
+
 void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
     VkImageMemoryBarrier barrier{};

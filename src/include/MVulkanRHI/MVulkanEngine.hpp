@@ -20,6 +20,7 @@
 #include "MVulkanShader.hpp"
 #include "Utils/MImage.hpp"
 #include <memory>
+#include "MVulkanSyncObject.hpp"
 //#include "Camera.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -75,6 +76,21 @@ private:
     void recordGbufferCommandBuffer(uint32_t imageIndex);
     void recordFinalCommandBuffer(uint32_t imageIndex);
 
+    void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
+
+    VkSubmitInfo generateSubmitInfo(std::vector<VkCommandBuffer> commandBuffer, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitSemaphoreStage, std::vector<VkSemaphore> signalSemaphores);
+    VkSubmitInfo generateSubmitInfo(VkCommandBuffer* commandBuffer, VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores);
+    void submitCommand();
+    void transitionImageLayout(MVulkanImageMemoryBarrier barrier, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage,
+        VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence = VK_NULL_HANDLE);
+
+    void transitionImageLayouts(
+        std::vector<MVulkanImageMemoryBarrier> barrier, 
+        VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage,
+        VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence = VK_NULL_HANDLE);
+
+    void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
+
     std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 
     uint16_t windowWidth = 800, windowHeight = 600;
@@ -112,7 +128,7 @@ private:
     MVulkanCommandAllocator commandAllocator;
 
     std::vector<MGraphicsCommandList> graphicsLists;
-    MGraphicsCommandList shaderList;
+    MGraphicsCommandList generalGraphicList;
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
@@ -127,19 +143,21 @@ private:
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
 
-    std::vector<VkSemaphore> imageAvailableSemaphores;
-    std::vector<VkSemaphore> renderFinishedSemaphores;
-    std::vector<VkSemaphore> gbufferRenderFinishedSemaphores;
-    std::vector<VkSemaphore> finalRenderFinishedSemaphores;
-    std::vector<VkSemaphore> gbufferTransferFinishedSemaphores;
-    std::vector<VkSemaphore> transferFinishedSemaphores;
-    std::vector<VkFence> inFlightFences;
+    std::vector<MVulkanSemaphore> imageAvailableSemaphores;
+    std::vector<MVulkanSemaphore> renderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> gbufferRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> gbufferTransferFinishedSemaphores;
+    std::vector<MVulkanSemaphore> transferFinishedSemaphores;
+    std::vector<MVulkanFence> inFlightFences;
     uint32_t currentFrame = 0;
 
+    std::shared_ptr<ShaderModule> gbufferShader;
+    std::shared_ptr<ShaderModule> squadPhongShader;
     //TestShader testShader;
     PhongShader phongShader;
-    GbufferShader gbufferShader;
-    SquadPhongShader squadPhongShader;
+    //GbufferShader gbufferShader;
+    //SquadPhongShader squadPhongShader;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Model> model;
     //bool framebufferResized = false;

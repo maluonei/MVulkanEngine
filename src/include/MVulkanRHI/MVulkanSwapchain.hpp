@@ -35,6 +35,7 @@ public:
 	}
 
 	inline VkSwapchainKHR Get()const { return swapChain; }
+	inline VkSwapchainKHR* GetPtr(){ return &swapChain; }
 private:
 	VkSwapchainKHR swapChain;
 

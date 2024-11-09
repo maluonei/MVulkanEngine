@@ -47,6 +47,8 @@ public:
 
 	inline VkFramebuffer Get() const { return frameBuffer; }
 
+	inline const uint32_t ColorAttachmentsCount() const { return static_cast<uint32_t>(colorBuffers.size()); }
+
 private:
 	VkFramebuffer frameBuffer;
 
