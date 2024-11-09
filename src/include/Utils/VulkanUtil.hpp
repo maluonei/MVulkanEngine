@@ -61,6 +61,12 @@ struct PipelineVertexInputStateInfo {
     std::vector<VkVertexInputAttributeDescription> attribDesc;
 };
 
+struct MVulkanDescriptorSetLayoutBinding {
+    VkDescriptorSetLayoutBinding binding;
+    uint32_t size = 0;
+};
+
+
 //struct MDescriptorBufferInfo {
 //    VkDescriptorBufferInfo bufferInfo;
 //    uint32_t binding;

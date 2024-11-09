@@ -36,6 +36,21 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescript
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout));
 }
 
+void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings)
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings2;
+    for (auto i = 0; i < bindings.size(); i++) {
+        bindings2.push_back(bindings[i].binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings2.data();
+
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout));
+}
+
 void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, int _MAX_FRAMES_IN_FLIGHT)
 {
     std::vector<VkDescriptorSetLayout> layouts(_MAX_FRAMES_IN_FLIGHT, layout);

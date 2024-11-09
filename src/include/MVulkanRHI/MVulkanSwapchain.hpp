@@ -36,6 +36,8 @@ public:
 
 	inline VkSwapchainKHR Get()const { return swapChain; }
 	inline VkSwapchainKHR* GetPtr(){ return &swapChain; }
+
+	inline uint32_t GetImageCount() const { return static_cast<uint32_t>(swapChainImages.size()); }
 private:
 	VkSwapchainKHR swapChain;
 

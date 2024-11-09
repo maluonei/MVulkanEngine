@@ -5,6 +5,8 @@
 #include<string>
 #include<unordered_map>
 #include<MVulkanRHI/MVulkanShader.hpp>
+#include<MVulkanRHI/MVulkanBuffer.hpp>
+#include<MVulkanRHI/MVulkanSampler.hpp>
 
 class ShaderModule {
 public:
@@ -18,6 +20,8 @@ public:
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t index, void* data);
 	virtual void* GetData(uint32_t binding);
+
+protected:
 
 private:
 	void load();

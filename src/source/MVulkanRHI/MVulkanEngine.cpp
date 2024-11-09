@@ -455,14 +455,6 @@ void MVulkanEngine::createDescriptorSetAllocator()
 
 void MVulkanEngine::createGbufferPipeline()
 {
-    //std::string vertPath = "gbuffer.vert.glsl";
-    //std::string fragPath = "gbuffer.frag.glsl";
-    //
-    //MVulkanShader vert(vertPath, ShaderStageFlagBits::VERTEX);
-    //MVulkanShader frag(fragPath, ShaderStageFlagBits::FRAGMENT);
-    //
-    //vert.Create(device.GetDevice());
-    //frag.Create(device.GetDevice());
     gbufferShader = std::make_shared<GbufferShader>();
     gbufferShader->Create(device.GetDevice());
 
@@ -473,52 +465,27 @@ void MVulkanEngine::createGbufferPipeline()
 
     ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
     ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
-    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
-    std::vector<VkDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
 
     gbufferDescriptorLayouts.Create(device.GetDevice(), bindings);
     gbufferDescriptorSet.Create(device.GetDevice(), allocator.Get(), gbufferDescriptorLayouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
-    //glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
-    //glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
     GbufferShader::UniformBufferObject ubo{};
     ubo.Model = glm::mat4(1.f);
     ubo.View = camera->GetViewMatrix();
     ubo.Projection = camera->GetProjMatrix();
-    //gbufferShader.SetUBO0(glm::mat4(1.f), camera->GetViewMatrix(), camera->GetProjMatrix());
     gbufferShader->SetUBO(0, &ubo);
-    //gbufferShader.SetUBO1(camera->GetPosition());
     
     gbufferCbvs0.resize(MAX_FRAMES_IN_FLIGHT);
-    //cbvs1.resize(MAX_FRAMES_IN_FLIGHT);
     BufferCreateInfo _infoUBO0{};
     _infoUBO0.size = gbufferShader->GetBufferSizeBinding(0);
-    //BufferCreateInfo _infoUBO1;
-    //_infoUBO1.size = phongShader.GetBufferSizeBinding(1);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         gbufferCbvs0[i].Create(device, _infoUBO0);
     }
 
-    //createTexture();
-    //createSampler();
-
-    //fs::path resourcePath = "F:/MVulkanEngine/resources/textures";
-    //fs::path imagePath = resourcePath / "test.jpg";
-    //image.Load(imagePath);
-    //
-    //ImageCreateInfo imageCreateInfo;
-    //imageCreateInfo.width = image.Width();
-    //imageCreateInfo.height = image.Height();
-    //imageCreateInfo.format = image.Format();
-    //imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    //imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    //imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    //
-    //testTexture.CreateAndLoadData(&transferList, device, imageCreateInfo, &image);
-    //transferList.End();
-    
     MVulkanDescriptorSetWrite write;
 
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(MAX_FRAMES_IN_FLIGHT);
@@ -527,66 +494,38 @@ void MVulkanEngine::createGbufferPipeline()
 
         bufferInfos[i][0].buffer = gbufferCbvs0[i].GetBuffer();
         bufferInfos[i][0].offset = 0;
-        bufferInfos[i][0].range = phongShader.GetBufferSizeBinding(0);
+        bufferInfos[i][0].range = gbufferShader->GetBufferSizeBinding(0);
     }
 
     std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(0);
 
     write.Update(device.GetDevice(), gbufferDescriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
 
-    gbufferPipeline.Create(device, gbufferShader->GetVertexShader().GetShaderModule(), gbufferShader->GetFragmentShader().GetShaderModule(), gbufferRenderPass.Get(), info, gbufferDescriptorLayouts.Get(), 2);
-    //finalPipeline.Create(device, vert.GetShaderModule(), frag.GetShaderModule(), finalRenderPass.Get(), info, layouts.Get());
+    gbufferPipeline.Create(device, 
+        gbufferShader->GetVertexShader().GetShaderModule(), gbufferShader->GetFragmentShader().GetShaderModule(), 
+        gbufferRenderPass.Get(), info, gbufferDescriptorLayouts.Get(), 2);
 
     gbufferShader->Clean(device.GetDevice());
-    //vert.Clean(device.GetDevice());
-    //frag.Clean(device.GetDevice());
 }
 
 void MVulkanEngine::createSquadPipeline()
 {
-    //std::string vertPath = "phong_sqad.vert.glsl";
-    //std::string fragPath = "phong_sqad.frag.glsl";
-    //
-    //MVulkanShader vert(vertPath, ShaderStageFlagBits::VERTEX);
-    //MVulkanShader frag(fragPath, ShaderStageFlagBits::FRAGMENT);
-    //
-    //vert.Create(device.GetDevice());
-    //frag.Create(device.GetDevice());
     squadPhongShader = std::make_shared<SquadPhongShader>();
     squadPhongShader->Create(device.GetDevice());
 
     MVulkanShaderReflector vertReflector(squadPhongShader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(squadPhongShader->GetFragmentShader().GetShader());
     PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
-    //fragReflector.GenerateDescriptorSet();
 
     ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
     ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
-    std::vector<VkDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
-    std::vector<VkDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
 
     finalDescriptorLayouts.Create(device.GetDevice(), bindings);
     finalDescriptorSet.Create(device.GetDevice(), allocator.Get(), finalDescriptorLayouts.Get(), MAX_FRAMES_IN_FLIGHT);
 
-    //glm::vec3 color0 = glm::vec3(1.f, 0.f, 0.f);
-    //glm::vec3 color1 = glm::vec3(0.f, 1.f, 0.f);
-    //phongShader.SetUBO0(glm::mat4(1.f), camera->GetViewMatrix(), camera->GetProjMatrix());
-    //phongShader.SetUBO1(camera->GetPosition());
-
-    //cbvs0.resize(MAX_FRAMES_IN_FLIGHT);
-    //cbvs1.resize(MAX_FRAMES_IN_FLIGHT);
-    //BufferCreateInfo _infoUBO0;
-    //_infoUBO0.size = phongShader.GetBufferSizeBinding(0);
-    //BufferCreateInfo _infoUBO1;
-    //_infoUBO1.size = phongShader.GetBufferSizeBinding(1);
-
-    //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    //    cbvs0[i].Create(device, _infoUBO0);
-    //    cbvs1[i].Create(device, _infoUBO1);
-    //}
-
-    //createTexture();
     createSampler();
     MVulkanDescriptorSetWrite write;
 
@@ -610,12 +549,9 @@ void MVulkanEngine::createSquadPipeline()
 
     write.Update(device.GetDevice(), finalDescriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
 
-    //gbufferPipeline.Create(device, vert.GetShaderModule(), frag.GetShaderModule(), gbufferRenderPass.Get(), info, layouts.Get());
     finalPipeline.Create(device, squadPhongShader->GetVertexShader().GetShaderModule(), squadPhongShader->GetFragmentShader().GetShaderModule(), finalRenderPass.Get(), info, finalDescriptorLayouts.Get(), 1);
 
     squadPhongShader->Clean(device.GetDevice());
-    //vert.Clean(device.GetDevice());
-    //frag.Clean(device.GetDevice());
 }
 
 void MVulkanEngine::createPipeline()
@@ -771,16 +707,9 @@ void MVulkanEngine::createGbufferFrameBuffers()
 void MVulkanEngine::createFrameBuffers()
 {
     std::vector<VkImageView> imageViews = swapChain.GetSwapChainImageViews();
-    //VkImageView depthImageView = depthBuffer.GetImageView();
 
     transferList.Reset();
     transferList.Begin();
-
-    MVulkanImageMemoryBarrier barrier{};
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
     finalFrameBuffers.resize(imageViews.size());
     for (auto i = 0; i < imageViews.size(); i++) {
@@ -798,14 +727,8 @@ void MVulkanEngine::createFrameBuffers()
         info.colorAttachmentResolvedViews = &imageViews[i];
         info.useAttachmentResolve = false;
 
-
         finalFrameBuffers[i].Create(device, info);
-
-        barrier.image = finalFrameBuffers[i].GetImage(0);
-
-        //transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
-    
     transferList.End();
 
     VkSubmitInfo submitInfo{};

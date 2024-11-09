@@ -27,6 +27,7 @@ private:
 class MVulkanDescriptorSetLayouts {
 public:
 	void Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings);
+	void Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings);
 	inline VkDescriptorSetLayout Get()const { return layout; }
 private:
 	VkDescriptorSetLayout layout;

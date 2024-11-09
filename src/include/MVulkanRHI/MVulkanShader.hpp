@@ -7,8 +7,7 @@
 #include "vulkan/vulkan_core.h"
 #include <spirv_glsl.hpp>
 #include <vector>
-#include <singleton.hpp>
-
+#include <Managers/singleton.hpp>
 
 class MVulkanShader {
 public:
@@ -44,9 +43,9 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> storageBuffers;
 	std::vector<ShaderResourceInfo> samplers;
 
-	std::vector<VkDescriptorSetLayoutBinding> GetUniformBufferBindings();
-	std::vector<VkDescriptorSetLayoutBinding> GetSamplers();
-	std::vector<VkDescriptorSetLayoutBinding> GetBindings();
+	std::vector<MVulkanDescriptorSetLayoutBinding> GetUniformBufferBindings();
+	std::vector<MVulkanDescriptorSetLayoutBinding> GetSamplers();
+	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
 
 };
 

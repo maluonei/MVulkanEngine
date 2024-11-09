@@ -7,10 +7,6 @@
 #include <MVulkanRHI/MVulkanAttachmentBuffer.hpp>
 
 struct FrameBufferCreateInfo {
-	//VkImageView colorImageView;
-	//VkImageView depthImageView;
-	//uint16_t numAttachments;
-	
 	bool useAttachmentResolve = false;
 	bool finalFrameBuffer = false;
 	VkRenderPass renderPass;
@@ -19,7 +15,6 @@ struct FrameBufferCreateInfo {
 	VkFormat* imageAttachmentFormats = nullptr;
 
 	VkImageView* colorAttachmentResolvedViews;
-	//VkImageView swapChainImageView;
 };
 
 class MVulkanFrameBuffer {

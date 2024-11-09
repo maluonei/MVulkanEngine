@@ -26,7 +26,7 @@ class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
 	void Create(MVulkanDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
-		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint8_t numAttachments);
+		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments);
 
 private:
 
