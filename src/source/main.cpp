@@ -8,8 +8,7 @@ const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
 
 int main() {
-    MVulkanEngine engine;
-    engine.SetWindowRes(WIDTH, HEIGHT);
-    engine.Init();
-    engine.Run();
+    Singleton<MVulkanEngine>::instance().SetWindowRes(WIDTH, HEIGHT);
+    Singleton<MVulkanEngine>::instance().Init();
+    Singleton<MVulkanEngine>::instance().Run();
 }

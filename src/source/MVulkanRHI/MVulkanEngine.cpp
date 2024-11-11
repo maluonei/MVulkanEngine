@@ -8,6 +8,7 @@
 #include "Scene/Model.hpp"
 
 #include "MVulkanRHI/MVulkanShader.hpp"
+#include "RenderPass.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
@@ -203,6 +204,15 @@ void MVulkanEngine::drawFrame()
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void MVulkanEngine::createGlobalSamplers()
+{
+    for (auto i = 0; i < 1; i++) {
+        MVulkanSampler sampler;
+        sampler.Create(device);
+        globalSamplers.push_back(sampler);
+    }
+}
+
 void MVulkanEngine::SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight)
 {
     windowWidth = _windowWidth;
@@ -310,6 +320,11 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     //endSingleTimeCommands(commandBuffer);
 }
 
+MVulkanSampler MVulkanEngine::GetGlobalSampler() const
+{
+    return globalSamplers[0];
+}
+
 void MVulkanEngine::initVulkan()
 {
     createInstance();
@@ -326,7 +341,7 @@ void MVulkanEngine::initVulkan()
     createDescriptorSetAllocator();
     //createDepthBuffer();
     createGbufferRenderPass();
-    createRenderPass();
+    createFinalRenderPass();
     createGbufferFrameBuffers();
     createFrameBuffers();
     createBufferAndLoadData();
@@ -402,10 +417,6 @@ void MVulkanEngine::transitionSwapchainImageFormat()
         barriers.push_back(barrier);
     }
     transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    //for (auto i = 0; i < images.size(); i++) {
-    //    barrier.image = images[i];
-    //    transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    //}
 
     transferList.End();
 
@@ -430,7 +441,7 @@ void MVulkanEngine::createGbufferRenderPass()
     gbufferRenderPass.Create(device, gbufferFormats);
 }
 
-void MVulkanEngine::createRenderPass()
+void MVulkanEngine::createFinalRenderPass()
 {
     RenderPassFormatsInfo finalFormats;
     finalFormats.useResolvedRef = false;
@@ -441,6 +452,11 @@ void MVulkanEngine::createRenderPass()
     finalFormats.resolvedFormat = swapChain.GetSwapChainImageFormat();
     finalFormats.isFinalRenderPass = true;
     finalRenderPass.Create(device, finalFormats);
+}
+
+void MVulkanEngine::createRenderPass()
+{
+    
 }
 
 //void MVulkanEngine::resolveDescriptorSet()
@@ -880,23 +896,7 @@ void MVulkanEngine::createSyncObjects()
     transferFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
-    //VkSemaphoreCreateInfo semaphoreInfo{};
-    //semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    //
-    //VkFenceCreateInfo fenceInfo{};
-    //fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    //fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        //if (vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &gbufferRenderFinishedSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &finalRenderFinishedSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &gbufferTransferFinishedSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateSemaphore(device.GetDevice(), &semaphoreInfo, nullptr, &transferFinishedSemaphores[i]) != VK_SUCCESS ||
-        //    vkCreateFence(device.GetDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-        //    throw std::runtime_error("failed to create synchronization objects for a frame!");
-        //}
         imageAvailableSemaphores[i].Create(device.GetDevice());
         renderFinishedSemaphores[i].Create(device.GetDevice());
         gbufferRenderFinishedSemaphores[i].Create(device.GetDevice());
@@ -954,13 +954,6 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     auto descriptorSets = finalDescriptorSet.Get();
     graphicsLists[currentFrame].BindDescriptorSet(finalPipeline.GetLayout(), 0, 1, &descriptorSets[currentFrame]);
 
-
-    //gbufferShader.SetUBO0(glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f)), camera->GetViewMatrix(), camera->GetProjMatrix());
-    //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    //    cbvs0[i].UpdateData(device, gbufferShader.GetData(0));
-    //    cbvs1[i].UpdateData(device, gbufferShader.GetData(1));
-    //}
-    //graphicsLists[currentFrame].DrawIndexed(sizeof(indices) / sizeof(uint32_t), 1, 0, 0, 0);
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
     graphicsLists[currentFrame].EndRenderPass();
     graphicsLists[currentFrame].End();

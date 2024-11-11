@@ -2,6 +2,7 @@
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "Shaders/ShaderModule.hpp"
 #include "Managers/GlobalConfig.hpp"
+#include "MVulkanRHI/MVulkanEngine.hpp"
 
 RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
     m_device(device), m_info(info)
@@ -9,12 +10,38 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 
 }
 
-
-void RenderPass::Create()
+void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
+    MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList,
+    MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews)
 {
+    SetShader(shader);
+    CreateRenderPass();
+    CreateFrameBuffers(swapChain, commandQueue, commandList);
+    CreatePipeline(allocator, imageViews);
 }
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator)
+void RenderPass::Clean()
+{
+    m_pipeline.Clean(m_device.GetDevice());
+
+    for (auto frameBuffer : m_frameBuffers) {
+        frameBuffer.Clean(m_device.GetDevice());
+    }
+
+    m_renderPass.Clean(m_device.GetDevice());
+}
+
+void RenderPass::RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList, VkExtent2D extent) {
+    m_info.extent = extent;
+
+    for (auto frameBuffer : m_frameBuffers) {
+        frameBuffer.Clean(m_device.GetDevice());
+    }
+
+    CreateFrameBuffers(swapChain, commandQueue, commandList);
+}
+
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews )
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -45,32 +72,54 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator)
         }
     }
 
-    //GbufferShader::UniformBufferObject ubo{};
-    //ubo.Model = glm::mat4(1.f);
-    //ubo.View = camera->GetViewMatrix();
-    //ubo.Projection = camera->GetProjMatrix();
-    //gbufferShader->SetUBO(0, &ubo);
-    //
-    //gbufferCbvs0.resize(MAX_FRAMES_IN_FLIGHT);
-    //BufferCreateInfo _infoUBO0{};
-    //_infoUBO0.size = gbufferShader->GetBufferSizeBinding(0);
-    //
-    //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    //    gbufferCbvs0[i].Create(device, _infoUBO0);
-    //}
+    uint32_t cbvCount = 0;
+    uint32_t samplerCount = 0;
+    for (auto i = 0; i < bindings.size(); i++) {
+        switch (bindings[i].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            for (auto j = 0; j < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); j++) {
+                MCBV buffer;
+                BufferCreateInfo info;
+                info.size = bindings[i].size;
+                buffer.Create(m_device, info);
+                m_uniformBuffers[cbvCount].push_back(buffer);
+            }
+            cbvCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            samplerCount++;
+            break;
+        }
+        }
+    }
 
     MVulkanDescriptorSetWrite write;
 
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
-    //for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    //    bufferInfos[i].resize(1);
-    //
-    //    bufferInfos[i][0].buffer = gbufferCbvs0[i].GetBuffer();
-    //    bufferInfos[i][0].offset = 0;
-    //    bufferInfos[i][0].range = phongShader.GetBufferSizeBinding(0);
-    //}
+    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
-    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(0);
+    for (auto i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
+        bufferInfos[i].resize(cbvCount);
+    
+        for (auto binding = 0; binding < cbvCount; binding++) {
+            bufferInfos[i][binding].buffer = m_uniformBuffers[i][binding].GetBuffer();
+            bufferInfos[i][binding].offset = 0;
+            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+        }
+    }
+
+    for (auto i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
+        imageInfos[i].resize(samplerCount);
+
+        for (auto binding = 0; binding < samplerCount; binding++) {
+            imageInfos[i][binding].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+            imageInfos[i][binding].imageView = imageViews[binding];
+            imageInfos[i][binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+    }
 
     write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
@@ -130,4 +179,8 @@ void RenderPass::SetShader(std::shared_ptr<ShaderModule> shader)
 {
     m_shader = shader;
     m_shader->Create(m_device.GetDevice());
+}
+
+void RenderPass::SetUBO(uint8_t index, void* data) {
+    m_shader->SetUBO(index, data);
 }

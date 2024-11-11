@@ -21,6 +21,7 @@
 #include "Utils/MImage.hpp"
 #include <memory>
 #include "MVulkanSyncObject.hpp"
+#include "Managers/Singleton.hpp"
 //#include "Camera.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -28,8 +29,9 @@
 class MWindow;
 class Camera;
 class Model;
+class RenderPass;
 
-class MVulkanEngine {
+class MVulkanEngine: public Singleton<MVulkanEngine> {
 public:
     MVulkanEngine();
     ~MVulkanEngine();
@@ -41,10 +43,14 @@ public:
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
     void GenerateMipMap(MVulkanTexture texture);
+
+    MVulkanSampler GetGlobalSampler()const;
 private:
     void initVulkan();
     void renderLoop();
     void drawFrame();
+
+    void createGlobalSamplers();
 
     void createInstance();
     void createDevice();
@@ -53,6 +59,7 @@ private:
     void RecreateSwapChain();
     void transitionSwapchainImageFormat();
     void createGbufferRenderPass();
+    void createFinalRenderPass();
     void createRenderPass();
     //void resolveDescriptorSet();
     void createDescriptorSetAllocator();
@@ -92,6 +99,11 @@ private:
     void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
 
     std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
+
+
+private:
+    std::shared_ptr<RenderPass> gbufferPass;
+    std::shared_ptr<RenderPass> lightingPass;
 
     uint16_t windowWidth = 800, windowHeight = 600;
 
@@ -160,6 +172,8 @@ private:
     //SquadPhongShader squadPhongShader;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Model> model;
+
+    std::vector<MVulkanSampler> globalSamplers;
     //bool framebufferResized = false;
 
     //VkInstance instance;
