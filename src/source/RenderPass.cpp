@@ -12,7 +12,7 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
     MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList,
-    MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews)
+    MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews)
 {
     SetShader(shader);
     CreateRenderPass();
@@ -41,7 +41,7 @@ void RenderPass::RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommand
     CreateFrameBuffers(swapChain, commandQueue, commandList);
 }
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews )
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews )
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -116,7 +116,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
 
         for (auto binding = 0; binding < samplerCount; binding++) {
             imageInfos[i][binding].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-            imageInfos[i][binding].imageView = imageViews[binding];
+            imageInfos[i][binding].imageView = imageViews[i][binding];
             imageInfos[i][binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
     }

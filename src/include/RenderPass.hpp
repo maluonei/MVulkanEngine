@@ -27,7 +27,7 @@ public:
 	RenderPass(MVulkanDevice device, RenderPassCreateInfo info);
 	void Create(std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList,
-		MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews);
+		MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
 
 	void Clean();
 
@@ -35,12 +35,12 @@ public:
 
 	void SetUBO(uint8_t index, void* data);
 
-	VkRenderPass GetRenderPass() const { return m_renderPass.Get(); }
-	VkPipeline GetPipeline() const { return m_pipeline.Get(); }
-	VkFramebuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index].Get(); }
+	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }
+	MVulkanPipeline GetPipeline() const { return m_pipeline; }
+	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
 
 private:
-	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<VkImageView> imageViews);
+	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList);
 	void SetShader(std::shared_ptr<ShaderModule> shader);

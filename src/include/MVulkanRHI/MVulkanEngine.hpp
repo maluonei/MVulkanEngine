@@ -58,6 +58,8 @@ private:
     void createSwapChain();
     void RecreateSwapChain();
     void transitionSwapchainImageFormat();
+    void transitionFramebufferImageLayout();
+
     void createGbufferRenderPass();
     void createFinalRenderPass();
     void createRenderPass();
@@ -68,7 +70,7 @@ private:
     void createPipeline();
     //void createDepthBuffer();
     void createGbufferFrameBuffers();
-    void createFrameBuffers();
+    void createFinalFrameBuffers();
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();

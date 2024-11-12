@@ -9,6 +9,7 @@
 
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "RenderPass.hpp"
+#include "Managers/GlobalConfig.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
@@ -272,24 +273,13 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
             texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             blits,
             VK_FILTER_LINEAR);
-        //vkCmdBlitImage(commandBuffer,
-        //    image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        //    image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        //    1, &blit,
-        //    VK_FILTER_LINEAR);
-    
+
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
         transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        //vkCmdPipelineBarrier(commandBuffer,
-        //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-        //    0, nullptr,
-        //    0, nullptr,
-        //    1, &barrier);
-    
         if (mipWidth > 1) mipWidth /= 2;
         if (mipHeight > 1) mipHeight /= 2;
     }
@@ -301,12 +291,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
     transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    //vkCmdPipelineBarrier(commandBuffer,
-    //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-    //    0, nullptr,
-    //    0, nullptr,
-    //    1, &barrier);
-    
+   
 
     transferList.End();
 
@@ -343,7 +328,7 @@ void MVulkanEngine::initVulkan()
     createGbufferRenderPass();
     createFinalRenderPass();
     createGbufferFrameBuffers();
-    createFrameBuffers();
+    createFinalFrameBuffers();
     createBufferAndLoadData();
     createGbufferPipeline();
     //createPipeline();
@@ -395,7 +380,31 @@ void MVulkanEngine::RecreateSwapChain()
             frameBuffer.Clean(device.GetDevice());
         }
 
-        createFrameBuffers();
+        createGbufferFrameBuffers();
+        createFinalFrameBuffers();
+
+        transitionFramebufferImageLayout();
+
+        MVulkanDescriptorSetWrite write;
+        std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            imageInfos[i].resize(2);
+
+            imageInfos[i][0].sampler = sampler.GetSampler();
+            imageInfos[i][0].imageView = gbufferFrameBuffers[i].GetImageView(0);
+            imageInfos[i][0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            imageInfos[i][1].sampler = sampler.GetSampler();
+            imageInfos[i][1].imageView = gbufferFrameBuffers[i].GetImageView(1);
+            imageInfos[i][1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+
+        std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            bufferInfos[i].resize(0);
+        }
+
+        write.Update(device.GetDevice(), finalDescriptorSet.Get(), bufferInfos, imageInfos, MAX_FRAMES_IN_FLIGHT);
     }
 }
 
@@ -416,6 +425,41 @@ void MVulkanEngine::transitionSwapchainImageFormat()
         barrier.image = images[i];
         barriers.push_back(barrier);
     }
+
+    transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::transitionFramebufferImageLayout()
+{
+    transferList.Reset();
+    transferList.Begin();
+
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        barrier.image = gbufferFrameBuffers[i].GetImage(0);
+        barriers.push_back(barrier);
+        barrier.image = gbufferFrameBuffers[i].GetImage(1);
+        barriers.push_back(barrier);
+    }
+    //for()
+
     transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     transferList.End();
@@ -456,7 +500,39 @@ void MVulkanEngine::createFinalRenderPass()
 
 void MVulkanEngine::createRenderPass()
 {
-    
+    std::vector<VkFormat> gbufferFormats;
+    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+
+    RenderPassCreateInfo info{};
+    info.extent = swapChain.GetSwapChainExtent();
+    info.useAttachmentResolve = false;
+    info.useSwapchainImages = false;
+    info.imageAttachmentFormats = gbufferFormats;
+    info.colorAttachmentResolvedViews = nullptr;
+
+    gbufferPass = std::make_shared<RenderPass>(device, info);
+
+    std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
+    std::vector<std::vector<VkImageView>> bufferTextureViews(0);
+
+    gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews);
+
+    std::vector<VkFormat> lightingPassFormats;
+    lightingPassFormats.push_back(swapChain.GetSwapChainImageFormat());
+    info.useSwapchainImages = true;
+    info.imageAttachmentFormats = lightingPassFormats;
+
+    lightingPass = std::make_shared<RenderPass>(device, info);
+
+    std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
+    std::vector<std::vector<VkImageView>> gbufferViews(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    for (auto i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
+        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(i).GetImageView(0));
+        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(i).GetImageView(1));
+    }
+
+    lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
 }
 
 //void MVulkanEngine::resolveDescriptorSet()
@@ -683,7 +759,6 @@ void MVulkanEngine::createGbufferFrameBuffers()
     barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
     barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    //barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     gbufferFrameBuffers.resize(imageViews.size());
     for (auto i = 0; i < imageViews.size(); i++) {
@@ -706,7 +781,6 @@ void MVulkanEngine::createGbufferFrameBuffers()
         barrier.image = gbufferFrameBuffers[i].GetImage(0);
 
         transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
     }
 
     transferList.End();
@@ -720,7 +794,7 @@ void MVulkanEngine::createGbufferFrameBuffers()
     transferQueue.WaitForQueueComplete();
 }
 
-void MVulkanEngine::createFrameBuffers()
+void MVulkanEngine::createFinalFrameBuffers()
 {
     std::vector<VkImageView> imageViews = swapChain.GetSwapChainImageViews();
 
