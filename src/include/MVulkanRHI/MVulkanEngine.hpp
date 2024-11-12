@@ -102,7 +102,6 @@ private:
 
     std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 
-
 private:
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> lightingPass;
@@ -117,23 +116,22 @@ private:
     MVulkanDevice device;
     MVulkanSwapchain swapChain;
 
-    //MVulkanGraphicsPipeline pipeline;
-    //MVulkanRenderPass renderPass;
-    //std::vector<MVulkanFrameBuffer> frameBuffers;
-    MVulkanGraphicsPipeline gbufferPipeline;
-    MVulkanGraphicsPipeline finalPipeline;
-    MVulkanRenderPass gbufferRenderPass;
-    MVulkanRenderPass finalRenderPass;
-    std::vector<MVulkanFrameBuffer> gbufferFrameBuffers;
-    std::vector<MVulkanFrameBuffer> finalFrameBuffers;
+    //MVulkanGraphicsPipeline gbufferPipeline;
+    //MVulkanGraphicsPipeline finalPipeline;
+    //MVulkanRenderPass gbufferRenderPass;
+    //MVulkanRenderPass finalRenderPass;
+    //std::vector<MVulkanFrameBuffer> gbufferFrameBuffers;
+    //std::vector<MVulkanFrameBuffer> finalFrameBuffers;
 
     MVulkanDescriptorSetAllocator allocator;
     MVulkanDescriptorSetLayouts layouts;
-    MVulkanDescriptorSetLayouts gbufferDescriptorLayouts;
-    MVulkanDescriptorSetLayouts finalDescriptorLayouts;
+    //MVulkanDescriptorSetLayouts gbufferDescriptorLayouts;
+    //MVulkanDescriptorSetLayouts finalDescriptorLayouts;
     MVulkanDescriptorSet descriptorSet;
-    MVulkanDescriptorSet gbufferDescriptorSet;
-    MVulkanDescriptorSet finalDescriptorSet;
+    //MVulkanDescriptorSet gbufferDescriptorSet;
+    //MVulkanDescriptorSet gbufferDescriptorSet;
+    //MVulkanDescriptorSet finalDescriptorSet;
+    //MVulkanDescriptorSet finalDescriptorSet;
     
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
@@ -150,9 +148,9 @@ private:
     IndexBuffer indexBuffer;
     VertexBuffer sqadVertexBuffer;
     IndexBuffer sqadIndexBuffer;
-    std::vector<MCBV> gbufferCbvs0;
-    std::vector<MCBV> cbvs0;
-    std::vector<MCBV> cbvs1;
+    //std::vector<MCBV> gbufferCbvs0;
+    //std::vector<MCBV> cbvs0;
+    //std::vector<MCBV> cbvs1;
     MVulkanSampler sampler;
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
@@ -166,8 +164,8 @@ private:
     std::vector<MVulkanFence> inFlightFences;
     uint32_t currentFrame = 0;
 
-    std::shared_ptr<ShaderModule> gbufferShader;
-    std::shared_ptr<ShaderModule> squadPhongShader;
+    //std::shared_ptr<ShaderModule> gbufferShader;
+    //std::shared_ptr<ShaderModule> squadPhongShader;
     //TestShader testShader;
     PhongShader phongShader;
     //GbufferShader gbufferShader;

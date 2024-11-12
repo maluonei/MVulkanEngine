@@ -70,20 +70,20 @@ void MVulkanDescriptorSetWrite::Update(
     std::vector<VkDescriptorSet> sets,
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
     std::vector<std::vector<VkDescriptorImageInfo>> imageInfos, 
-    int _MAX_FRAMES_IN_FLIGHT)
+    int frameBufferCount)
 {
     auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos[0].size();
     auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos[0].size();
 
-    std::vector<std::vector<VkDescriptorBufferInfo>> fullBufferInfos(_MAX_FRAMES_IN_FLIGHT);
-    std::vector<std::vector<VkDescriptorImageInfo>> fullImageInfos(_MAX_FRAMES_IN_FLIGHT);
+    std::vector<std::vector<VkDescriptorBufferInfo>> fullBufferInfos(frameBufferCount);
+    std::vector<std::vector<VkDescriptorImageInfo>> fullImageInfos(frameBufferCount);
 
-    for (int i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+    for (int i = 0; i < frameBufferCount; i++) {
         if (bufferInfoCount > 0) fullBufferInfos[i] = bufferInfos[i];
         if (imageInfosCount > 0) fullImageInfos[i] = imageInfos[i];
     }
 
-    for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < frameBufferCount; i++) {
         std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
         for (auto j = 0; j < bufferInfoCount; j++) {
             descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

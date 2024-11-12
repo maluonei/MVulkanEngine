@@ -6,7 +6,7 @@ MVulkanRenderPass::MVulkanRenderPass()
 {
 }
 
-void MVulkanRenderPass::Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, bool isFinalRenderPass)
+void MVulkanRenderPass::Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, VkImageLayout initialLayout, VkImageLayout finalLayout)
 {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = imageFormat;
@@ -15,13 +15,14 @@ void MVulkanRenderPass::Create(MVulkanDevice device, VkFormat imageFormat, VkFor
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (isFinalRenderPass) {
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    }
-    else {
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    }
+    colorAttachment.initialLayout = initialLayout;
+    colorAttachment.finalLayout = finalLayout;
+    //if (isFinalRenderPass) {
+    //    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    //}
+    //else {
+    //    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    //}
 
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = depthFormat;
@@ -99,13 +100,8 @@ void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo forma
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        if (formats.isFinalRenderPass && !formats.useResolvedRef && i==0) {
-            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        }
-        else {
-            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        }
+        colorAttachment.initialLayout = formats.initialLayout;
+        colorAttachment.finalLayout = formats.finalLayout;
 
         colorAttachments[i] = colorAttachment;
     }

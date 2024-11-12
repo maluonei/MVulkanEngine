@@ -15,11 +15,15 @@
 class ShaderModule;
 
 struct RenderPassCreateInfo {
+	uint32_t frambufferCount = 1;
 	bool useAttachmentResolve = false;
 	bool useSwapchainImages = false;
 	VkExtent2D extent;
 	std::vector<VkFormat> imageAttachmentFormats;
 	VkImageView* colorAttachmentResolvedViews = nullptr;
+
+	VkImageLayout initialLayout;
+	VkImageLayout finalLayout;
 };
 
 class RenderPass {
@@ -32,12 +36,19 @@ public:
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList, VkExtent2D extent);
+	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews);
 
 	void SetUBO(uint8_t index, void* data);
+	void LoadCBV();
 
 	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }
 	MVulkanPipeline GetPipeline() const { return m_pipeline; }
 	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
+	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
+	MVulkanDescriptorSet GetDescriptorSet() const { return m_descriptorSet; }
+	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
+
+	void TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGraphicsCommandList commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
 private:
 	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
@@ -60,6 +71,8 @@ private:
 
 	MVulkanDescriptorSetLayouts m_descriptorLayouts;
 	MVulkanDescriptorSet m_descriptorSet;
+
+	uint32_t m_cbvCount = 0, m_textureCount = 0;
 };
 
 

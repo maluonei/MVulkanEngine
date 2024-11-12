@@ -8,12 +8,14 @@
 
 struct FrameBufferCreateInfo {
 	bool useAttachmentResolve = false;
-	bool finalFrameBuffer = false;
+	bool useSwapchainImageViews = false;
+	//bool finalFrameBuffer = false;
 	VkRenderPass renderPass;
 	VkExtent2D extent;
 	uint16_t numAttachments;
 	VkFormat* imageAttachmentFormats = nullptr;
 
+	VkImageView* swapchainImageViews = nullptr;
 	VkImageView* colorAttachmentResolvedViews;
 };
 

@@ -12,9 +12,9 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     std::vector<VkImageView> attachments;
     attachments.resize(creatInfo.numAttachments + 1);
 
-    if (creatInfo.finalFrameBuffer && !creatInfo.useAttachmentResolve) {
+    if (creatInfo.useSwapchainImageViews) {
         for (auto i = 0; i < creatInfo.numAttachments; i++) {
-            attachments[i] = creatInfo.colorAttachmentResolvedViews[i];
+            attachments[i] = creatInfo.swapchainImageViews[i];
         }
     }
     else {
