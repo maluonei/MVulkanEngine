@@ -4,7 +4,8 @@
 
 #include "vulkan/vulkan_core.h"
 #include <vector>
-#include <MVulkanRHI/MVulkanAttachmentBuffer.hpp>
+#include "MVulkanRHI/MVulkanAttachmentBuffer.hpp"
+#include "MVulkanRHI/MVulkanSwapchain.hpp"
 
 struct FrameBufferCreateInfo {
 	bool useAttachmentResolve = false;
@@ -15,7 +16,10 @@ struct FrameBufferCreateInfo {
 	uint16_t numAttachments;
 	VkFormat* imageAttachmentFormats = nullptr;
 
-	VkImageView* swapchainImageViews = nullptr;
+	MVulkanSwapchain swapChain;
+	uint32_t swapChainImageIndex;
+	//VkImageView* swapchainImageViews = nullptr;
+	//VkImage* swapchainImages = nullptr;
 	VkImageView* colorAttachmentResolvedViews;
 };
 
@@ -30,6 +34,11 @@ public:
 		if (i < 0 || i >= colorBuffers.size()) {
 			spdlog::error("invalid index:", i);
 		}
+
+		if (m_info.useSwapchainImageViews) {
+			return m_swapChain.GetImage(i);
+		}
+		
 		return colorBuffers[i].GetImage();
 	}
 
@@ -37,6 +46,10 @@ public:
 		if (i < 0 || i >= colorBuffers.size()) {
 			spdlog::error("invalid index:", i);
 		}
+		if (m_info.useSwapchainImageViews) {
+			return m_swapChain.GetImageView(i);
+		}
+
 		return colorBuffers[i].GetImageView();
 	}
 
@@ -47,11 +60,13 @@ public:
 	inline const uint32_t ColorAttachmentsCount() const { return static_cast<uint32_t>(colorBuffers.size()); }
 
 private:
+	FrameBufferCreateInfo m_info;
+	MVulkanSwapchain m_swapChain;
+
 	VkFramebuffer frameBuffer;
 
 	std::vector<MVulkanAttachmentBuffer> colorBuffers;
 	MVulkanAttachmentBuffer depthBuffer;
 };
-
 
 #endif

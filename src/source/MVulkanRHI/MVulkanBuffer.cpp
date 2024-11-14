@@ -179,21 +179,21 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.samples = info.samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // 设置 image 格式、尺寸等
-    VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &image));
+    VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
 
     mipLevel = info.mipLevels;
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device.GetDevice(), image, &memRequirements);
+    vkGetImageMemoryRequirements(device.GetDevice(), m_image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, info.properties);
 
-    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &imageMemory));
+    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &m_imageMemory));
 
-    vkBindImageMemory(device.GetDevice(), image, imageMemory, 0);
+    vkBindImageMemory(device.GetDevice(), m_image, m_imageMemory, 0);
 }
 
 void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo info)
@@ -201,7 +201,7 @@ void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo inf
     // 创建 ImageView
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
+    viewInfo.image = m_image;
     viewInfo.viewType = info.viewType;
     viewInfo.format = info.format; //gpu中数据访问格式
     viewInfo.subresourceRange.aspectMask = info.flag;
@@ -210,14 +210,14 @@ void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo inf
     viewInfo.subresourceRange.baseArrayLayer = info.baseArrayLayer;
     viewInfo.subresourceRange.layerCount = info.layerCount;
 
-    VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &view));
+    VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &m_view));
 }
 
 void MVulkanImage::Clean(VkDevice device)
 {
-    vkDestroyImageView(device, view, nullptr);
-    vkDestroyImage(device, image, nullptr);
-    vkFreeMemory(device, imageMemory, nullptr);
+    vkDestroyImageView(device, m_view, nullptr);
+    vkDestroyImage(device, m_image, nullptr);
+    vkFreeMemory(device, m_imageMemory, nullptr);
 }
 
 MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING)

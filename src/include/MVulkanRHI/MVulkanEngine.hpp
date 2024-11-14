@@ -60,17 +60,10 @@ private:
     void transitionSwapchainImageFormat();
     void transitionFramebufferImageLayout();
 
-    void createGbufferRenderPass();
-    void createFinalRenderPass();
     void createRenderPass();
-    //void resolveDescriptorSet();
+
     void createDescriptorSetAllocator();
-    void createGbufferPipeline();
-    void createSquadPipeline();
-    void createPipeline();
-    //void createDepthBuffer();
-    void createGbufferFrameBuffers();
-    void createFinalFrameBuffers();
+
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
@@ -116,22 +109,9 @@ private:
     MVulkanDevice device;
     MVulkanSwapchain swapChain;
 
-    //MVulkanGraphicsPipeline gbufferPipeline;
-    //MVulkanGraphicsPipeline finalPipeline;
-    //MVulkanRenderPass gbufferRenderPass;
-    //MVulkanRenderPass finalRenderPass;
-    //std::vector<MVulkanFrameBuffer> gbufferFrameBuffers;
-    //std::vector<MVulkanFrameBuffer> finalFrameBuffers;
-
     MVulkanDescriptorSetAllocator allocator;
-    MVulkanDescriptorSetLayouts layouts;
-    //MVulkanDescriptorSetLayouts gbufferDescriptorLayouts;
-    //MVulkanDescriptorSetLayouts finalDescriptorLayouts;
-    MVulkanDescriptorSet descriptorSet;
-    //MVulkanDescriptorSet gbufferDescriptorSet;
-    //MVulkanDescriptorSet gbufferDescriptorSet;
-    //MVulkanDescriptorSet finalDescriptorSet;
-    //MVulkanDescriptorSet finalDescriptorSet;
+    //MVulkanDescriptorSetLayouts layouts;
+    //MVulkanDescriptorSet descriptorSet;
     
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
@@ -148,9 +128,7 @@ private:
     IndexBuffer indexBuffer;
     VertexBuffer sqadVertexBuffer;
     IndexBuffer sqadIndexBuffer;
-    //std::vector<MCBV> gbufferCbvs0;
-    //std::vector<MCBV> cbvs0;
-    //std::vector<MCBV> cbvs1;
+
     MVulkanSampler sampler;
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
@@ -164,22 +142,10 @@ private:
     std::vector<MVulkanFence> inFlightFences;
     uint32_t currentFrame = 0;
 
-    //std::shared_ptr<ShaderModule> gbufferShader;
-    //std::shared_ptr<ShaderModule> squadPhongShader;
-    //TestShader testShader;
-    PhongShader phongShader;
-    //GbufferShader gbufferShader;
-    //SquadPhongShader squadPhongShader;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Model> model;
 
     std::vector<MVulkanSampler> globalSamplers;
-    //bool framebufferResized = false;
-
-    //VkInstance instance;
-
-    //VkBuffer vertexBuffer;
-    //VkDeviceMemory vertexBufferMemory;
 };
 
 #endif

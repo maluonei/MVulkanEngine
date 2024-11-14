@@ -114,19 +114,26 @@ public:
 	void CreateImageView(MVulkanDevice device, ImageViewCreateInfo info);
 	void Clean(VkDevice deivce);
 
-	inline VkImage GetImage()const { return image; }
-	inline VkDeviceMemory GetImageMemory() const { return imageMemory; }
-	inline VkImageView GetImageView()const { return view; }
+	inline VkImage GetImage()const { return m_image; }
+	inline VkDeviceMemory GetImageMemory() const { return m_imageMemory; }
+	inline VkImageView GetImageView()const { return m_view; }
 
 	inline uint32_t GetMipLevel()const {
 		return mipLevel;
 	};
 
+	static MVulkanImage CreateSwapchainImage(VkImage image, VkImageView view) {
+		MVulkanImage mImage;
+		mImage.m_image = image;
+		mImage.m_view = view;
+		return mImage;
+	}
+
 private:
 	uint32_t mipLevel = 1;
-	VkImage image;
-	VkDeviceMemory imageMemory;
-	VkImageView view;
+	VkImage m_image;
+	VkDeviceMemory m_imageMemory;
+	VkImageView m_view;
 };
 
 class MVulkanTexture {

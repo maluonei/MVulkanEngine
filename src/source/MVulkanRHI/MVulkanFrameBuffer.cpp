@@ -8,13 +8,17 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 
 void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo creatInfo)
 {
+    m_info = creatInfo;
+
     colorBuffers.resize(creatInfo.numAttachments);
     std::vector<VkImageView> attachments;
     attachments.resize(creatInfo.numAttachments + 1);
 
     if (creatInfo.useSwapchainImageViews) {
+        m_swapChain = creatInfo.swapChain;
+        assert(creatInfo.numAttachments == 1);
         for (auto i = 0; i < creatInfo.numAttachments; i++) {
-            attachments[i] = creatInfo.swapchainImageViews[i];
+            attachments[i] = m_swapChain.GetImageView(creatInfo.swapChainImageIndex);
         }
     }
     else {

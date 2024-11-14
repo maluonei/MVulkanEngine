@@ -37,6 +37,7 @@ public:
 
 	void RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList, VkExtent2D extent);
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews);
+	void UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews);
 
 	void SetUBO(uint8_t index, void* data);
 	void LoadCBV();
