@@ -21,6 +21,11 @@ public:
 
     bool WindowShouldClose();
     void WindowPollEvents();
+    inline glm::vec2 GetMousePosition() {
+        double mousePosX, mousePosY;
+        glfwGetCursorPos(window, &mousePosX, &mousePosY);
+        return glm::vec2(mousePosX, mousePosY);
+    }
     inline bool GetWindowResized() const { return windowResized; }
     inline void SetWindowResized(bool flag) { windowResized = flag; }
 private:

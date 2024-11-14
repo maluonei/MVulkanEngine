@@ -12,14 +12,13 @@ static const glm::vec3 UP = { 0.f, 1.f, 0.f };
 
 class Frustum;
 
+enum Direction {
+	Right, Up, Forward
+};
+
 class Camera {
 private:
 	bool useOrtho = false;
-
-	//glm::vec3 tempLookFrom;
-	//glm::vec3 tempLookAt;
-	//glm::vec3 lookFrom;
-	//glm::vec3 lookAt;
 
 	glm::mat4 projMatrix;
 	glm::mat4 viewMatrix;
@@ -49,7 +48,6 @@ public:
 	inline void SetOrth(bool _flag) {
 		useOrtho = true;
 	}
-
 
 	inline glm::vec3 GetPosition() const {
 		return position;
@@ -92,6 +90,10 @@ public:
 	inline glm::vec3 GetRight() {
 		return right;
 	}
+
+	void Move(Direction direction, float scale);
+
+	void Rotate(float pitch, float yaw);
 };
 
 

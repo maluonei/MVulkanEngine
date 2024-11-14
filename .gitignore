@@ -21,7 +21,8 @@ Makefile
 # Ignore generated files
 *.o
 *.obj
-!resources/**/*.obj
+resources/
+# !resources/**/*.obj
 
 # Ignore macOS specific files
 .DS_Store

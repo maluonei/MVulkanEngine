@@ -10,6 +10,7 @@
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "RenderPass.hpp"
 #include "Managers/GlobalConfig.hpp"
+#include "Managers/InputManager.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
@@ -73,6 +74,9 @@ void MVulkanEngine::Clean()
 
 void MVulkanEngine::Run()
 {
+    //glm::vec2 mousePos = window->GetMousePosition();
+    ////glfwGetCursorPos(window, &mousePos.x, &mousePos.y);
+    //Singleton<InputManager>::instance().SetMousePositionFirstTime(mousePos);
     while (!window->WindowShouldClose()) {
         renderLoop();
     }
@@ -182,21 +186,6 @@ void MVulkanEngine::drawFrame()
         transferWaitSemaphores2, transferWaitStages2,
         transferSignalSemaphores2, VK_NULL_HANDLE
     );
-
-    //barriers.clear();
-    //
-    //for (auto i = 0; i < gbufferPass->GetFrameBuffer(0).ColorAttachmentsCount(); i++) {
-    //    MVulkanImageMemoryBarrier barrier{};
-    //    barrier.image = gbufferPass->GetFrameBuffer(0).GetImage(i);
-    //    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //
-    //    barriers.push_back(barrier);
-    //}
-
-
 
     present(swapChain.GetPtr(), transferSignalSemaphores2, &imageIndex);
 
@@ -326,6 +315,7 @@ void MVulkanEngine::initVulkan()
 void MVulkanEngine::renderLoop()
 {
     window->WindowPollEvents();
+    Singleton<InputManager>::instance().DealInputs();
     drawFrame();
 }
 

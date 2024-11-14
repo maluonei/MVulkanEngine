@@ -43,6 +43,7 @@ public:
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
     void GenerateMipMap(MVulkanTexture texture);
+    inline std::shared_ptr<Camera> GetCamera()const { return camera; }
 
     MVulkanSampler GetGlobalSampler()const;
 private:
@@ -94,7 +95,6 @@ private:
     void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
 
     std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
-
 private:
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> lightingPass;
@@ -110,9 +110,7 @@ private:
     MVulkanSwapchain swapChain;
 
     MVulkanDescriptorSetAllocator allocator;
-    //MVulkanDescriptorSetLayouts layouts;
-    //MVulkanDescriptorSet descriptorSet;
-    
+
     VkSurfaceKHR surface;
     MVulkanCommandQueue graphicsQueue;
     MVulkanCommandQueue presentQueue;
