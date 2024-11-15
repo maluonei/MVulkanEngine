@@ -7,9 +7,6 @@
 #include <memory>
 #include <glm/glm.hpp>
 #include <vector>
-//#include <filesystem>
-
-//using fs = std::filesystem;
 
 struct Vertex {
     glm::vec3 position;

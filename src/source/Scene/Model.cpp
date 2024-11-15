@@ -22,6 +22,9 @@ void Model::Load(const std::string& path)
 
 void Model::processNode(const aiNode* node, const aiScene* scene)
 {
+    spdlog::info("node.name: " + std::string(node->mName.C_Str()));
+    spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
+
     // 处理当前节点的所有网格
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -38,6 +41,9 @@ void Model::processMesh(const aiMesh* mesh, const aiScene* scene)
 {
     //std::vector<Vertex> vertices;
     //std::vector<unsigned int> indices;
+
+    spdlog::info("mesh.name: " + std::string(mesh->mName.C_Str()));
+    spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
 
     // 遍历网格的所有顶点
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {

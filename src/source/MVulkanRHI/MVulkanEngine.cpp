@@ -37,8 +37,8 @@ float sqad_vertices[] = {
     1.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 0.f
 };
 uint32_t sqad_indices[] = {
-    0, 1, 2,
-    2, 1, 3
+    0, 2, 1,
+    2, 3, 1
 };
 
 
@@ -596,7 +596,8 @@ void MVulkanEngine::loadModel()
     model = std::make_shared<Model>();
 
     fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
-    fs::path modelPath = resourcePath / "suzanne.obj";
+    //fs::path modelPath = resourcePath / "suzanne.obj";
+    fs::path modelPath = resourcePath / "CornellBox.glb";
 
     model->Load(modelPath.string());
 }

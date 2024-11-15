@@ -23,6 +23,7 @@ Makefile
 *.obj
 resources/
 # !resources/**/*.obj
+!3rdParty/VulkanSDK/binary/Windows/*.exe
 
 # Ignore macOS specific files
 .DS_Store
