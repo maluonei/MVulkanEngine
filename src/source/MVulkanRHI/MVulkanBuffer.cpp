@@ -47,11 +47,9 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     //Map(device.GetDevice());
 }
 
-void MVulkanBuffer::LoadData(VkDevice device, void* data)
+void MVulkanBuffer::LoadData(VkDevice device, const void* data)
 {
-    //vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
     memcpy(mappedData, data, bufferSize);
-    //vkUnmapMemory(device, bufferMemory);
 }
 
 void MVulkanBuffer::Map(VkDevice device)
@@ -71,46 +69,74 @@ void MVulkanBuffer::Clean(VkDevice device)
     //vkDestroyBufferView(device, bufferView, nullptr);
 }
 
-VertexBuffer::VertexBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
+//VertexBuffer::VertexBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
+//{
+//
+//}
+//
+//void VertexBuffer::Clean(VkDevice device)
+//{
+//    dataBuffer.Clean(device);
+//}
+//
+//void VertexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
+//{
+//    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+//    dataBuffer.Create(device, info);
+//
+//    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+//    stagingBuffer.Create(device, info);
+//
+//    stagingBuffer.Map(device.GetDevice());
+//    stagingBuffer.LoadData(device.GetDevice(), data);
+//    stagingBuffer.UnMap(device.GetDevice());
+//
+//    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+//
+//    stagingBuffer.Clean(device.GetDevice());
+//}
+//
+//IndexBuffer::IndexBuffer() :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
+//{
+//
+//}
+//
+//void IndexBuffer::Clean(VkDevice device)
+//{
+//    dataBuffer.Clean(device);
+//}
+//
+//void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
+//{
+//    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+//    dataBuffer.Create(device, info);
+//
+//    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+//    stagingBuffer.Create(device, info);
+//
+//    stagingBuffer.Map(device.GetDevice());
+//    stagingBuffer.LoadData(device.GetDevice(), data);
+//    stagingBuffer.UnMap(device.GetDevice());
+//
+//    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+//
+//    stagingBuffer.Clean(device.GetDevice());
+//}
+
+Buffer::Buffer(BufferType type) :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING_BUFFER), m_type(type)
 {
 
 }
 
-void VertexBuffer::Clean(VkDevice device)
+void Buffer::Clean(VkDevice device)
 {
     dataBuffer.Clean(device);
 }
 
-void VertexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+void Buffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
 {
-    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    dataBuffer.Create(device, info);
-
-    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    stagingBuffer.Create(device, info);
-
-    stagingBuffer.Map(device.GetDevice());
-    stagingBuffer.LoadData(device.GetDevice(), data);
-    stagingBuffer.UnMap(device.GetDevice());
-
-    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
-
-    stagingBuffer.Clean(device.GetDevice());
-}
-
-IndexBuffer::IndexBuffer() :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
-{
-
-}
-
-void IndexBuffer::Clean(VkDevice device)
-{
-    dataBuffer.Clean(device);
-}
-
-void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
-{
-    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    info.usage = BufferType2VkBufferUsageFlagBits(m_type);
     dataBuffer.Create(device, info);
 
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -220,7 +246,7 @@ void MVulkanImage::Clean(VkDevice device)
     vkFreeMemory(device, m_imageMemory, nullptr);
 }
 
-MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING)
+MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING_BUFFER)
 {
 }
 

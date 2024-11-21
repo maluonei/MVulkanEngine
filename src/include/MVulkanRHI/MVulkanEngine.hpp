@@ -28,7 +28,7 @@
 
 class MWindow;
 class Camera;
-class Model;
+class Scene;
 class RenderPass;
 
 class MVulkanEngine: public Singleton<MVulkanEngine> {
@@ -46,6 +46,8 @@ public:
     inline std::shared_ptr<Camera> GetCamera()const { return camera; }
 
     MVulkanSampler GetGlobalSampler()const;
+
+    void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 private:
     void initVulkan();
     void renderLoop();
@@ -73,7 +75,8 @@ private:
     void createBufferAndLoadData();
     void createTexture();
     void createSampler();
-    void loadModel();
+    //void loadModel();
+    void loadScene();
     
     void createSyncObjects();
     void recordGbufferCommandBuffer(uint32_t imageIndex);
@@ -94,7 +97,7 @@ private:
 
     void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
 
-    std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
+    //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> lightingPass;
@@ -122,10 +125,12 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    VertexBuffer vertexBuffer;
-    IndexBuffer indexBuffer;
-    VertexBuffer sqadVertexBuffer;
-    IndexBuffer sqadIndexBuffer;
+    //VertexBuffer vertexBuffer;
+    //IndexBuffer indexBuffer;
+    //VertexBuffer squadVertexBuffer;
+    //IndexBuffer squadIndexBuffer;
+    Buffer squadVertexBuffer;
+    Buffer squadIndexBuffer;
 
     MVulkanSampler sampler;
     MVulkanTexture testTexture;
@@ -141,7 +146,8 @@ private:
     uint32_t currentFrame = 0;
 
     std::shared_ptr<Camera> camera;
-    std::shared_ptr<Model> model;
+    //std::shared_ptr<Model> model;
+    std::shared_ptr<Scene> scene;
 
     std::vector<MVulkanSampler> globalSamplers;
 };

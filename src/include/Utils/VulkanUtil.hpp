@@ -89,9 +89,11 @@ enum BufferType {
     UAV,
     SRV,
     SHADER_INPUT,
-    STAGING,
-    INDIRECT,
-    TEST
+    STAGING_BUFFER,
+    INDIRECT_BUFFER,
+    VERTEX_BUFFER,
+    INDEX_BUFFER,
+    NONE
 };
 
 enum ShaderStageFlagBits {
@@ -111,6 +113,17 @@ enum AttachmentType {
     COLOR_ATTACHMENT = 0,
     DEPTH_STENCIL_ATTACHMENT = 1
 };
+
+inline VkBufferUsageFlagBits BufferType2VkBufferUsageFlagBits(BufferType type) {
+    switch (type) {
+    case VERTEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    case INDEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    case INDIRECT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+    case STAGING_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    case NONE: spdlog::error("BufferType2VkBufferUsageFlagBits: NONE buffer type is not supported!"); return VkBufferUsageFlagBits(0);
+    default: spdlog::error("BufferType2VkBufferUsageFlagBits: unknown buffer type!"); return VkBufferUsageFlagBits(0);
+    }
+}
 
 inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit) {
     switch (bit) {
@@ -136,7 +149,7 @@ inline VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type){
     switch (type) {
     case SHADER_INPUT:
         return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    case STAGING:
+    case STAGING_BUFFER:
         return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     //case UNIFORM_BUFFER:
     //    return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;

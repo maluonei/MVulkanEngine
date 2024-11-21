@@ -1,0 +1,121 @@
+#include "Scene/SceneLoader.hpp"
+#include "Scene/Scene.hpp"
+#include "MVulkanRHI/MVulkanEngine.hpp"
+
+int SceneLoader::g_meshId = 0;
+
+SceneLoader::SceneLoader()
+{
+   
+}
+
+
+void SceneLoader::Load(std::string path, Scene* scene)
+{
+    if (scene == nullptr) {
+        spdlog::error("Scene is nullptr");
+    }
+
+    Assimp::Importer importer;
+
+    // 通过指定路径加载模型
+    const aiScene* aiscene = importer.ReadFile(path,
+        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices);
+
+    // 检查加载是否成功
+    if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
+        //std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
+        spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
+        return;
+    }
+
+    processNode(aiscene->mRootNode, aiscene, scene);
+
+    scene->GenerateIndirectDrawData();
+
+    auto totalVertexs = scene->GetTotalVertexs();
+    auto totalIndeices = scene->GetTotalIndeices();
+
+    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+
+    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
+
+    scene->SetIndirectVertexBuffer(vertexBuffer);
+    scene->SetIndirectIndexBuffer(indexBuffer);
+
+    scene->GenerateIndirectDrawCommand();
+    std::vector<VkDrawIndexedIndirectCommand> commands = scene->GetIndirectDrawCommands();
+    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    scene->SetIndirectBuffer(indirectCommandBuffer);
+}
+
+void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
+{
+    spdlog::info("node.name: " + std::string(node->mName.C_Str()));
+    spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
+
+    // 处理当前节点的所有网格
+    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+        aiMesh* mesh = aiscene->mMeshes[node->mMeshes[i]];
+        processMesh(mesh, aiscene, scene);
+    }
+
+    // 递归处理每个子节点
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        processNode(node->mChildren[i], aiscene, scene);
+    }
+}
+
+void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene* scene)
+{
+    spdlog::info("mesh.name: " + std::string(mesh->mName.C_Str()));
+    spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
+
+
+    std::shared_ptr<Mesh> _mesh = std::make_shared<Mesh>();
+    std::string meshName = mesh->mName.C_Str();
+    if (meshName == "") {
+        meshName = "mesh" + std::to_string(g_meshId);
+        g_meshId++;
+    }
+
+    // 遍历网格的索引
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+        aiFace face = mesh->mFaces[i];
+
+        for (unsigned int j = 0; j < face.mNumIndices; j++) {
+            _mesh->indices.push_back(face.mIndices[j]);
+            //spdlog::info("indices:" + std::to_string(face.mIndices[j] + currentVertexNum));
+        }
+    }
+
+    // 遍历网格的所有顶点
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        Vertex vertex;
+        vertex.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+        vertex.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+        if (mesh->mTextureCoords[0]) {
+            vertex.texcoord = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+        }
+        else {
+            vertex.texcoord = glm::vec2(0.0f, 0.0f);
+        }
+        _mesh->vertices.push_back(vertex);
+    }
+
+    if (mesh->mNumVertices > 0) {
+        scene->SetMesh(meshName, _mesh);
+
+        std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+        std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+
+        Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(_mesh->vertices.data()), sizeof(Vertex) * _mesh->vertices.size());
+        Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(_mesh->indices.data()), sizeof(unsigned int) * _mesh->indices.size());
+
+        scene->SetVertexBuffer(meshName, vertexBuffer);
+        scene->SetIndexBuffer(meshName, indexBuffer);
+    }
+}

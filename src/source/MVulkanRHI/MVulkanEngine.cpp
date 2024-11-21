@@ -5,12 +5,13 @@
 #include"MVulkanRHI/MVulkanEngine.hpp"
 #include <stdexcept>
 #include "Camera.hpp"
-#include "Scene/Model.hpp"
+#include "Scene/Scene.hpp"
 
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "RenderPass.hpp"
 #include "Managers/GlobalConfig.hpp"
 #include "Managers/InputManager.hpp"
+#include "Scene/SceneLoader.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
@@ -520,26 +521,30 @@ void MVulkanEngine::createCamera()
 
 void MVulkanEngine::createBufferAndLoadData()
 {
-    loadModel();
+    //loadModel();
+    loadScene();
+
+    squadVertexBuffer = Buffer(BufferType::VERTEX_BUFFER);
+    squadIndexBuffer = Buffer(BufferType::INDEX_BUFFER);
 
     BufferCreateInfo vertexInfo;
-    vertexInfo.size = model->VertexSize();
-
-    BufferCreateInfo indexInfo;
-    indexInfo.size = model->IndexSize();
+    //vertexInfo.size = model->VertexSize();
     
+    BufferCreateInfo indexInfo;
+    //indexInfo.size = model->IndexSize();
+    //
     transferList.Reset();
     transferList.Begin();
-    vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, (void*)(model->GetVerticesData()));
-    indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, (void*)model->GetIndicesData());
-
+    //vertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, (void*)(model->GetVerticesData()));
+    //indexBuffer.CreateAndLoadData(&transferList, device, indexInfo, (void*)model->GetIndicesData());
+    //
     vertexInfo.size = sizeof(sqad_vertices);
     indexInfo.size = sizeof(sqad_indices);
-    sqadVertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, (void*)(sqad_vertices));
-    sqadIndexBuffer.CreateAndLoadData(&transferList, device, indexInfo, (void*)(sqad_indices));
-
+    squadVertexBuffer.CreateAndLoadData(&transferList, device, vertexInfo, (void*)(sqad_vertices));
+    squadIndexBuffer.CreateAndLoadData(&transferList, device, indexInfo, (void*)(sqad_indices));
+    //
     transferList.End();
-    
+    //
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
@@ -591,15 +596,27 @@ void MVulkanEngine::createSampler()
     sampler.Create(device);
 }
 
-void MVulkanEngine::loadModel()
+//void MVulkanEngine::loadModel()
+//{
+//    model = std::make_shared<Model>();
+//
+//    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
+//    //fs::path modelPath = resourcePath / "suzanne.obj";
+//    fs::path modelPath = resourcePath / "CornellBox.glb";
+//
+//    model->Load(modelPath.string());
+//}
+
+void MVulkanEngine::loadScene()
 {
-    model = std::make_shared<Model>();
+    scene = std::make_shared<Scene>();
 
     fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
     //fs::path modelPath = resourcePath / "suzanne.obj";
     fs::path modelPath = resourcePath / "CornellBox.glb";
 
-    model->Load(modelPath.string());
+    Singleton<SceneLoader>::instance().Load(modelPath.string(), scene.get());
+    //model->Load(modelPath.string());
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -660,11 +677,11 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     scissor.extent = swapChainExtent;
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = { sqadVertexBuffer.GetBuffer() };
+    VkBuffer vertexBuffers[] = { squadVertexBuffer.GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
 
     graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    graphicsLists[currentFrame].BindIndexBuffers(0, 1, sqadIndexBuffer.GetBuffer(), offsets);
+    graphicsLists[currentFrame].BindIndexBuffers(0, 1, squadIndexBuffer.GetBuffer(), offsets);
 
     auto descriptorSets = lightingPass->GetDescriptorSet().Get();
     graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[imageIndex]);
@@ -773,6 +790,26 @@ void MVulkanEngine::transitionImageLayouts(
     graphicsQueue.WaitForQueueComplete();
 }
 
+void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size)
+{
+    BufferCreateInfo vertexInfo;
+    vertexInfo.size = size;
+
+    transferList.Reset();
+    transferList.Begin();
+    buffer->CreateAndLoadData(&transferList, device, vertexInfo, data);
+
+    transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    transferQueue.WaitForQueueComplete();
+}
+
 void MVulkanEngine::present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex)
 {
     VkPresentInfoKHR presentInfo{};
@@ -835,14 +872,8 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
     scissor.extent = swapChainExtent;
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = { vertexBuffer.GetBuffer()};
-    VkDeviceSize offsets[] = { 0 };
-
-    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    graphicsLists[currentFrame].BindIndexBuffers(0, 1, indexBuffer.GetBuffer(), offsets);
-
-    auto descriptorSets = gbufferPass->GetDescriptorSet().Get();
-    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
+    //VkBuffer vertexBuffers[] = { vertexBuffer.GetBuffer()};
+    //VkDeviceSize offsets[] = { 0 };
 
     GbufferShader::UniformBufferObject ubo{};
     ubo.Model = glm::mat4(1.f);
@@ -851,25 +882,46 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
     gbufferPass->GetShader()->SetUBO(0, &ubo);
     gbufferPass->LoadCBV();
 
-    graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(model->GetIndices().size()), 1, 0, 0, 0);
+    auto descriptorSets = gbufferPass->GetDescriptorSet().Get();
+    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
+
+    //auto meshNames = scene->GetMeshNames();
+    //for (auto item : meshNames) {
+    //    VkBuffer vertexBuffers[] = { scene->GetVertexBuffer(item)->GetBuffer() };
+    //    VkDeviceSize offsets[] = { 0 };
+    //
+    //    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    //    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndexBuffer(item)->GetBuffer(), offsets);
+    //
+    //    graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    //}
+
+    VkBuffer vertexBuffers[] = { scene->GetIndirectVertexBuffer()->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndirectIndexBuffer()->GetBuffer(), offsets);
+
+    //graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    graphicsLists[currentFrame].DrawIndexedIndirectCommand(scene->GetIndirectBuffer()->GetBuffer(), 0, scene->GetIndirectDrawCommands().size(), sizeof(VkDrawIndexedIndirectCommand));
 
     graphicsLists[currentFrame].EndRenderPass();
 
     graphicsLists[currentFrame].End();
 }
 
-std::vector<VkDescriptorBufferInfo> MVulkanEngine::generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos)
-{
-    std::vector<VkDescriptorBufferInfo> bufferInfos;
-
-    for (auto i = 0; i < resourceInfos.size(); i++) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = buffers[i];
-        bufferInfo.offset = resourceInfos[i].offset;
-        bufferInfo.range = resourceInfos[i].size;
-
-        bufferInfos.push_back(bufferInfo);
-    }
-
-    return bufferInfos;
-}
+//std::vector<VkDescriptorBufferInfo> MVulkanEngine::generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos)
+//{
+//    std::vector<VkDescriptorBufferInfo> bufferInfos;
+//
+//    for (auto i = 0; i < resourceInfos.size(); i++) {
+//        VkDescriptorBufferInfo bufferInfo{};
+//        bufferInfo.buffer = buffers[i];
+//        bufferInfo.offset = resourceInfos[i].offset;
+//        bufferInfo.range = resourceInfos[i].size;
+//
+//        bufferInfos.push_back(bufferInfo);
+//    }
+//
+//    return bufferInfos;
+//}

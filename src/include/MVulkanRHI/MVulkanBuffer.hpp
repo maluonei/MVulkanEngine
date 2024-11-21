@@ -19,7 +19,7 @@ public:
 	MVulkanBuffer(BufferType _type);
 
 	void Create(MVulkanDevice device, BufferCreateInfo info);
-	void LoadData(VkDevice device, void* data);
+	void LoadData(VkDevice device, const void* data);
 	void Map(VkDevice device);
 	void UnMap(VkDevice device);
 
@@ -63,26 +63,39 @@ private:
 //	UBO();
 //};
 
-class VertexBuffer {
-public:
-	VertexBuffer();
-	void Clean(VkDevice device);
-	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
-	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
-	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
-private:
-	MVulkanBuffer dataBuffer;
-	MVulkanBuffer stagingBuffer;
-};
+//class VertexBuffer {
+//public:
+//	VertexBuffer();
+//	void Clean(VkDevice device);
+//	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data);
+//	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
+//	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
+//private:
+//	MVulkanBuffer dataBuffer;
+//	MVulkanBuffer stagingBuffer;
+//};
+//
+//class IndexBuffer {
+//public:
+//	IndexBuffer();
+//	void Clean(VkDevice device);
+//	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data);
+//	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
+//	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
+//private:
+//	MVulkanBuffer dataBuffer;
+//	MVulkanBuffer stagingBuffer;
+//};
 
-class IndexBuffer {
+class Buffer {
 public:
-	IndexBuffer();
+	Buffer(BufferType type = BufferType::NONE);
 	void Clean(VkDevice device);
-	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data);
 	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
 	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
 private:
+	BufferType m_type;
 	MVulkanBuffer dataBuffer;
 	MVulkanBuffer stagingBuffer;
 };

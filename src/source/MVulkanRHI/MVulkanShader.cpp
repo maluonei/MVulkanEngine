@@ -1,5 +1,5 @@
 #include "MVulkanRHI/MVulkanShader.hpp"
-#include "Scene/Model.hpp"
+#include "Scene/Scene.hpp"
 
 MVulkanShader::MVulkanShader()
 {
