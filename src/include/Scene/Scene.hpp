@@ -9,7 +9,9 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <map>
-#include <MVulkanRHI/MVulkanBuffer.hpp>
+#include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "MVulkanRHI/MVulkanDescriptor.hpp"
+#include "Material.hpp"
 #include <spdlog/spdlog.h>
 
 struct Vertex {
@@ -26,10 +28,15 @@ static size_t VertexSize[] = {
 
 struct Mesh {
     //glm::mat4 transform;
+    MVulkanDescriptorSet descriptorSet;
+    uint32_t matId;
+
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 };
 
+
+class Light;
 
 class Scene {
 public:
@@ -64,6 +71,12 @@ public:
     std::vector<std::string> GetMeshNames();
     void GenerateIndirectDrawCommand();
     inline std::vector<VkDrawIndexedIndirectCommand> GetIndirectDrawCommands(){return m_indirectCommands;}
+
+    inline void AddLight(std::string name, std::shared_ptr<Light> light){m_lightMap[name] = light;}
+    inline std::shared_ptr<Light> GetLight(std::string name){return m_lightMap[name];}
+
+    inline void AddMaterial(std::shared_ptr<PhongMaterial> material){m_materials.push_back(material);}
+    inline std::shared_ptr<PhongMaterial> GetMaterial(int index){return m_materials[index];}
 private:
     std::vector<Vertex> m_totalVertexs;
     std::vector<uint32_t> m_totalIndeices;
@@ -75,6 +88,9 @@ private:
     std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshMap;
     std::unordered_map<std::string, std::shared_ptr<Buffer>> m_vertexBufferMap;
     std::unordered_map<std::string, std::shared_ptr<Buffer>> m_indexBufferMap;
+    std::vector<std::shared_ptr<PhongMaterial>> m_materials;
+
+    std::unordered_map<std::string, std::shared_ptr<Light>> m_lightMap;
 };
 
 #endif

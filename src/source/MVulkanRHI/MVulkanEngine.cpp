@@ -12,6 +12,8 @@
 #include "Managers/GlobalConfig.hpp"
 #include "Managers/InputManager.hpp"
 #include "Scene/SceneLoader.hpp"
+#include "Managers/TextureManager.hpp"
+#include "Scene/Light/DirectionalLight.hpp"
 
 float verteices[] = {
     0.8f, 0.8f, 0.f,   0.f, 0.f, 1.f,   1.f, 1.f,
@@ -304,13 +306,15 @@ void MVulkanEngine::initVulkan()
     createCommandList();
     createSyncObjects();
 
+    createTempTexture();
     createSwapChain();
     
     createDescriptorSetAllocator();
 
-    createRenderPass();
-
     createBufferAndLoadData();
+
+    createRenderPass();
+    generateMeshDecriptorSets();
 }
 
 void MVulkanEngine::renderLoop()
@@ -318,6 +322,7 @@ void MVulkanEngine::renderLoop()
     window->WindowPollEvents();
     Singleton<InputManager>::instance().DealInputs();
     drawFrame();
+    //spdlog::info("****************************************");
 }
 
 void MVulkanEngine::createInstance()
@@ -424,6 +429,7 @@ void MVulkanEngine::createRenderPass()
     std::vector<VkFormat> gbufferFormats;
     gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
     gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
     RenderPassCreateInfo info{};
     info.frambufferCount = 1;
@@ -438,7 +444,13 @@ void MVulkanEngine::createRenderPass()
     gbufferPass = std::make_shared<RenderPass>(device, info);
 
     std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
-    std::vector<std::vector<VkImageView>> bufferTextureViews(0);
+    std::vector<std::vector<VkImageView>> bufferTextureViews(1);
+    for (auto i = 0; i < bufferTextureViews.size(); i++) {
+        bufferTextureViews[i].resize(1);
+        bufferTextureViews[i] = std::vector<VkImageView>(1);
+        bufferTextureViews[i][0] = Singleton<TextureManager>::instance().Get("placeholder")->GetImageView();
+        //bufferTextureViews[i][0] = 
+    }
 
     gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews);
 
@@ -457,9 +469,20 @@ void MVulkanEngine::createRenderPass()
     for (auto i = 0; i < swapChain.GetImageCount(); i++) {
         gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(0));
         gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(1));
+        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(2));
     }
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
+}
+
+void MVulkanEngine::generateMeshDecriptorSets()
+{
+    auto meshNames = scene->GetMeshNames();
+
+    for (auto item : meshNames) {
+        auto mesh = scene->GetMesh(item);
+        mesh->descriptorSet = gbufferPass->CreateDescriptorSet(allocator);
+    }
 }
 
 //void MVulkanEngine::resolveDescriptorSet()
@@ -596,24 +619,14 @@ void MVulkanEngine::createSampler()
     sampler.Create(device);
 }
 
-//void MVulkanEngine::loadModel()
-//{
-//    model = std::make_shared<Model>();
-//
-//    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
-//    //fs::path modelPath = resourcePath / "suzanne.obj";
-//    fs::path modelPath = resourcePath / "CornellBox.glb";
-//
-//    model->Load(modelPath.string());
-//}
-
 void MVulkanEngine::loadScene()
 {
     scene = std::make_shared<Scene>();
 
     fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("models");
     //fs::path modelPath = resourcePath / "suzanne.obj";
-    fs::path modelPath = resourcePath / "CornellBox.glb";
+    //fs::path modelPath = resourcePath / "CornellBox.glb";
+    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), scene.get());
     //model->Load(modelPath.string());
@@ -677,14 +690,30 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     scissor.extent = swapChainExtent;
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
+    DirectionalLight light(glm::normalize(glm::vec3(-1.f, -1.f, -1.f)), glm::vec3(1.f), 1.f);
+    
+    SquadPhongShader::DirectionalLightBuffer ubo0{};
+    ubo0.lightNum = 1;
+    ubo0.lights[0].direction = light.GetDirection();
+    ubo0.lights[0].intensity = light.GetIntensity();
+    ubo0.lights[0].color = light.GetColor();
+
+    ubo0.cameraPos = camera->GetPosition();
+
+    lightingPass->GetShader()->SetUBO(0, &ubo0);
+    lightingPass->LoadCBV();
+
+    auto descriptorSets = lightingPass->GetDescriptorSet().Get();
+    graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[imageIndex]);
+
     VkBuffer vertexBuffers[] = { squadVertexBuffer.GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
 
     graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
     graphicsLists[currentFrame].BindIndexBuffers(0, 1, squadIndexBuffer.GetBuffer(), offsets);
 
-    auto descriptorSets = lightingPass->GetDescriptorSet().Get();
-    graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[imageIndex]);
+    //auto descriptorSets = lightingPass->GetDescriptorSet().Get();
+    //graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[imageIndex]);
 
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
     graphicsLists[currentFrame].EndRenderPass();
@@ -810,6 +839,48 @@ void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* dat
     transferQueue.WaitForQueueComplete();
 }
 
+//template<class T>
+//void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, VkExtent2D extent, VkFormat format, MImage<T>* imageData)
+//{
+//    ImageCreateInfo imageInfo{};
+//    imageInfo.width = extent.width;
+//    imageInfo.height = extent.height;
+//    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+//    imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+//    imageInfo.format = format;
+//    imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+//    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+//
+//    ImageViewCreateInfo viewInfo{};
+//    viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+//    viewInfo.format = format;
+//    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+//    viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+//    viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+//    viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+//    viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+//    //viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//    viewInfo.baseMipLevel = 0;
+//    viewInfo.levelCount = 1;
+//    viewInfo.baseArrayLayer = 0;
+//    viewInfo.layerCount = 1;
+//    viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+//
+//    transferList.Reset();
+//    transferList.Begin();
+//    texture->CreateAndLoadData(&transferList, device, imageInfo, viewInfo, imageData);
+//    transferList.End();
+//
+//    VkSubmitInfo submitInfo{};
+//    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//    submitInfo.commandBufferCount = 1;
+//    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+//
+//    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+//    transferQueue.WaitForQueueComplete();
+//}
+
+
 void MVulkanEngine::present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex)
 {
     VkPresentInfoKHR presentInfo{};
@@ -834,6 +905,16 @@ void MVulkanEngine::present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemapho
     }
 }
 
+void MVulkanEngine::createTempTexture()
+{
+    std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+
+    MImage<unsigned char> tempImage = MImage<unsigned char>::GetDefault();
+    CreateImage(texture, &tempImage);
+
+    Singleton<TextureManager>::instance().Put("placeholder", texture);
+}
+
 void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
 {
     graphicsLists[currentFrame].Begin();
@@ -847,10 +928,11 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
     renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = swapChainExtent;
 
-    std::array<VkClearValue, 3> clearValues{};
+    std::array<VkClearValue, 4> clearValues{};
     clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
     clearValues[1].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-    clearValues[2].depthStencil = { 1.0f, 0 };
+    clearValues[2].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[3].depthStencil = { 1.0f, 0 };
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
@@ -882,28 +964,41 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
     gbufferPass->GetShader()->SetUBO(0, &ubo);
     gbufferPass->LoadCBV();
 
-    auto descriptorSets = gbufferPass->GetDescriptorSet().Get();
-    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
 
-    //auto meshNames = scene->GetMeshNames();
-    //for (auto item : meshNames) {
-    //    VkBuffer vertexBuffers[] = { scene->GetVertexBuffer(item)->GetBuffer() };
-    //    VkDeviceSize offsets[] = { 0 };
+
+    //auto descriptorSets = gbufferPass->GetDescriptorSet().Get();
+    //graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
+
+    auto meshNames = scene->GetMeshNames();
+    for (auto item : meshNames) {
+        //spdlog::info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+        std::vector<VkImageView> gbufferTextures(1);
+        auto mat = scene->GetMaterial(scene->GetMesh(item)->matId);
+        gbufferTextures[0] = Singleton<TextureManager>::instance().Get(mat->diffuseTexture)->GetImageView();
+        //gbufferPass->UpdateDescriptorSetWrite(gbufferTextures);
+        //graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
+        auto descriptorSets = scene->GetMesh(item)->descriptorSet.Get();
+        auto descriptorSet = descriptorSets[0];
+        gbufferPass->UpdateDescriptorSetWrite(scene->GetMesh(item)->descriptorSet, gbufferTextures);
+        graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+        VkBuffer vertexBuffers[] = { scene->GetVertexBuffer(item)->GetBuffer() };
+        VkDeviceSize offsets[] = { 0 };
+    
+        graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+        graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndexBuffer(item)->GetBuffer(), offsets);
+    
+        graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    }
+
+    //VkBuffer vertexBuffers[] = { scene->GetIndirectVertexBuffer()->GetBuffer() };
+    //VkDeviceSize offsets[] = { 0 };
     //
-    //    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    //    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndexBuffer(item)->GetBuffer(), offsets);
+    //graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    //graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndirectIndexBuffer()->GetBuffer(), offsets);
     //
-    //    graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
-    //}
-
-    VkBuffer vertexBuffers[] = { scene->GetIndirectVertexBuffer()->GetBuffer() };
-    VkDeviceSize offsets[] = { 0 };
-
-    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndirectIndexBuffer()->GetBuffer(), offsets);
-
-    //graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
-    graphicsLists[currentFrame].DrawIndexedIndirectCommand(scene->GetIndirectBuffer()->GetBuffer(), 0, scene->GetIndirectDrawCommands().size(), sizeof(VkDrawIndexedIndirectCommand));
+    ////graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    //graphicsLists[currentFrame].DrawIndexedIndirectCommand(scene->GetIndirectBuffer()->GetBuffer(), 0, scene->GetIndirectDrawCommands().size(), sizeof(VkDrawIndexedIndirectCommand));
 
     graphicsLists[currentFrame].EndRenderPass();
 

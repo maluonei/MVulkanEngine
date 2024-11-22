@@ -68,8 +68,10 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
-            spdlog::info("maxSmaaFlag: ", int(maxSmaaFlag));
-
+            spdlog::info("maxSmaaFlag:{0}", int(maxSmaaFlag));
+            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndirectCount:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndirectCount));
+            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndexedIndexValue:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndexedIndexValue));
+            spdlog::info("Max descriptor set sampled images::{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
             break;
         }
     }
@@ -121,6 +123,12 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos(3, queueCreateInfo);
     queueCreateInfos[1].queueFamilyIndex = indices.computeFamily.value();
     queueCreateInfos[2].queueFamilyIndex = indices.transferFamily.value();
+
+    //VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
+    //descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    //descriptorIndexingFeatures.nullDescriptor = VK_TRUE;  // ∆Ù”√ nullDescriptor Ãÿ–‘
+
+
 
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;

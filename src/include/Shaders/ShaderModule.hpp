@@ -106,8 +106,29 @@ private:
 class SquadPhongShader:public ShaderModule {
 public:
 	SquadPhongShader();
-private:
 
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding);
+
+public:
+	struct Light {
+		glm::vec3 direction;
+		float intensity;
+		glm::vec3 color;
+		float padding0;
+	};
+
+	struct DirectionalLightBuffer {
+		Light lights[2];
+		glm::vec3 cameraPos;
+		int lightNum;
+	};
+
+private:
+	DirectionalLightBuffer ubo0;
 };
 
 #endif

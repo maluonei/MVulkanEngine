@@ -18,8 +18,11 @@ public:
     Singleton& operator =(const Singleton&) = delete;
 protected:
     Singleton() {
+        Init();
         //std::cout << "constructor called!" << std::endl;
     }
+
+    virtual void Init(){}
 };
 
 #endif

@@ -51,6 +51,18 @@ public:
 	inline const int Channels() const { return texChannels; }
     inline const uint32_t MipLevels() const { return mipLevels; }
 	inline const VkFormat Format() const { return format; }
+
+    static MImage<T> GetDefault() {
+        MImage<T> image;
+        image.texWidth = 1;
+        image.texHeight = 1;
+        image.texChannels = 4;
+        image.format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+        image.mipLevels = 1;
+        image.data = new T[4];
+
+        return image;
+    }
 private:
     uint32_t mipLevels = 1;
 	int texWidth, texHeight, texChannels;

@@ -25,6 +25,7 @@ size_t ShaderModule::GetBufferSizeBinding(uint32_t binding) const
 
 void ShaderModule::SetUBO(uint8_t index, void* data)
 {
+
 }
 
 void* ShaderModule::GetData(uint32_t binding)
@@ -143,4 +144,23 @@ void* GbufferShader::GetData(uint32_t binding)
 
 SquadPhongShader::SquadPhongShader():ShaderModule("phong_sqad.vert.glsl", "phong_sqad.frag.glsl")
 {
+}
+
+size_t SquadPhongShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return sizeof(DirectionalLightBuffer);
+}
+
+void SquadPhongShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<DirectionalLightBuffer*>(data);
+		return;
+	}
+}
+
+void* SquadPhongShader::GetData(uint32_t binding)
+{
+	return &ubo0;
 }

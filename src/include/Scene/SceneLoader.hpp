@@ -24,7 +24,12 @@ public:
 
 private:
 	static int g_meshId;
+	std::string m_currentScenePath;
 
+	void loadTexture(std::string path);
+
+	void processTextures(const aiScene* aiscene);
+	void processMaterials(const aiScene* aiscene, Scene* scene);
 	void processNode(const aiNode* node, const aiScene* aiscene, Scene* scene);
 	void processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene* scene);
 };

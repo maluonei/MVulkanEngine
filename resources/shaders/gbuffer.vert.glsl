@@ -5,7 +5,8 @@ layout(location = 1)in vec3 Normal;
 layout(location = 2)in vec2 Coord;
 
 layout(location = 0)out vec3 normal;
-layout(location = 1)out vec2 texCoord;
+layout(location = 1)out vec3 worldPos;
+layout(location = 2)out vec2 texCoord;
 
 layout(std140, binding = 0) uniform UniformBufferObject{
 	mat4 Model;
@@ -23,6 +24,7 @@ void main() {
 	mat3 normalMatrix = transpose(inverse(mat3(ubo0.Model)));
 	normal = normalize(normalMatrix * Normal);
 	texCoord = Coord;
+	worldPos = vec3(worldSpacePosition);
 
 	gl_Position = screenSpacePosition;
 }

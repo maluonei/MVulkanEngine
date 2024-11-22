@@ -1,6 +1,7 @@
 #include "Scene/SceneLoader.hpp"
 #include "Scene/Scene.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
+#include "Managers/TextureManager.hpp"
 
 int SceneLoader::g_meshId = 0;
 
@@ -16,6 +17,8 @@ void SceneLoader::Load(std::string path, Scene* scene)
         spdlog::error("Scene is nullptr");
     }
 
+    m_currentScenePath = path;
+
     Assimp::Importer importer;
 
     // 通过指定路径加载模型
@@ -28,6 +31,9 @@ void SceneLoader::Load(std::string path, Scene* scene)
         spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
         return;
     }
+
+    processTextures(aiscene);
+    processMaterials(aiscene, scene);
 
     processNode(aiscene->mRootNode, aiscene, scene);
 
@@ -106,6 +112,8 @@ void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene*
         _mesh->vertices.push_back(vertex);
     }
 
+    _mesh->matId = mesh->mMaterialIndex;
+
     if (mesh->mNumVertices > 0) {
         scene->SetMesh(meshName, _mesh);
 
@@ -117,5 +125,60 @@ void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene*
 
         scene->SetVertexBuffer(meshName, vertexBuffer);
         scene->SetIndexBuffer(meshName, indexBuffer);
+    }
+}
+
+void SceneLoader::loadTexture(std::string path)
+{
+
+}
+
+void SceneLoader::processTextures(const aiScene* aiscene)
+{
+    for (auto i = 0; i < aiscene->mNumTextures; i++) {
+        spdlog::info("texture.name: " + std::string(aiscene->mTextures[i]->mFilename.C_Str()));
+    }
+}
+
+void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
+{
+    spdlog::info("currentScenePath:{0}", m_currentScenePath);
+    fs::path currentSceneRootPath = fs::path(m_currentScenePath).parent_path();
+
+    for (auto i = 0; i < aiscene->mNumMaterials; i++) {
+        spdlog::info("material.name: " + std::string(aiscene->mMaterials[i]->GetName().C_Str()));
+
+        aiMaterial* aimaterial = aiscene->mMaterials[i];
+        aiString texturePath;
+
+        std::shared_ptr<PhongMaterial> mat = std::make_shared<PhongMaterial>();
+
+        if (aimaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "Diffuse texture: " << texturePath.C_Str() << std::endl;
+            
+            MImage<unsigned char> diffuseImage;
+            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+
+            std::string diffusePath = (currentSceneRootPath / texturePath.C_Str()).string();
+            if (diffuseImage.Load(diffusePath)) {
+                Singleton<MVulkanEngine>::instance().CreateImage(texture, &diffuseImage);
+            }
+
+            Singleton<TextureManager>::instance().Put(diffusePath, texture);
+            mat->diffuseTexture = diffusePath;
+        }
+        else {
+            mat->diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        }
+
+        if (aimaterial->GetTexture(aiTextureType_SPECULAR, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "Specular texture: " << texturePath.C_Str() << std::endl;
+        }
+
+        if (aimaterial->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "Normal map: " << texturePath.C_Str() << std::endl;
+        }
+
+        scene->AddMaterial(mat);
     }
 }

@@ -48,6 +48,51 @@ public:
     MVulkanSampler GetGlobalSampler()const;
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
+
+    //template<class T>
+    //void CreateImage(std::shared_ptr<MVulkanTexture> texture, VkExtent2D extent, VkFormat format, MImage<T>* imageData);
+
+    template<class T>
+    void CreateImage(std::shared_ptr<MVulkanTexture> texture, MImage<T>* image) {
+        //VkExtent2D extent = { image->Width().image->Height() };
+
+        ImageCreateInfo imageInfo{};
+        imageInfo.width = image->Width();
+        imageInfo.height = image->Height();
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        imageInfo.format = image->Format();
+        imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        ImageViewCreateInfo viewInfo{};
+        viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.format = image->Format();
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.baseMipLevel = 0;
+        viewInfo.levelCount = 1;
+        viewInfo.baseArrayLayer = 0;
+        viewInfo.layerCount = 1;
+        viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
+        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, image);
+        generalGraphicList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+        graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        graphicsQueue.WaitForQueueComplete();
+    }
 private:
     void initVulkan();
     void renderLoop();
@@ -64,6 +109,7 @@ private:
     void transitionFramebufferImageLayout();
 
     void createRenderPass();
+    void generateMeshDecriptorSets();
 
     void createDescriptorSetAllocator();
 
@@ -97,6 +143,7 @@ private:
 
     void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
 
+    void createTempTexture();
     //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
     std::shared_ptr<RenderPass> gbufferPass;

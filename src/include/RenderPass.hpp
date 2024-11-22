@@ -39,6 +39,9 @@ public:
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews);
 	void UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews);
 
+	void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews);
+	void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews);
+
 	void SetUBO(uint8_t index, void* data);
 	void LoadCBV();
 
@@ -48,6 +51,8 @@ public:
 	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
 	MVulkanDescriptorSet GetDescriptorSet() const { return m_descriptorSet; }
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
+
+	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator allocator);
 
 	void TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGraphicsCommandList commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
