@@ -93,6 +93,10 @@ public:
         graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
         graphicsQueue.WaitForQueueComplete();
     }
+
+    inline uint32_t GetUniformBufferOffsetAlignment() const {
+        return device.GetUniformBufferOffsetAlignment();
+    }
 private:
     void initVulkan();
     void renderLoop();
@@ -109,7 +113,7 @@ private:
     void transitionFramebufferImageLayout();
 
     void createRenderPass();
-    void generateMeshDecriptorSets();
+    //void generateMeshDecriptorSets();
 
     void createDescriptorSetAllocator();
 

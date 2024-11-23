@@ -1,5 +1,6 @@
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include <stdexcept>
+#include <MVulkanRHI/MVulkanEngine.hpp>
 
 //uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 //    VkPhysicalDeviceMemoryProperties memProperties;
@@ -25,7 +26,7 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = info.size;
+    bufferInfo.size = CalculateAlignedSize(info.size, Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment()) * info.arrayLength;
     bufferInfo.usage = info.usage;
     bufferInfo.sharingMode = info.sharingMode;
 
@@ -47,9 +48,9 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     //Map(device.GetDevice());
 }
 
-void MVulkanBuffer::LoadData(VkDevice device, const void* data)
+void MVulkanBuffer::LoadData(VkDevice device, const void* data, uint32_t offset)
 {
-    memcpy(mappedData, data, bufferSize);
+    memcpy((char*)mappedData + offset, data, bufferSize);
 }
 
 void MVulkanBuffer::Map(VkDevice device)
@@ -176,15 +177,16 @@ void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice devi
 void MCBV::Create( MVulkanDevice device, BufferCreateInfo info)
 {
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    m_info = info;
 
     dataBuffer.Create(device, info);
 
     dataBuffer.Map(device.GetDevice());
 }
 
-void MCBV::UpdateData(MVulkanDevice device, void* data)
+void MCBV::UpdateData(MVulkanDevice device, void* data, float offset)
 {
-    dataBuffer.LoadData(device.GetDevice(), data);
+    dataBuffer.LoadData(device.GetDevice(), data, offset);
 }
 
 void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)

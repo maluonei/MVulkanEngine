@@ -56,6 +56,10 @@ public:
         //return maxSmaaFlag; 
         return VK_SAMPLE_COUNT_1_BIT;
     }
+
+    inline uint32_t GetUniformBufferOffsetAlignment() const {
+        return alignment;
+    }
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;
@@ -66,6 +70,8 @@ private:
     VkQueue computeQueue;
     VkQueue transferQueue;
     VkQueue presentQueue;
+
+    uint32_t alignment = 0;
 
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     void createLogicalDevice(VkInstance instance, VkSurfaceKHR surface);

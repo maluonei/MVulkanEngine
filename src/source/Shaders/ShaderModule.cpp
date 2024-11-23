@@ -28,7 +28,7 @@ void ShaderModule::SetUBO(uint8_t index, void* data)
 
 }
 
-void* ShaderModule::GetData(uint32_t binding)
+void* ShaderModule::GetData(uint32_t binding, uint32_t index)
 {
 	return nullptr;
 }
@@ -60,7 +60,7 @@ void TestShader::SetUBO(uint8_t index, void* data)
 	}
 }
 
-void* TestShader::GetData(uint32_t binding)
+void* TestShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
@@ -105,7 +105,7 @@ void PhongShader::SetUBO(uint8_t index, void* data)
 	}
 }
 
-void* PhongShader::GetData(uint32_t binding)
+void* PhongShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
@@ -125,21 +125,47 @@ GbufferShader::GbufferShader():
 
 size_t GbufferShader::GetBufferSizeBinding(uint32_t binding) const
 {
-	return sizeof(UniformBufferObject);
+	switch (binding) {
+	case 0:
+		return sizeof(UniformBufferObject0);
+	case 1:
+		return sizeof(UniformBufferObject1);
+	case 2:
+		return sizeof(UniformBufferObject2) * 4;
+	default:
+		return -1;
+	}
 }
 
 void GbufferShader::SetUBO(uint8_t index, void* data)
 {
 	switch (index) {
 	case 0:
-		ubo0 = *reinterpret_cast<UniformBufferObject*>(data);
+		ubo0 = *reinterpret_cast<UniformBufferObject0*>(data);
 		return;
-	}
+	case 1:
+		for (auto i = 0; i < 256; i++) {
+			ubo1[i] = reinterpret_cast<UniformBufferObject1*>(data)[i];
+		}
+		return;
+	case 2:
+		for (auto i = 0; i < 4; i++) {
+			ubo2[i] = reinterpret_cast<UniformBufferObject2*>(data)[i];
+		}
+		return;
+}
 }
 
-void* GbufferShader::GetData(uint32_t binding)
+void* GbufferShader::GetData(uint32_t binding, uint32_t index)
 {
-	return &ubo0;
+	switch (binding) {
+	case 0:
+		return &ubo0;
+	case 1:
+		return &(ubo1[index]);
+	case 2:
+		return &(ubo2[index]);
+	}
 }
 
 SquadPhongShader::SquadPhongShader():ShaderModule("phong_sqad.vert.glsl", "phong_sqad.frag.glsl")
@@ -160,7 +186,7 @@ void SquadPhongShader::SetUBO(uint8_t index, void* data)
 	}
 }
 
-void* SquadPhongShader::GetData(uint32_t binding)
+void* SquadPhongShader::GetData(uint32_t binding, uint32_t index)
 {
 	return &ubo0;
 }

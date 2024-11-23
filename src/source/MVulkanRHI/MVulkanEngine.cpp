@@ -77,9 +77,6 @@ void MVulkanEngine::Clean()
 
 void MVulkanEngine::Run()
 {
-    //glm::vec2 mousePos = window->GetMousePosition();
-    ////glfwGetCursorPos(window, &mousePos.x, &mousePos.y);
-    //Singleton<InputManager>::instance().SetMousePositionFirstTime(mousePos);
     while (!window->WindowShouldClose()) {
         renderLoop();
     }
@@ -87,6 +84,7 @@ void MVulkanEngine::Run()
 
 void MVulkanEngine::drawFrame()
 {
+    //spdlog::info("********************************************");
     inFlightFences[currentFrame].WaitForSignal(device.GetDevice());
 
     uint32_t imageIndex;
@@ -105,7 +103,9 @@ void MVulkanEngine::drawFrame()
 
     graphicsLists[currentFrame].Reset();
     
+    //spdlog::info("a");
     recordGbufferCommandBuffer(imageIndex);
+    //spdlog::info("b");
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -146,8 +146,12 @@ void MVulkanEngine::drawFrame()
         transferSignalSemaphores, VK_NULL_HANDLE
     );
 
+
     graphicsLists[currentFrame].Reset();
+
+    //spdlog::info("c");
     recordFinalCommandBuffer(imageIndex);
+    //spdlog::info("d");
 
     //VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -314,7 +318,7 @@ void MVulkanEngine::initVulkan()
     createBufferAndLoadData();
 
     createRenderPass();
-    generateMeshDecriptorSets();
+    //generateMeshDecriptorSets();
 }
 
 void MVulkanEngine::renderLoop()
@@ -358,11 +362,14 @@ void MVulkanEngine::RecreateSwapChain()
         gbufferPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-        std::vector<VkImageView> gbufferTextures(0);
-        std::vector<VkImageView> lightingTextures(2);
-        lightingTextures[0] = gbufferPass->GetFrameBuffer(0).GetImageView(0);
-        lightingTextures[1] = gbufferPass->GetFrameBuffer(0).GetImageView(1);
-        gbufferPass->UpdateDescriptorSetWrite(gbufferTextures);
+        //std::vector<std::vector<VkImageView>> gbufferTextures(gbufferPass->GetFramebufferCount());
+
+        std::vector<std::vector<VkImageView>> lightingTextures(lightingPass->GetFramebufferCount());
+        for (auto i = 0; i < lightingPass->GetFramebufferCount(); i++) {
+            lightingTextures[i].resize(1);
+            lightingTextures[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        }
+        //gbufferPass->UpdateDescriptorSetWrite(gbufferTextures);
         lightingPass->UpdateDescriptorSetWrite(lightingTextures);
     }
 }
@@ -445,11 +452,13 @@ void MVulkanEngine::createRenderPass()
 
     std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
     std::vector<std::vector<VkImageView>> bufferTextureViews(1);
+    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    auto wholeTextureSize = wholeTextures.size();
     for (auto i = 0; i < bufferTextureViews.size(); i++) {
-        bufferTextureViews[i].resize(1);
-        bufferTextureViews[i] = std::vector<VkImageView>(1);
-        bufferTextureViews[i][0] = Singleton<TextureManager>::instance().Get("placeholder")->GetImageView();
-        //bufferTextureViews[i][0] = 
+        bufferTextureViews[i].resize(wholeTextureSize);
+        for (auto j = 0; j < wholeTextureSize; j++) {
+            bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
+        }
     }
 
     gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews);
@@ -465,25 +474,24 @@ void MVulkanEngine::createRenderPass()
     lightingPass = std::make_shared<RenderPass>(device, info);
 
     std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
-    std::vector<std::vector<VkImageView>> gbufferViews(swapChain.GetImageCount());
+    std::vector<std::vector<VkImageView>> gbufferViews(3);
     for (auto i = 0; i < swapChain.GetImageCount(); i++) {
-        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(0));
-        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(1));
-        gbufferViews[i].push_back(gbufferPass->GetFrameBuffer(0).GetImageView(2));
+        gbufferViews[i].resize(1);
+        gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
     }
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
 }
 
-void MVulkanEngine::generateMeshDecriptorSets()
-{
-    auto meshNames = scene->GetMeshNames();
-
-    for (auto item : meshNames) {
-        auto mesh = scene->GetMesh(item);
-        mesh->descriptorSet = gbufferPass->CreateDescriptorSet(allocator);
-    }
-}
+//void MVulkanEngine::generateMeshDecriptorSets()
+//{
+//    auto meshNames = scene->GetMeshNames();
+//
+//    for (auto item : meshNames) {
+//        auto mesh = scene->GetMesh(item);
+//        mesh->descriptorSet = gbufferPass->CreateDescriptorSet(allocator);
+//    }
+//}
 
 //void MVulkanEngine::resolveDescriptorSet()
 //{
@@ -703,8 +711,8 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     lightingPass->GetShader()->SetUBO(0, &ubo0);
     lightingPass->LoadCBV();
 
-    auto descriptorSets = lightingPass->GetDescriptorSet().Get();
-    graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[imageIndex]);
+    auto descriptorSet = lightingPass->GetDescriptorSet(currentFrame).Get();
+    graphicsLists[currentFrame].BindDescriptorSet(lightingPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
 
     VkBuffer vertexBuffers[] = { squadVertexBuffer.GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
@@ -957,48 +965,69 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
     //VkBuffer vertexBuffers[] = { vertexBuffer.GetBuffer()};
     //VkDeviceSize offsets[] = { 0 };
 
-    GbufferShader::UniformBufferObject ubo{};
-    ubo.Model = glm::mat4(1.f);
-    ubo.View = camera->GetViewMatrix();
-    ubo.Projection = camera->GetProjMatrix();
-    gbufferPass->GetShader()->SetUBO(0, &ubo);
-    gbufferPass->LoadCBV();
+    GbufferShader::UniformBufferObject0 ubo0{};
+    ubo0.Model = glm::mat4(1.f);
+    ubo0.View = camera->GetViewMatrix();
+    ubo0.Projection = camera->GetProjMatrix();
+    gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
+    GbufferShader::UniformBufferObject1 ubo1[256];
+    //ubo1.diffuseTextureIdx = 0;
+    //gbufferPass->GetShader()->SetUBO(1, &ubo1);
 
+    std::vector<GbufferShader::UniformBufferObject2> ubo2(4);
+    ubo2[0].testValue = glm::vec4(1.f, 0.f, 0.f, 0.f);
+    ubo2[1].testValue = glm::vec4(0.f, 1.f, 0.f, 0.f);
+    ubo2[2].testValue = glm::vec4(0.f, 0.f, 1.f, 0.f);
+    ubo2[3].testValue = glm::vec4(0.f, 0.f, 0.f, 1.f);
+    gbufferPass->GetShader()->SetUBO(2, ubo2.data());
+    //gbufferPass->LoadCBV();
 
-    //auto descriptorSets = gbufferPass->GetDescriptorSet().Get();
-    //graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
+    auto descriptorSet = gbufferPass->GetDescriptorSet(0).Get();
+    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
 
     auto meshNames = scene->GetMeshNames();
-    for (auto item : meshNames) {
-        //spdlog::info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-        std::vector<VkImageView> gbufferTextures(1);
-        auto mat = scene->GetMaterial(scene->GetMesh(item)->matId);
-        gbufferTextures[0] = Singleton<TextureManager>::instance().Get(mat->diffuseTexture)->GetImageView();
-        //gbufferPass->UpdateDescriptorSetWrite(gbufferTextures);
-        //graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSets[0]);
-        auto descriptorSets = scene->GetMesh(item)->descriptorSet.Get();
-        auto descriptorSet = descriptorSets[0];
-        gbufferPass->UpdateDescriptorSetWrite(scene->GetMesh(item)->descriptorSet, gbufferTextures);
-        graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto drawIndexedIndirectCommands = scene->GetIndirectDrawCommands();
 
-        VkBuffer vertexBuffers[] = { scene->GetVertexBuffer(item)->GetBuffer() };
-        VkDeviceSize offsets[] = { 0 };
-    
-        graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-        graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndexBuffer(item)->GetBuffer(), offsets);
-    
-        graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    for (auto i = 0; i < meshNames.size(); i++) {
+        auto name = meshNames[i];
+        auto mesh = scene->GetMesh(name);
+        auto mat = scene->GetMaterial(mesh->matId);
+        auto texId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+        auto indirectCommand = drawIndexedIndirectCommands[i];
+        ubo1[indirectCommand.firstInstance].diffuseTextureIdx = texId;
     }
+    gbufferPass->GetShader()->SetUBO(1, &ubo1);
+    gbufferPass->LoadCBV();
+    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
 
-    //VkBuffer vertexBuffers[] = { scene->GetIndirectVertexBuffer()->GetBuffer() };
-    //VkDeviceSize offsets[] = { 0 };
+    //for (auto item : meshNames) {
+    //    auto mesh = scene->GetMesh(item);
+    //    auto mat = scene->GetMaterial(mesh->matId);
+    //    auto texId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+    //    spdlog::info("tesId:{0}", texId);
+    //    ubo1.diffuseTextureIdx = texId;
+    //    gbufferPass->GetShader()->SetUBO(1, &ubo1);
+    //    gbufferPass->LoadCBV();
+    //    graphicsLists[currentFrame].BindDescriptorSet(gbufferPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
     //
-    //graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    //graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndirectIndexBuffer()->GetBuffer(), offsets);
+    //    VkBuffer vertexBuffers[] = { scene->GetVertexBuffer(item)->GetBuffer() };
+    //    VkDeviceSize offsets[] = { 0 };
     //
-    ////graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
-    //graphicsLists[currentFrame].DrawIndexedIndirectCommand(scene->GetIndirectBuffer()->GetBuffer(), 0, scene->GetIndirectDrawCommands().size(), sizeof(VkDrawIndexedIndirectCommand));
+    //    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    //    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndexBuffer(item)->GetBuffer(), offsets);
+    //
+    //    graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    //}
+
+    VkBuffer vertexBuffers[] = { scene->GetIndirectVertexBuffer()->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+    
+    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    graphicsLists[currentFrame].BindIndexBuffers(0, 1, scene->GetIndirectIndexBuffer()->GetBuffer(), offsets);
+    
+    //graphicsLists[currentFrame].DrawIndexed(static_cast<uint32_t>(scene->GetMesh(item)->indices.size()), 1, 0, 0, 0);
+    graphicsLists[currentFrame].DrawIndexedIndirectCommand(scene->GetIndirectBuffer()->GetBuffer(), 0, scene->GetIndirectDrawCommands().size(), sizeof(VkDrawIndexedIndirectCommand));
 
     graphicsLists[currentFrame].EndRenderPass();
 

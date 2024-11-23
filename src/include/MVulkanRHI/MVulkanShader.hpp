@@ -35,6 +35,8 @@ struct ShaderResourceInfo {
 	uint32_t binding;
 	size_t size;
 	uint32_t offset;
+
+	uint32_t descriptorCount;
 	//ShaderResourceInfo(const std::string& _name, uint32_t _set, )
 };
 

@@ -44,57 +44,61 @@ void RenderPass::RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommand
 
 void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews)
 {
-    MVulkanDescriptorSetWrite write;
-    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        imageInfos[i].resize(imageViews.size());
-        for (auto j = 0; j < imageViews.size(); j++) {
-            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-            imageInfos[i][j].imageView = imageViews[i][j];
-            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    for (auto i = 0; i < m_frameBuffers.size(); i++) {
+        MVulkanDescriptorSetWrite write;
+        std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_textureCount);
+        for (auto binding = 0; binding < m_textureCount; binding++) {
+            imageInfos[binding].resize(imageViews[binding].size());
+            for (auto j = 0; j < imageViews[i].size(); j++) {
+                imageInfos[binding][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+                imageInfos[binding][j].imageView = imageViews[binding][j];
+                imageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
         }
-    }
 
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        bufferInfos[i].resize(m_cbvCount);
+        std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_cbvCount);
 
         for (auto binding = 0; binding < m_cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
-            bufferInfos[i][binding].offset = 0;
-            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+            bufferInfos[binding].resize(m_uniformBuffers[i][binding].GetArrayLength());
+            for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
+                bufferInfos[binding][j].buffer = m_uniformBuffers[i][binding].GetBuffer();
+                //bufferInfos[binding][j].offset = j * m_uniformBuffers[i][binding].GetBufferSize();
+                bufferInfos[binding][j].offset = j * CalculateAlignedSize(m_uniformBuffers[i][binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+                bufferInfos[binding][j].range = m_uniformBuffers[i][binding].GetBufferSize();
+            }
         }
-    }
 
-    write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
+        //spdlog::info("bbbbbbbbbbbbbbbbbbbbbbb");
+        write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(), bufferInfos, imageInfos);
+    }
 }
 
-void RenderPass::UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews)
-{
-    MVulkanDescriptorSetWrite write;
-    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        imageInfos[i].resize(imageViews.size());
-        for (auto j = 0; j < imageViews.size(); j++) {
-            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-            imageInfos[i][j].imageView = imageViews[j];
-            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-    }
-
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        bufferInfos[i].resize(m_cbvCount);
-
-        for (auto binding = 0; binding < m_cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
-            bufferInfos[i][binding].offset = 0;
-            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-        }
-    }
-
-    write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
-}
+//void RenderPass::UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews)
+//{
+//    MVulkanDescriptorSetWrite write;
+//    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        imageInfos[i].resize(imageViews.size());
+//        for (auto j = 0; j < imageViews.size(); j++) {
+//            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+//            imageInfos[i][j].imageView = imageViews[j];
+//            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        }
+//    }
+//
+//    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        bufferInfos[i].resize(m_cbvCount);
+//
+//        for (auto binding = 0; binding < m_cbvCount; binding++) {
+//            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
+//            bufferInfos[i][binding].offset = 0;
+//            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+//        }
+//    }
+//
+//    write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
+//}
 
 
 void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews)
@@ -115,43 +119,43 @@ void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, st
         bufferInfos[i].resize(m_cbvCount);
 
         for (auto binding = 0; binding < m_cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
+            bufferInfos[i][binding].buffer = m_uniformBuffers[i][binding].GetBuffer();
             bufferInfos[i][binding].offset = 0;
             bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
         }
     }
 
-    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
+    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos);
 }
 
-void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews)
-{
-    MVulkanDescriptorSetWrite write;
-    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        imageInfos[i].resize(imageViews.size());
-        for (auto j = 0; j < imageViews.size(); j++) {
-            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-            imageInfos[i][j].imageView = imageViews[j];
-            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-    }
+//void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews)
+//{
+//    MVulkanDescriptorSetWrite write;
+//    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        imageInfos[i].resize(imageViews.size());
+//        for (auto j = 0; j < imageViews.size(); j++) {
+//            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+//            imageInfos[i][j].imageView = imageViews[j];
+//            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        }
+//    }
+//
+//    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        bufferInfos[i].resize(m_cbvCount);
+//
+//        for (auto binding = 0; binding < m_cbvCount; binding++) {
+//            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
+//            bufferInfos[i][binding].offset = 0;
+//            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+//        }
+//    }
+//
+//    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
+//}
 
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        bufferInfos[i].resize(m_cbvCount);
-
-        for (auto binding = 0; binding < m_cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
-            bufferInfos[i][binding].offset = 0;
-            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-        }
-    }
-
-    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
-}
-
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews )
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -164,61 +168,71 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
 
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
-    m_descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get(), m_info.frambufferCount);
+    std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
+    m_descriptorSets = MVulkanDescriptorSet::CreateDescriptorSets(m_device.GetDevice(), allocator.Get(), layouts);
 
     uint32_t cbvCount = 0;
     uint32_t samplerCount = 0;
-    for (auto i = 0; i < bindings.size(); i++) {
-        switch (bindings[i].binding.descriptorType) {
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-        {
-            for (auto j = 0; j < m_info.frambufferCount; j++) {
+
+    m_uniformBuffers.resize(m_info.frambufferCount);
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
+        for (auto binding = 0; binding < bindings.size(); binding++) {
+            switch (bindings[binding].binding.descriptorType) {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            {
                 MCBV buffer;
                 BufferCreateInfo info;
-                info.size = bindings[i].size;
+                info.arrayLength = bindings[binding].binding.descriptorCount;
+                info.size = bindings[binding].size;
                 buffer.Create(m_device, info);
+
                 m_uniformBuffers[i].push_back(buffer);
+                if (i == 0) cbvCount++;
+                break;
             }
-            cbvCount++;
-            break;
-        }
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        {
-            samplerCount++;
-            break;
-        }
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            {
+                if (i == 0) samplerCount++;
+                break;
+            }
+            }
         }
     }
 
-    MVulkanDescriptorSetWrite write;
-
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        bufferInfos[i].resize(cbvCount);
-    
-        for (auto binding = 0; binding < cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
-            bufferInfos[i][binding].offset = 0;
-            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-        }
-    }
-
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        imageInfos[i].resize(samplerCount);
-
-        for (auto binding = 0; binding < samplerCount; binding++) {
-            imageInfos[i][binding].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-            imageInfos[i][binding].imageView = imageViews[i][binding];
-            imageInfos[i][binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-    }
 
     m_cbvCount = cbvCount;
     m_textureCount = samplerCount;
 
-    write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
+    //spdlog::info("aaaaaaaaaaaaaaaaaaaaaaaa");
+    UpdateDescriptorSetWrite(imageViews);
+    //spdlog::info("cccccccccccccccccccccccc");
+
+    //MVulkanDescriptorSetWrite write;
+    //
+    //std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
+    //std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
+    //
+    //for (auto i = 0; i < m_info.frambufferCount; i++) {
+    //    bufferInfos[i].resize(cbvCount);
+    //
+    //    for (auto binding = 0; binding < cbvCount; binding++) {
+    //        bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
+    //        bufferInfos[i][binding].offset = 0;
+    //        bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+    //    }
+    //}
+    //
+    //for (auto i = 0; i < m_info.frambufferCount; i++) {
+    //    imageInfos[i].resize(samplerCount);
+    //
+    //    for (auto binding = 0; binding < samplerCount; binding++) {
+    //        imageInfos[i][binding].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+    //        imageInfos[i][binding].imageView = imageViews[i][binding];
+    //        imageInfos[i][binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    //    }
+    //}
+
+    //write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
 
     m_pipeline.Create(m_device, 
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
@@ -318,17 +332,25 @@ void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGr
 }
 
 void RenderPass::LoadCBV() {
-    for (auto binding = 0; binding < m_cbvCount; binding++) {
-        for (auto j = 0; j < m_info.frambufferCount; j++) {
-            m_uniformBuffers[binding][j].UpdateData(m_device, m_shader->GetData(binding));
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
+        for (auto binding = 0; binding < m_cbvCount; binding++) {
+            for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
+                uint32_t offset = j * Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment();
+                m_uniformBuffers[i][binding].UpdateData(m_device, m_shader->GetData(binding, j), offset);
+            }
         }
     }
+}
+
+void RenderPass::UpdateCBVData()
+{
+
 }
 
 
 MVulkanDescriptorSet RenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocator allocator)
 {
     MVulkanDescriptorSet descriptorSet;
-    descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get(), m_info.frambufferCount);
+    descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get());
     return descriptorSet;
 }

@@ -8,8 +8,6 @@
 
 class TextureManager : public Singleton<TextureManager> {
 public:
-
-
 	inline void Put(const std::string& name, std::shared_ptr<MVulkanTexture> texture) {
 		m_textureMap[name] = texture;
 	}
@@ -18,6 +16,12 @@ public:
 		return m_textureMap[name];
 	}
 
+	inline int GetTextureId(const std::string& name) {
+		return m_textureMapIdx[name];
+	}
+
+	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextureVector();
+
 protected:
 	virtual void Init() {
 		
@@ -25,6 +29,7 @@ protected:
 
 private:
 	std::unordered_map<std::string, std::shared_ptr<MVulkanTexture>> m_textureMap;
+	std::unordered_map<std::string, int> m_textureMapIdx;
 };
 
 

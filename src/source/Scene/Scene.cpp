@@ -89,7 +89,7 @@ void Scene::GenerateIndirectDrawCommand()
         cmd.instanceCount = 1;
         cmd.firstIndex = currentIndex;
         cmd.vertexOffset = 0;
-        cmd.firstInstance = 0;
+        cmd.firstInstance = i;
 
         m_indirectCommands.push_back(cmd);
 

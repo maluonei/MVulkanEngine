@@ -37,25 +37,27 @@ public:
 
 	void RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList, VkExtent2D extent);
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews);
-	void UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews);
+	//void UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews);
 
 	void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews);
-	void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews);
+	//void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews);
 
 	void SetUBO(uint8_t index, void* data);
 	void LoadCBV();
+	void UpdateCBVData();
 
 	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }
 	MVulkanPipeline GetPipeline() const { return m_pipeline; }
 	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
 	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
-	MVulkanDescriptorSet GetDescriptorSet() const { return m_descriptorSet; }
+	MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
 
 	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator allocator);
 
 	void TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGraphicsCommandList commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
+	inline uint32_t GetFramebufferCount() { return m_info.frambufferCount; }
 private:
 	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
 	void CreateRenderPass();
@@ -68,15 +70,17 @@ private:
 	RenderPassCreateInfo m_info;
 
 	std::shared_ptr<ShaderModule> m_shader;
-	std::unordered_map<uint32_t, std::vector<MCBV>> m_uniformBuffers;
-	std::unordered_map<uint32_t, std::vector<MVulkanSampler>> m_samplers;
+	//std::unordered_map<uint32_t, std::vector<MCBV>> m_uniformBuffers;
+	//std::unordered_map<uint32_t, std::vector<MVulkanSampler>> m_samplers;
+	std::vector<std::vector<MCBV>> m_uniformBuffers;
+	std::vector<std::vector<MVulkanSampler>> m_samplers;
 
 	MVulkanRenderPass m_renderPass;
 	MVulkanGraphicsPipeline m_pipeline;
 	std::vector<MVulkanFrameBuffer> m_frameBuffers;
 
 	MVulkanDescriptorSetLayouts m_descriptorLayouts;
-	MVulkanDescriptorSet m_descriptorSet;
+	std::vector<MVulkanDescriptorSet> m_descriptorSets;
 
 	uint32_t m_cbvCount = 0, m_textureCount = 0;
 };

@@ -41,20 +41,12 @@ const std::vector<const char*> validationLayers = {
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-};
+    //VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+    VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+    //VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
 
-//struct Vertex {
-//    glm::vec3 position;  // R32G32B32_SFLOAT
-//    glm::vec3 normal;    // R32G32B32_SFLOAT
-//    glm::vec2 texcoord;  // R32G32_SFLOAT
-//};
-//
-//static size_t VertexSize[] = {
-//    sizeof(Vertex::position),
-//    sizeof(Vertex::normal),
-//    sizeof(Vertex::texcoord),
-//};
+};
 
 struct PipelineVertexInputStateInfo {
     VkVertexInputBindingDescription bindingDesc;
@@ -222,5 +214,8 @@ static std::vector<uint32_t> loadSPIRV(const std::string& filename) {
     return buffer;
 }
 
+static uint32_t CalculateAlignedSize(uint32_t size, uint32_t alignment) {
+    return (size + alignment - 1) & ~(alignment - 1);
+}
 
 #endif

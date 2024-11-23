@@ -26,6 +26,9 @@ private:
 
 class MVulkanDescriptorSetLayouts {
 public:
+	MVulkanDescriptorSetLayouts() = default;
+	MVulkanDescriptorSetLayouts(VkDescriptorSetLayout _layout);
+
 	void Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings);
 	void Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings);
 	inline VkDescriptorSetLayout Get()const { return layout; }
@@ -35,20 +38,31 @@ private:
 
 class MVulkanDescriptorSet {
 public:
-	void Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, int _MAX_FRAMES_IN_FLIGHT);
-	inline std::vector<VkDescriptorSet> Get() { return sets; }
+	MVulkanDescriptorSet() = default;
+	MVulkanDescriptorSet(VkDescriptorSet _set);
+
+	void Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout);
+
+	static std::vector<MVulkanDescriptorSet> CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts);
+
+	inline VkDescriptorSet Get() { return set; }
 private:
-	std::vector<VkDescriptorSet> sets;
+	VkDescriptorSet set;
 };
 
 class MVulkanDescriptorSetWrite {
 public:
 	void Update(
-		VkDevice device, 
-		std::vector<VkDescriptorSet> sets, 
-		std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos, 
-		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos, 
-		int _MAX_FRAMES_IN_FLIGHT);
+		VkDevice device,
+		VkDescriptorSet set,
+		std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
+		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos);
+
+	void Update(
+		VkDevice device,
+		VkDescriptorSet set,
+		std::vector<VkDescriptorBufferInfo> bufferInfos,
+		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos);
 
 private:
 	VkWriteDescriptorSet write;

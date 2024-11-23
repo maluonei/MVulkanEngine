@@ -67,11 +67,21 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+            //std::cout << "Vulkan API Version: "
+            //    << VK_VERSION_MAJOR(deviceProperties.apiVersion) << "."
+            //    << VK_VERSION_MINOR(deviceProperties.apiVersion) << "."
+            //    << VK_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
+
+            alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
+            spdlog::info("Vulkan API Version:{0}.{1}.{2}", VK_VERSION_MAJOR(deviceProperties.apiVersion), VK_VERSION_MINOR(deviceProperties.apiVersion), VK_VERSION_PATCH(deviceProperties.apiVersion));
             spdlog::info("maxSmaaFlag:{0}", int(maxSmaaFlag));
             spdlog::info("VkPhysicalDeviceLimits.maxDrawIndirectCount:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndirectCount));
             spdlog::info("VkPhysicalDeviceLimits.maxDrawIndexedIndexValue:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndexedIndexValue));
-            spdlog::info("Max descriptor set sampled images::{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
+            spdlog::info("Max descriptor set sampled images:{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
+            spdlog::info("deviceProperties.limits.maxPushConstantsSize:{0}", static_cast<int>(deviceProperties.limits.maxPushConstantsSize));
+            spdlog::info("deviceProperties.limits.minUniformBufferOffsetAlignment:{0}", static_cast<int>(deviceProperties.limits.minUniformBufferOffsetAlignment));
             break;
         }
     }
@@ -128,11 +138,20 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     //descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     //descriptorIndexingFeatures.nullDescriptor = VK_TRUE;  // ∆Ù”√ nullDescriptor Ãÿ–‘
 
-
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+    descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
 
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
     deviceFeatures.multiDrawIndirect = VK_TRUE;
+
+    VkPhysicalDeviceFeatures2 deviceFeatures2{};
+    deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    deviceFeatures2.pNext = &descriptorIndexingFeatures;
+    deviceFeatures2.features = deviceFeatures;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -140,10 +159,13 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 
-    createInfo.pEnabledFeatures = &deviceFeatures;
+    //createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.pEnabledFeatures = nullptr;
 
     createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+
+    createInfo.pNext = &deviceFeatures2;
 
     if (enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -184,6 +206,7 @@ bool MVulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
     for (const auto& extension : availableExtensions) {
+        //spdlog::info(extension.extensionName);
         requiredExtensions.erase(extension.extensionName);
     }
 

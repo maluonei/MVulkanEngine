@@ -19,7 +19,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t index, void* data);
-	virtual void* GetData(uint32_t binding);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 protected:
 
@@ -55,7 +55,7 @@ public:
 	TestShader();
 	virtual void SetUBO(uint8_t index, void* data);
 	virtual inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
-	virtual void* GetData(uint32_t binding);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
 
 class PhongShader : public ShaderModule {
@@ -78,7 +78,7 @@ public:
 
 	virtual void SetUBO(uint8_t index, void* data);
 	virtual inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
-	virtual void* GetData(uint32_t binding);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
 
 class GbufferShader: public ShaderModule
@@ -90,17 +90,31 @@ public:
 
 	virtual void SetUBO(uint8_t index, void* data);
 	
-	virtual void* GetData(uint32_t binding);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 public:
-	struct UniformBufferObject
+	struct UniformBufferObject0
 	{
 		glm::mat4 Model;
 		glm::mat4 View;
 		glm::mat4 Projection;
 	};
 
+	struct UniformBufferObject1
+	{
+		int diffuseTextureIdx;
+		int padding0;
+		int padding1;
+		int padding2;
+	};
+
+	struct UniformBufferObject2
+	{
+		glm::vec3 testValue;
+	};
 private:
-	UniformBufferObject ubo0;
+	UniformBufferObject0 ubo0;
+	UniformBufferObject1 ubo1[256];
+	UniformBufferObject2 ubo2[4];
 };
 
 class SquadPhongShader:public ShaderModule {
@@ -111,7 +125,7 @@ public:
 
 	virtual void SetUBO(uint8_t index, void* data);
 
-	virtual void* GetData(uint32_t binding);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 public:
 	struct Light {

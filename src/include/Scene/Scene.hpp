@@ -28,7 +28,7 @@ static size_t VertexSize[] = {
 
 struct Mesh {
     //glm::mat4 transform;
-    MVulkanDescriptorSet descriptorSet;
+    //MVulkanDescriptorSet descriptorSet;
     uint32_t matId;
 
     std::vector<Vertex> vertices;

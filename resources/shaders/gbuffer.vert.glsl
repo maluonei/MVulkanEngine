@@ -7,6 +7,7 @@ layout(location = 2)in vec2 Coord;
 layout(location = 0)out vec3 normal;
 layout(location = 1)out vec3 worldPos;
 layout(location = 2)out vec2 texCoord;
+layout(location = 3)out flat int instanceId;
 
 layout(std140, binding = 0) uniform UniformBufferObject{
 	mat4 Model;
@@ -27,4 +28,6 @@ void main() {
 	worldPos = vec3(worldSpacePosition);
 
 	gl_Position = screenSpacePosition;
+
+	instanceId = gl_InstanceIndex;
 }

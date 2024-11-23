@@ -69,5 +69,5 @@ void main(){
     color = vec4(fragcolor, 1.f);
     //color = vec4(normal*0.5+0.5, 1.f);
     //color = vec4(uv, 0.f, 1.f);
-    //color = vec4(0.f, 1.f, 0.5f, 1.f);
+    //color = vec4(0.f, 1.f, 0.f, 1.f);
 }

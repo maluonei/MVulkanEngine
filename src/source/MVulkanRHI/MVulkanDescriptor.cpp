@@ -1,5 +1,6 @@
 #include "MVulkanRHI/MVulkanDescriptor.hpp"
 #include <stdexcept>
+#include <spdlog/spdlog.h>
 
 MVulkanDescriptorSetAllocator::MVulkanDescriptorSetAllocator()
 {
@@ -26,6 +27,8 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
 
+MVulkanDescriptorSetLayouts::MVulkanDescriptorSetLayouts(VkDescriptorSetLayout _layout):layout(_layout){}
+
 void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings)
 {
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -51,60 +54,111 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDes
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout));
 }
 
-void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, int _MAX_FRAMES_IN_FLIGHT)
+MVulkanDescriptorSet::MVulkanDescriptorSet(VkDescriptorSet _set):set(_set){}
+
+void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout)
 {
-    std::vector<VkDescriptorSetLayout> layouts(_MAX_FRAMES_IN_FLIGHT, layout);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &layout;
+
+    //sets.resize(_MAX_FRAMES_IN_FLIGHT);
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &set));
+}
+
+std::vector<MVulkanDescriptorSet> MVulkanDescriptorSet::CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts)
+{
+    std::vector<VkDescriptorSet> descriptorSets(layouts.size());
 
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = pool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
+    allocInfo.descriptorSetCount = layouts.size();
     allocInfo.pSetLayouts = layouts.data();
 
-    sets.resize(_MAX_FRAMES_IN_FLIGHT);
-    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, sets.data()));
+    //sets.resize(_MAX_FRAMES_IN_FLIGHT);
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()));
+
+    std::vector<MVulkanDescriptorSet> sets(layouts.size());
+    for (auto i = 0; i < descriptorSets.size(); i++) {
+        sets[i] = MVulkanDescriptorSet(descriptorSets[i]);
+    }
+
+    return sets;
 }
 
 void MVulkanDescriptorSetWrite::Update(
-    VkDevice device, 
-    std::vector<VkDescriptorSet> sets,
+    VkDevice device,
+    VkDescriptorSet set,
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
-    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos, 
-    int frameBufferCount)
+    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos)
 {
-    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos[0].size();
-    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos[0].size();
+    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos.size();
+    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos.size();
 
-    std::vector<std::vector<VkDescriptorBufferInfo>> fullBufferInfos(frameBufferCount);
-    std::vector<std::vector<VkDescriptorImageInfo>> fullImageInfos(frameBufferCount);
+    //std::vector<VkDescriptorBufferInfo> fullBufferInfos(bufferInfos.size());
+    //std::vector<VkDescriptorImageInfo> fullImageInfos(imageInfos.size());
 
-    for (int i = 0; i < frameBufferCount; i++) {
-        if (bufferInfoCount > 0) fullBufferInfos[i] = bufferInfos[i];
-        if (imageInfosCount > 0) fullImageInfos[i] = imageInfos[i];
+    //if (bufferInfoCount > 0) fullBufferInfos = bufferInfos[i];
+    //if (imageInfosCount > 0) fullImageInfos = imageInfos[i];
+
+    std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
+    for (auto binding = 0; binding < bufferInfoCount; binding++) {
+        descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[binding].dstSet = set;
+        descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
+        descriptorWrite[binding].dstArrayElement = 0;
+        descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite[binding].descriptorCount = bufferInfos[binding].size();
+        descriptorWrite[binding].pBufferInfo = &(bufferInfos[binding][0]);
     }
 
-    for (size_t i = 0; i < frameBufferCount; i++) {
-        std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
-        for (auto j = 0; j < bufferInfoCount; j++) {
-            descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[j].dstSet = sets[i];
-            descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
-            descriptorWrite[j].dstArrayElement = 0;
-            descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite[j].descriptorCount = 1;
-            descriptorWrite[j].pBufferInfo = &(fullBufferInfos[i][j]);
-        }
-
-        for (auto j = bufferInfoCount; j < bufferInfoCount + imageInfosCount; j++) {
-            descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[j].dstSet = sets[i];
-            descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
-            descriptorWrite[j].dstArrayElement = 0;
-            descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite[j].descriptorCount = 1;
-            descriptorWrite[j].pImageInfo = &(fullImageInfos[i][j - bufferInfoCount]);
-        }
-
-        vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
+    for (auto binding = bufferInfoCount; binding < bufferInfoCount + imageInfosCount; binding++) {
+        descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[binding].dstSet = set;
+        descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
+        descriptorWrite[binding].dstArrayElement = 0;
+        descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrite[binding].descriptorCount = imageInfos[binding - bufferInfoCount].size();
+        descriptorWrite[binding].pImageInfo = &(imageInfos[binding - bufferInfoCount][0]);
     }
+
+    //spdlog::info("**************************************");
+    vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
 }
+
+//void MVulkanDescriptorSetWrite::Update(
+//    VkDevice device,
+//    VkDescriptorSet set,
+//    std::vector<VkDescriptorBufferInfo> bufferInfos,
+//    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos)
+//{
+//    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos[0].size();
+//    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos[0].size();
+//
+//    std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
+//    for (auto j = 0; j < bufferInfoCount; j++) {
+//        descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//        descriptorWrite[j].dstSet = set;
+//        descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
+//        descriptorWrite[j].dstArrayElement = 0;
+//        descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//        descriptorWrite[j].descriptorCount = bufferInfos[j].size();
+//        descriptorWrite[j].pBufferInfo = &(bufferInfos[j][0]);
+//    }
+//
+//    for (auto j = bufferInfoCount; j < bufferInfoCount + imageInfosCount; j++) {
+//        descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//        descriptorWrite[j].dstSet = set;
+//        descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
+//        descriptorWrite[j].dstArrayElement = 0;
+//        descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//        descriptorWrite[j].descriptorCount = imageInfos[j].size();
+//        descriptorWrite[j].pImageInfo = &(imageInfos[j - bufferInfoCount][0]);
+//    }
+//
+//    vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
+//}
+//

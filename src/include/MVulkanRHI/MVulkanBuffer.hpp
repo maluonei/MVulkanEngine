@@ -12,6 +12,7 @@ struct BufferCreateInfo {
 	VkBufferUsageFlagBits usage;
 	VkDeviceSize size;
 	VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	uint32_t arrayLength = 1;
 };
 
 class MVulkanBuffer {
@@ -19,7 +20,7 @@ public:
 	MVulkanBuffer(BufferType _type);
 
 	void Create(MVulkanDevice device, BufferCreateInfo info);
-	void LoadData(VkDevice device, const void* data);
+	void LoadData(VkDevice device, const void* data, uint32_t offset=0);
 	void Map(VkDevice device);
 	void UnMap(VkDevice device);
 
@@ -50,10 +51,13 @@ public:
 	void Clean(VkDevice device);
 	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
 	void Create(MVulkanDevice device, BufferCreateInfo info);
-	void UpdateData(MVulkanDevice device, void* data);
+	void UpdateData(MVulkanDevice device, void* data, float offset=0);
 	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
 	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
+	const inline uint32_t GetArrayLength() const { return m_info.arrayLength; }
+	const inline uint32_t GetBufferSize() const { return m_info.size; }
 private:
+	BufferCreateInfo m_info;
 	MVulkanBuffer dataBuffer;
 	//MVulkanBuffer stagingBuffer;
 };
