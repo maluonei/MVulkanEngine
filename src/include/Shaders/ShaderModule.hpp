@@ -132,7 +132,8 @@ public:
 		glm::vec3 direction;
 		float intensity;
 		glm::vec3 color;
-		float padding0;
+		int shadowMapIndex;
+		glm::mat4 shadowViewProj;
 	};
 
 	struct DirectionalLightBuffer {
@@ -143,6 +144,24 @@ public:
 
 private:
 	DirectionalLightBuffer ubo0;
+};
+
+class ShadowShader :public ShaderModule {
+public:
+	ShadowShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct ShadowUniformBuffer {
+		glm::mat4 shadowMVP;
+	};
+private:
+	ShadowUniformBuffer ubo0;
 };
 
 #endif

@@ -30,6 +30,7 @@ class MWindow;
 class Camera;
 class Scene;
 class RenderPass;
+class Light;
 
 class MVulkanEngine: public Singleton<MVulkanEngine> {
 public:
@@ -127,9 +128,11 @@ private:
     void createSampler();
     //void loadModel();
     void loadScene();
+    void createLight();
     
     void createSyncObjects();
     void recordGbufferCommandBuffer(uint32_t imageIndex);
+    void recordShadowCommandBuffer(uint32_t imageIndex);
     void recordFinalCommandBuffer(uint32_t imageIndex);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
@@ -151,6 +154,7 @@ private:
     //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
     std::shared_ptr<RenderPass> gbufferPass;
+    std::shared_ptr<RenderPass> shadowPass;
     std::shared_ptr<RenderPass> lightingPass;
 
     uint16_t windowWidth = 800, windowHeight = 600;
@@ -176,10 +180,6 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    //VertexBuffer vertexBuffer;
-    //IndexBuffer indexBuffer;
-    //VertexBuffer squadVertexBuffer;
-    //IndexBuffer squadIndexBuffer;
     Buffer squadVertexBuffer;
     Buffer squadIndexBuffer;
 
@@ -191,14 +191,16 @@ private:
     std::vector<MVulkanSemaphore> renderFinishedSemaphores;
     std::vector<MVulkanSemaphore> gbufferRenderFinishedSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> shadowRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> shadowTransferFinishedSemaphores;
     std::vector<MVulkanSemaphore> gbufferTransferFinishedSemaphores;
     std::vector<MVulkanSemaphore> transferFinishedSemaphores;
     std::vector<MVulkanFence> inFlightFences;
     uint32_t currentFrame = 0;
 
     std::shared_ptr<Camera> camera;
-    //std::shared_ptr<Model> model;
     std::shared_ptr<Scene> scene;
+    std::shared_ptr<Light> directionalLight;
 
     std::vector<MVulkanSampler> globalSamplers;
 };

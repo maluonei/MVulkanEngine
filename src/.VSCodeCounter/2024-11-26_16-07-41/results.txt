@@ -1,0 +1,114 @@
+Date : 2024-11-26 16:07:41
+Directory : f:\MVulkanEngine\src
+Total : 70 files,  4995 codes, 656 comments, 1436 blanks, all 7087 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| C++      |         69 |      4,954 |        656 |      1,421 |      7,031 |
+| CMake    |          1 |         41 |          0 |         15 |         56 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                   |         70 |      4,995 |        656 |      1,436 |      7,087 |
+| . (Files)                                                           |          1 |         41 |          0 |         15 |         56 |
+| include                                                             |         35 |      1,622 |        160 |        512 |      2,294 |
+| include (Files)                                                     |          4 |        151 |          6 |         51 |        208 |
+| include\MVulkanRHI                                                  |         15 |        835 |         76 |        262 |      1,173 |
+| include\Managers                                                    |          4 |         91 |          3 |         29 |        123 |
+| include\Scene                                                       |          7 |        173 |         41 |         66 |        280 |
+| include\Scene (Files)                                               |          4 |        118 |         41 |         47 |        206 |
+| include\Scene\Light                                                 |          3 |         55 |          0 |         19 |         74 |
+| include\Shaders                                                     |          3 |        160 |          3 |         51 |        214 |
+| include\Utils                                                       |          2 |        212 |         31 |         53 |        296 |
+| source                                                              |         34 |      3,332 |        496 |        909 |      4,737 |
+| source (Files)                                                      |          4 |        281 |         85 |         77 |        443 |
+| source\MVulkanRHI                                                   |         17 |      2,588 |        235 |        700 |      3,523 |
+| source\Managers                                                     |          2 |         70 |          1 |         18 |         89 |
+| source\Scene                                                        |          7 |        179 |        127 |         69 |        375 |
+| source\Scene (Files)                                                |          4 |        178 |        127 |         66 |        371 |
+| source\Scene\Light                                                  |          3 |          1 |          0 |          3 |          4 |
+| source\Shaders                                                      |          3 |        213 |         48 |         44 |        305 |
+| source\Utils                                                        |          1 |          1 |          0 |          1 |          2 |
++---------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                            | language | code       | comment    | blank      | total      |
++---------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| f:\MVulkanEngine\src\CMakeLists.txt                                 | CMake    |         41 |          0 |         15 |         56 |
+| f:\MVulkanEngine\src\include\Camera.hpp                             | C++      |         74 |          1 |         26 |        101 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanAttachmentBuffer.hpp | C++      |         18 |         14 |         10 |         42 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanBuffer.hpp           | C++      |        157 |         40 |         39 |        236 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanCommand.hpp          | C++      |         96 |          2 |         25 |        123 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanDescriptor.hpp       | C++      |         52 |          5 |         13 |         70 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanDevice.hpp           | C++      |         64 |          1 |         27 |         92 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanEngine.hpp           | C++      |        158 |          8 |         42 |        208 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanFrameBuffer.hpp      | C++      |         53 |          3 |         18 |         74 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanInstance.hpp         | C++      |         22 |          0 |         12 |         34 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanPipeline.hpp         | C++      |         26 |          0 |         10 |         36 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanRenderPass.hpp       | C++      |         23 |          0 |          9 |         32 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanSampler.hpp          | C++      |         10 |          0 |          4 |         14 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanShader.hpp           | C++      |         55 |          3 |         18 |         76 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanSwapchain.hpp        | C++      |         49 |          0 |         19 |         68 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MVulkanSyncObject.hpp       | C++      |         23 |          0 |          8 |         31 |
+| f:\MVulkanEngine\src\include\MVulkanRHI\MWindow.hpp                 | C++      |         29 |          0 |          8 |         37 |
+| f:\MVulkanEngine\src\include\Managers\GlobalConfig.hpp              | C++      |         11 |          0 |          7 |         18 |
+| f:\MVulkanEngine\src\include\Managers\InputManager.hpp              | C++      |         33 |          1 |          7 |         41 |
+| f:\MVulkanEngine\src\include\Managers\Singleton.hpp                 | C++      |         22 |          2 |          4 |         28 |
+| f:\MVulkanEngine\src\include\Managers\TextureManager.hpp            | C++      |         25 |          0 |         11 |         36 |
+| f:\MVulkanEngine\src\include\RenderPass.hpp                         | C++      |         64 |          5 |         20 |         89 |
+| f:\MVulkanEngine\src\include\Scene\Light\DirectionalLight.hpp       | C++      |         14 |          0 |          5 |         19 |
+| f:\MVulkanEngine\src\include\Scene\Light\Light.hpp                  | C++      |         27 |          0 |          7 |         34 |
+| f:\MVulkanEngine\src\include\Scene\Light\PointLight.hpp             | C++      |         14 |          0 |          7 |         21 |
+| f:\MVulkanEngine\src\include\Scene\Material.hpp                     | C++      |         10 |          0 |          7 |         17 |
+| f:\MVulkanEngine\src\include\Scene\Model.hpp                        | C++      |         10 |         39 |          5 |         54 |
+| f:\MVulkanEngine\src\include\Scene\Scene.hpp                        | C++      |         73 |          2 |         21 |         96 |
+| f:\MVulkanEngine\src\include\Scene\SceneLoader.hpp                  | C++      |         25 |          0 |         14 |         39 |
+| f:\MVulkanEngine\src\include\Shaders\Shader.hpp                     | C++      |         22 |          3 |          7 |         32 |
+| f:\MVulkanEngine\src\include\Shaders\ShaderModule.hpp               | C++      |        130 |          0 |         37 |        167 |
+| f:\MVulkanEngine\src\include\Shaders\ShaderResourceMap.hpp          | C++      |          8 |          0 |          7 |         15 |
+| f:\MVulkanEngine\src\include\Util.cpp                               | C++      |          0 |          0 |          1 |          1 |
+| f:\MVulkanEngine\src\include\Util.hpp                               | C++      |         13 |          0 |          4 |         17 |
+| f:\MVulkanEngine\src\include\Utils\MImage.hpp                       | C++      |         44 |         16 |         15 |         75 |
+| f:\MVulkanEngine\src\include\Utils\VulkanUtil.hpp                   | C++      |        168 |         15 |         38 |        221 |
+| f:\MVulkanEngine\src\source\Camera.cpp                              | C++      |         41 |          4 |         11 |         56 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanAttachmentBuffer.cpp  | C++      |         43 |         27 |         10 |         80 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanBuffer.cpp            | C++      |        153 |         73 |         51 |        277 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanCommandList.cpp       | C++      |        199 |         18 |         44 |        261 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanCommandPool.cpp       | C++      |         28 |          0 |          8 |         36 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanCommandQueue.cpp      | C++      |         20 |          0 |          7 |         27 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanDescriptor.cpp        | C++      |         95 |         42 |         27 |        164 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanDevice.cpp            | C++      |        242 |          9 |         74 |        325 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanEngine.cpp            | C++      |        841 |         25 |        249 |      1,115 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanFrameBuffer.cpp       | C++      |         52 |          0 |         10 |         62 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanInstance.cpp          | C++      |        106 |          0 |         30 |        136 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanPipeline.cpp          | C++      |        119 |          7 |         21 |        147 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanRenderPass.cpp        | C++      |        173 |          0 |         33 |        206 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanSampler.cpp           | C++      |         27 |          1 |          8 |         36 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanShader.cpp            | C++      |        241 |         27 |         64 |        332 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanSwapchain.cpp         | C++      |        145 |          1 |         36 |        182 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MVulkanSyncObject.cpp        | C++      |         31 |          0 |          9 |         40 |
+| f:\MVulkanEngine\src\source\MVulkanRHI\MWindow.cpp                  | C++      |         73 |          5 |         19 |         97 |
+| f:\MVulkanEngine\src\source\Managers\InputManager.cpp               | C++      |         56 |          1 |         12 |         69 |
+| f:\MVulkanEngine\src\source\Managers\TextureManager.cpp             | C++      |         14 |          0 |          6 |         20 |
+| f:\MVulkanEngine\src\source\RenderPass.cpp                          | C++      |        217 |         81 |         59 |        357 |
+| f:\MVulkanEngine\src\source\Scene\Light\DirectionalLight.cpp        | C++      |          0 |          0 |          1 |          1 |
+| f:\MVulkanEngine\src\source\Scene\Light\Light.cpp                   | C++      |          1 |          0 |          1 |          2 |
+| f:\MVulkanEngine\src\source\Scene\Light\PointLight.cpp              | C++      |          0 |          0 |          1 |          1 |
+| f:\MVulkanEngine\src\source\Scene\Material.cpp                      | C++      |          0 |          0 |          1 |          1 |
+| f:\MVulkanEngine\src\source\Scene\Model.cpp                         | C++      |          2 |         78 |          2 |         82 |
+| f:\MVulkanEngine\src\source\Scene\Scene.cpp                         | C++      |         45 |         41 |         17 |        103 |
+| f:\MVulkanEngine\src\source\Scene\SceneLoader.cpp                   | C++      |        131 |          8 |         46 |        185 |
+| f:\MVulkanEngine\src\source\Shaders\Shader.cpp                      | C++      |         41 |         37 |         14 |         92 |
+| f:\MVulkanEngine\src\source\Shaders\ShaderModule.cpp                | C++      |        172 |         11 |         29 |        212 |
+| f:\MVulkanEngine\src\source\Shaders\ShaderResourceMap.cpp           | C++      |          0 |          0 |          1 |          1 |
+| f:\MVulkanEngine\src\source\Util.cpp                                | C++      |         12 |          0 |          3 |         15 |
+| f:\MVulkanEngine\src\source\Utils\MImage.cpp                        | C++      |          1 |          0 |          1 |          2 |
+| f:\MVulkanEngine\src\source\main.cpp                                | C++      |         11 |          0 |          4 |         15 |
+| Total                                                               |          |      4,995 |        656 |      1,436 |      7,087 |
++---------------------------------------------------------------------+----------+------------+------------+------------+------------+

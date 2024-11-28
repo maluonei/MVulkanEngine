@@ -19,11 +19,13 @@ struct RenderPassCreateInfo {
 	bool useAttachmentResolve = false;
 	bool useSwapchainImages = false;
 	VkExtent2D extent;
+	VkFormat depthFormat;
 	std::vector<VkFormat> imageAttachmentFormats;
 	VkImageView* colorAttachmentResolvedViews = nullptr;
 
-	VkImageLayout initialLayout;
-	VkImageLayout finalLayout;
+	VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	VkImageLayout depthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 };
 
 class RenderPass {

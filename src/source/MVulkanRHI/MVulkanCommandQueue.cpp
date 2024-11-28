@@ -17,7 +17,7 @@ void MVulkanCommandQueue::SubmitCommands(uint32_t submitCount, const VkSubmitInf
 
 void MVulkanCommandQueue::WaitForQueueComplete()
 {
-	vkQueueWaitIdle(queue);
+	VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 }
 
 VkResult MVulkanCommandQueue::Present(VkPresentInfoKHR* presentInfo)

@@ -39,6 +39,8 @@ void SceneLoader::Load(std::string path, Scene* scene)
 
     scene->GenerateIndirectDrawData();
 
+    scene->CalculateBB();
+
     auto totalVertexs = scene->GetTotalVertexs();
     auto totalIndeices = scene->GetTotalIndeices();
 

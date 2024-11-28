@@ -100,3 +100,19 @@ void Scene::GenerateIndirectDrawCommand()
 
     //return m_indirectCommands;
 }
+
+void Scene::CalculateBB()
+{
+    //BoundingBox bbx;
+    m_bbx.pMin = glm::vec3(1000.f);
+    m_bbx.pMax = glm::vec3(-1000.f);
+
+    for (auto vertex : m_totalVertexs) {
+        m_bbx.pMin.x = std::min(m_bbx.pMin.x, vertex.position.x);
+        m_bbx.pMin.y = std::min(m_bbx.pMin.y, vertex.position.y);
+        m_bbx.pMin.z = std::min(m_bbx.pMin.z, vertex.position.z);
+        m_bbx.pMax.x = std::max(m_bbx.pMax.x, vertex.position.x);
+        m_bbx.pMax.y = std::max(m_bbx.pMax.y, vertex.position.y);
+        m_bbx.pMax.z = std::max(m_bbx.pMax.z, vertex.position.z);
+    }
+}

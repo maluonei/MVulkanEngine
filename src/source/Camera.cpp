@@ -10,7 +10,8 @@ Camera::Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _asp
 	up = glm::normalize(glm::cross(right, forward));
 
 	projMatrix = glm::perspective(glm::radians(fov), aspect_ratio, zNear, zFar);
-	orthoMatrix = glm::ortho(-10.f, 10.f, -7.f, 7.f, 0.1f, 1000.f);
+	orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, zNear, zFar);
+	//orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.001f, 10000.f);
 	UpdateViewMatrix();
 }
 

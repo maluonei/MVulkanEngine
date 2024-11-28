@@ -108,7 +108,8 @@ void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo forma
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthAttachment.finalLayout = formats.finalDepthLayout;
 
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = static_cast<uint32_t>(colorAttachments.size());

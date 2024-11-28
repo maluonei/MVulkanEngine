@@ -11,6 +11,7 @@ struct RenderPassFormatsInfo {
 	VkFormat resolvedFormat;
 	VkImageLayout initialLayout;
 	VkImageLayout finalLayout;
+	VkImageLayout finalDepthLayout;
 };
 
 class MVulkanRenderPass {

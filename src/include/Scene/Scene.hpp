@@ -35,6 +35,10 @@ struct Mesh {
     std::vector<uint32_t> indices;
 };
 
+struct BoundingBox {
+    glm::vec3 pMin;
+    glm::vec3 pMax;
+};
 
 class Light;
 
@@ -77,7 +81,15 @@ public:
 
     inline void AddMaterial(std::shared_ptr<PhongMaterial> material){m_materials.push_back(material);}
     inline std::shared_ptr<PhongMaterial> GetMaterial(int index){return m_materials[index];}
+
+    inline BoundingBox GetBoundingBox() const { return m_bbx; }
+
+    void CalculateBB();
 private:
+    //void calculateBB();
+
+    BoundingBox m_bbx;
+
     std::vector<Vertex> m_totalVertexs;
     std::vector<uint32_t> m_totalIndeices;
     std::shared_ptr<Buffer> m_indirectBuffer;

@@ -14,6 +14,7 @@ struct FrameBufferCreateInfo {
 	VkRenderPass renderPass;
 	VkExtent2D extent;
 	uint16_t numAttachments;
+	VkFormat depthStencilFormat;
 	VkFormat* imageAttachmentFormats = nullptr;
 
 	MVulkanSwapchain swapChain;
@@ -55,9 +56,13 @@ public:
 
 	inline VkImage GetDepthImage() const { return depthBuffer.GetImage(); }
 
+	inline VkImageView GetDepthImageView() const { return depthBuffer.GetImageView(); }
+
 	inline VkFramebuffer Get() const { return frameBuffer; }
 
 	inline const uint32_t ColorAttachmentsCount() const { return static_cast<uint32_t>(colorBuffers.size()); }
+
+	inline const VkExtent2D GetExtent2D()const { return m_info.extent; }
 
 private:
 	FrameBufferCreateInfo m_info;

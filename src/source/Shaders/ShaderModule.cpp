@@ -190,3 +190,22 @@ void* SquadPhongShader::GetData(uint32_t binding, uint32_t index)
 {
 	return &ubo0;
 }
+
+ShadowShader::ShadowShader():ShaderModule("shadow.vert.glsl", "shadow.frag.glsl")
+{
+}
+
+size_t ShadowShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return sizeof(ShadowUniformBuffer);
+}
+
+void ShadowShader::SetUBO(uint8_t index, void* data)
+{
+	ubo0 = *reinterpret_cast<ShadowUniformBuffer*>(data);
+}
+
+void* ShadowShader::GetData(uint32_t binding, uint32_t index)
+{
+	return &ubo0;
+}

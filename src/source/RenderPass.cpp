@@ -49,7 +49,7 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
         std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_textureCount);
         for (auto binding = 0; binding < m_textureCount; binding++) {
             imageInfos[binding].resize(imageViews[binding].size());
-            for (auto j = 0; j < imageViews[i].size(); j++) {
+            for (auto j = 0; j < imageViews[binding].size(); j++) {
                 imageInfos[binding][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
                 imageInfos[binding][j].imageView = imageViews[binding][j];
                 imageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -246,9 +246,10 @@ void RenderPass::CreateRenderPass()
     RenderPassFormatsInfo gbufferFormats{};
     gbufferFormats.useResolvedRef = m_info.useAttachmentResolve;
     gbufferFormats.imageFormats = m_info.imageAttachmentFormats;
-    gbufferFormats.depthFormat = m_device.FindDepthFormat();
+    gbufferFormats.depthFormat = m_info.depthFormat;
     gbufferFormats.initialLayout = m_info.initialLayout;
     gbufferFormats.finalLayout = m_info.finalLayout;
+    gbufferFormats.finalDepthLayout = m_info.depthLayout;
 
     m_renderPass.Create(m_device, gbufferFormats);
 }
@@ -264,6 +265,7 @@ void RenderPass::CreateFrameBuffers(
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         FrameBufferCreateInfo info{};
 
+        info.depthStencilFormat = m_info.depthFormat;
         info.useSwapchainImageViews = m_info.useSwapchainImages;
         info.useAttachmentResolve = m_info.useAttachmentResolve;
         info.renderPass = m_renderPass.Get();

@@ -68,7 +68,8 @@ public:
 	}
 
 	inline glm::mat4* GetProjMatrixPtr() {
-		return &projMatrix;
+		if (IsOrtho()) return &orthoMatrix;
+		else return &projMatrix;
 	}
 
 	inline glm::mat4* GetViewMatrixPtr() {

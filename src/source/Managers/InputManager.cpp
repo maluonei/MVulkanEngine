@@ -22,23 +22,25 @@ void InputManager::DealMouseClickInput()
 
 void InputManager::DealKeyboardInput()
 {
+	float velocity = 0.1f;
+
 	if (Keys[GLFW_KEY_W]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Up, 0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Up, velocity);
 	}
 	if (Keys[GLFW_KEY_S]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Up, -0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Up, -velocity);
 	}
 	if (Keys[GLFW_KEY_A]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Right, -0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Right, -velocity);
 	}
 	if (Keys[GLFW_KEY_D]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Right, 0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Right, velocity);
 	}
 	if (Keys[GLFW_KEY_Q]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Forward, 0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Forward, velocity);
 	}
 	if (Keys[GLFW_KEY_E]) {
-		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Forward, -0.01f);
+		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Forward, -velocity);
 	}
 }
 

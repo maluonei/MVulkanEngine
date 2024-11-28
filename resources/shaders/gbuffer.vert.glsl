@@ -25,7 +25,7 @@ void main() {
 	mat3 normalMatrix = transpose(inverse(mat3(ubo0.Model)));
 	normal = normalize(normalMatrix * Normal);
 	texCoord = Coord;
-	worldPos = vec3(worldSpacePosition);
+	worldPos = vec3(worldSpacePosition.xyz / worldSpacePosition.w);
 
 	gl_Position = screenSpacePosition;
 
