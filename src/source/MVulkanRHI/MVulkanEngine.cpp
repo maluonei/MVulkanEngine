@@ -90,7 +90,7 @@ void MVulkanEngine::drawFrame()
     inFlightFences[currentFrame].WaitForSignal(device.GetDevice());
 
     uint32_t imageIndex;
-    VkResult result = swapChain.AcquireNextImage(device.GetDevice(), imageAvailableSemaphores[currentFrame].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = swapChain.AcquireNextImage(device.GetDevice(), imageAvailableSemaphores[0].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
     //spdlog::info("imageIndex:" + std::to_string(imageIndex));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -101,131 +101,31 @@ void MVulkanEngine::drawFrame()
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    inFlightFences[currentFrame].Reset(device.GetDevice());
-    spdlog::info("b");
+    inFlightFences[0].Reset(device.GetDevice());
 
     graphicsLists[currentFrame].Reset();
     recordGbufferCommandBuffer(imageIndex);
-
+    recordShadowCommandBuffer(imageIndex);
+    recordFinalCommandBuffer(imageIndex);
+    graphicsLists[currentFrame].End();
+    
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores1[] = { imageAvailableSemaphores[currentFrame].GetSemaphore() };
-    VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    //submitInfo.waitSemaphoreCount = 1;
-    //submitInfo.pWaitSemaphores = waitSemaphores1;
-    submitInfo.waitSemaphoreCount = 0;
-    submitInfo.pWaitSemaphores = nullptr;
-    submitInfo.pWaitDstStageMask = waitStages1;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
-
-    VkSemaphore signalSemaphores1[] = { gbufferRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.pSignalSemaphores = nullptr;
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = signalSemaphores1;
-
-    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    graphicsQueue.WaitForQueueComplete();
-    spdlog::info("c");
-
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    //for (auto i = 0; i < gbufferPass->GetFrameBuffer(0).ColorAttachmentsCount(); i++) {
-    //    MVulkanImageMemoryBarrier barrier{};
-    //    barrier.image = gbufferPass->GetFrameBuffer(0).GetImage(i);
-    //    barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    //    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //
-    //    barriers.push_back(barrier);
-    //}
-    //
-    //VkSemaphore transferWaitSemaphores[] = { gbufferRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    //VkPipelineStageFlags transferWaitStages1[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    //VkSemaphore transferSignalSemaphores[] = { gbufferTransferFinishedSemaphores[currentFrame].GetSemaphore() };
-    //transitionImageLayouts(barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    //    transferWaitSemaphores, transferWaitStages1,
-    //    transferSignalSemaphores, VK_NULL_HANDLE
-    //);
-
-    spdlog::info("d");
-    graphicsLists[currentFrame].Reset();
-    recordShadowCommandBuffer(imageIndex);
-    
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores2[] = { gbufferRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    //VkSemaphore waitSemaphores2[] = { gbufferTransferFinishedSemaphores[currentFrame].GetSemaphore() };
-    VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    //submitInfo.waitSemaphoreCount = 1;
-    //submitInfo.pWaitSemaphores = waitSemaphores2;
-    submitInfo.waitSemaphoreCount = 0;
-    submitInfo.pWaitSemaphores = nullptr;
-    submitInfo.pWaitDstStageMask = waitStages2;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
-
-    VkSemaphore signalSemaphores2[] = { shadowRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = signalSemaphores2;
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.pSignalSemaphores = nullptr;
-
-    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    graphicsQueue.WaitForQueueComplete();
-    //done draw gbuffer
-
-
-    spdlog::info("d0");
-    //barriers.clear();
-
-    //MVulkanImageMemoryBarrier barrier{};
-    //barrier.image = shadowPass->GetFrameBuffer(0).GetDepthImage();
-    //barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    //
-    //barriers.push_back(barrier);
-    //
-    //VkSemaphore transferWaitSemaphores2[] = { shadowRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    //VkPipelineStageFlags transferWaitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    //VkSemaphore transferSignalSemaphores2[] = { shadowTransferFinishedSemaphores[currentFrame].GetSemaphore() };
-    //transitionImageLayouts(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    //    transferWaitSemaphores2, transferWaitStages2,
-    //    transferSignalSemaphores2, VK_NULL_HANDLE
-    //);
-    //spdlog::info("e");
-
-    graphicsLists[currentFrame].Reset();
-    recordFinalCommandBuffer(imageIndex);
-
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    //VkSemaphore waitSemaphores3[] = { shadowTransferFinishedSemaphores[currentFrame].GetSemaphore() };
-    VkSemaphore waitSemaphores3[] = { shadowRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore waitSemaphores3[] = { imageAvailableSemaphores[0].GetSemaphore() };
     VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    //submitInfo.waitSemaphoreCount = 1;
-    //submitInfo.pWaitSemaphores = waitSemaphores3;
-    submitInfo.waitSemaphoreCount = 0;
-    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores3;
     submitInfo.pWaitDstStageMask = waitStages3;
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
 
-    VkSemaphore signalSemaphores3[] = { finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = signalSemaphores3;
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.pSignalSemaphores = nullptr;
+    VkSemaphore signalSemaphores3[] = { finalRenderFinishedSemaphores[0].GetSemaphore() };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores3;
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, inFlightFences[currentFrame].GetFence());
+    graphicsQueue.SubmitCommands(1, &submitInfo, inFlightFences[0].GetFence());
     graphicsQueue.WaitForQueueComplete();
     //done draw gbuffer
 
@@ -256,7 +156,7 @@ void MVulkanEngine::drawFrame()
     //VkSemaphore transferWaitSemaphores3[] = { finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
     //VkPipelineStageFlags transferWaitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     //VkSemaphore transferSignalSemaphores3[] = { finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-    VkSemaphore transferSignalSemaphores3[] = { imageAvailableSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore transferSignalSemaphores3[] = { finalRenderFinishedSemaphores[0].GetSemaphore() };
     //VkSemaphore transferSignalSemaphores3[] = { transferFinishedSemaphores[currentFrame].GetSemaphore() };
     //transitionImageLayouts(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     //    transferWaitSemaphores3, transferWaitStages3,
@@ -265,6 +165,7 @@ void MVulkanEngine::drawFrame()
 
     spdlog::info("f");
 
+    vkDeviceWaitIdle(device.GetDevice());
     present(swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex);
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1016,12 +917,10 @@ void MVulkanEngine::recordGbufferCommandBuffer(uint32_t imageIndex)
 
     graphicsLists[currentFrame].EndRenderPass();
 
-    graphicsLists[currentFrame].End();
 }
 
 void MVulkanEngine::recordShadowCommandBuffer(uint32_t imageIndex)
 {
-    graphicsLists[currentFrame].Begin();
 
     VkExtent2D extent = shadowPass->GetFrameBuffer(0).GetExtent2D();
     //swapChainExtent = shadowPass->GetFrameBuffer(0).GetExtent2D();
@@ -1061,8 +960,8 @@ void MVulkanEngine::recordShadowCommandBuffer(uint32_t imageIndex)
     glm::vec3 position = 33.6f * glm::vec3(1.f);
     glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetDirection();
 
-    std::cout << "position:" << position << std::endl;
-    std::cout << "direction:" << direction << std::endl;
+    // std::cout << "position:" << position << std::endl;
+    // std::cout << "direction:" << direction << std::endl;
 
     float fov = 60.f;
     float aspect = (float)extent.width / (float)extent.height;
@@ -1075,8 +974,8 @@ void MVulkanEngine::recordShadowCommandBuffer(uint32_t imageIndex)
     glm::mat4 orth = lightCamera.GetOrthoMatrix();
 
     //spdlog::info();
-    std::cout << "view:" << view << std::endl;
-    std::cout << "orth:" << orth << std::endl;
+    // std::cout << "view:" << view << std::endl;
+    // std::cout << "orth:" << orth << std::endl;
 
     ShadowShader::ShadowUniformBuffer ubo0{};
     ubo0.shadowMVP = lightCamera.GetOrthoMatrix() * lightCamera.GetViewMatrix();
@@ -1102,13 +1001,11 @@ void MVulkanEngine::recordShadowCommandBuffer(uint32_t imageIndex)
 
     graphicsLists[currentFrame].EndRenderPass();
 
-    graphicsLists[currentFrame].End();
 }
 
 
 void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
 {
-    graphicsLists[currentFrame].Begin();
 
     VkExtent2D swapChainExtent = swapChain.GetSwapChainExtent();
 
@@ -1157,8 +1054,8 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     glm::mat4 orth = lightCamera.GetOrthoMatrix();
 
     //spdlog::info();
-    std::cout << "view:" << view << std::endl;
-    std::cout << "orth:" << orth << std::endl;
+    // std::cout << "view:" << view << std::endl;
+    // std::cout << "orth:" << orth << std::endl;
 
     SquadPhongShader::DirectionalLightBuffer ubo0{};
     ubo0.lightNum = 1;
@@ -1168,7 +1065,7 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     ubo0.lights[0].shadowMapIndex = 0;
     ubo0.lights[0].shadowViewProj = lightCamera.GetOrthoMatrix() * lightCamera.GetViewMatrix();
 
-    std::cout << "shadowViewProj:" << ubo0.lights[0].shadowViewProj << std::endl;
+    // std::cout << "shadowViewProj:" << ubo0.lights[0].shadowViewProj << std::endl;
 
     ubo0.cameraPos = camera->GetPosition();
 
@@ -1186,5 +1083,4 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
 
     graphicsLists[currentFrame].DrawIndexed(6, 1, 0, 0, 0);
     graphicsLists[currentFrame].EndRenderPass();
-    graphicsLists[currentFrame].End();
 }
