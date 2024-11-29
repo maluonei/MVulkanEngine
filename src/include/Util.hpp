@@ -10,13 +10,17 @@
 #include <array>
 #include "glm/glm.hpp"
 
+struct BoundingBox {
+    glm::vec3 pMin;
+    glm::vec3 pMax;
+};
+
 void DirectionToPitchYaw(glm::vec3 direction, float& pitch, float& yaw);
 void PitchYawToDirection(float pitch, float yaw, glm::vec3& direction);
 
 std::ostream& operator<<(std::ostream& os, const glm::mat4& mat);
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec);
-
 
 
 #endif

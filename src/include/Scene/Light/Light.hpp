@@ -3,6 +3,8 @@
 #define LIGHT_HPP
 
 #include "glm/glm.hpp"
+#include <memory>
+#include "Util.hpp"
 
 enum class LightType : uint8_t {
 	NONE = 0,
@@ -11,6 +13,7 @@ enum class LightType : uint8_t {
 	SPOT
 };
 
+class Camera;
 class Light {
 public:
 	Light()
@@ -23,6 +26,8 @@ public:
 	inline float GetIntensity() const { return m_intensity; }
 	inline void SetIntensity(float intensity) { m_intensity = intensity; }
 	inline LightType GetType() const { return m_type; }
+
+	//virtual std::shared_ptr<Camera> GetLightCamera(BoundingBox bbx) = 0;
 
 private:
 	glm::vec3 m_color;

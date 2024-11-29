@@ -22,7 +22,7 @@ void InputManager::DealMouseClickInput()
 
 void InputManager::DealKeyboardInput()
 {
-	float velocity = 0.1f;
+	float velocity = 0.01f;
 
 	if (Keys[GLFW_KEY_W]) {
 		Singleton<MVulkanEngine>::instance().GetCamera()->Move(Direction::Up, velocity);

@@ -13,6 +13,7 @@
 #include "MVulkanRHI/MVulkanDescriptor.hpp"
 #include "Material.hpp"
 #include <spdlog/spdlog.h>
+#include "Util.hpp"
 
 struct Vertex {
     glm::vec3 position;
@@ -33,11 +34,6 @@ struct Mesh {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-};
-
-struct BoundingBox {
-    glm::vec3 pMin;
-    glm::vec3 pMax;
 };
 
 class Light;

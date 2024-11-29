@@ -37,10 +37,9 @@ const mat4 biasMat = mat4(
     0.0, 0.0, 1.0, 0.0,
     0.5, 0.5, 0.0, 1.0);
 
-void main(){
-    color = vec4(vec3(texture(shadowMaps[0], texCoord).r), 1.f);
-    return;
+const float offset = 0.001f;
 
+void main(){
     vec4 gBufferValue0 = texture(gBufferNormal, texCoord);
     vec4 gBufferValue1 = texture(gBufferPosition, texCoord);
     vec4 gBufferValue2 = texture(gAlbedo, texCoord);
@@ -51,29 +50,22 @@ void main(){
     vec4 fragAlbedo = gBufferValue2.rgba;
     
     vec3 fragcolor = vec3(0.f, 0.f, 0.f);
-
-    //color = vec4(1.f, 0.f, 0.f, 1.f);
-    //return;
     
     for(int i=0;i< ubo0.lightNum;i++){
         float shadow = 1.0;
         vec4 shadowCoord = biasMat * ubo0.lights[i].shadowViewProj * vec4(fragPos, 1.0);
-        //shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
+        shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
+        shadowCoord.y = 1.f - shadowCoord.y;
 
         float shadowDepth = 0.f;
-        //if (shadowCoord.x < 0 || shadowCoord.x>0 || shadowCoord.y < 0 || shadowCoord.y>0) shadow = 0.f;
-        //else {
-            //shadowDepth = texture(shadowMaps[ubo0.lights[i].shadowMapIndex], shadowCoord.xy).r;
-        shadowDepth = texture(shadowMaps[0], shadowCoord.xy).r;
-            //if (shadowDepth < shadowCoord.z - 0.000001) shadow = 0.f;
-        //}
+        if (shadowCoord.x < 0 || shadowCoord.x>1. || shadowCoord.y < 0 || shadowCoord.y>1.) {
+            shadow = 0.f;
+        }
+        else {
+          shadowDepth = texture(shadowMaps[ubo0.lights[i].shadowMapIndex], shadowCoord.xy).r;
+          if ((shadowDepth+offset) < shadowCoord.z) shadow = 0.f;
+        }
 
-        //color = vec4(vec3(shadowDepth), 1.f);
-        color = vec4(shadowCoord.xy, 0.f, 1.f);
-        //color = vec4(vec3(shadowCoord.z), 1.f);
-        return;
-        
-        //shadow = 1.0;
 
         // Vector to light
         vec3 L = -ubo0.lights[i].direction;
@@ -105,15 +97,8 @@ void main(){
 
             fragcolor += shadow * (diff + spec) + ambient;
 
-            //fragcolor = fragAlbedo.rgb;
-            
-            color = vec4(fragAlbedo.rgb, 1.f);
-            return;
         }
     }
 
     color = vec4(fragcolor, 1.f);
-    //color = vec4(normal*0.5+0.5, 1.f);
-    //color = vec4(uv, 0.f, 1.f);
-    //color = vec4(0.f, 1.f, 0.f, 1.f);
 }

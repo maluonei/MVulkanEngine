@@ -344,8 +344,8 @@ void MVulkanEngine::RecreateSwapChain()
             lightingTextures[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
         lightingTextures[3].resize(2);
-        lightingTextures[3][0] = shadowPass->GetFrameBuffer(0).GetImageView(0);
-        lightingTextures[3][1] = shadowPass->GetFrameBuffer(0).GetImageView(0);
+        lightingTextures[3][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        lightingTextures[3][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
         lightingPass->UpdateDescriptorSetWrite(lightingTextures);
     }
@@ -446,7 +446,8 @@ void MVulkanEngine::createRenderPass()
     shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
     //RenderPassCreateInfo info{};
-    info.depthFormat = VK_FORMAT_D32_SFLOAT;
+    //info.depthFormat = VK_FORMAT_D32_SFLOAT;
+    info.depthFormat = VK_FORMAT_D16_UNORM;
     info.frambufferCount = 1;
     info.extent = VkExtent2D(2048, 2048);
     info.useAttachmentResolve = false;
@@ -486,12 +487,8 @@ void MVulkanEngine::createRenderPass()
         gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
     }
     gbufferViews[3] = std::vector<VkImageView>(2);
-    //gbufferViews[3][0] = gbufferPass->GetFrameBuffer(0).GetImageView(2);
-    //gbufferViews[3][1] = gbufferPass->GetFrameBuffer(0).GetImageView(2);
     gbufferViews[3][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
     gbufferViews[3][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    //gbufferViews[3][0] = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-    //gbufferViews[3][1] = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
 }
@@ -648,7 +645,7 @@ void MVulkanEngine::loadScene()
 
 void MVulkanEngine::createLight()
 {
-    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, -1.f));
+    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
     float intensity = 1.f;
     directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
@@ -957,25 +954,19 @@ void MVulkanEngine::recordShadowCommandBuffer(uint32_t imageIndex)
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
 
-    glm::vec3 position = 33.6f * glm::vec3(1.f);
+    
     glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetDirection();
-
-    // std::cout << "position:" << position << std::endl;
-    // std::cout << "direction:" << direction << std::endl;
+    glm::vec3 position = -50.f * direction;
 
     float fov = 60.f;
     float aspect = (float)extent.width / (float)extent.height;
     float zNear = 0.01f;
-    float zFar = 70.f;
+    float zFar = 60.f;
     Camera lightCamera(position, direction, fov, aspect, zNear, zFar);
     lightCamera.SetOrth(true);
 
     glm::mat4 view = lightCamera.GetViewMatrix();
     glm::mat4 orth = lightCamera.GetOrthoMatrix();
-
-    //spdlog::info();
-    // std::cout << "view:" << view << std::endl;
-    // std::cout << "orth:" << orth << std::endl;
 
     ShadowShader::ShadowUniformBuffer ubo0{};
     ubo0.shadowMVP = lightCamera.GetOrthoMatrix() * lightCamera.GetViewMatrix();
@@ -1041,12 +1032,14 @@ void MVulkanEngine::recordFinalCommandBuffer(uint32_t imageIndex)
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
     VkExtent2D extent = shadowPass->GetFrameBuffer(0).GetExtent2D();
-    glm::vec3 position = 33.6f * glm::vec3(1.f);
+    //glm::vec3 position = 33.6f * glm::vec3(1.f);
     glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetDirection();
+    glm::vec3 position = -50.f * direction;
+
     float fov = 60.f;
     float aspect = (float)extent.width / (float)extent.height;
     float zNear = 0.01f;
-    float zFar = 70.f;
+    float zFar = 60.f;
     Camera lightCamera(position, direction, fov, aspect, zNear, zFar);
     lightCamera.SetOrth(true);
 
