@@ -11,6 +11,8 @@ public:
 
 	glm::vec3 GetDirection() const { return m_direction; }
 	void SetDirection(glm::vec3 direction) { m_direction = direction; }
+
+	//virtual std::shared_ptr<Camera> GetLightCamera(BoundingBox bbx);
 private:
 	glm::vec3 m_direction;
 };

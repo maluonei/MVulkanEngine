@@ -53,6 +53,10 @@ public:
 		return position;
 	}
 
+	inline glm::vec3 GetDirection() const {
+		return direction;
+	}
+
 	inline glm::mat4 GetProjMatrix()const {
 		if (IsOrtho()) return orthoMatrix;
 		else return projMatrix;

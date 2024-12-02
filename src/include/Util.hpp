@@ -13,6 +13,10 @@
 struct BoundingBox {
     glm::vec3 pMin;
     glm::vec3 pMax;
+
+    const inline glm::vec3 GetCenter() const {
+        return (pMax + pMin) / 2.0f;
+    }
 };
 
 void DirectionToPitchYaw(glm::vec3 direction, float& pitch, float& yaw);

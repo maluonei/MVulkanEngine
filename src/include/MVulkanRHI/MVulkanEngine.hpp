@@ -131,9 +131,12 @@ private:
     void createLight();
     
     void createSyncObjects();
-    void recordGbufferCommandBuffer(uint32_t imageIndex);
-    void recordShadowCommandBuffer(uint32_t imageIndex);
-    void recordFinalCommandBuffer(uint32_t imageIndex);
+    //void recordGbufferCommandBuffer(uint32_t imageIndex);
+    //void recordShadowCommandBuffer(uint32_t imageIndex);
+    //void recordFinalCommandBuffer(uint32_t imageIndex);
+    void recordCommandBuffer(
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, 
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
 
@@ -180,8 +183,8 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    Buffer squadVertexBuffer;
-    Buffer squadIndexBuffer;
+    std::shared_ptr<Buffer> squadVertexBuffer;
+    std::shared_ptr<Buffer> squadIndexBuffer;
 
     MVulkanSampler sampler;
     MVulkanTexture testTexture;
@@ -199,10 +202,15 @@ private:
     uint32_t currentFrame = 0;
 
     std::shared_ptr<Camera> camera;
+
+    std::shared_ptr<Camera> directionalLightCamera;
+
     std::shared_ptr<Scene> scene;
     std::shared_ptr<Light> directionalLight;
 
     std::vector<MVulkanSampler> globalSamplers;
+
+    std::shared_ptr<Buffer> lightPassIndirectBuffer;
 };
 
 #endif

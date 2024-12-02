@@ -53,6 +53,7 @@ public:
 	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
 	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
 	MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
+	
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
 
 	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator allocator);
@@ -60,6 +61,7 @@ public:
 	void TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGraphicsCommandList commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	inline uint32_t GetFramebufferCount() { return m_info.frambufferCount; }
+	inline uint32_t GetAttachmentCount() { return m_frameBuffers[0].ColorAttachmentsCount(); }
 private:
 	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
 	void CreateRenderPass();
