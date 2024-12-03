@@ -217,23 +217,28 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    transferList.Reset();
-    transferList.Begin();
+    generalGraphicList.Reset();
+    generalGraphicList.Begin();
 
     MVulkanImageMemoryBarrier barrier{};
     barrier.image = texture.GetImage();
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+    barrier.levelCount = 1;
     
     int32_t mipWidth = texture.GetImageInfo().width;
     int32_t mipHeight = texture.GetImageInfo().height;
 
+    //spdlog::info("texture.GetImageInfo().mipLevels: {}", texture.GetImageInfo().mipLevels);
     for (uint32_t i = 1; i < texture.GetImageInfo().mipLevels; i++) {
         barrier.baseMipLevel = i - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         std::vector<VkImageBlit> blits(1);
         blits[0] = VkImageBlit();
@@ -250,7 +255,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         blits[0].dstSubresource.baseArrayLayer = 0;
         blits[0].dstSubresource.layerCount = 1;
     
-        transferList.BlitImage(
+        generalGraphicList.BlitImage(
             texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             blits,
@@ -261,7 +266,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
-        transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         if (mipWidth > 1) mipWidth /= 2;
         if (mipHeight > 1) mipHeight /= 2;
     }
@@ -272,18 +277,18 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
-    transferList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
    
 
-    transferList.End();
+    generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
 
-    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    transferQueue.WaitForQueueComplete();
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.WaitForQueueComplete();
 }
 
 MVulkanSampler MVulkanEngine::GetGlobalSampler() const
@@ -312,7 +317,6 @@ void MVulkanEngine::initVulkan()
     createBufferAndLoadData();
 
     createRenderPass();
-    //generateMeshDecriptorSets();
 }
 
 void MVulkanEngine::renderLoop()
@@ -320,9 +324,6 @@ void MVulkanEngine::renderLoop()
     window->WindowPollEvents();
     Singleton<InputManager>::instance().DealInputs();
     drawFrame();
-
-    //std::cout << "camera.position:" << camera->GetPosition();
-    //spdlog::info("****************************************");
 }
 
 void MVulkanEngine::createInstance()
@@ -467,8 +468,6 @@ void MVulkanEngine::createRenderPass()
     std::vector<VkFormat> shadowFormats(0);
     shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-    //RenderPassCreateInfo info{};
-    //info.depthFormat = VK_FORMAT_D32_SFLOAT;
     info.depthFormat = VK_FORMAT_D16_UNORM;
     info.frambufferCount = 1;
     info.extent = VkExtent2D(2048, 2048);
@@ -487,7 +486,6 @@ void MVulkanEngine::createRenderPass()
     shadowShaderTextures[0].resize(0);
 
     shadowPass->Create(shadowShader, swapChain, graphicsQueue, generalGraphicList, allocator, shadowShaderTextures);
-
 
     std::vector<VkFormat> lightingPassFormats;
     lightingPassFormats.push_back(swapChain.GetSwapChainImageFormat());
@@ -560,16 +558,12 @@ void MVulkanEngine::createCamera()
     glm::vec3 center(0.f);
     glm::vec3 direction = glm::normalize(center - position);
 
-    //glm::vec3 position = 33.69f * glm::vec3(1.f);
-    //glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetDirection();
-
     float fov = 60.f;
     float aspectRatio = (float)windowWidth / (float)windowHeight;
     float zNear = 0.01f;
     float zFar = 1000.f;
 
     camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
-    //camera->SetOrth(true);
 }
 
 void MVulkanEngine::createBufferAndLoadData()
@@ -647,8 +641,6 @@ void MVulkanEngine::createTexture()
 
     graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     graphicsQueue.WaitForQueueComplete();
-    ///Submit
-    //testTexture.Create(device, info);
 }
 
 void MVulkanEngine::createSampler()
@@ -668,8 +660,46 @@ void MVulkanEngine::loadScene()
     Singleton<SceneLoader>::instance().Load(modelPath.string(), scene.get());
 
     BoundingBox bbx = scene->GetBoundingBox();
-    std::cout << "bbx.pMin:" << bbx.pMin << std::endl;
-    std::cout << "bbx.pMax:" << bbx.pMax << std::endl;
+
+    //split Image
+    {
+        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+
+        transferList.Reset();
+        transferList.Begin();
+        std::vector<MVulkanImageMemoryBarrier> barriers(wholeTextures.size());
+        for (auto i = 0; i < wholeTextures.size(); i++) {
+            MVulkanImageMemoryBarrier barrier{};
+            barrier.image = wholeTextures[i]->GetImage();
+
+            barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.levelCount = wholeTextures[i]->GetImageInfo().mipLevels;
+
+            barriers[i] = barrier;
+        }
+
+        transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+
+        transferList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &transferList.GetBuffer();
+
+        transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        transferQueue.WaitForQueueComplete();
+
+
+        //auto meshNames = scene->GetMeshNames();
+        for (auto item : wholeTextures) {
+            auto texture = item;
+            GenerateMipMap(*texture);
+        }
+    }
 }
 
 void MVulkanEngine::createLight()
@@ -680,7 +710,6 @@ void MVulkanEngine::createLight()
     directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 
     {
-        //directionalLightCamera = 
         VkExtent2D extent = shadowPass->GetFrameBuffer(0).GetExtent2D();
 
         glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetDirection();
@@ -698,34 +727,18 @@ void MVulkanEngine::createLight()
 void MVulkanEngine::createSyncObjects()
 {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    gbufferRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     finalRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    gbufferTransferFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    transferFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-    shadowRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    shadowTransferFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         imageAvailableSemaphores[i].Create(device.GetDevice());
-        renderFinishedSemaphores[i].Create(device.GetDevice());
-        gbufferRenderFinishedSemaphores[i].Create(device.GetDevice());
         finalRenderFinishedSemaphores[i].Create(device.GetDevice());
-        gbufferTransferFinishedSemaphores[i].Create(device.GetDevice());
-        transferFinishedSemaphores[i].Create(device.GetDevice());
         inFlightFences[i].Create(device.GetDevice());
-
-        shadowRenderFinishedSemaphores[i].Create(device.GetDevice());
-        shadowTransferFinishedSemaphores[i].Create(device.GetDevice());
     }
 }
 
 void MVulkanEngine::renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore) {
     graphicsLists[currentFrame].Reset();
-
-    //recordGbufferCommandBuffer(imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -760,7 +773,6 @@ VkSubmitInfo MVulkanEngine::generateSubmitInfo(std::vector<VkCommandBuffer> comm
     submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size());
     submitInfo.pSignalSemaphores = signalSemaphores.data();
 
-    //graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     return submitInfo;
 }
 
@@ -778,7 +790,6 @@ VkSubmitInfo MVulkanEngine::generateSubmitInfo(VkCommandBuffer* commandBuffer, V
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     return submitInfo;
-    //graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
 }
 
 void MVulkanEngine::submitCommand(){

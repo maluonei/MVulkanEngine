@@ -5,7 +5,6 @@
 #include "Singleton.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 
-
 class TextureManager : public Singleton<TextureManager> {
 public:
 	inline void Put(const std::string& name, std::shared_ptr<MVulkanTexture> texture) {

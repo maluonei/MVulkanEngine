@@ -1,6 +1,6 @@
 ﻿#pragma once
-#ifndef MVULKANENGINE_H
-#define MVULKANENGINE_H
+#ifndef MVULKANENGINE_HPP
+#define MVULKANENGINE_HPP
 
 #include <cstdint>
 #include <vulkan\vulkan_core.h>
@@ -50,21 +50,24 @@ public:
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
-    //template<class T>
-    //void CreateImage(std::shared_ptr<MVulkanTexture> texture, VkExtent2D extent, VkFormat format, MImage<T>* imageData);
-
     template<class T>
-    void CreateImage(std::shared_ptr<MVulkanTexture> texture, MImage<T>* image) {
+    void CreateImage(std::shared_ptr<MVulkanTexture> texture, MImage<T>* image, bool calculateMipLevels = false) {
         //VkExtent2D extent = { image->Width().image->Height() };
+
+        uint32_t mipLevels = 1;
+        if (calculateMipLevels) {
+            mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image->Width(), image->Height())))) + 1;
+        }
 
         ImageCreateInfo imageInfo{};
         imageInfo.width = image->Width();
         imageInfo.height = image->Height();
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         imageInfo.format = image->Format();
         imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.mipLevels = mipLevels;
 
         ImageViewCreateInfo viewInfo{};
         viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -76,7 +79,7 @@ public:
         viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
         //viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.baseMipLevel = 0;
-        viewInfo.levelCount = 1;
+        viewInfo.levelCount = mipLevels;
         viewInfo.baseArrayLayer = 0;
         viewInfo.layerCount = 1;
         viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -191,13 +194,7 @@ private:
     MImage<unsigned char> image;
 
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
-    std::vector<MVulkanSemaphore> renderFinishedSemaphores;
-    std::vector<MVulkanSemaphore> gbufferRenderFinishedSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
-    std::vector<MVulkanSemaphore> shadowRenderFinishedSemaphores;
-    std::vector<MVulkanSemaphore> shadowTransferFinishedSemaphores;
-    std::vector<MVulkanSemaphore> gbufferTransferFinishedSemaphores;
-    std::vector<MVulkanSemaphore> transferFinishedSemaphores;
     std::vector<MVulkanFence> inFlightFences;
     uint32_t currentFrame = 0;
 

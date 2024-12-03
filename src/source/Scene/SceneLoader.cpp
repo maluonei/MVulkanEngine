@@ -163,7 +163,8 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
 
             std::string diffusePath = (currentSceneRootPath / texturePath.C_Str()).string();
             if (diffuseImage.Load(diffusePath)) {
-                Singleton<MVulkanEngine>::instance().CreateImage(texture, &diffuseImage);
+                //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+                Singleton<MVulkanEngine>::instance().CreateImage(texture, &diffuseImage, true);
             }
 
             Singleton<TextureManager>::instance().Put(diffusePath, texture);

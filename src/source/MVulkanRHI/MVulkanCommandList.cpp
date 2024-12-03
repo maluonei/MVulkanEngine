@@ -194,21 +194,6 @@ void MVulkanCommandList::Clean(VkDevice _device)
     
 }
 
-//void MVulkanCommandList::endSingleTimeCommands(VkDevice device)
-//{
-//    vkEndCommandBuffer(commandBuffer);
-//
-//    VkSubmitInfo submitInfo{};
-//    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-//    submitInfo.commandBufferCount = 1;
-//    submitInfo.pCommandBuffers = &commandBuffer;
-//
-//    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-//    vkQueueWaitIdle(graphicsQueue);
-//
-//    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-//}
-
 void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }

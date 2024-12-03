@@ -160,7 +160,8 @@ public:
 	void Clean(VkDevice device);
 
 	template<typename T>
-	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, MImage<T>* imageData)
+	void CreateAndLoadData(
+		MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, MImage<T>* imageData)
 	{
 		this->imageInfo = imageInfo;
 		this->viewInfo = viewInfo;
@@ -192,6 +193,8 @@ public:
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		//barrier.newLayout = dstLayout;
+
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 		//stagingBuffer.Clean(device.GetDevice());
