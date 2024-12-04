@@ -133,6 +133,7 @@ public:
 		float intensity;
 		glm::vec3 color;
 		int shadowMapIndex;
+
 		glm::mat4 shadowViewProj;
 	};
 
@@ -141,6 +142,7 @@ public:
 		glm::vec3 cameraPos;
 		int lightNum;
 	};
+
 
 private:
 	DirectionalLightBuffer ubo0;
@@ -159,11 +161,18 @@ public:
 
 public:
 	struct Light {
+		glm::mat4 shadowViewProj;
+
 		glm::vec3 direction;
 		float intensity;
+
 		glm::vec3 color;
 		int shadowMapIndex;
-		glm::mat4 shadowViewProj;
+		
+		float cameraZnear;
+		float cameraZfar;
+		float padding6;
+		float padding7;
 	};
 
 	struct DirectionalLightBuffer {
@@ -172,8 +181,17 @@ public:
 		int lightNum;
 	};
 
+
+	struct UniformBuffer0 {
+		int ResolusionWidth;
+		int ResolusionHeight;
+		int padding0;
+		int padding1;
+	};
+
 private:
-	DirectionalLightBuffer ubo0;
+	UniformBuffer0 ubo0;
+	DirectionalLightBuffer ubo1;
 };
 
 class ShadowShader :public ShaderModule {

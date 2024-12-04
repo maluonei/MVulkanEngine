@@ -45,8 +45,6 @@ uint32_t sqad_indices[] = {
     2, 3, 1
 };
 
-
-
 MVulkanEngine::MVulkanEngine()
 {
     window = new MWindow();
@@ -146,17 +144,36 @@ void MVulkanEngine::drawFrame()
 
     //prepare lightingPass ubo
     {
-        SquadPhongShader::DirectionalLightBuffer ubo0{};
-        ubo0.lightNum = 1;
-        ubo0.lights[0].direction = directionalLightCamera->GetDirection();
-        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetIntensity();
-        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetColor();
-        ubo0.lights[0].shadowMapIndex = 0;
-        ubo0.lights[0].shadowViewProj = directionalLightCamera->GetOrthoMatrix() * directionalLightCamera->GetViewMatrix();
+        LightingPbrShader::UniformBuffer0 ubo0{};
+        ubo0.ResolusionWidth = lightingPass->GetFrameBuffer(0).GetExtent2D().width;
+        ubo0.ResolusionHeight = lightingPass->GetFrameBuffer(0).GetExtent2D().height;
 
-        ubo0.cameraPos = camera->GetPosition();
+        LightingPbrShader::DirectionalLightBuffer ubo1{};
+        ubo1.lightNum = 1;
+        ubo1.lights[0].direction = directionalLightCamera->GetDirection();
+        ubo1.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetIntensity();
+        ubo1.lights[0].color = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetColor();
+        ubo1.lights[0].shadowMapIndex = 0;
+        ubo1.lights[0].shadowViewProj = directionalLightCamera->GetOrthoMatrix() * directionalLightCamera->GetViewMatrix();
+        ubo1.lights[0].cameraZnear = directionalLightCamera->GetZnear();
+        ubo1.lights[0].cameraZfar = directionalLightCamera->GetZfar();
+        ubo1.cameraPos = camera->GetPosition();
 
         lightingPass->GetShader()->SetUBO(0, &ubo0);
+        lightingPass->GetShader()->SetUBO(1, &ubo1);
+
+        //std::vector<std::vector<VkImageView>> gbufferViews(5);
+        //for (auto i = 0; i < 4; i++) {
+        //    gbufferViews[i].resize(1);
+        //    gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        //}
+        //gbufferViews[4] = std::vector<VkImageView>(2);
+        //gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        //gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        //lightingPass->UpdateDescriptorSetWrite(gbufferViews);
+
+        //spdlog::info("sizeof(UniformBuffer0):{}", sizeof(LightingPbrShader::UniformBuffer0));
+        //spdlog::info("sizeof(DirectionalLightBuffer):{}", sizeof(LightingPbrShader::DirectionalLightBuffer));
     }
 
     graphicsLists[currentFrame].Reset();

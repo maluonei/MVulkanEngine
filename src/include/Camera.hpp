@@ -45,6 +45,9 @@ public:
 
 	Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar);
 
+	inline float GetZnear()const { return zNear; }
+	inline float GetZfar()const { return zFar; }
+
 	inline void SetOrth(bool _flag) {
 		useOrtho = true;
 	}

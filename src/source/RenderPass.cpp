@@ -62,13 +62,11 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
             bufferInfos[binding].resize(m_uniformBuffers[i][binding].GetArrayLength());
             for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
                 bufferInfos[binding][j].buffer = m_uniformBuffers[i][binding].GetBuffer();
-                //bufferInfos[binding][j].offset = j * m_uniformBuffers[i][binding].GetBufferSize();
                 bufferInfos[binding][j].offset = j * CalculateAlignedSize(m_uniformBuffers[i][binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
                 bufferInfos[binding][j].range = m_uniformBuffers[i][binding].GetBufferSize();
             }
         }
 
-        //spdlog::info("bbbbbbbbbbbbbbbbbbbbbbb");
         write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(), bufferInfos, imageInfos);
     }
 }
@@ -174,8 +172,27 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
     uint32_t cbvCount = 0;
     uint32_t samplerCount = 0;
 
+    for (auto binding = 0; binding < bindings.size(); binding++) {
+        switch (bindings[binding].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            cbvCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            samplerCount++;
+            break;
+        }
+        }
+    }
+
+    m_cbvCount = cbvCount;
+    m_textureCount = samplerCount;
+
     m_uniformBuffers.resize(m_info.frambufferCount);
     for (auto i = 0; i < m_info.frambufferCount; i++) {
+        m_uniformBuffers[i].resize(cbvCount);
         for (auto binding = 0; binding < bindings.size(); binding++) {
             switch (bindings[binding].binding.descriptorType) {
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -186,53 +203,19 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
                 info.size = bindings[binding].size;
                 buffer.Create(m_device, info);
 
-                m_uniformBuffers[i].push_back(buffer);
-                if (i == 0) cbvCount++;
+                //m_uniformBuffers[i].push_back(buffer);
+                m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
                 break;
             }
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             {
-                if (i == 0) samplerCount++;
                 break;
             }
             }
         }
     }
 
-
-    m_cbvCount = cbvCount;
-    m_textureCount = samplerCount;
-
-    //spdlog::info("aaaaaaaaaaaaaaaaaaaaaaaa");
     UpdateDescriptorSetWrite(imageViews);
-    //spdlog::info("cccccccccccccccccccccccc");
-
-    //MVulkanDescriptorSetWrite write;
-    //
-    //std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    //std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-    //
-    //for (auto i = 0; i < m_info.frambufferCount; i++) {
-    //    bufferInfos[i].resize(cbvCount);
-    //
-    //    for (auto binding = 0; binding < cbvCount; binding++) {
-    //        bufferInfos[i][binding].buffer = m_uniformBuffers[binding][i].GetBuffer();
-    //        bufferInfos[i][binding].offset = 0;
-    //        bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-    //    }
-    //}
-    //
-    //for (auto i = 0; i < m_info.frambufferCount; i++) {
-    //    imageInfos[i].resize(samplerCount);
-    //
-    //    for (auto binding = 0; binding < samplerCount; binding++) {
-    //        imageInfos[i][binding].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
-    //        imageInfos[i][binding].imageView = imageViews[i][binding];
-    //        imageInfos[i][binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    }
-    //}
-
-    //write.Update(m_device.GetDevice(), m_descriptorSet.Get(), bufferInfos, imageInfos, m_info.frambufferCount);
 
     m_pipeline.Create(m_device, 
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),

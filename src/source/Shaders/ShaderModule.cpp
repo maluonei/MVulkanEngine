@@ -205,19 +205,33 @@ LightingPbrShader::LightingPbrShader() :ShaderModule("lighting_pbr.vert.glsl", "
 
 size_t LightingPbrShader::GetBufferSizeBinding(uint32_t binding) const
 {
-	return sizeof(DirectionalLightBuffer);
+	switch (binding) {
+	case 0:
+		return sizeof(LightingPbrShader::UniformBuffer0);
+	case 1:
+		return sizeof(LightingPbrShader::DirectionalLightBuffer);
+	}
+	//return sizeof(DirectionalLightBuffer);
 }
 
 void LightingPbrShader::SetUBO(uint8_t index, void* data)
 {
 	switch (index) {
 	case 0:
-		ubo0 = *reinterpret_cast<DirectionalLightBuffer*>(data);
+		ubo0 = *reinterpret_cast<LightingPbrShader::UniformBuffer0*>(data);
+		return;
+	case 1:
+		ubo1 = *reinterpret_cast<LightingPbrShader::DirectionalLightBuffer*>(data);
 		return;
 	}
 }
 
 void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 {
-	return &ubo0;
+	switch (binding) {
+	case 0:
+		return &ubo0;
+	case 1:
+		return &ubo1;
+	}
 }

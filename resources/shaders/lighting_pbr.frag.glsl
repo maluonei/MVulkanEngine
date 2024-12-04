@@ -1,32 +1,46 @@
 #version 450 core
+#extension GL_NV_uniform_buffer_std430_layout : enable
+#extension GL_EXT_scalar_block_layout : enable
 
 layout(location = 0)out vec4 color;
 
-layout(binding = 1) uniform sampler2D gBufferNormal;
-layout(binding = 2) uniform sampler2D gBufferPosition;
-layout(binding = 3) uniform sampler2D gAlbedo;
-layout(binding = 4) uniform sampler2D gMetallicAndRoughness;
-layout(binding = 5) uniform sampler2D shadowMaps[2];
+layout(binding = 2) uniform sampler2D gBufferNormal;
+layout(binding = 3) uniform sampler2D gBufferPosition;
+layout(binding = 4) uniform sampler2D gAlbedo;
+layout(binding = 5) uniform sampler2D gMetallicAndRoughness;
+layout(binding = 6) uniform sampler2D shadowMaps[2];
 
 layout(location = 0)in vec2 texCoord;
 
 struct Light {
+    mat4 shadowViewProj;
+
     vec3 direction;
     float intensity;
+
     vec3 color;
     int shadowMapIndex;
-    mat4 shadowViewProj;
+
     float cameraZnear;
     float cameraZfar;
-    float padding0;
-    float padding1;
+    float padding6;
+    float padding7;
 };
 
-layout(std140, binding = 0) uniform DirectionalLightBuffer{
+layout(std430, binding = 1) uniform DirectionalLightBuffer{
     Light lights[2];
     vec3 cameraPos;
     int lightNum;
+} ubo1;
+
+
+layout(std430, binding = 0) uniform UniformBuffer{
+    int ResolusionWidth;
+    int ResolusionHeight;
+    int padding0;
+    int padding1;
 } ubo0;
+
 
 const mat4 biasMat = mat4(
     0.5, 0.0, 0.0, 0.0,
@@ -41,6 +55,28 @@ float LinearDepth(float depth, float zNear, float zFar){
     float zDis = zFar - zNear;
 
     return (2.f*depth*zDis) / (zFar+zNear-depth*zDis);
+}
+
+float PCF(int lightIndex, vec3 fragPos){
+    float ocllusion = 0.f;
+
+    vec4 shadowCoord = biasMat * ubo1.lights[lightIndex].shadowViewProj * vec4(fragPos, 1.f);
+    shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
+    shadowCoord.y = 1.f - shadowCoord.y;
+
+    float shadowDepth = texture(shadowMaps[ubo1.lights[lightIndex].shadowMapIndex], shadowCoord.xy).r;
+    //float linearShadowDepth = LinearDepth(shadowDepth, ubo0.lights[lightIndex].cameraZnear, ubo0.lights[lightIndex].cameraZfar);
+        
+    for(int i=-3;i<=3;i++){
+        for(int j=-3;j<=3;j++){
+            float shadowDepth = texture(shadowMaps[ubo1.lights[lightIndex].shadowMapIndex], shadowCoord.xy + vec2(i,j)/vec2(ubo0.ResolusionWidth, ubo0.ResolusionHeight)).r;
+            if ((shadowDepth+DepthBias) < shadowCoord.z) ocllusion+=1.;
+        }
+    }
+
+    ocllusion/=49.f;
+
+    return ocllusion;
 }
 
 // Normal Distribution function --------------------------------------
@@ -127,27 +163,30 @@ void main(){
     
     vec3 fragcolor = vec3(0.f, 0.f, 0.f);
 
-    for(int i=0;i< ubo0.lightNum;i++){
-        float shadow = 1.0;
-        vec4 shadowCoord = biasMat * ubo0.lights[i].shadowViewProj * vec4(fragPos, 1.0);
-        shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
-        shadowCoord.y = 1.f - shadowCoord.y;
+    for(int i=0;i< ubo1.lightNum;i++){
+        //float shadow = 1.0;
+        //vec4 shadowCoord = biasMat * ubo1.lights[i].shadowViewProj * vec4(fragPos, 1.0);
+        //shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
+        //shadowCoord.y = 1.f - shadowCoord.y;
+        //
+        //float shadowDepth = 0.f;
+        //if (shadowCoord.x < 0 || shadowCoord.x>1. || shadowCoord.y < 0 || shadowCoord.y>1.) {
+        //    shadow = 0.f;
+        //}
+        //else {
+        //  shadowDepth = texture(shadowMaps[ubo1.lights[i].shadowMapIndex], shadowCoord.xy).r;
+        //  if ((shadowDepth+DepthBias) < shadowCoord.z) shadow = 0.f;
+        //}
+        float ocllusion = PCF(i, fragPos);
 
-        float shadowDepth = 0.f;
-        if (shadowCoord.x < 0 || shadowCoord.x>1. || shadowCoord.y < 0 || shadowCoord.y>1.) {
-            shadow = 0.f;
-        }
-        else {
-          shadowDepth = texture(shadowMaps[ubo0.lights[i].shadowMapIndex], shadowCoord.xy).r;
-          if ((shadowDepth+DepthBias) < shadowCoord.z) shadow = 0.f;
-        }
-
-        vec3 L = -ubo0.lights[i].direction;
-        vec3 V = ubo0.cameraPos.xyz - fragPos;
+        vec3 L = -ubo1.lights[i].direction;
+        vec3 V = ubo1.cameraPos.xyz - fragPos;
         V = normalize(V);
 
         {
-            fragcolor += shadow * ubo0.lights[i].intensity * ubo0.lights[i].color * fragAlbedo.rgb * BRDF(L, V, fragNormal, metalness, roughness);
+            //ocllusion = 0.f;
+            //fragcolor += shadow * ubo1.lights[i].intensity * ubo1.lights[i].color * fragAlbedo.rgb * BRDF(L, V, fragNormal, metalness, roughness);
+            fragcolor += (1.f - ocllusion) * ubo1.lights[i].intensity * ubo1.lights[i].color * fragAlbedo.rgb * BRDF(L, V, fragNormal, metalness, roughness);
             fragcolor += fragAlbedo.rgb * 0.01; //ambient
         }
     }
