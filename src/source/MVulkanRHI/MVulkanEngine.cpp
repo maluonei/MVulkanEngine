@@ -192,7 +192,7 @@ void MVulkanEngine::drawFrame()
     vkDeviceWaitIdle(device.GetDevice());
     present(swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex);
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % Singleton<GlobalConfig>::instance().GetMaxFramesInFlight();
 }
 
 void MVulkanEngine::createGlobalSamplers()
@@ -542,8 +542,8 @@ void MVulkanEngine::createCommandList()
     info.commandBufferCount = 1;
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    graphicsLists.resize(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    graphicsLists.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    for (int i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
         graphicsLists[i].Create(device.GetDevice(), info);
     }
 
@@ -721,7 +721,7 @@ void MVulkanEngine::createLight()
 
         float fov = 60.f;
         float aspect = (float)extent.width / (float)extent.height;
-        float zNear = 0.01f;
+        float zNear = 0.001f;
         float zFar = 60.f;
         directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
         directionalLightCamera->SetOrth(true);
@@ -730,11 +730,11 @@ void MVulkanEngine::createLight()
 
 void MVulkanEngine::createSyncObjects()
 {
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    finalRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
         imageAvailableSemaphores[i].Create(device.GetDevice());
         finalRenderFinishedSemaphores[i].Create(device.GetDevice());
         inFlightFences[i].Create(device.GetDevice());

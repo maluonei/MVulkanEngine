@@ -16,6 +16,10 @@ struct Light {
     vec3 color;
     int shadowMapIndex;
     mat4 shadowViewProj;
+    float cameraZnear;
+    float cameraZfar;
+    float padding0;
+    float padding1;
 };
 
 layout(std140, binding = 0) uniform DirectionalLightBuffer{
@@ -32,6 +36,12 @@ const mat4 biasMat = mat4(
 
 const float DepthBias = 0.001f;
 const float PI = 3.14159265359;
+
+float LinearDepth(float depth, float zNear, float zFar){
+    float zDis = zFar - zNear;
+
+    return (2.f*depth*zDis) / (zFar+zNear-depth*zDis);
+}
 
 // Normal Distribution function --------------------------------------
 float D_GGX(float dotNH, float roughness)
@@ -94,6 +104,14 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, float metallic, float roughness)
 	return color;
 }
 
+vec3 rgb2srgb(vec3 color){
+    color.x = color.x<0.0031308 ? color.x*12.92f : pow(color.x, 1.0/2.4) * 1.055f - 0.055f;
+    color.y = color.y<0.0031308 ? color.y*12.92f : pow(color.y, 1.0/2.4) * 1.055f - 0.055f;
+    color.z = color.z<0.0031308 ? color.z*12.92f : pow(color.z, 1.0/2.4) * 1.055f - 0.055f;
+
+    return color;
+}
+
 void main(){
     vec4 gBufferValue0 = texture(gBufferNormal, texCoord);
     vec4 gBufferValue1 = texture(gBufferPosition, texCoord);
@@ -130,8 +148,10 @@ void main(){
 
         {
             fragcolor += shadow * ubo0.lights[i].intensity * ubo0.lights[i].color * fragAlbedo.rgb * BRDF(L, V, fragNormal, metalness, roughness);
-            fragcolor += fragAlbedo.rgb * 0.04; //ambient
+            fragcolor += fragAlbedo.rgb * 0.01; //ambient
         }
     }
+
+    fragcolor = rgb2srgb(fragcolor);
     color = vec4(fragcolor, 1.f);
 }
