@@ -37,7 +37,7 @@ const mat4 biasMat = mat4(
     0.0, 0.0, 1.0, 0.0,
     0.5, 0.5, 0.0, 1.0);
 
-const float offset = 0.001f;
+const float DepthBias = 0.001f;
 
 void main(){
     vec4 gBufferValue0 = texture(gBufferNormal, texCoord);
@@ -63,7 +63,7 @@ void main(){
         }
         else {
           shadowDepth = texture(shadowMaps[ubo0.lights[i].shadowMapIndex], shadowCoord.xy).r;
-          if ((shadowDepth+offset) < shadowCoord.z) shadow = 0.f;
+          if ((shadowDepth+DepthBias) < shadowCoord.z) shadow = 0.f;
         }
 
 

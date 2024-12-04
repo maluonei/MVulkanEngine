@@ -1,1 +1,1 @@
-F:\MVulkanEngine\resources\shaders\phong_sqad.frag.glsl
+G:\codes\MVulkanEngine\resources\shaders\lighting_pbr.frag.glsl

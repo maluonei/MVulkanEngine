@@ -81,18 +81,6 @@ PhongShader::PhongShader()
 	sizes[2] = 0;
 }
 
-//void PhongShader::SetUBO0(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
-//{
-//	ubo0.Model = model;
-//	ubo0.View = view;
-//	ubo0.Projection = projection;
-//}
-//
-//void PhongShader::SetUBO1(glm::vec3 cameraPosition)
-//{
-//	ubo1.cameraPosition = cameraPosition;
-//}
-
 void PhongShader::SetUBO(uint8_t index, void* data)
 {
 	switch (index) {
@@ -206,6 +194,30 @@ void ShadowShader::SetUBO(uint8_t index, void* data)
 }
 
 void* ShadowShader::GetData(uint32_t binding, uint32_t index)
+{
+	return &ubo0;
+}
+
+
+LightingPbrShader::LightingPbrShader() :ShaderModule("lighting_pbr.vert.glsl", "lighting_pbr.frag.glsl")
+{
+}
+
+size_t LightingPbrShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return sizeof(DirectionalLightBuffer);
+}
+
+void LightingPbrShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<DirectionalLightBuffer*>(data);
+		return;
+	}
+}
+
+void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 {
 	return &ubo0;
 }

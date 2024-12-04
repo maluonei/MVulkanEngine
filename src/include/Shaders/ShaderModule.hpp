@@ -102,9 +102,9 @@ public:
 	struct UniformBufferObject1
 	{
 		int diffuseTextureIdx;
+		int metallicAndRoughnessTexIdx;
 		int padding0;
 		int padding1;
-		int padding2;
 	};
 
 	struct UniformBufferObject2
@@ -120,6 +120,36 @@ private:
 class SquadPhongShader:public ShaderModule {
 public:
 	SquadPhongShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct Light {
+		glm::vec3 direction;
+		float intensity;
+		glm::vec3 color;
+		int shadowMapIndex;
+		glm::mat4 shadowViewProj;
+	};
+
+	struct DirectionalLightBuffer {
+		Light lights[2];
+		glm::vec3 cameraPos;
+		int lightNum;
+	};
+
+private:
+	DirectionalLightBuffer ubo0;
+};
+
+
+class LightingPbrShader :public ShaderModule {
+public:
+	LightingPbrShader();
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 

@@ -182,6 +182,34 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             std::cout << "Normal map: " << texturePath.C_Str() << std::endl;
         }
 
+        if (aimaterial->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "roughness map: " << texturePath.C_Str() << std::endl;
+
+            MImage<unsigned char> roughnessImage;
+            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+
+            std::string roughnessPath = (currentSceneRootPath / texturePath.C_Str()).string();
+            if (roughnessImage.Load(roughnessPath)) {
+                //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+                Singleton<MVulkanEngine>::instance().CreateImage(texture, &roughnessImage, true);
+            }
+
+            Singleton<TextureManager>::instance().Put(roughnessPath, texture);
+            mat->metallicAndRoughnessTexture = roughnessPath;
+        }
+
+        if (aimaterial->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "metalness map: " << texturePath.C_Str() << std::endl;
+        }
+
+        if (aimaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, mat->roughness)) {
+            std::cout << "AI_MATKEY_ROUGHNESS_FACTOR: " << mat->roughness << std::endl;
+        }
+
+        if (aimaterial->Get(AI_MATKEY_METALLIC_FACTOR, mat->metallic)) {
+            std::cout << "AI_MATKEY_METALLIC_FACTOR: " << mat->metallic << std::endl;
+        }
+
         scene->AddMaterial(mat);
     }
 }

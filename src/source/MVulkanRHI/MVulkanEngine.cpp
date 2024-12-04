@@ -128,9 +128,11 @@ void MVulkanEngine::drawFrame()
             auto name = meshNames[i];
             auto mesh = scene->GetMesh(name);
             auto mat = scene->GetMaterial(mesh->matId);
-            auto texId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+            auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
             auto indirectCommand = drawIndexedIndirectCommands[i];
-            ubo1[indirectCommand.firstInstance].diffuseTextureIdx = texId;
+            ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+            auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+            ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
         }
         gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
@@ -437,6 +439,7 @@ void MVulkanEngine::createRenderPass()
     gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
     gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
     gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
     RenderPassCreateInfo info{};
     info.depthFormat = device.FindDepthFormat();
@@ -500,15 +503,16 @@ void MVulkanEngine::createRenderPass()
 
     lightingPass = std::make_shared<RenderPass>(device, info);
 
-    std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
-    std::vector<std::vector<VkImageView>> gbufferViews(4);
-    for (auto i = 0; i < 3; i++) {
+    //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
+    std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader>();
+    std::vector<std::vector<VkImageView>> gbufferViews(5);
+    for (auto i = 0; i < 4; i++) {
         gbufferViews[i].resize(1);
         gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
     }
-    gbufferViews[3] = std::vector<VkImageView>(2);
-    gbufferViews[3][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    gbufferViews[3][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+    gbufferViews[4] = std::vector<VkImageView>(2);
+    gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+    gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
 }
@@ -706,7 +710,7 @@ void MVulkanEngine::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 1.f;
+    float intensity = 100.f;
     directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 
     {
