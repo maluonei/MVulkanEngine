@@ -117,7 +117,6 @@ private:
     void transitionFramebufferImageLayout();
 
     void createRenderPass();
-    //void generateMeshDecriptorSets();
 
     void createDescriptorSetAllocator();
 

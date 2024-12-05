@@ -1,3 +1,3 @@
-D:\codes\MVulkanEngine\resources\shaders\lighting_pbr.frag.glsl
-WARNING: D:\codes\MVulkanEngine\resources\shaders\lighting_pbr.frag.glsl:2: '#extension' : extension not supported: GL_NV_uniform_buffer_std430_layout
+G:\codes\MVulkanEngine\resources\shaders\lighting_pbr.frag.glsl
+WARNING: G:\codes\MVulkanEngine\resources\shaders\lighting_pbr.frag.glsl:2: '#extension' : extension not supported: GL_NV_uniform_buffer_std430_layout
 

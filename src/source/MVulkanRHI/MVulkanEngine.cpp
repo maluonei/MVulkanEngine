@@ -145,8 +145,8 @@ void MVulkanEngine::drawFrame()
     //prepare lightingPass ubo
     {
         LightingPbrShader::UniformBuffer0 ubo0{};
-        ubo0.ResolusionWidth = lightingPass->GetFrameBuffer(0).GetExtent2D().width;
-        ubo0.ResolusionHeight = lightingPass->GetFrameBuffer(0).GetExtent2D().height;
+        ubo0.ResolusionWidth = shadowPass->GetFrameBuffer(0).GetExtent2D().width;
+        ubo0.ResolusionHeight = shadowPass->GetFrameBuffer(0).GetExtent2D().height;
 
         LightingPbrShader::DirectionalLightBuffer ubo1{};
         ubo1.lightNum = 1;
@@ -490,7 +490,7 @@ void MVulkanEngine::createRenderPass()
 
     info.depthFormat = VK_FORMAT_D16_UNORM;
     info.frambufferCount = 1;
-    info.extent = VkExtent2D(2048, 2048);
+    info.extent = VkExtent2D(4096, 4096);
     info.useAttachmentResolve = false;
     info.useSwapchainImages = false;
     info.imageAttachmentFormats = shadowFormats;
@@ -727,7 +727,7 @@ void MVulkanEngine::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 100.f;
+    float intensity = 10.f;
     directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 
     {

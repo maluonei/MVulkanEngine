@@ -198,9 +198,9 @@ void* ShadowShader::GetData(uint32_t binding, uint32_t index)
 	return &ubo0;
 }
 
-
 LightingPbrShader::LightingPbrShader() :ShaderModule("lighting_pbr.vert.glsl", "lighting_pbr.frag.glsl")
 {
+
 }
 
 size_t LightingPbrShader::GetBufferSizeBinding(uint32_t binding) const
