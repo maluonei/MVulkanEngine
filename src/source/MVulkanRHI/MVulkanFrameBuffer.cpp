@@ -28,8 +28,13 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
         }
     }
 
-    depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
-    attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
+    if (creatInfo.depthView) {
+        attachments[creatInfo.numAttachments] = creatInfo.depthView;
+    }
+    else {
+        depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
+        attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
+    }
 
     if(creatInfo.useAttachmentResolve)
     {

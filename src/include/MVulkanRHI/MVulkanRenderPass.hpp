@@ -11,7 +11,15 @@ struct RenderPassFormatsInfo {
 	VkFormat resolvedFormat;
 	VkImageLayout initialLayout;
 	VkImageLayout finalLayout;
+	VkImageLayout initialDepthLayout;
 	VkImageLayout finalDepthLayout;
+
+	VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	VkAttachmentLoadOp  depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	VkAttachmentStoreOp depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+	VkAttachmentLoadOp  stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	VkAttachmentStoreOp stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 };
 
 class MVulkanRenderPass {

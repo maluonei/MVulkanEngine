@@ -184,7 +184,7 @@ void MCBV::Create( MVulkanDevice device, BufferCreateInfo info)
     dataBuffer.Map(device.GetDevice());
 }
 
-void MCBV::UpdateData(MVulkanDevice device, void* data, float offset)
+void MCBV::UpdateData(MVulkanDevice device, float offset, void* data)
 {
     dataBuffer.LoadData(device.GetDevice(), data, offset);
 }

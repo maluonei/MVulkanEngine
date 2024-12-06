@@ -22,7 +22,7 @@ public:
 	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextureVector();
 
 protected:
-	virtual void Init() {
+	virtual void InitSingleton() {
 		
 	}
 

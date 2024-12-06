@@ -8,6 +8,11 @@
 #include "MVulkanDescriptor.hpp"
 #include "MVulkanDevice.hpp"
 
+struct MVulkanPilelineCreateInfo {
+	bool depthTestEnable = VK_TRUE;
+	bool depthWriteEnable = VK_TRUE;
+};
+
 class MVulkanPipeline {
 public:
 	MVulkanPipeline();
@@ -25,7 +30,7 @@ protected:
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
-	void Create(MVulkanDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+	void Create(MVulkanDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
 		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments);
 
 private:

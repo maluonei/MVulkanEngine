@@ -134,17 +134,17 @@ void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage,
     vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height)
+void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo)
 {
     VkImageCopy copyRegion = {};
-    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.aspectMask = copyInfo.srcAspectMask;
+    copyRegion.srcSubresource.mipLevel = copyInfo.srcMpiLevel;
     copyRegion.srcSubresource.baseArrayLayer = 0;
     copyRegion.srcSubresource.layerCount = 1;
     copyRegion.srcOffset = { 0, 0, 0 };
 
-    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.aspectMask = copyInfo.dstAspectMask;
+    copyRegion.dstSubresource.mipLevel = copyInfo.dstMpiLevel;
     copyRegion.dstSubresource.baseArrayLayer = 0;
     copyRegion.dstSubresource.layerCount = 1;
     copyRegion.dstOffset = { 0, 0, 0 };

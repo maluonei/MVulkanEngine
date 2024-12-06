@@ -5,8 +5,7 @@
 
 class GlobalConfig : public Singleton<GlobalConfig> {
 public:
-	inline int GetMaxFramesInFlight() const { return _MAX_FRAMES_IN_FLIGHT
-		; }
+	inline int GetMaxFramesInFlight() const { return _MAX_FRAMES_IN_FLIGHT; }
 
 
 private:

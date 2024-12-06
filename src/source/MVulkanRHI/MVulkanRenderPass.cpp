@@ -90,10 +90,14 @@ void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo forma
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = formats.imageFormats[i];
         colorAttachment.samples = device.GetMaxSmaaFlag();
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        //colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        //colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        //colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        //colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.loadOp = formats.loadOp;
+        colorAttachment.storeOp = formats.storeOp;
+        colorAttachment.stencilLoadOp = formats.stencilLoadOp;
+        colorAttachment.stencilStoreOp = formats.stencilStoreOp;
         colorAttachment.initialLayout = formats.initialLayout;
         colorAttachment.finalLayout = formats.finalLayout;
 
@@ -103,11 +107,15 @@ void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo forma
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = formats.depthFormat;
     depthAttachment.samples = device.GetMaxSmaaFlag();
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    //depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    //depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.loadOp = formats.depthLoadOp;
+    depthAttachment.storeOp = formats.depthStoreOp;
+    depthAttachment.stencilLoadOp = formats.stencilLoadOp;
+    depthAttachment.stencilStoreOp = formats.stencilStoreOp;
+    depthAttachment.initialLayout = formats.initialDepthLayout;
     //depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     depthAttachment.finalLayout = formats.finalDepthLayout;
 

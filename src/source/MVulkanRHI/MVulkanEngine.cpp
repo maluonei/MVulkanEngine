@@ -85,12 +85,10 @@ void MVulkanEngine::Run()
 
 void MVulkanEngine::drawFrame()
 {
-    //spdlog::info("a");
     inFlightFences[currentFrame].WaitForSignal(device.GetDevice());
 
     uint32_t imageIndex;
     VkResult result = swapChain.AcquireNextImage(device.GetDevice(), imageAvailableSemaphores[0].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
-    //spdlog::info("imageIndex:" + std::to_string(imageIndex));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         RecreateSwapChain();
@@ -161,26 +159,13 @@ void MVulkanEngine::drawFrame()
 
         lightingPass->GetShader()->SetUBO(0, &ubo0);
         lightingPass->GetShader()->SetUBO(1, &ubo1);
-
-        //std::vector<std::vector<VkImageView>> gbufferViews(5);
-        //for (auto i = 0; i < 4; i++) {
-        //    gbufferViews[i].resize(1);
-        //    gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
-        //}
-        //gbufferViews[4] = std::vector<VkImageView>(2);
-        //gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        //gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        //lightingPass->UpdateDescriptorSetWrite(gbufferViews);
-
-        //spdlog::info("sizeof(UniformBuffer0):{}", sizeof(LightingPbrShader::UniformBuffer0));
-        //spdlog::info("sizeof(DirectionalLightBuffer):{}", sizeof(LightingPbrShader::DirectionalLightBuffer));
     }
 
     graphicsLists[currentFrame].Reset();
     graphicsLists[currentFrame].Begin();
 
-    recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
     recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
     recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
 
     graphicsLists[currentFrame].End();
@@ -343,6 +328,7 @@ void MVulkanEngine::renderLoop()
     window->WindowPollEvents();
     Singleton<InputManager>::instance().DealInputs();
     drawFrame();
+    //m_frameId++;
 }
 
 void MVulkanEngine::createInstance()
@@ -468,7 +454,10 @@ void MVulkanEngine::createRenderPass()
     info.colorAttachmentResolvedViews = nullptr;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.depthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+    info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
 
     gbufferPass = std::make_shared<RenderPass>(device, info);
 
@@ -497,7 +486,8 @@ void MVulkanEngine::createRenderPass()
     info.colorAttachmentResolvedViews = nullptr;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.depthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     shadowPass = std::make_shared<RenderPass>(device, info);
 
@@ -515,8 +505,15 @@ void MVulkanEngine::createRenderPass()
     info.frambufferCount = swapChain.GetImageCount();
     info.useSwapchainImages = true;
     info.imageAttachmentFormats = lightingPassFormats;
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ;
-    info.depthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+    info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+    //info.reuseDepthView = true;
+    info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
     lightingPass = std::make_shared<RenderPass>(device, info);
 
@@ -532,6 +529,7 @@ void MVulkanEngine::createRenderPass()
     gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
+    //lightingPass->GetFrameBuffer().GetDepthImage
 }
 
 
@@ -585,6 +583,7 @@ void MVulkanEngine::createCamera()
     float zFar = 1000.f;
 
     camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    //spdlog::info("create camera");
 }
 
 void MVulkanEngine::createBufferAndLoadData()
@@ -947,7 +946,7 @@ void MVulkanEngine::recordCommandBuffer(
     scissor.extent = extent;
     graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
 
-    renderPass->LoadCBV();
+    renderPass->LoadCBV(device.GetUniformBufferOffsetAlignment());
 
     auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
     graphicsLists[currentFrame].BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);

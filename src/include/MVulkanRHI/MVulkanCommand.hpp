@@ -27,6 +27,14 @@ private:
 	std::map<QueueType, VkCommandPool> commandPools;
 };
 
+struct MVulkanImageCopyInfo {
+	VkImageAspectFlags srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	VkImageAspectFlags dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+	uint32_t srcMpiLevel = 0;
+	uint32_t dstMpiLevel = 0;
+};
+
 struct MVulkanImageMemoryBarrier {
 	VkAccessFlags              srcAccessMask = 0;
 	VkAccessFlags              dstAccessMask = 0;
@@ -58,7 +66,7 @@ public:
 	void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	void TransitionImageLayout(MVulkanImageMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height);
-	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height);
+	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
 
 	void BlitImage(
 		VkImage srcImage, VkImageLayout srcLayout,

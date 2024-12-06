@@ -15,7 +15,7 @@ void MVulkanPipeline::Clean(VkDevice device)
     vkDestroyPipeline(device, pipeline, nullptr);
 }
 
-void MVulkanGraphicsPipeline::Create(MVulkanDevice device, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+void MVulkanGraphicsPipeline::Create(MVulkanDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
     PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments)
 {
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
@@ -103,8 +103,8 @@ void MVulkanGraphicsPipeline::Create(MVulkanDevice device, VkShaderModule vertSh
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthTestEnable = info.depthTestEnable;
+    depthStencil.depthWriteEnable = info.depthWriteEnable;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.minDepthBounds = 0.0f; // Optional

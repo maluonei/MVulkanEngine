@@ -51,7 +51,7 @@ public:
 	void Clean(VkDevice device);
 	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
 	void Create(MVulkanDevice device, BufferCreateInfo info);
-	void UpdateData(MVulkanDevice device, void* data, float offset=0);
+	void UpdateData(MVulkanDevice device, float offset=0, void* data=nullptr);
 	inline VkBuffer& GetBuffer() { return dataBuffer.GetBuffer(); }
 	inline VkDeviceMemory& GetBufferMemory() { return dataBuffer.GetBufferMemory(); }
 	const inline uint32_t GetArrayLength() const { return m_info.arrayLength; }

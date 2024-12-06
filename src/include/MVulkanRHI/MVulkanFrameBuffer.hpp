@@ -21,7 +21,10 @@ struct FrameBufferCreateInfo {
 	uint32_t swapChainImageIndex;
 	//VkImageView* swapchainImageViews = nullptr;
 	//VkImage* swapchainImages = nullptr;
-	VkImageView* colorAttachmentResolvedViews;
+	VkImageView* colorAttachmentResolvedViews = nullptr;
+
+	//bool reuseDepthView = false;
+	VkImageView depthView = nullptr;
 };
 
 class MVulkanFrameBuffer {

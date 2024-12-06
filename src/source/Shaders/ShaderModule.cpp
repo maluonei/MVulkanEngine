@@ -64,9 +64,9 @@ void* TestShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
-		return &ubo0;
+		return (void*)&ubo0;
 	case 1:
-		return &ubo1;
+		return (void*)&ubo1;
 	case 2:
 	default:
 		return nullptr;
@@ -97,9 +97,9 @@ void* PhongShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
-		return &ubo0;
+		return (void*)&ubo0;
 	case 1:
-		return &ubo1;
+		return (void*)&ubo1;
 	case 2:
 	default:
 		return nullptr;
@@ -148,11 +148,11 @@ void* GbufferShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
-		return &ubo0;
+		return (void*)&ubo0;
 	case 1:
-		return &(ubo1[index]);
+		return (void*)&(ubo1[index]);
 	case 2:
-		return &(ubo2[index]);
+		return (void*)&(ubo2[index]);
 	}
 }
 
@@ -176,7 +176,7 @@ void SquadPhongShader::SetUBO(uint8_t index, void* data)
 
 void* SquadPhongShader::GetData(uint32_t binding, uint32_t index)
 {
-	return &ubo0;
+	return (void*)&ubo0;
 }
 
 ShadowShader::ShadowShader():ShaderModule("shadow.vert.glsl", "shadow.frag.glsl")
@@ -195,7 +195,7 @@ void ShadowShader::SetUBO(uint8_t index, void* data)
 
 void* ShadowShader::GetData(uint32_t binding, uint32_t index)
 {
-	return &ubo0;
+	return (void*)&ubo0;
 }
 
 LightingPbrShader::LightingPbrShader() :ShaderModule("lighting_pbr.vert.glsl", "lighting_pbr.frag.glsl")
@@ -230,8 +230,8 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
-		return &ubo0;
+		return (void*)&ubo0;
 	case 1:
-		return &ubo1;
+		return (void*)&ubo1;
 	}
 }

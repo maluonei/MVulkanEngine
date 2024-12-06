@@ -23,9 +23,22 @@ struct RenderPassCreateInfo {
 	std::vector<VkFormat> imageAttachmentFormats;
 	VkImageView* colorAttachmentResolvedViews = nullptr;
 
+	bool reuseDepthView = false;
+	VkImageView depthView = nullptr;
+
 	VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	VkImageLayout depthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	VkAttachmentLoadOp  depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	VkAttachmentStoreOp depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+	VkAttachmentLoadOp  stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	VkAttachmentStoreOp stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+	MVulkanPilelineCreateInfo pipelineCreateInfo;
 };
 
 class RenderPass {
@@ -45,7 +58,7 @@ public:
 	//void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews);
 
 	void SetUBO(uint8_t index, void* data);
-	void LoadCBV();
+	void LoadCBV(uint32_t alignment);
 	void UpdateCBVData();
 
 	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }

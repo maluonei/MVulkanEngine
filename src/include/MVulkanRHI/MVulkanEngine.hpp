@@ -158,11 +158,13 @@ private:
     void createTempTexture();
     //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
+    uint32_t m_frameId = 0;
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> shadowPass;
     std::shared_ptr<RenderPass> lightingPass;
 
     uint16_t windowWidth = 800, windowHeight = 600;
+    //uint32_t m_frameId = 0;
 
     MWindow* window = nullptr;
 

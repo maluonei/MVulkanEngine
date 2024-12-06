@@ -74,6 +74,7 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             //    << VK_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
 
             alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
+
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
             spdlog::info("Vulkan API Version:{0}.{1}.{2}", VK_VERSION_MAJOR(deviceProperties.apiVersion), VK_VERSION_MINOR(deviceProperties.apiVersion), VK_VERSION_PATCH(deviceProperties.apiVersion));
             spdlog::info("maxSmaaFlag:{0}", int(maxSmaaFlag));
@@ -82,6 +83,7 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             spdlog::info("Max descriptor set sampled images:{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
             spdlog::info("deviceProperties.limits.maxPushConstantsSize:{0}", static_cast<int>(deviceProperties.limits.maxPushConstantsSize));
             spdlog::info("deviceProperties.limits.minUniformBufferOffsetAlignment:{0}", static_cast<int>(deviceProperties.limits.minUniformBufferOffsetAlignment));
+            spdlog::info("device.alignment: {0}", alignment);
             break;
         }
     }
