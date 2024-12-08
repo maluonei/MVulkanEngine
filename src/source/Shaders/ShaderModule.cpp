@@ -235,3 +235,23 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 		return (void*)&ubo1;
 	}
 }
+
+SkyboxShader::SkyboxShader() :ShaderModule("skybox.vert.glsl", "skybox.frag.glsl")
+{
+
+}
+
+size_t SkyboxShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return sizeof(SkyboxShader::UniformBuffer0);
+}
+
+void SkyboxShader::SetUBO(uint8_t index, void* data)
+{
+	ubo0 = *reinterpret_cast<SkyboxShader::UniformBuffer0*>(data);
+}
+
+void* SkyboxShader::GetData(uint32_t binding, uint32_t index)
+{
+	return (void*)&ubo0;
+}

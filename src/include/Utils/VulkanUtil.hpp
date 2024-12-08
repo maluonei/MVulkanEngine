@@ -59,7 +59,10 @@ struct MVulkanDescriptorSetLayoutBinding {
     uint32_t size = 0;
 };
 
-
+enum class MVulkanTextureType {
+    TEXTURE_2D,
+    TEXTURE_CUBEMAP,
+};
 //struct MDescriptorBufferInfo {
 //    VkDescriptorBufferInfo bufferInfo;
 //    uint32_t binding;

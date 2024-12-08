@@ -106,11 +106,14 @@ private:
 
 struct ImageCreateInfo {
 	uint32_t width, height, channels, mipLevels=1;
+	uint32_t arrayLength = 1;
+
 	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+	VkImageCreateFlags flag = 0;
 };
 
 struct ImageViewCreateInfo {
@@ -119,6 +122,7 @@ struct ImageViewCreateInfo {
 	VkImageAspectFlagBits flag = VK_IMAGE_ASPECT_COLOR_BIT;
 	uint32_t baseMipLevel = 0;
 	uint32_t levelCount = 1;
+
 	uint32_t baseArrayLayer = 0;
 	uint32_t layerCount = 1;
 	VkComponentMapping components;
@@ -161,22 +165,13 @@ public:
 
 	template<typename T>
 	void CreateAndLoadData(
-		MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, MImage<T>* imageData)
+		MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, std::vector<MImage<T>*> imageDatas, uint32_t mipLevel = 0)
 	{
 		this->imageInfo = imageInfo;
 		this->viewInfo = viewInfo;
 
 		image.CreateImage(device, imageInfo);
 		image.CreateImageView(device, viewInfo);
-
-		BufferCreateInfo binfo;
-		binfo.size = imageInfo.width * imageInfo.height * 4;
-		binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		stagingBuffer.Create(device, binfo);
-
-		stagingBuffer.Map(device.GetDevice());
-		stagingBuffer.LoadData(device.GetDevice(), imageData->GetData());
-		stagingBuffer.UnMap(device.GetDevice());
 
 		MVulkanImageMemoryBarrier barrier{};
 		barrier.image = image.GetImage();
@@ -185,18 +180,39 @@ public:
 		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.levelCount = image.GetMipLevel();
+		barrier.baseArrayLayer = 0;
+		barrier.layerCount = imageDatas.size();
 
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-		commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height));
-		
+		BufferCreateInfo binfo;
+		binfo.size = imageInfo.width * imageInfo.height * 4;
+		binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		stagingBuffer.Create(device, binfo);
+
+		for (auto layer = 0; layer < imageDatas.size(); layer++) {
+
+			stagingBuffer.Map(device.GetDevice());
+			stagingBuffer.LoadData(device.GetDevice(), imageDatas[layer]->GetData());
+			stagingBuffer.UnMap(device.GetDevice());
+
+			commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), mipLevel, layer);
+
+			//barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			//barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			//barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			//barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			//barrier.newLayout = dstLayout;
+
+			//commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		}
+
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		//barrier.newLayout = dstLayout;
-
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
+		//stagingBuffer.Clean(device.GetDevice());
 		//stagingBuffer.Clean(device.GetDevice());
 	}
 

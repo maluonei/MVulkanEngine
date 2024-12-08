@@ -51,9 +51,9 @@ public:
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
     template<class T>
-    void CreateImage(std::shared_ptr<MVulkanTexture> texture, MImage<T>* image, bool calculateMipLevels = false) {
-        //VkExtent2D extent = { image->Width().image->Height() };
-
+    void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
+        MImage<T>* image = images[0];
+        
         uint32_t mipLevels = 1;
         if (calculateMipLevels) {
             mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image->Width(), image->Height())))) + 1;
@@ -81,12 +81,26 @@ public:
         viewInfo.baseMipLevel = 0;
         viewInfo.levelCount = mipLevels;
         viewInfo.baseArrayLayer = 0;
-        viewInfo.layerCount = 1;
+        viewInfo.layerCount = images.size();
+        //if (type == MVulkanTextureType::TEXTURE_2D) {
+        //    viewInfo.layerCount = 1;
+        //}
+        //else if (type == MVulkanTextureType::TEXTURE_CUBEMAP) {
+        //    viewInfo.layerCount = 6;
+        //}
         viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
         generalGraphicList.Reset();
         generalGraphicList.Begin();
-        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, image);
+        //if (type == MVulkanTextureType::TEXTURE_2D) {
+        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, images, 0);
+        //}
+        //else if (type == MVulkanTextureType::TEXTURE_CUBEMAP) {
+        //    for (auto layer = 0; layer < 6; layer++) {
+        //        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, images[i], 0, layer);
+        //    }
+        //}
+        //texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, image);
         generalGraphicList.End();
 
         VkSubmitInfo submitInfo{};
@@ -127,6 +141,7 @@ private:
 
     void createBufferAndLoadData();
     void createTexture();
+    void createSkyboxTexture();
     void createSampler();
     //void loadModel();
     void loadScene();
@@ -162,6 +177,7 @@ private:
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> shadowPass;
     std::shared_ptr<RenderPass> lightingPass;
+    std::shared_ptr<RenderPass> skyboxPass;
 
     uint16_t windowWidth = 800, windowHeight = 600;
     //uint32_t m_frameId = 0;
@@ -194,6 +210,8 @@ private:
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
 
+    MVulkanTexture skyboxTexture;
+
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
     std::vector<MVulkanFence> inFlightFences;
@@ -204,6 +222,7 @@ private:
     std::shared_ptr<Camera> directionalLightCamera;
 
     std::shared_ptr<Scene> scene;
+    std::shared_ptr<Scene> cube;
     std::shared_ptr<Light> directionalLight;
 
     std::vector<MVulkanSampler> globalSamplers;

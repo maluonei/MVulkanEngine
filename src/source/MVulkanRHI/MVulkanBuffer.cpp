@@ -199,13 +199,14 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.extent.height = info.height;
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = info.mipLevels;
-    imageInfo.arrayLayers = 1;
+    imageInfo.arrayLayers = info.arrayLength;
     imageInfo.format = info.format; //显存中数据存储格式
     imageInfo.tiling = info.tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = info.usage;
     imageInfo.samples = info.samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.flags = info.flag;
     // 设置 image 格式、尺寸等
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
 

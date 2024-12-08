@@ -161,12 +161,21 @@ void MVulkanEngine::drawFrame()
         lightingPass->GetShader()->SetUBO(1, &ubo1);
     }
 
+    {
+        SkyboxShader::UniformBuffer0 ubo0{};
+        ubo0.View = camera->GetViewMatrix();
+        ubo0.Projection = camera->GetProjMatrix();
+
+        skyboxPass->GetShader()->SetUBO(0, &ubo0);
+    }
+
     graphicsLists[currentFrame].Reset();
     graphicsLists[currentFrame].Begin();
 
-    recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+    //recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    //recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    //recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+    recordCommandBuffer(imageIndex, skyboxPass, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
 
     graphicsLists[currentFrame].End();
     
@@ -314,6 +323,8 @@ void MVulkanEngine::initVulkan()
     createSyncObjects();
 
     createTempTexture();
+    createSkyboxTexture();
+
     createSwapChain();
     
     createDescriptorSetAllocator();
@@ -458,6 +469,7 @@ void MVulkanEngine::createRenderPass()
     info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
     info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+    info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
     gbufferPass = std::make_shared<RenderPass>(device, info);
 
@@ -530,6 +542,36 @@ void MVulkanEngine::createRenderPass()
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
     //lightingPass->GetFrameBuffer().GetDepthImage
+
+    std::vector<VkFormat> skyboxPassFormats(0);
+    skyboxPassFormats.push_back(swapChain.GetSwapChainImageFormat());
+
+    info.extent = swapChain.GetSwapChainExtent();
+    info.depthFormat = device.FindDepthFormat();
+    info.frambufferCount = swapChain.GetImageCount();
+    info.useSwapchainImages = true;
+    info.imageAttachmentFormats = skyboxPassFormats;
+    info.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    //info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    //info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+    info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+    info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+    //info.reuseDepthView = true;
+    info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+    skyboxPass = std::make_shared<RenderPass>(device, info);
+
+    std::shared_ptr<ShaderModule> skyboxShader = std::make_shared<SkyboxShader>();
+    std::vector<std::vector<VkImageView>> skyboxPassViews(1);
+    skyboxPassViews[0] = std::vector<VkImageView>(1);
+    skyboxPassViews[0][0] = skyboxTexture.GetImageView();
+
+    skyboxPass->Create(skyboxShader, swapChain, graphicsQueue, generalGraphicList, allocator, skyboxPassViews);
 }
 
 
@@ -651,7 +693,63 @@ void MVulkanEngine::createTexture()
 
     generalGraphicList.Reset();
     generalGraphicList.Begin();
-    testTexture.CreateAndLoadData(&generalGraphicList, device, imageinfo, viewInfo, &image);
+    std::vector<MImage<unsigned char>*> images(1);
+    images[0] = &image;
+    testTexture.CreateAndLoadData(&generalGraphicList, device, imageinfo, viewInfo, images);
+    generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::createSkyboxTexture()
+{
+    fs::path resourcePath = fs::current_path().parent_path().parent_path().append("resources").append("textures").append("noon_grass");
+    
+    std::vector<MImage<unsigned char>*> images(6);
+
+    std::vector<std::shared_ptr<MImage<unsigned char>>> imagesPtrs(6);
+
+    //std::shared_ptr<MImage<unsigned char>> m_image = nullptr;
+    for (auto i = 0; i < 6; i++) {
+        imagesPtrs[i] = std::make_shared<MImage<unsigned char>>();
+
+        fs::path imagePath = resourcePath / (std::to_string(i) + ".png");
+        //spdlog::info(imagePath.string());
+        imagesPtrs[i]->Load(imagePath);
+
+        images[i] = imagesPtrs[i].get();
+    }
+
+    ImageCreateInfo imageinfo{};
+    imageinfo.width = imagesPtrs[0]->Width();
+    imageinfo.height = imagesPtrs[0]->Height();
+    imageinfo.format = imagesPtrs[0]->Format();
+    imageinfo.mipLevels = imagesPtrs[0]->MipLevels();
+    imageinfo.arrayLength = 6;
+    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    ImageViewCreateInfo viewInfo{};
+    viewInfo.format = imagesPtrs[0]->Format();
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
+    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    //viewInfo.levelCount = m_image->MipLevels();
+    viewInfo.levelCount = 1;
+    viewInfo.layerCount = 6;
+
+    generalGraphicList.Reset();
+    generalGraphicList.Begin();
+    //std::vector<MImage<unsigned char>*> images(1);
+    //images[0] = &image;
+    skyboxTexture.CreateAndLoadData(&generalGraphicList, device, imageinfo, viewInfo, images);
     generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
@@ -720,6 +818,11 @@ void MVulkanEngine::loadScene()
             GenerateMipMap(*texture);
         }
     }
+
+    cube = std::make_shared<Scene>();
+    fs::path cubePath = resourcePath / "cube.obj";
+
+    Singleton<SceneLoader>::instance().Load(cubePath.string(), cube.get());
 }
 
 void MVulkanEngine::createLight()
@@ -901,7 +1004,9 @@ void MVulkanEngine::createTempTexture()
     std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
 
     MImage<unsigned char> tempImage = MImage<unsigned char>::GetDefault();
-    CreateImage(texture, &tempImage);
+    std::vector<MImage<unsigned char>*> images(1);
+    images[0] = &tempImage;
+    CreateImage(texture, images);
 
     Singleton<TextureManager>::instance().Put("placeholder", texture);
 }
