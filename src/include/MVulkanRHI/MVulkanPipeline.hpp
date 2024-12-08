@@ -12,6 +12,8 @@ struct MVulkanPilelineCreateInfo {
 	bool depthTestEnable = VK_TRUE;
 	bool depthWriteEnable = VK_TRUE;
 	VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
+
+	VkCullModeFlags cullmode = VK_CULL_MODE_BACK_BIT;
 };
 
 class MVulkanPipeline {

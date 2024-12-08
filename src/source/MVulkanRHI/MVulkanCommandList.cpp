@@ -114,11 +114,12 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
     //vkEndCommandBuffer(commandBuffer);
 }
 
-void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, 
-    uint32_t mipLevel, uint32_t baseArrayLayer)
+void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
+//void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel, uint32_t baseArrayLayer)
 {
     VkBufferImageCopy region{};
-    region.bufferOffset = 0;
+    region.bufferOffset = bufferOffset;
+    //region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

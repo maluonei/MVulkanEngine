@@ -20,7 +20,7 @@ public:
 	MVulkanBuffer(BufferType _type);
 
 	void Create(MVulkanDevice device, BufferCreateInfo info);
-	void LoadData(VkDevice device, const void* data, uint32_t offset=0);
+	void LoadData(VkDevice device, const void* data, uint32_t offset=0, uint32_t datasize=0);
 	void Map(VkDevice device);
 	void UnMap(VkDevice device);
 
@@ -28,6 +28,10 @@ public:
 
 	inline VkBuffer& GetBuffer() { return buffer; }
 	inline VkDeviceMemory& GetBufferMemory() { return bufferMemory; }
+
+	inline uint32_t GetBufferSize() const {
+		return bufferSize;
+	}
 protected:
 	void* mappedData;
 	BufferType type;
@@ -185,25 +189,19 @@ public:
 
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 		BufferCreateInfo binfo;
-		binfo.size = imageInfo.width * imageInfo.height * 4;
+		binfo.size = imageDatas.size() * imageInfo.width * imageInfo.height * 4;
 		binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		stagingBuffer.Create(device, binfo);
 
 		for (auto layer = 0; layer < imageDatas.size(); layer++) {
-
+		
+			uint32_t offset = layer * imageInfo.width * imageInfo.height * 4;
 			stagingBuffer.Map(device.GetDevice());
-			stagingBuffer.LoadData(device.GetDevice(), imageDatas[layer]->GetData());
+			stagingBuffer.LoadData(device.GetDevice(), imageDatas[layer]->GetData(), offset, imageInfo.width * imageInfo.height * 4);
 			stagingBuffer.UnMap(device.GetDevice());
 
-			commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), mipLevel, layer);
-
-			//barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			//barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			//barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			//barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			//barrier.newLayout = dstLayout;
-
-			//commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			commandList->CopyBufferToImage(stagingBuffer.GetBuffer(), image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), offset, mipLevel, uint32_t(layer));
+			
 		}
 
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -211,9 +209,6 @@ public:
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-		//stagingBuffer.Clean(device.GetDevice());
-		//stagingBuffer.Clean(device.GetDevice());
 	}
 
 	inline VkImage GetImage() const { return image.GetImage(); }

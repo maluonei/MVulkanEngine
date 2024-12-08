@@ -48,9 +48,9 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     //Map(device.GetDevice());
 }
 
-void MVulkanBuffer::LoadData(VkDevice device, const void* data, uint32_t offset)
+void MVulkanBuffer::LoadData(VkDevice device, const void* data, uint32_t offset, uint32_t datasize)
 {
-    memcpy((char*)mappedData + offset, data, bufferSize);
+    memcpy((char*)mappedData + offset, data, datasize);
 }
 
 void MVulkanBuffer::Map(VkDevice device)
@@ -144,7 +144,7 @@ void Buffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice de
     stagingBuffer.Create(device, info);
 
     stagingBuffer.Map(device.GetDevice());
-    stagingBuffer.LoadData(device.GetDevice(), data);
+    stagingBuffer.LoadData(device.GetDevice(), data, 0, info.size);
     stagingBuffer.UnMap(device.GetDevice());
 
     commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
@@ -170,7 +170,7 @@ void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice devi
     dataBuffer.Create(device, info);
 
     dataBuffer.Map(device.GetDevice());
-    dataBuffer.LoadData(device.GetDevice(), data);
+    dataBuffer.LoadData(device.GetDevice(), data, 0, info.size);
 
 }
 
@@ -186,7 +186,7 @@ void MCBV::Create( MVulkanDevice device, BufferCreateInfo info)
 
 void MCBV::UpdateData(MVulkanDevice device, float offset, void* data)
 {
-    dataBuffer.LoadData(device.GetDevice(), data, offset);
+    dataBuffer.LoadData(device.GetDevice(), data, offset, dataBuffer.GetBufferSize());
 }
 
 void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
@@ -272,6 +272,6 @@ void IndirectBuffer::Create(MVulkanDevice device, uint32_t indexCount, uint32_t 
     indirectBuffer.Create(device, info);
 
     indirectBuffer.Map(device.GetDevice());
-    indirectBuffer.LoadData(device.GetDevice(), &drawCommand);
+    indirectBuffer.LoadData(device.GetDevice(), &drawCommand, 0, info.size);
     indirectBuffer.UnMap(device.GetDevice());
 }

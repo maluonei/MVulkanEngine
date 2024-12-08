@@ -82,25 +82,13 @@ public:
         viewInfo.levelCount = mipLevels;
         viewInfo.baseArrayLayer = 0;
         viewInfo.layerCount = images.size();
-        //if (type == MVulkanTextureType::TEXTURE_2D) {
-        //    viewInfo.layerCount = 1;
-        //}
-        //else if (type == MVulkanTextureType::TEXTURE_CUBEMAP) {
-        //    viewInfo.layerCount = 6;
-        //}
         viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
         generalGraphicList.Reset();
         generalGraphicList.Begin();
-        //if (type == MVulkanTextureType::TEXTURE_2D) {
+
         texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, images, 0);
-        //}
-        //else if (type == MVulkanTextureType::TEXTURE_CUBEMAP) {
-        //    for (auto layer = 0; layer < 6; layer++) {
-        //        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, images[i], 0, layer);
-        //    }
-        //}
-        //texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, image);
+
         generalGraphicList.End();
 
         VkSubmitInfo submitInfo{};

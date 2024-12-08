@@ -3,6 +3,7 @@
 
 #include"MVulkanRHI/MWindow.hpp"
 #include"MVulkanRHI/MVulkanEngine.hpp"
+#include "MVulkanRHI/MVulkanCommand.hpp"
 #include <stdexcept>
 #include "Camera.hpp"
 #include "Scene/Scene.hpp"
@@ -172,9 +173,9 @@ void MVulkanEngine::drawFrame()
     graphicsLists[currentFrame].Reset();
     graphicsLists[currentFrame].Begin();
 
-    //recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    //recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    //recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+    recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
     recordCommandBuffer(imageIndex, skyboxPass, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
 
     graphicsLists[currentFrame].End();
@@ -370,12 +371,14 @@ void MVulkanEngine::RecreateSwapChain()
 
     if (swapChain.Recreate(device, window->GetWindow(), surface)) {
         gbufferPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
-        lightingPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
         shadowPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+        lightingPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+        skyboxPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
 
         gbufferPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         shadowPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         std::vector<std::vector<VkImageView>> lightingTextures(4);
         for (auto i = 0; i < lightingPass->GetFramebufferCount(); i++) {
@@ -551,16 +554,23 @@ void MVulkanEngine::createRenderPass()
     info.frambufferCount = swapChain.GetImageCount();
     info.useSwapchainImages = true;
     info.imageAttachmentFormats = skyboxPassFormats;
+    //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    //info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
     info.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    //info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    //info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
     info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
     info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+    info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
     //info.reuseDepthView = true;
     info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
