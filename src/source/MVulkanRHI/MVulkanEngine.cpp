@@ -372,24 +372,28 @@ void MVulkanEngine::RecreateSwapChain()
     if (swapChain.Recreate(device, window->GetWindow(), surface)) {
         gbufferPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
         shadowPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+        
+        lightingPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
         lightingPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+
+        skyboxPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
         skyboxPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
 
-        gbufferPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        shadowPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        //gbufferPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        //shadowPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        //lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        //skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        std::vector<std::vector<VkImageView>> lightingTextures(4);
-        for (auto i = 0; i < lightingPass->GetFramebufferCount(); i++) {
-            lightingTextures[i].resize(1);
-            lightingTextures[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        std::vector<std::vector<VkImageView>> gbufferViews(5);
+        for (auto i = 0; i < 4; i++) {
+            gbufferViews[i].resize(1);
+            gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
-        lightingTextures[3].resize(2);
-        lightingTextures[3][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        lightingTextures[3][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[4] = std::vector<VkImageView>(2);
+        gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
-        lightingPass->UpdateDescriptorSetWrite(lightingTextures);
+        lightingPass->UpdateDescriptorSetWrite(gbufferViews);
     }
 }
 
@@ -554,12 +558,6 @@ void MVulkanEngine::createRenderPass()
     info.frambufferCount = swapChain.GetImageCount();
     info.useSwapchainImages = true;
     info.imageAttachmentFormats = skyboxPassFormats;
-    //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-
     info.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -571,7 +569,6 @@ void MVulkanEngine::createRenderPass()
     info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
     info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
     info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-    //info.reuseDepthView = true;
     info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
     skyboxPass = std::make_shared<RenderPass>(device, info);

@@ -75,6 +75,8 @@ public:
 
 	inline uint32_t GetFramebufferCount() { return m_info.frambufferCount; }
 	inline uint32_t GetAttachmentCount() { return m_frameBuffers[0].ColorAttachmentsCount(); }
+
+	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 private:
 	void CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews);
 	void CreateRenderPass();
