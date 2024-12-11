@@ -104,73 +104,6 @@ void MVulkanEngine::drawFrame()
 
     inFlightFences[0].Reset(device.GetDevice());
 
-    //{
-    //    glm::vec3 directions[6] = {
-    //        glm::vec3(1.f, 0.f, 0.f),
-    //        glm::vec3(-1.f, 0.f, 0.f),
-    //        glm::vec3(0.f, 1.f, 0.f),
-    //        glm::vec3(0.f, -1.f, 0.f),
-    //        glm::vec3(0.f, 0.f, 1.f),
-    //        glm::vec3(0.f, 0.f, -1.f)
-    //    };
-    //
-    //    glm::vec3 ups[6] = {
-    //        glm::vec3(0.f, 1.f, 0.f),
-    //        glm::vec3(0.f, 1.f, 0.f),
-    //        glm::vec3(0.f, 0.f, 1.f),
-    //        glm::vec3(0.f, 0.f, -1.f),
-    //        glm::vec3(0.f, 1.f, 0.f),
-    //        glm::vec3(0.f, 1.f, 0.f)
-    //    };
-    //
-    //    for (int i = 0; i < 6; i++) {
-    //        glm::vec3 position(0.f, 0.f, 0.f);
-    //
-    //        float fov = 90.f;
-    //        float aspectRatio = 1.;
-    //        float zNear = 0.01f;
-    //        float zFar = 1000.f;
-    //
-    //        std::shared_ptr<Camera> cam = std::make_shared<Camera>(position, directions[i], ups[i], fov, aspectRatio, zNear, zFar);
-    //
-    //        {
-    //            IrradianceConvolutionShader::UniformBuffer0 ubo0{};
-    //            ubo0.View = cam->GetViewMatrix();
-    //            ubo0.Projection = cam->GetProjMatrix();
-    //
-    //            irradianceConvolutionPass->GetShader()->SetUBO(0, &ubo0);
-    //        }
-    //
-    //        graphicsLists[currentFrame].Reset();
-    //        graphicsLists[currentFrame].Begin();
-    //
-    //        recordCommandBuffer(0, irradianceConvolutionPass, graphicsLists[currentFrame], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
-    //
-    //        MVulkanImageCopyInfo copyInfo{};
-    //        copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //        copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //        copyInfo.srcMipLevel = 0;
-    //        copyInfo.dstMipLevel = 0;
-    //        copyInfo.srcArrayLayer = 0;
-    //        copyInfo.dstArrayLayer = i;
-    //        copyInfo.layerCount = 1;
-    //
-    //        graphicsLists[currentFrame].CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 800, 800, copyInfo);
-    //
-    //        graphicsLists[currentFrame].End();
-    //
-    //        VkSubmitInfo submitInfo{};
-    //        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //
-    //        submitInfo.commandBufferCount = 1;
-    //        submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
-    //
-    //        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    //        graphicsQueue.WaitForQueueComplete();
-    //    }
-    //}
-
-
     //prepare gbufferPass ubo
     {
         GbufferShader::UniformBufferObject0 ubo0{};
@@ -195,11 +128,22 @@ void MVulkanEngine::drawFrame()
             auto name = meshNames[i];
             auto mesh = scene->GetMesh(name);
             auto mat = scene->GetMaterial(mesh->matId);
-            auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
             auto indirectCommand = drawIndexedIndirectCommands[i];
-            ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
-            auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-            ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+            if (mat->diffuseTexture != "") {
+                auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+            }
+            else {
+                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+            }
+
+            if (mat->metallicAndRoughnessTexture != "") {
+                auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+            }
+            else {
+                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+            }
         }
         gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
@@ -245,6 +189,8 @@ void MVulkanEngine::drawFrame()
 
     recordCommandBuffer(0, shadowPass, graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
     recordCommandBuffer(0, gbufferPass,graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    //recordCommandBuffer(0, shadowPass, graphicsLists[currentFrame], sphere->GetIndirectVertexBuffer(), sphere->GetIndirectIndexBuffer(), sphere->GetIndirectBuffer(), sphere->GetIndirectDrawCommands().size());
+    //recordCommandBuffer(0, gbufferPass, graphicsLists[currentFrame], sphere->GetIndirectVertexBuffer(), sphere->GetIndirectIndexBuffer(), sphere->GetIndirectBuffer(), sphere->GetIndirectDrawCommands().size());
     recordCommandBuffer(imageIndex, lightingPass, graphicsLists[currentFrame], squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
     recordCommandBuffer(imageIndex, skyboxPass, graphicsLists[currentFrame], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
 
@@ -888,7 +834,7 @@ void MVulkanEngine::createIrradianceCubemapTexture()
     imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
     ImageViewCreateInfo viewInfo{};
-    viewInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
     viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
     viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
     //viewInfo.levelCount = m_image->MipLevels();
@@ -1041,8 +987,18 @@ void MVulkanEngine::loadScene()
 
     cube = std::make_shared<Scene>();
     fs::path cubePath = resourcePath / "cube.obj";
-
     Singleton<SceneLoader>::instance().Load(cubePath.string(), cube.get());
+
+    sphere = std::make_shared<Scene>();
+    fs::path spherePath = resourcePath / "sphere.obj";
+    Singleton<SceneLoader>::instance().Load(spherePath.string(), sphere.get());
+    
+    glm::mat4 translation = glm::translate(glm::mat4(1.f), glm::vec3(40.f, 5.f, 0.f));
+    glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(2.f, 2.f, 2.f));
+    scene->AddScene(sphere, translation * scale);
+
+    cube->GenerateIndirectDataAndBuffers();
+    scene->GenerateIndirectDataAndBuffers();
 }
 
 void MVulkanEngine::createLight()
@@ -1283,5 +1239,6 @@ void MVulkanEngine::recordCommandBuffer(
     commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
 
     commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+
     commandList.EndRenderPass();
 }

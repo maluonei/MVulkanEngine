@@ -30,8 +30,13 @@ void main() {
 
 	Normal = vec4(normal, texCoord.x);
 	Position = vec4(worldPos, texCoord.y);
-	Albedo = texture(textures[diffuseTextureIdx], texCoord);
+	if(diffuseTextureIdx!=-1)
+		Albedo = texture(textures[diffuseTextureIdx], texCoord);
+	else
+		Albedo = vec4(1.f);
 
-	MetallicAndRoughness.rgb = texture(textures[metallicAndRoughnessTextureIdx], texCoord).rgb;
-	//Albedo = texture(textures[0], texCoord);
+	if(metallicAndRoughnessTextureIdx!=-1)
+		MetallicAndRoughness.rgb = texture(textures[metallicAndRoughnessTextureIdx], texCoord).rgb;
+	else
+		MetallicAndRoughness.rgb = vec3(0.f, 0.f, 0.5f);
 }

@@ -43,6 +43,8 @@ public:
     void Run();
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
+    inline MVulkanDevice GetDevice()const { return device; }
+
     void GenerateMipMap(MVulkanTexture texture);
     inline std::shared_ptr<Camera> GetCamera()const { return camera; }
 
@@ -217,6 +219,7 @@ private:
 
     std::shared_ptr<Scene> scene;
     std::shared_ptr<Scene> cube;
+    std::shared_ptr<Scene> sphere;
     std::shared_ptr<Light> directionalLight;
 
     std::vector<MVulkanSampler> globalSamplers;

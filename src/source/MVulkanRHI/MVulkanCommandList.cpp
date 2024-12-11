@@ -151,7 +151,7 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
     copyRegion.dstSubresource.layerCount = copyInfo.layerCount;
     copyRegion.dstOffset = { 0, 0, 0 };
 
-    copyRegion.extent.width = width;  // ���ƵĿ���
+    copyRegion.extent.width = width;    // ���ƵĿ���
     copyRegion.extent.height = height;  // ���Ƶĸ߶�
     copyRegion.extent.depth = 1;
 

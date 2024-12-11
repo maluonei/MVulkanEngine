@@ -23,7 +23,7 @@ void SceneLoader::Load(std::string path, Scene* scene)
 
     // 通过指定路径加载模型
     const aiScene* aiscene = importer.ReadFile(path,
-        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices);
+        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals);
 
     // 检查加载是否成功
     if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
@@ -41,23 +41,26 @@ void SceneLoader::Load(std::string path, Scene* scene)
 
     scene->CalculateBB();
 
-    auto totalVertexs = scene->GetTotalVertexs();
-    auto totalIndeices = scene->GetTotalIndeices();
-
-    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
-    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
-
-    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
-    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
-
-    scene->SetIndirectVertexBuffer(vertexBuffer);
-    scene->SetIndirectIndexBuffer(indexBuffer);
-
-    scene->GenerateIndirectDrawCommand();
-    std::vector<VkDrawIndexedIndirectCommand> commands = scene->GetIndirectDrawCommands();
-    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
-    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
-    scene->SetIndirectBuffer(indirectCommandBuffer);
+    //scene->GenerateIndirectDataAndBuffers();
+    //{
+    //    auto totalVertexs = scene->GetTotalVertexs();
+    //    auto totalIndeices = scene->GetTotalIndeices();
+    //
+    //    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    //    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+    //
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
+    //
+    //    scene->SetIndirectVertexBuffer(vertexBuffer);
+    //    scene->SetIndirectIndexBuffer(indexBuffer);
+    //
+    //    scene->GenerateIndirectDrawCommand();
+    //    std::vector<VkDrawIndexedIndirectCommand> commands = scene->GetIndirectDrawCommands();
+    //    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    //    scene->SetIndirectBuffer(indirectCommandBuffer);
+    //}
 }
 
 void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
@@ -79,16 +82,16 @@ void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene*
 
 void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene* scene)
 {
-    spdlog::info("mesh.name: " + std::string(mesh->mName.C_Str()));
-    spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
-
-
     std::shared_ptr<Mesh> _mesh = std::make_shared<Mesh>();
     std::string meshName = mesh->mName.C_Str();
     if (meshName == "") {
         meshName = "mesh" + std::to_string(g_meshId);
         g_meshId++;
     }
+
+    spdlog::info("mesh.name: " + meshName);
+    spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
+
 
     // 遍历网格的索引
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
@@ -118,15 +121,15 @@ void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene*
 
     if (mesh->mNumVertices > 0) {
         scene->SetMesh(meshName, _mesh);
-
-        std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
-        std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
-
-        Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(_mesh->vertices.data()), sizeof(Vertex) * _mesh->vertices.size());
-        Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(_mesh->indices.data()), sizeof(unsigned int) * _mesh->indices.size());
-
-        scene->SetVertexBuffer(meshName, vertexBuffer);
-        scene->SetIndexBuffer(meshName, indexBuffer);
+    
+        //std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+        //std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+        //
+        //Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(_mesh->vertices.data()), sizeof(Vertex) * _mesh->vertices.size());
+        //Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(_mesh->indices.data()), sizeof(unsigned int) * _mesh->indices.size());
+        //
+        //scene->SetVertexBuffer(meshName, vertexBuffer);
+        //scene->SetIndexBuffer(meshName, indexBuffer);
     }
 }
 
@@ -174,6 +177,7 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             mat->diffuseTexture = diffusePath;
         }
         else {
+            mat->diffuseTexture = "";
             mat->diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
         }
 
@@ -201,6 +205,9 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
 
             Singleton<TextureManager>::instance().Put(roughnessPath, texture);
             mat->metallicAndRoughnessTexture = roughnessPath;
+        }
+        else {
+            mat->metallicAndRoughnessTexture = "";
         }
 
         if (aimaterial->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS) {

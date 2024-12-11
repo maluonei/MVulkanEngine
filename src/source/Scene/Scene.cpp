@@ -1,46 +1,6 @@
 #include "Scene/Scene.hpp"
 #include <spdlog/spdlog.h>
-
-//void Scene::Load(const std::string& path)
-//{
-//    Assimp::Importer importer;
-//
-//    // 通过指定路径加载模型
-//    const aiScene* scene = importer.ReadFile(path,
-//        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices);
-//
-//    // 检查加载是否成功
-//    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-//        //std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-//        spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
-//        return;
-//    }
-//
-//    // 遍历场景中的所有网格
-//    processNode(scene->mRootNode, scene);
-//}
-//
-//void Scene::processNode(const aiNode* node, const aiScene* scene)
-//{
-//    spdlog::info("node.name: " + std::string(node->mName.C_Str()));
-//    spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
-//
-//    // 处理当前节点的所有网格
-//    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-//        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-//        processMesh(mesh, scene);
-//    }
-//
-//    // 递归处理每个子节点
-//    for (unsigned int i = 0; i < node->mNumChildren; i++) {
-//        processNode(node->mChildren[i], scene);
-//    }
-//}
-//
-//void Scene::processMesh(const aiMesh* mesh, const aiScene* scene)
-//{
-//
-//}
+#include <MVulkanRHI/MVulkanEngine.hpp>
 
 void Scene::GenerateIndirectDrawData()
 {
@@ -94,11 +54,7 @@ void Scene::GenerateIndirectDrawCommand()
         m_indirectCommands.push_back(cmd);
 
         currentIndex += cmd.indexCount;
-
-        std::cout << cmd.indexCount << "," << cmd.instanceCount << "," << cmd.firstIndex << "," << cmd.vertexOffset << "," << cmd.firstInstance << "\n";
     }
-
-    //return m_indirectCommands;
 }
 
 void Scene::CalculateBB()
@@ -115,4 +71,89 @@ void Scene::CalculateBB()
         m_bbx.pMax.y = std::max(m_bbx.pMax.y, vertex.position.y);
         m_bbx.pMax.z = std::max(m_bbx.pMax.z, vertex.position.z);
     }
+}
+
+void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
+{
+    std::vector<std::string> names = scene->GetMeshNames();
+    auto vertexNum = this->m_totalVertexs.size();
+
+    for (auto i = 0; i < names.size(); i++) {
+        auto name = names[i];
+
+        auto mesh = scene->GetMesh(name);
+        for (auto vertex : mesh->vertices) {
+            glm::vec4 newPosition = transform * glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, 1.f);
+            newPosition /= newPosition.w;
+            glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(transform)));
+            glm::vec3 newNormal = glm::normalize(normalMatrix * vertex.normal);
+           
+            this->m_totalVertexs.push_back(Vertex{glm::vec3(newPosition.x, newPosition.y, newPosition.z), newNormal, vertex.texcoord});
+        }
+
+        for (auto index : mesh->indices) {
+            this->m_totalIndeices.push_back(index + vertexNum);
+        }
+
+        vertexNum = this->m_totalVertexs.size();
+    }
+
+    auto baseMatId = m_materials.size();
+    for (auto i = 0; i < scene->m_materials.size(); i++) {
+        this->m_materials.push_back(scene->m_materials[i]);
+    }
+
+    for (auto mesh : scene->m_meshMap) {
+        mesh.second->matId += baseMatId;
+        this->m_meshMap.insert(std::make_pair(mesh.first, mesh.second));
+    }
+
+    //spdlog::info("m_indirectCommands.size(): {0}", m_indirectCommands.size());
+
+    //{
+    //    this->m_indirectVertexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    //    this->m_indirectIndexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    //
+    //    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    //    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+    //
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(m_totalVertexs.data()), sizeof(Vertex) * m_totalVertexs.size());
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(m_totalIndeices.data()), sizeof(unsigned int) * m_totalIndeices.size());
+    //
+    //    this->SetIndirectVertexBuffer(vertexBuffer);
+    //    this->SetIndirectIndexBuffer(indexBuffer);
+    //
+    //    this->m_indirectBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    //    this->GenerateIndirectDrawCommand();
+    //    std::vector<VkDrawIndexedIndirectCommand> commands = this->GetIndirectDrawCommands();
+    //    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    //    this->SetIndirectBuffer(indirectCommandBuffer);
+    //}
+    //spdlog::info("m_indirectCommands.size(): {0}", m_indirectCommands.size());
+}
+
+void Scene::GenerateIndirectDataAndBuffers()
+{
+    if (m_indirectVertexBuffer != nullptr) m_indirectVertexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    if (m_indirectIndexBuffer != nullptr) m_indirectIndexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    if (m_indirectBuffer != nullptr) m_indirectBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+
+    auto totalVertexs = GetTotalVertexs();
+    auto totalIndeices = GetTotalIndeices();
+
+    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+
+    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
+
+    SetIndirectVertexBuffer(vertexBuffer);
+    SetIndirectIndexBuffer(indexBuffer);
+
+    GenerateIndirectDrawCommand();
+    std::vector<VkDrawIndexedIndirectCommand> commands = GetIndirectDrawCommands();
+    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    SetIndirectBuffer(indirectCommandBuffer);
 }

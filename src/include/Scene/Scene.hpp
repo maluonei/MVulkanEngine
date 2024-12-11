@@ -58,7 +58,9 @@ public:
     inline void SetIndirectIndexBuffer(std::shared_ptr<Buffer> indirectIndexBuffer){m_indirectIndexBuffer = indirectIndexBuffer;}
     inline std::shared_ptr<Buffer> GetIndirectIndexBuffer(){return m_indirectIndexBuffer;}
 
-    inline void SetIndirectBuffer(std::shared_ptr<Buffer> indirectBuffer) { m_indirectBuffer = indirectBuffer; }
+    inline void SetIndirectBuffer(std::shared_ptr<Buffer> indirectBuffer) { 
+        m_indirectBuffer = indirectBuffer; 
+    }
     inline std::shared_ptr<Buffer> GetIndirectBuffer() { return m_indirectBuffer; }
 
     inline void SetTotalVertexs(std::vector<Vertex> totalVertexs){m_totalVertexs = totalVertexs;}
@@ -78,9 +80,15 @@ public:
     inline void AddMaterial(std::shared_ptr<PhongMaterial> material){m_materials.push_back(material);}
     inline std::shared_ptr<PhongMaterial> GetMaterial(int index){return m_materials[index];}
 
+    //inline std::vector<std::shared_ptr<PhongMaterial>> GetMaterial(int index) { return m_materials[index]; }
+
     inline BoundingBox GetBoundingBox() const { return m_bbx; }
 
     void CalculateBB();
+
+    void AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform);
+
+    void GenerateIndirectDataAndBuffers();
 private:
     //void calculateBB();
 
@@ -88,9 +96,9 @@ private:
 
     std::vector<Vertex> m_totalVertexs;
     std::vector<uint32_t> m_totalIndeices;
-    std::shared_ptr<Buffer> m_indirectBuffer;
-    std::shared_ptr<Buffer> m_indirectVertexBuffer;
-    std::shared_ptr<Buffer> m_indirectIndexBuffer;
+    std::shared_ptr<Buffer> m_indirectBuffer = nullptr;
+    std::shared_ptr<Buffer> m_indirectVertexBuffer = nullptr;
+    std::shared_ptr<Buffer> m_indirectIndexBuffer = nullptr;
     std::vector<VkDrawIndexedIndirectCommand> m_indirectCommands;
 
     std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshMap;
