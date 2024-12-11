@@ -15,6 +15,19 @@ Camera::Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _asp
 	UpdateViewMatrix();
 }
 
+Camera::Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _fov, float _aspect_ratio, float _zNear, float _zFar)
+	:fov(_fov), aspect_ratio(_aspect_ratio), zNear(_zNear), zFar(_zFar), position(_position), direction(_direction), UP(_up)
+{
+	forward = glm::normalize(_direction);
+	right = glm::normalize(glm::cross(forward, UP));
+	up = glm::normalize(glm::cross(right, forward));
+
+	projMatrix = glm::perspective(glm::radians(fov), aspect_ratio, zNear, zFar);
+	orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, zNear, zFar);
+	//orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.001f, 10000.f);
+	UpdateViewMatrix();
+}
+
 void Camera::Move(Direction direction, float scale)
 {
 	switch (direction) {

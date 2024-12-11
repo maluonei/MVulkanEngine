@@ -140,15 +140,15 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
 {
     VkImageCopy copyRegion = {};
     copyRegion.srcSubresource.aspectMask = copyInfo.srcAspectMask;
-    copyRegion.srcSubresource.mipLevel = copyInfo.srcMpiLevel;
-    copyRegion.srcSubresource.baseArrayLayer = 0;
-    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcSubresource.mipLevel = copyInfo.srcMipLevel;
+    copyRegion.srcSubresource.baseArrayLayer = copyInfo.srcArrayLayer;
+    copyRegion.srcSubresource.layerCount = copyInfo.layerCount;
     copyRegion.srcOffset = { 0, 0, 0 };
 
     copyRegion.dstSubresource.aspectMask = copyInfo.dstAspectMask;
-    copyRegion.dstSubresource.mipLevel = copyInfo.dstMpiLevel;
-    copyRegion.dstSubresource.baseArrayLayer = 0;
-    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstSubresource.mipLevel = copyInfo.dstMipLevel;
+    copyRegion.dstSubresource.baseArrayLayer = copyInfo.dstArrayLayer;
+    copyRegion.dstSubresource.layerCount = copyInfo.layerCount;
     copyRegion.dstOffset = { 0, 0, 0 };
 
     copyRegion.extent.width = width;  // ���ƵĿ���

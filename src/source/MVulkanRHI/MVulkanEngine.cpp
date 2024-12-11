@@ -62,8 +62,11 @@ void MVulkanEngine::Init()
 
     initVulkan();
 
+    preComputeIrradianceCubemap();
+
     createLight();
     createCamera();
+    //preComputeIrradianceCubemap();
 }
 
 void MVulkanEngine::Clean()
@@ -100,6 +103,73 @@ void MVulkanEngine::drawFrame()
     }
 
     inFlightFences[0].Reset(device.GetDevice());
+
+    //{
+    //    glm::vec3 directions[6] = {
+    //        glm::vec3(1.f, 0.f, 0.f),
+    //        glm::vec3(-1.f, 0.f, 0.f),
+    //        glm::vec3(0.f, 1.f, 0.f),
+    //        glm::vec3(0.f, -1.f, 0.f),
+    //        glm::vec3(0.f, 0.f, 1.f),
+    //        glm::vec3(0.f, 0.f, -1.f)
+    //    };
+    //
+    //    glm::vec3 ups[6] = {
+    //        glm::vec3(0.f, 1.f, 0.f),
+    //        glm::vec3(0.f, 1.f, 0.f),
+    //        glm::vec3(0.f, 0.f, 1.f),
+    //        glm::vec3(0.f, 0.f, -1.f),
+    //        glm::vec3(0.f, 1.f, 0.f),
+    //        glm::vec3(0.f, 1.f, 0.f)
+    //    };
+    //
+    //    for (int i = 0; i < 6; i++) {
+    //        glm::vec3 position(0.f, 0.f, 0.f);
+    //
+    //        float fov = 90.f;
+    //        float aspectRatio = 1.;
+    //        float zNear = 0.01f;
+    //        float zFar = 1000.f;
+    //
+    //        std::shared_ptr<Camera> cam = std::make_shared<Camera>(position, directions[i], ups[i], fov, aspectRatio, zNear, zFar);
+    //
+    //        {
+    //            IrradianceConvolutionShader::UniformBuffer0 ubo0{};
+    //            ubo0.View = cam->GetViewMatrix();
+    //            ubo0.Projection = cam->GetProjMatrix();
+    //
+    //            irradianceConvolutionPass->GetShader()->SetUBO(0, &ubo0);
+    //        }
+    //
+    //        graphicsLists[currentFrame].Reset();
+    //        graphicsLists[currentFrame].Begin();
+    //
+    //        recordCommandBuffer(0, irradianceConvolutionPass, graphicsLists[currentFrame], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+    //
+    //        MVulkanImageCopyInfo copyInfo{};
+    //        copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //        copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //        copyInfo.srcMipLevel = 0;
+    //        copyInfo.dstMipLevel = 0;
+    //        copyInfo.srcArrayLayer = 0;
+    //        copyInfo.dstArrayLayer = i;
+    //        copyInfo.layerCount = 1;
+    //
+    //        graphicsLists[currentFrame].CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 800, 800, copyInfo);
+    //
+    //        graphicsLists[currentFrame].End();
+    //
+    //        VkSubmitInfo submitInfo{};
+    //        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //
+    //        submitInfo.commandBufferCount = 1;
+    //        submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
+    //
+    //        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+    //        graphicsQueue.WaitForQueueComplete();
+    //    }
+    //}
+
 
     //prepare gbufferPass ubo
     {
@@ -173,10 +243,10 @@ void MVulkanEngine::drawFrame()
     graphicsLists[currentFrame].Reset();
     graphicsLists[currentFrame].Begin();
 
-    recordCommandBuffer(0, shadowPass,  scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    recordCommandBuffer(0, gbufferPass, scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    recordCommandBuffer(imageIndex, lightingPass, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
-    recordCommandBuffer(imageIndex, skyboxPass, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+    recordCommandBuffer(0, shadowPass, graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    recordCommandBuffer(0, gbufferPass,graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    recordCommandBuffer(imageIndex, lightingPass, graphicsLists[currentFrame], squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+    recordCommandBuffer(imageIndex, skyboxPass, graphicsLists[currentFrame], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
 
     graphicsLists[currentFrame].End();
     
@@ -325,6 +395,7 @@ void MVulkanEngine::initVulkan()
 
     createTempTexture();
     createSkyboxTexture();
+    createIrradianceCubemapTexture();
 
     createSwapChain();
     
@@ -384,7 +455,7 @@ void MVulkanEngine::RecreateSwapChain()
         //lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         //skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        std::vector<std::vector<VkImageView>> gbufferViews(5);
+        std::vector<std::vector<VkImageView>> gbufferViews(6);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
             gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
@@ -392,6 +463,8 @@ void MVulkanEngine::RecreateSwapChain()
         gbufferViews[4] = std::vector<VkImageView>(2);
         gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
         gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[5] = std::vector<VkImageView>(1);
+        gbufferViews[5][0] = irradianceTexture.GetImageView();
 
         lightingPass->UpdateDescriptorSetWrite(gbufferViews);
     }
@@ -538,7 +611,7 @@ void MVulkanEngine::createRenderPass()
 
     //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
     std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader>();
-    std::vector<std::vector<VkImageView>> gbufferViews(5);
+    std::vector<std::vector<VkImageView>> gbufferViews(6);
     for (auto i = 0; i < 4; i++) {
         gbufferViews[i].resize(1);
         gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
@@ -546,6 +619,8 @@ void MVulkanEngine::createRenderPass()
     gbufferViews[4] = std::vector<VkImageView>(2);
     gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
     gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+    gbufferViews[5] = std::vector<VkImageView>(1);
+    gbufferViews[5][0] = irradianceTexture.GetImageView();
 
     lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
     //lightingPass->GetFrameBuffer().GetDepthImage
@@ -579,6 +654,37 @@ void MVulkanEngine::createRenderPass()
     skyboxPassViews[0][0] = skyboxTexture.GetImageView();
 
     skyboxPass->Create(skyboxShader, swapChain, graphicsQueue, generalGraphicList, allocator, skyboxPassViews);
+
+
+    RenderPassCreateInfo irradianceConvolusionPassInfo{};
+    std::vector<VkFormat> irradianceConvolutionPassFormats(0);
+    irradianceConvolutionPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+    
+    irradianceConvolusionPassInfo.extent = VkExtent2D(800, 800);
+    irradianceConvolusionPassInfo.depthFormat = device.FindDepthFormat();
+    irradianceConvolusionPassInfo.frambufferCount = 1;
+    irradianceConvolusionPassInfo.useSwapchainImages = false;
+    irradianceConvolusionPassInfo.imageAttachmentFormats = irradianceConvolutionPassFormats;
+    irradianceConvolusionPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    irradianceConvolusionPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    irradianceConvolusionPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    irradianceConvolusionPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    irradianceConvolusionPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    irradianceConvolusionPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    irradianceConvolusionPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    irradianceConvolusionPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    irradianceConvolusionPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+    irradianceConvolusionPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+    irradianceConvolusionPassInfo.depthView = nullptr;
+    
+    irradianceConvolutionPass = std::make_shared<RenderPass>(device, irradianceConvolusionPassInfo);
+    
+    std::shared_ptr<ShaderModule> irradianceConvolusionShader = std::make_shared<IrradianceConvolutionShader>();
+    std::vector<std::vector<VkImageView>> irradianceConvolusionPassViews(1);
+    irradianceConvolusionPassViews[0] = std::vector<VkImageView>(1);
+    irradianceConvolusionPassViews[0][0] = skyboxTexture.GetImageView();
+    
+    irradianceConvolutionPass->Create(irradianceConvolusionShader, swapChain, graphicsQueue, generalGraphicList, allocator, irradianceConvolusionPassViews);
 }
 
 
@@ -766,6 +872,113 @@ void MVulkanEngine::createSkyboxTexture()
 
     graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::createIrradianceCubemapTexture()
+{
+    ImageCreateInfo imageinfo{};
+    imageinfo.width = 800;
+    imageinfo.height = 800;
+    imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    imageinfo.mipLevels = 1;
+    imageinfo.arrayLength = 6;
+    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    ImageViewCreateInfo viewInfo{};
+    viewInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
+    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    //viewInfo.levelCount = m_image->MipLevels();
+    viewInfo.levelCount = 1;
+    viewInfo.layerCount = 6;
+
+    generalGraphicList.Reset();
+    generalGraphicList.Begin();
+
+    irradianceTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
+    generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::preComputeIrradianceCubemap()
+{
+    glm::vec3 directions[6] = {
+        glm::vec3(1.f, 0.f, 0.f),
+        glm::vec3(-1.f, 0.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f),
+        glm::vec3(0.f, 0.f, -1.f)
+    };
+
+    glm::vec3 ups[6] = {
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f),
+        glm::vec3(0.f, 0.f, -1.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f)
+    };
+
+    for (int i = 0; i < 6; i++) {
+        glm::vec3 position(0.f, 0.f, 0.f);
+        //glm::vec3 center(0.f);
+        //glm::vec3 direction = directions[i];
+
+        float fov = 90.f;
+        float aspectRatio = 1.;
+        float zNear = 0.01f;
+        float zFar = 1000.f;
+
+        //camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+
+        std::shared_ptr<Camera> cam = std::make_shared<Camera>(position, directions[i], ups[i], fov, aspectRatio, zNear, zFar);
+
+        {
+            IrradianceConvolutionShader::UniformBuffer0 ubo0{};
+            ubo0.View = cam->GetViewMatrix();
+            ubo0.Projection = cam->GetProjMatrix();
+
+            irradianceConvolutionPass->GetShader()->SetUBO(0, &ubo0);
+        }
+
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
+
+        recordCommandBuffer(0, irradianceConvolutionPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+
+        MVulkanImageCopyInfo copyInfo{};
+        copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyInfo.srcMipLevel = 0;
+        copyInfo.dstMipLevel = 0;
+        copyInfo.srcArrayLayer = 0;
+        copyInfo.dstArrayLayer = i;
+        copyInfo.layerCount = 1;
+
+        generalGraphicList.CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 800, 800, copyInfo);
+
+        generalGraphicList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+        graphicsQueue.WaitForQueueComplete();
+    }
 }
 
 void MVulkanEngine::createSampler()
@@ -1019,7 +1232,7 @@ void MVulkanEngine::createTempTexture()
 }
 
 void MVulkanEngine::recordCommandBuffer(
-    uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, 
+    uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
     std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount)
 {
     VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
@@ -1040,9 +1253,9 @@ void MVulkanEngine::recordCommandBuffer(
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
-    graphicsLists[currentFrame].BeginRenderPass(&renderPassInfo);
+    commandList.BeginRenderPass(&renderPassInfo);
 
-    graphicsLists[currentFrame].BindPipeline(renderPass->GetPipeline().Get());
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -1051,24 +1264,24 @@ void MVulkanEngine::recordCommandBuffer(
     viewport.height = -(float)extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    graphicsLists[currentFrame].SetViewport(0, 1, &viewport);
+    commandList.SetViewport(0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = extent;
-    graphicsLists[currentFrame].SetScissor(0, 1, &scissor);
+    commandList.SetScissor(0, 1, &scissor);
 
     renderPass->LoadCBV(device.GetUniformBufferOffsetAlignment());
 
     auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    graphicsLists[currentFrame].BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
 
     VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
 
-    graphicsLists[currentFrame].BindVertexBuffers(0, 1, vertexBuffers, offsets);
-    graphicsLists[currentFrame].BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
 
-    graphicsLists[currentFrame].DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
-    graphicsLists[currentFrame].EndRenderPass();
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+    commandList.EndRenderPass();
 }

@@ -163,7 +163,6 @@ private:
 
 class MVulkanTexture {
 public:
-public:
 	MVulkanTexture();
 	void Clean(VkDevice device);
 
@@ -210,6 +209,8 @@ public:
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
+
+	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
 
 	inline VkImage GetImage() const { return image.GetImage(); }
 	inline VkImageView GetImageView() const { return image.GetImageView(); }

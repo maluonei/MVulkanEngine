@@ -255,3 +255,23 @@ void* SkyboxShader::GetData(uint32_t binding, uint32_t index)
 {
 	return (void*)&ubo0;
 }
+
+IrradianceConvolutionShader::IrradianceConvolutionShader() :ShaderModule("skybox.vert.glsl", "convolution_irradiance.frag.glsl")
+{
+
+}
+
+size_t IrradianceConvolutionShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return sizeof(IrradianceConvolutionShader::UniformBuffer0);
+}
+
+void IrradianceConvolutionShader::SetUBO(uint8_t index, void* data)
+{
+	ubo0 = *reinterpret_cast<IrradianceConvolutionShader::UniformBuffer0*>(data);
+}
+
+void* IrradianceConvolutionShader::GetData(uint32_t binding, uint32_t index)
+{
+	return (void*)&ubo0;
+}

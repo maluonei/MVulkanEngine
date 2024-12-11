@@ -130,6 +130,8 @@ private:
     void createBufferAndLoadData();
     void createTexture();
     void createSkyboxTexture();
+    void createIrradianceCubemapTexture();
+    void preComputeIrradianceCubemap();
     void createSampler();
     //void loadModel();
     void loadScene();
@@ -140,7 +142,7 @@ private:
     //void recordShadowCommandBuffer(uint32_t imageIndex);
     //void recordFinalCommandBuffer(uint32_t imageIndex);
     void recordCommandBuffer(
-        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, 
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
@@ -162,6 +164,9 @@ private:
     //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
     uint32_t m_frameId = 0;
+
+    std::shared_ptr<RenderPass> irradianceConvolutionPass;
+
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> shadowPass;
     std::shared_ptr<RenderPass> lightingPass;
@@ -199,6 +204,7 @@ private:
     MImage<unsigned char> image;
 
     MVulkanTexture skyboxTexture;
+    MVulkanTexture irradianceTexture;
 
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;

@@ -8,7 +8,7 @@
 #include<glm/gtc/type_ptr.hpp>
 #include <math.h>
 
-static const glm::vec3 UP = { 0.f, 1.f, 0.f };
+//static const glm::vec3 UP = { 0.f, 1.f, 0.f };
 
 class Frustum;
 
@@ -38,12 +38,14 @@ public:
 
 	glm::vec3 position;
 	glm::vec3 direction;
+	glm::vec3 UP = { 0.f, 1.f, 0.f };
 
 	glm::vec3 forward;
 	glm::vec3 up;
 	glm::vec3 right;
 
 	Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar);
+	Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _fov, float _aspect_ratio, float _zNear, float _zFar);
 
 	inline float GetZnear()const { return zNear; }
 	inline float GetZfar()const { return zFar; }

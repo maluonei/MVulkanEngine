@@ -232,4 +232,25 @@ private:
 	UniformBuffer0 ubo0;
 };
 
+class IrradianceConvolutionShader :public ShaderModule {
+public:
+	IrradianceConvolutionShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct UniformBuffer0 {
+		glm::mat4 View;
+		glm::mat4 Projection;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+};
+
+
 #endif

@@ -9,6 +9,7 @@ layout(binding = 3) uniform sampler2D gBufferPosition;
 layout(binding = 4) uniform sampler2D gAlbedo;
 layout(binding = 5) uniform sampler2D gMetallicAndRoughness;
 layout(binding = 6) uniform sampler2D shadowMaps[2];
+layout(binding = 7) uniform samplerCube enviromentIrradiance;
 
 layout(location = 0)in vec2 texCoord;
 

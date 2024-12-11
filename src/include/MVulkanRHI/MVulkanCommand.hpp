@@ -31,8 +31,13 @@ struct MVulkanImageCopyInfo {
 	VkImageAspectFlags srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	VkImageAspectFlags dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-	uint32_t srcMpiLevel = 0;
-	uint32_t dstMpiLevel = 0;
+	uint32_t srcMipLevel = 0;
+	uint32_t dstMipLevel = 0;
+
+	uint32_t srcArrayLayer = 0;
+	uint32_t layerCount = 1;
+
+	uint32_t dstArrayLayer = 0;
 };
 
 struct MVulkanImageMemoryBarrier {

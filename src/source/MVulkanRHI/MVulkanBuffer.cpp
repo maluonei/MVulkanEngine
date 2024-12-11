@@ -257,6 +257,28 @@ void MVulkanTexture::Clean(VkDevice device)
 {
 }
 
+void MVulkanTexture::Create(
+    MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
+{
+    this->imageInfo = imageInfo;
+    this->viewInfo = viewInfo;
+
+    image.CreateImage(device, imageInfo);
+    image.CreateImageView(device, viewInfo);
+
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = image.GetImage();
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.levelCount = image.GetMipLevel();
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = imageInfo.arrayLength;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+}
+
 void IndirectBuffer::Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     drawCommand.indexCount = indexCount;
