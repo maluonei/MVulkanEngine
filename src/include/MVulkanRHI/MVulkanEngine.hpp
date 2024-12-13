@@ -134,6 +134,8 @@ private:
     void createSkyboxTexture();
     void createIrradianceCubemapTexture();
     void preComputeIrradianceCubemap();
+    void preFilterEnvmaps();
+    void preComputeLUT();
     void createSampler();
     //void loadModel();
     void loadScene();
@@ -168,6 +170,8 @@ private:
     uint32_t m_frameId = 0;
 
     std::shared_ptr<RenderPass> irradianceConvolutionPass;
+    std::shared_ptr<RenderPass> prefilterEnvmapPass;
+    std::shared_ptr<RenderPass> brdfLUTPass;
 
     std::shared_ptr<RenderPass> gbufferPass;
     std::shared_ptr<RenderPass> shadowPass;
@@ -201,12 +205,15 @@ private:
     std::shared_ptr<Buffer> squadVertexBuffer;
     std::shared_ptr<Buffer> squadIndexBuffer;
 
-    MVulkanSampler sampler;
+    MVulkanSampler linearSampler;
+    MVulkanSampler nearestSampler;
     MVulkanTexture testTexture;
     MImage<unsigned char> image;
 
     MVulkanTexture skyboxTexture;
     MVulkanTexture irradianceTexture;
+    MVulkanTexture preFilteredEnvTexture;
+    //MVulkanTexture brdfLUTTexture;
 
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;

@@ -1,1 +1,1 @@
-G:\codes\MVulkanEngine\resources\shaders\convolution_irradiance.frag.glsl
+G:\codes\MVulkanEngine\resources\shaders\skybox.frag.glsl

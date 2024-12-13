@@ -236,6 +236,45 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 	}
 }
 
+
+LightingIBLShader::LightingIBLShader() :ShaderModule("lighting_ibl.vert.glsl", "lighting_ibl.frag.glsl")
+{
+
+}
+
+size_t LightingIBLShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(LightingIBLShader::UniformBuffer0);
+	case 1:
+		return sizeof(LightingIBLShader::DirectionalLightBuffer);
+	}
+	//return sizeof(DirectionalLightBuffer);
+}
+
+void LightingIBLShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<LightingIBLShader::UniformBuffer0*>(data);
+		return;
+	case 1:
+		ubo1 = *reinterpret_cast<LightingIBLShader::DirectionalLightBuffer*>(data);
+		return;
+	}
+}
+
+void* LightingIBLShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	case 1:
+		return (void*)&ubo1;
+	}
+}
+
 SkyboxShader::SkyboxShader() :ShaderModule("skybox.vert.glsl", "skybox.frag.glsl")
 {
 
@@ -274,4 +313,61 @@ void IrradianceConvolutionShader::SetUBO(uint8_t index, void* data)
 void* IrradianceConvolutionShader::GetData(uint32_t binding, uint32_t index)
 {
 	return (void*)&ubo0;
+}
+
+PreFilterEnvmapShader::PreFilterEnvmapShader() :ShaderModule("skybox.vert.glsl", "prefilterSpecular.frag.glsl")
+{
+
+}
+
+size_t PreFilterEnvmapShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(PreFilterEnvmapShader::UniformBuffer0);
+	case 1:
+		return sizeof(PreFilterEnvmapShader::UniformBuffer1);
+	}
+}
+
+void PreFilterEnvmapShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<PreFilterEnvmapShader::UniformBuffer0*>(data);
+		break;
+	case 1:
+		ubo1 = *reinterpret_cast<PreFilterEnvmapShader::UniformBuffer1*>(data);
+		break;
+	}
+}
+
+void* PreFilterEnvmapShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	case 1:
+		return (void*)&ubo1;
+	}
+}
+
+IBLBrdfShader::IBLBrdfShader() :ShaderModule("IBLbrdf.vert.glsl", "IBLbrdf.frag.glsl")
+{
+
+}
+
+size_t IBLBrdfShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	return 0;
+}
+
+void IBLBrdfShader::SetUBO(uint8_t index, void* data)
+{
+	
+}
+
+void* IBLBrdfShader::GetData(uint32_t binding, uint32_t index)
+{
+	return nullptr;
 }

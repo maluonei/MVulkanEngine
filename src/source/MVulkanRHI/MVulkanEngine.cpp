@@ -63,6 +63,8 @@ void MVulkanEngine::Init()
     initVulkan();
 
     preComputeIrradianceCubemap();
+    preFilterEnvmaps();
+    preComputeLUT();
 
     createLight();
     createCamera();
@@ -143,6 +145,13 @@ void MVulkanEngine::drawFrame()
             }
             else {
                 ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+            }
+
+            if (i == 25) {
+                ubo1[indirectCommand.firstInstance].matId = 1;
+            }
+            else {
+                ubo1[indirectCommand.firstInstance].matId = 0;
             }
         }
         gbufferPass->GetShader()->SetUBO(1, &ubo1);
@@ -225,11 +234,10 @@ void MVulkanEngine::drawFrame()
 
 void MVulkanEngine::createGlobalSamplers()
 {
-    for (auto i = 0; i < 1; i++) {
-        MVulkanSampler sampler;
-        sampler.Create(device);
-        globalSamplers.push_back(sampler);
-    }
+    createSampler();
+
+    globalSamplers.push_back(linearSampler);
+    globalSamplers.push_back(nearestSampler);
 }
 
 void MVulkanEngine::SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight)
@@ -401,18 +409,25 @@ void MVulkanEngine::RecreateSwapChain()
         //lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         //skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        std::vector<std::vector<VkImageView>> gbufferViews(6);
-        for (auto i = 0; i < 4; i++) {
+        std::vector<std::vector<VkImageView>> gbufferViews(9);
+        for (auto i = 0; i < 5; i++) {
             gbufferViews[i].resize(1);
             gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
-        gbufferViews[4] = std::vector<VkImageView>(2);
-        gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[5] = std::vector<VkImageView>(1);
-        gbufferViews[5][0] = irradianceTexture.GetImageView();
+        gbufferViews[5] = std::vector<VkImageView>(2);
+        gbufferViews[5][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[5][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[6] = std::vector<VkImageView>(1);
+        gbufferViews[6][0] = irradianceTexture.GetImageView();
+        gbufferViews[7] = std::vector<VkImageView>(1);
+        gbufferViews[7][0] = preFilteredEnvTexture.GetImageView();
+        gbufferViews[8] = std::vector<VkImageView>(1);
+        gbufferViews[8][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
-        lightingPass->UpdateDescriptorSetWrite(gbufferViews);
+        std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
+        samplers[4] = nearestSampler.GetSampler();
+
+        lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
     }
 }
 
@@ -475,162 +490,257 @@ void MVulkanEngine::transitionFramebufferImageLayout()
 
 void MVulkanEngine::createRenderPass()
 {
-    std::vector<VkFormat> gbufferFormats;
-    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-    RenderPassCreateInfo info{};
-    info.depthFormat = device.FindDepthFormat();
-    info.frambufferCount = 1;
-    info.extent = swapChain.GetSwapChainExtent();
-    info.useAttachmentResolve = false;
-    info.useSwapchainImages = false;
-    info.imageAttachmentFormats = gbufferFormats;
-    info.colorAttachmentResolvedViews = nullptr;
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-    info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-    info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+    {
+        RenderPassCreateInfo irradianceConvolusionPassInfo{};
+        std::vector<VkFormat> irradianceConvolutionPassFormats(0);
+        irradianceConvolutionPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
 
-    gbufferPass = std::make_shared<RenderPass>(device, info);
+        irradianceConvolusionPassInfo.extent = VkExtent2D(512, 512);
+        irradianceConvolusionPassInfo.depthFormat = device.FindDepthFormat();
+        irradianceConvolusionPassInfo.frambufferCount = 1;
+        irradianceConvolusionPassInfo.useSwapchainImages = false;
+        irradianceConvolusionPassInfo.imageAttachmentFormats = irradianceConvolutionPassFormats;
+        irradianceConvolusionPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        irradianceConvolusionPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        irradianceConvolusionPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        irradianceConvolusionPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        irradianceConvolusionPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        irradianceConvolusionPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        irradianceConvolusionPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        irradianceConvolusionPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        irradianceConvolusionPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+        irradianceConvolusionPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        irradianceConvolusionPassInfo.depthView = nullptr;
 
-    std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
-    std::vector<std::vector<VkImageView>> bufferTextureViews(1);
-    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-    auto wholeTextureSize = wholeTextures.size();
-    for (auto i = 0; i < bufferTextureViews.size(); i++) {
-        bufferTextureViews[i].resize(wholeTextureSize);
-        for (auto j = 0; j < wholeTextureSize; j++) {
-            bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
+        irradianceConvolutionPass = std::make_shared<RenderPass>(device, irradianceConvolusionPassInfo);
+
+        std::shared_ptr<ShaderModule> irradianceConvolusionShader = std::make_shared<IrradianceConvolutionShader>();
+        std::vector<std::vector<VkImageView>> irradianceConvolusionPassViews(1);
+        irradianceConvolusionPassViews[0] = std::vector<VkImageView>(1);
+        irradianceConvolusionPassViews[0][0] = skyboxTexture.GetImageView();
+
+        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+
+        irradianceConvolutionPass->Create(irradianceConvolusionShader, swapChain, graphicsQueue, generalGraphicList, allocator, irradianceConvolusionPassViews, samplers);
+    }
+
+    {
+        RenderPassCreateInfo prefilterEnvmapPassInfo{};
+        std::vector<VkFormat> prefilterEnvmapPassFormats(0);
+        prefilterEnvmapPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+
+        prefilterEnvmapPassInfo.extent = VkExtent2D(128, 128);
+        prefilterEnvmapPassInfo.depthFormat = device.FindDepthFormat();
+        prefilterEnvmapPassInfo.frambufferCount = 1;
+        prefilterEnvmapPassInfo.useSwapchainImages = false;
+        prefilterEnvmapPassInfo.imageAttachmentFormats = prefilterEnvmapPassFormats;
+        prefilterEnvmapPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        prefilterEnvmapPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        prefilterEnvmapPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        prefilterEnvmapPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        prefilterEnvmapPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        prefilterEnvmapPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        prefilterEnvmapPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        prefilterEnvmapPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        prefilterEnvmapPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+        prefilterEnvmapPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        prefilterEnvmapPassInfo.depthView = nullptr;
+
+        prefilterEnvmapPass = std::make_shared<RenderPass>(device, prefilterEnvmapPassInfo);
+
+        std::shared_ptr<ShaderModule> prefilterEnvmapShader = std::make_shared<PreFilterEnvmapShader>();
+        std::vector<std::vector<VkImageView>> prefilterEnvmapPassViews(1);
+        prefilterEnvmapPassViews[0] = std::vector<VkImageView>(1);
+        prefilterEnvmapPassViews[0][0] = skyboxTexture.GetImageView();
+
+        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+
+        prefilterEnvmapPass->Create(prefilterEnvmapShader, swapChain, graphicsQueue, generalGraphicList, allocator, prefilterEnvmapPassViews, samplers);
+    }
+
+    {
+        RenderPassCreateInfo brdfLUTPassInfo{};
+        std::vector<VkFormat> brdfLUTPassFormats(0);
+        brdfLUTPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+
+        brdfLUTPassInfo.extent = VkExtent2D(512, 512);
+        brdfLUTPassInfo.depthFormat = device.FindDepthFormat();
+        brdfLUTPassInfo.frambufferCount = 1;
+        brdfLUTPassInfo.useSwapchainImages = false;
+        brdfLUTPassInfo.imageAttachmentFormats = brdfLUTPassFormats;
+        brdfLUTPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        brdfLUTPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        brdfLUTPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        brdfLUTPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        brdfLUTPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        brdfLUTPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        brdfLUTPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        brdfLUTPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        brdfLUTPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+        brdfLUTPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        brdfLUTPassInfo.depthView = nullptr;
+
+        brdfLUTPass = std::make_shared<RenderPass>(device, brdfLUTPassInfo);
+
+        std::shared_ptr<ShaderModule> brdfLUTShader = std::make_shared<IBLBrdfShader>();
+        std::vector<std::vector<VkImageView>> brdfLUTPassViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        brdfLUTPass->Create(brdfLUTShader, swapChain, graphicsQueue, generalGraphicList, allocator, brdfLUTPassViews, samplers);
+    }
+
+    {
+        std::vector<VkFormat> gbufferFormats;
+        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+
+        RenderPassCreateInfo info{};
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = 1;
+        info.extent = swapChain.GetSwapChainExtent();
+        info.useAttachmentResolve = false;
+        info.useSwapchainImages = false;
+        info.imageAttachmentFormats = gbufferFormats;
+        info.colorAttachmentResolvedViews = nullptr;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+
+        gbufferPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
+        std::vector<std::vector<VkImageView>> bufferTextureViews(1);
+        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+        auto wholeTextureSize = wholeTextures.size();
+        for (auto i = 0; i < bufferTextureViews.size(); i++) {
+            bufferTextureViews[i].resize(wholeTextureSize);
+            for (auto j = 0; j < wholeTextureSize; j++) {
+                bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
+            }
         }
+
+        std::vector<VkSampler> samplers(wholeTextures.size(), linearSampler.GetSampler());
+
+        gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews, samplers);
     }
 
-    gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews);
+    {
+        std::vector<VkFormat> shadowFormats(0);
+        shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-    std::vector<VkFormat> shadowFormats(0);
-    shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        RenderPassCreateInfo info{};
+        info.depthFormat = VK_FORMAT_D16_UNORM;
+        info.frambufferCount = 1;
+        info.extent = VkExtent2D(4096, 4096);
+        info.useAttachmentResolve = false;
+        info.useSwapchainImages = false;
+        info.imageAttachmentFormats = shadowFormats;
+        info.colorAttachmentResolvedViews = nullptr;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    info.depthFormat = VK_FORMAT_D16_UNORM;
-    info.frambufferCount = 1;
-    info.extent = VkExtent2D(4096, 4096);
-    info.useAttachmentResolve = false;
-    info.useSwapchainImages = false;
-    info.imageAttachmentFormats = shadowFormats;
-    info.colorAttachmentResolvedViews = nullptr;
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        shadowPass = std::make_shared<RenderPass>(device, info);
 
-    shadowPass = std::make_shared<RenderPass>(device, info);
+        std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
+        std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
+        shadowShaderTextures[0].resize(0);
 
-    std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
-    std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
-    shadowShaderTextures[0].resize(0);
+        std::vector<VkSampler> samplers(0);
 
-    shadowPass->Create(shadowShader, swapChain, graphicsQueue, generalGraphicList, allocator, shadowShaderTextures);
-
-    std::vector<VkFormat> lightingPassFormats;
-    lightingPassFormats.push_back(swapChain.GetSwapChainImageFormat());
-
-    info.extent = swapChain.GetSwapChainExtent();
-    info.depthFormat = device.FindDepthFormat();
-    info.frambufferCount = swapChain.GetImageCount();
-    info.useSwapchainImages = true;
-    info.imageAttachmentFormats = lightingPassFormats;
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ;
-    info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-    info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-    //info.reuseDepthView = true;
-    info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-
-    lightingPass = std::make_shared<RenderPass>(device, info);
-
-    //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
-    std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader>();
-    std::vector<std::vector<VkImageView>> gbufferViews(6);
-    for (auto i = 0; i < 4; i++) {
-        gbufferViews[i].resize(1);
-        gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        shadowPass->Create(shadowShader, swapChain, graphicsQueue, generalGraphicList, allocator, shadowShaderTextures, samplers);
     }
-    gbufferViews[4] = std::vector<VkImageView>(2);
-    gbufferViews[4][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    gbufferViews[4][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    gbufferViews[5] = std::vector<VkImageView>(1);
-    gbufferViews[5][0] = irradianceTexture.GetImageView();
 
-    lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews);
-    //lightingPass->GetFrameBuffer().GetDepthImage
+    {
+        std::vector<VkFormat> lightingPassFormats;
+        lightingPassFormats.push_back(swapChain.GetSwapChainImageFormat());
 
-    std::vector<VkFormat> skyboxPassFormats(0);
-    skyboxPassFormats.push_back(swapChain.GetSwapChainImageFormat());
+        RenderPassCreateInfo info{};
+        info.extent = swapChain.GetSwapChainExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = swapChain.GetImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = lightingPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.reuseDepthView = true;
+        info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
-    info.extent = swapChain.GetSwapChainExtent();
-    info.depthFormat = device.FindDepthFormat();
-    info.frambufferCount = swapChain.GetImageCount();
-    info.useSwapchainImages = true;
-    info.imageAttachmentFormats = skyboxPassFormats;
-    info.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-    info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-    info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
-    info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-    info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        lightingPass = std::make_shared<RenderPass>(device, info);
 
-    skyboxPass = std::make_shared<RenderPass>(device, info);
+        //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<SquadPhongShader>();
+        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingIBLShader>();
+        std::vector<std::vector<VkImageView>> gbufferViews(9);
+        for (auto i = 0; i < 5; i++) {
+            gbufferViews[i].resize(1);
+            gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        }
+        gbufferViews[5] = std::vector<VkImageView>(2);
+        gbufferViews[5][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[5][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        gbufferViews[6] = std::vector<VkImageView>(1);
+        gbufferViews[6][0] = irradianceTexture.GetImageView();
+        gbufferViews[7] = std::vector<VkImageView>(1);
+        gbufferViews[7][0] = preFilteredEnvTexture.GetImageView();
+        gbufferViews[8] = std::vector<VkImageView>(1);
+        gbufferViews[8][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
-    std::shared_ptr<ShaderModule> skyboxShader = std::make_shared<SkyboxShader>();
-    std::vector<std::vector<VkImageView>> skyboxPassViews(1);
-    skyboxPassViews[0] = std::vector<VkImageView>(1);
-    skyboxPassViews[0][0] = skyboxTexture.GetImageView();
+        std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
+        samplers[4] = nearestSampler.GetSampler();
 
-    skyboxPass->Create(skyboxShader, swapChain, graphicsQueue, generalGraphicList, allocator, skyboxPassViews);
+        lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews, samplers);
+        //lightingPass->GetFrameBuffer().GetDepthImage
+    }
 
+    {
+        std::vector<VkFormat> skyboxPassFormats(0);
+        skyboxPassFormats.push_back(swapChain.GetSwapChainImageFormat());
 
-    RenderPassCreateInfo irradianceConvolusionPassInfo{};
-    std::vector<VkFormat> irradianceConvolutionPassFormats(0);
-    irradianceConvolutionPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
-    
-    irradianceConvolusionPassInfo.extent = VkExtent2D(800, 800);
-    irradianceConvolusionPassInfo.depthFormat = device.FindDepthFormat();
-    irradianceConvolusionPassInfo.frambufferCount = 1;
-    irradianceConvolusionPassInfo.useSwapchainImages = false;
-    irradianceConvolusionPassInfo.imageAttachmentFormats = irradianceConvolutionPassFormats;
-    irradianceConvolusionPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    irradianceConvolusionPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    irradianceConvolusionPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    irradianceConvolusionPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    irradianceConvolusionPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    irradianceConvolusionPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    irradianceConvolusionPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    irradianceConvolusionPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    irradianceConvolusionPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
-    irradianceConvolusionPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-    irradianceConvolusionPassInfo.depthView = nullptr;
-    
-    irradianceConvolutionPass = std::make_shared<RenderPass>(device, irradianceConvolusionPassInfo);
-    
-    std::shared_ptr<ShaderModule> irradianceConvolusionShader = std::make_shared<IrradianceConvolutionShader>();
-    std::vector<std::vector<VkImageView>> irradianceConvolusionPassViews(1);
-    irradianceConvolusionPassViews[0] = std::vector<VkImageView>(1);
-    irradianceConvolusionPassViews[0][0] = skyboxTexture.GetImageView();
-    
-    irradianceConvolutionPass->Create(irradianceConvolusionShader, swapChain, graphicsQueue, generalGraphicList, allocator, irradianceConvolusionPassViews);
+        RenderPassCreateInfo info{};
+        info.extent = swapChain.GetSwapChainExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = swapChain.GetImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = skyboxPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        skyboxPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> skyboxShader = std::make_shared<SkyboxShader>();
+        std::vector<std::vector<VkImageView>> skyboxPassViews(1);
+        skyboxPassViews[0] = std::vector<VkImageView>(1);
+        skyboxPassViews[0][0] = skyboxTexture.GetImageView();
+
+        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+
+        skyboxPass->Create(skyboxShader, swapChain, graphicsQueue, generalGraphicList, allocator, skyboxPassViews, samplers);
+    }
 }
 
 
@@ -822,38 +932,116 @@ void MVulkanEngine::createSkyboxTexture()
 
 void MVulkanEngine::createIrradianceCubemapTexture()
 {
-    ImageCreateInfo imageinfo{};
-    imageinfo.width = 800;
-    imageinfo.height = 800;
-    imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-    imageinfo.mipLevels = 1;
-    imageinfo.arrayLength = 6;
-    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    {
+        ImageCreateInfo imageinfo{};
+        imageinfo.width = 512;
+        imageinfo.height = 512;
+        imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        imageinfo.mipLevels = 1;
+        imageinfo.arrayLength = 6;
+        imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
-    ImageViewCreateInfo viewInfo{};
-    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
-    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-    //viewInfo.levelCount = m_image->MipLevels();
-    viewInfo.levelCount = 1;
-    viewInfo.layerCount = 6;
+        ImageViewCreateInfo viewInfo{};
+        viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
+        viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+        //viewInfo.levelCount = m_image->MipLevels();
+        viewInfo.levelCount = 1;
+        viewInfo.layerCount = 6;
 
-    generalGraphicList.Reset();
-    generalGraphicList.Begin();
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
 
-    irradianceTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
-    generalGraphicList.End();
+        irradianceTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
+        generalGraphicList.End();
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    graphicsQueue.WaitForQueueComplete();
+        graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        graphicsQueue.WaitForQueueComplete();
+    }
+    //return;
+
+    //spdlog::info("aaaaaaaaaa");
+
+    {
+        ImageCreateInfo imageinfo{};
+        imageinfo.width = 128;
+        imageinfo.height = 128;
+        imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        imageinfo.mipLevels = 5;
+        imageinfo.arrayLength = 6;
+        imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+        ImageViewCreateInfo viewInfo{};
+        viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_CUBE;
+        viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.levelCount = 5;
+        viewInfo.layerCount = 6;
+
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
+
+        preFilteredEnvTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
+        generalGraphicList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+        graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        graphicsQueue.WaitForQueueComplete();
+    }
+
+    //spdlog::info("bbbbbbbbbbb");
+
+    //{
+    //    ImageCreateInfo imageinfo{};
+    //    imageinfo.width = 512;
+    //    imageinfo.height = 512;
+    //    imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    //    imageinfo.mipLevels = 1;
+    //    imageinfo.arrayLength = 1;
+    //    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    //    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    //    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    //    //imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    //
+    //    ImageViewCreateInfo viewInfo{};
+    //    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    //    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+    //    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    //    //viewInfo.levelCount = m_image->MipLevels();
+    //    viewInfo.levelCount = 1;
+    //    viewInfo.layerCount = 1;
+    //
+    //    generalGraphicList.Reset();
+    //    generalGraphicList.Begin();
+    //
+    //    brdfLUTTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
+    //    generalGraphicList.End();
+    //
+    //    VkSubmitInfo submitInfo{};
+    //    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //    submitInfo.commandBufferCount = 1;
+    //    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+    //
+    //    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //    graphicsQueue.WaitForQueueComplete();
+    //}
+
+    //spdlog::info("ccccccccccc");
 }
 
 void MVulkanEngine::preComputeIrradianceCubemap()
@@ -878,15 +1066,11 @@ void MVulkanEngine::preComputeIrradianceCubemap()
 
     for (int i = 0; i < 6; i++) {
         glm::vec3 position(0.f, 0.f, 0.f);
-        //glm::vec3 center(0.f);
-        //glm::vec3 direction = directions[i];
 
         float fov = 90.f;
         float aspectRatio = 1.;
         float zNear = 0.01f;
         float zFar = 1000.f;
-
-        //camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
 
         std::shared_ptr<Camera> cam = std::make_shared<Camera>(position, directions[i], ups[i], fov, aspectRatio, zNear, zFar);
 
@@ -912,7 +1096,7 @@ void MVulkanEngine::preComputeIrradianceCubemap()
         copyInfo.dstArrayLayer = i;
         copyInfo.layerCount = 1;
 
-        generalGraphicList.CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 800, 800, copyInfo);
+        generalGraphicList.CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 512, 512, copyInfo);
 
         generalGraphicList.End();
 
@@ -927,9 +1111,131 @@ void MVulkanEngine::preComputeIrradianceCubemap()
     }
 }
 
+void MVulkanEngine::preFilterEnvmaps()
+{
+    glm::vec3 directions[6] = {
+        glm::vec3(1.f, 0.f, 0.f),
+        glm::vec3(-1.f, 0.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f),
+        glm::vec3(0.f, 0.f, -1.f)
+    };
+
+    glm::vec3 ups[6] = {
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f),
+        glm::vec3(0.f, 0.f, -1.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f)
+    };
+
+    for (auto mipLevel = 0; mipLevel < 5; mipLevel++) {
+        //spdlog::info("mipLevel:{0}",  mipLevel);
+        float roughness = mipLevel / 4.0f;
+        unsigned int mipWidth = static_cast<unsigned int>(128 * std::pow(0.5, mipLevel));
+        unsigned int mipHeight = static_cast<unsigned int>(128 * std::pow(0.5, mipLevel));
+
+        for (int i = 0; i < 6; i++) {
+            //spdlog::info("layer:{0}", i);
+            glm::vec3 position(0.f, 0.f, 0.f);
+
+            float fov = 90.f;
+            float aspectRatio = 1.;
+            float zNear = 0.01f;
+            float zFar = 1000.f;
+
+            std::shared_ptr<Camera> cam = std::make_shared<Camera>(position, directions[i], ups[i], fov, aspectRatio, zNear, zFar);
+            {
+                PreFilterEnvmapShader::UniformBuffer0 ubo0{};
+                ubo0.View = cam->GetViewMatrix();
+                ubo0.Projection = cam->GetProjMatrix();
+
+                PreFilterEnvmapShader::UniformBuffer1 ubo1{};
+                ubo1.roughness = roughness;
+
+                prefilterEnvmapPass->GetShader()->SetUBO(0, &ubo0);
+                prefilterEnvmapPass->GetShader()->SetUBO(1, &ubo1);
+            }
+
+            generalGraphicList.Reset();
+            generalGraphicList.Begin();
+
+            recordCommandBuffer(0, prefilterEnvmapPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+
+            MVulkanImageCopyInfo copyInfo{};
+            copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyInfo.srcMipLevel = 0;
+            copyInfo.dstMipLevel = mipLevel;
+            copyInfo.srcArrayLayer = 0;
+            copyInfo.dstArrayLayer = i;
+            copyInfo.layerCount = 1;
+
+            generalGraphicList.CopyImage(prefilterEnvmapPass->GetFrameBuffer(0).GetImage(0), preFilteredEnvTexture.GetImage(), mipWidth, mipHeight, copyInfo);
+
+            generalGraphicList.End();
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+            graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+            graphicsQueue.WaitForQueueComplete();
+        }
+    }
+}
+
+void MVulkanEngine::preComputeLUT()
+{
+    generalGraphicList.Reset();
+    generalGraphicList.Begin();
+
+    recordCommandBuffer(0, brdfLUTPass, generalGraphicList, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+
+    //MVulkanImageCopyInfo copyInfo{};
+    //copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //copyInfo.srcMipLevel = 0;
+    //copyInfo.dstMipLevel = 0;
+    //copyInfo.srcArrayLayer = 0;
+    //copyInfo.dstArrayLayer = i;
+    //copyInfo.layerCount = 1;
+    //
+    //generalGraphicList.CopyImage(brdfLUTPass->GetFrameBuffer(0).GetImage(0), brdfLUTTexture.GetImage(), 512, 512, copyInfo);
+
+    generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+    graphicsQueue.WaitForQueueComplete();
+}
+
 void MVulkanEngine::createSampler()
 {
-    sampler.Create(device);
+    {
+        MVulkanSamplerCreateInfo info{};
+        info.minFilter = VK_FILTER_LINEAR;
+        info.magFilter = VK_FILTER_LINEAR;
+        info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        linearSampler.Create(device, info);
+    }
+
+    {
+        MVulkanSamplerCreateInfo info{};
+        info.minFilter = VK_FILTER_NEAREST;
+        info.magFilter = VK_FILTER_NEAREST;
+        info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        nearestSampler.Create(device, info);
+    }
 }
 
 void MVulkanEngine::loadScene()

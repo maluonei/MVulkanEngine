@@ -7,6 +7,7 @@ layout(location = 0)out vec4 Normal;
 layout(location = 1)out vec4 Position;
 layout(location = 2)out vec4 Albedo;
 layout(location = 3)out vec4 MetallicAndRoughness;
+layout(location = 4)out uvec4 MatId;
 
 layout(location = 0)in vec3 normal;
 layout(location = 1)in vec3 worldPos;
@@ -16,7 +17,7 @@ layout(location = 3)in flat int instanceId;
 layout(std140, binding = 1) uniform TextureBuffer{
 	int diffuseTextureIdx;
 	int metallicAndRoughnessTextureIdx;
-	int padding1;
+	int matId;
 	int padding2;
 } ubo1[256];
 
@@ -39,4 +40,6 @@ void main() {
 		MetallicAndRoughness.rgb = texture(textures[metallicAndRoughnessTextureIdx], texCoord).rgb;
 	else
 		MetallicAndRoughness.rgb = vec3(0.f, 0.f, 0.5f);
+
+	MatId.r = ubo1[instanceId].matId;
 }

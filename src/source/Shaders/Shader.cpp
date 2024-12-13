@@ -59,6 +59,8 @@ void Shader::compile(std::string shaderPath)
 	//spdlog::info("shaderRootPath:", shaderRootPath.string());
 	fs::path compilerPath = fs::current_path().parent_path().append("ShaderCompilers").append("glslangValidator.exe");
 
+	spdlog::info("compilng shader: {0}", shaderPath);
+
 	if (shaderPath.ends_with("glsl")) {
 		size_t size = shaderPath.size();
 
@@ -87,5 +89,8 @@ void Shader::compile(std::string shaderPath)
 		compiledShaderCode = readFile(outputShader.string());
 		compiledShaderPath = outputShader.string();
 		//compiledShaderCode_ui32 = readFileToUnsignedInt(outputShader.string());
+	}
+	else {
+		spdlog::error("unknown shader type");
 	}
 }

@@ -1,8 +1,10 @@
 #include "MVulkanRHI/MVulkanSampler.hpp"
 
 
-void MVulkanSampler::Create(MVulkanDevice device)
+void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
 {
+    m_info = info;
+
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	
@@ -10,8 +12,9 @@ void MVulkanSampler::Create(MVulkanDevice device)
 
 	// 设置过滤模式、地址模式等
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.magFilter = info.magFilter;
+    samplerInfo.minFilter = info.minFilter;
+    samplerInfo.mipmapMode = info.mipMode;
     samplerInfo.minLod = 0.f;
     samplerInfo.maxLod = 4.f;
 
@@ -24,12 +27,11 @@ void MVulkanSampler::Create(MVulkanDevice device)
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-	vkCreateSampler(device.GetDevice(), &samplerInfo, nullptr, &sampler);
+	vkCreateSampler(device.GetDevice(), &samplerInfo, nullptr, &m_sampler);
 }
 
 void MVulkanSampler::Clean(VkDevice device)
 {
-    vkDestroySampler(device, sampler, nullptr);
+    vkDestroySampler(device, m_sampler, nullptr);
 }

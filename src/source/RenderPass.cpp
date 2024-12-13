@@ -12,12 +12,12 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
     MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList,
-    MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews)
+    MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     SetShader(shader);
     CreateRenderPass();
     CreateFrameBuffers(swapChain, commandQueue, commandList);
-    CreatePipeline(allocator, imageViews);
+    CreatePipeline(allocator, imageViews, samplers);
 }
 
 void RenderPass::Clean()
@@ -42,7 +42,7 @@ void RenderPass::RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommand
     CreateFrameBuffers(swapChain, commandQueue, commandList);
 }
 
-void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews)
+void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     for (auto i = 0; i < m_frameBuffers.size(); i++) {
         MVulkanDescriptorSetWrite write;
@@ -50,7 +50,7 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
         for (auto binding = 0; binding < m_textureCount; binding++) {
             imageInfos[binding].resize(imageViews[binding].size());
             for (auto j = 0; j < imageViews[binding].size(); j++) {
-                imageInfos[binding][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+                imageInfos[binding][j].sampler = samplers[binding];
                 imageInfos[binding][j].imageView = imageViews[binding][j];
                 imageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             }
@@ -71,14 +71,14 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
     }
 }
 
-void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews)
+void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     MVulkanDescriptorSetWrite write;
     std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         imageInfos[i].resize(imageViews.size());
         for (auto j = 0; j < imageViews.size(); j++) {
-            imageInfos[i][j].sampler = Singleton<MVulkanEngine>::instance().GetGlobalSampler().GetSampler();
+            imageInfos[i][j].sampler = samplers[j];
             imageInfos[i][j].imageView = imageViews[i][j];
             imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
@@ -98,7 +98,7 @@ void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, st
     write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos);
 }
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews)
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -160,7 +160,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
         }
     }
 
-    UpdateDescriptorSetWrite(imageViews);
+    UpdateDescriptorSetWrite(imageViews, samplers);
 
     m_pipeline.Create(m_device, m_info.pipelineCreateInfo,
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),

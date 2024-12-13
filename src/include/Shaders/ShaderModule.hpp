@@ -103,7 +103,7 @@ public:
 	{
 		int diffuseTextureIdx;
 		int metallicAndRoughnessTexIdx;
-		int padding0;
+		int matId;
 		int padding1;
 	};
 
@@ -194,6 +194,52 @@ private:
 	DirectionalLightBuffer ubo1;
 };
 
+class LightingIBLShader :public ShaderModule {
+public:
+	LightingIBLShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct Light {
+		glm::mat4 shadowViewProj;
+
+		glm::vec3 direction;
+		float intensity;
+
+		glm::vec3 color;
+		int shadowMapIndex;
+
+		float cameraZnear;
+		float cameraZfar;
+		float padding6;
+		float padding7;
+	};
+
+	struct DirectionalLightBuffer {
+		Light lights[2];
+		glm::vec3 cameraPos;
+		int lightNum;
+	};
+
+
+	struct UniformBuffer0 {
+		int ResolusionWidth;
+		int ResolusionHeight;
+		int padding0;
+		int padding1;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+	DirectionalLightBuffer ubo1;
+};
+
+
 class ShadowShader :public ShaderModule {
 public:
 	ShadowShader();
@@ -251,6 +297,46 @@ public:
 private:
 	UniformBuffer0 ubo0;
 };
+
+class PreFilterEnvmapShader :public ShaderModule {
+public:
+	PreFilterEnvmapShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct UniformBuffer0 {
+		glm::mat4 View;
+		glm::mat4 Projection;
+	};
+
+	struct UniformBuffer1 {
+		float roughness;
+		float padding0;
+		float padding1;
+		float padding2;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+	UniformBuffer1 ubo1;
+};
+
+class IBLBrdfShader :public ShaderModule {
+public:
+	IBLBrdfShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+};
+
 
 
 #endif

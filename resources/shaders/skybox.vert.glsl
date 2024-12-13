@@ -15,9 +15,4 @@ void main() {
 	outUVW = Position;
 	vec4 pos = ubo0.Projection * mat4(mat3(ubo0.View)) * vec4(Position.xyz, 1.0);
 	gl_Position = pos.xyww;
-
-	//vec4 pos = ubo0.Projection * vec4(Position.xyz, 1.0);
-	//gl_Position = vec4(pos.xyz, 1.f);
-	//gl_Position = vec4(Position.xy, 0.5f, 1.f);
-	//gl_Position = pos.xyww;
 }
