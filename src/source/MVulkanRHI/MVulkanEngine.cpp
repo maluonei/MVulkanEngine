@@ -196,12 +196,15 @@ void MVulkanEngine::drawFrame()
     graphicsLists[currentFrame].Reset();
     graphicsLists[currentFrame].Begin();
 
+    //spdlog::info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     recordCommandBuffer(0, shadowPass, graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
+    //spdlog::info("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
     recordCommandBuffer(0, gbufferPass,graphicsLists[currentFrame], scene->GetIndirectVertexBuffer(), scene->GetIndirectIndexBuffer(), scene->GetIndirectBuffer(), scene->GetIndirectDrawCommands().size());
-    //recordCommandBuffer(0, shadowPass, graphicsLists[currentFrame], sphere->GetIndirectVertexBuffer(), sphere->GetIndirectIndexBuffer(), sphere->GetIndirectBuffer(), sphere->GetIndirectDrawCommands().size());
-    //recordCommandBuffer(0, gbufferPass, graphicsLists[currentFrame], sphere->GetIndirectVertexBuffer(), sphere->GetIndirectIndexBuffer(), sphere->GetIndirectBuffer(), sphere->GetIndirectDrawCommands().size());
+    //spdlog::info("ccccccccccccccccccccccccccccccccccccccc");
     recordCommandBuffer(imageIndex, lightingPass, graphicsLists[currentFrame], squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
+    //spdlog::info("ddddddddddddddddddddddddddddddddddddddd");
     recordCommandBuffer(imageIndex, skyboxPass, graphicsLists[currentFrame], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+    //spdlog::info("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
 
     graphicsLists[currentFrame].End();
     
@@ -526,37 +529,48 @@ void MVulkanEngine::createRenderPass()
     }
 
     {
-        RenderPassCreateInfo prefilterEnvmapPassInfo{};
-        std::vector<VkFormat> prefilterEnvmapPassFormats(0);
-        prefilterEnvmapPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+        prefilterEnvmapPasses.resize(5);
+        for (auto mipLevel = 0; mipLevel < 5; mipLevel++) {
+            RenderPassCreateInfo prefilterEnvmapPassInfo{};
+            std::vector<VkFormat> prefilterEnvmapPassFormats(0);
+            prefilterEnvmapPassFormats.push_back(VK_FORMAT_R8G8B8A8_SRGB);
 
-        prefilterEnvmapPassInfo.extent = VkExtent2D(128, 128);
-        prefilterEnvmapPassInfo.depthFormat = device.FindDepthFormat();
-        prefilterEnvmapPassInfo.frambufferCount = 1;
-        prefilterEnvmapPassInfo.useSwapchainImages = false;
-        prefilterEnvmapPassInfo.imageAttachmentFormats = prefilterEnvmapPassFormats;
-        prefilterEnvmapPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        prefilterEnvmapPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        prefilterEnvmapPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        prefilterEnvmapPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        prefilterEnvmapPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        prefilterEnvmapPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        prefilterEnvmapPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        prefilterEnvmapPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        prefilterEnvmapPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
-        prefilterEnvmapPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-        prefilterEnvmapPassInfo.depthView = nullptr;
+            unsigned int mipWidth = static_cast<unsigned int>(128 * std::pow(0.5, mipLevel));
+            unsigned int mipHeight = static_cast<unsigned int>(128 * std::pow(0.5, mipLevel));
+            prefilterEnvmapPassInfo.extent = VkExtent2D(mipWidth, mipHeight);
+            prefilterEnvmapPassInfo.depthFormat = device.FindDepthFormat();
+            prefilterEnvmapPassInfo.frambufferCount = 1;
+            prefilterEnvmapPassInfo.useSwapchainImages = false;
+            prefilterEnvmapPassInfo.imageAttachmentFormats = prefilterEnvmapPassFormats;
+            prefilterEnvmapPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            prefilterEnvmapPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            prefilterEnvmapPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            prefilterEnvmapPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            prefilterEnvmapPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            prefilterEnvmapPassInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            prefilterEnvmapPassInfo.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            prefilterEnvmapPassInfo.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+            prefilterEnvmapPassInfo.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
+            prefilterEnvmapPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+            prefilterEnvmapPassInfo.depthView = nullptr;
 
-        prefilterEnvmapPass = std::make_shared<RenderPass>(device, prefilterEnvmapPassInfo);
+            prefilterEnvmapPasses[mipLevel] = std::make_shared<RenderPass>(device, prefilterEnvmapPassInfo);
 
-        std::shared_ptr<ShaderModule> prefilterEnvmapShader = std::make_shared<PreFilterEnvmapShader>();
-        std::vector<std::vector<VkImageView>> prefilterEnvmapPassViews(1);
-        prefilterEnvmapPassViews[0] = std::vector<VkImageView>(1);
-        prefilterEnvmapPassViews[0][0] = skyboxTexture.GetImageView();
+            std::shared_ptr<ShaderModule> prefilterEnvmapShader;
+            if (mipLevel == 0) {
+                prefilterEnvmapShader = std::make_shared<PreFilterEnvmapShader>();
+            }
+            else {
+                prefilterEnvmapShader = prefilterEnvmapPasses[0]->GetShader();
+            }
+            std::vector<std::vector<VkImageView>> prefilterEnvmapPassViews(1);
+            prefilterEnvmapPassViews[0] = std::vector<VkImageView>(1);
+            prefilterEnvmapPassViews[0][0] = skyboxTexture.GetImageView();
 
-        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+            std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
 
-        prefilterEnvmapPass->Create(prefilterEnvmapShader, swapChain, graphicsQueue, generalGraphicList, allocator, prefilterEnvmapPassViews, samplers);
+            prefilterEnvmapPasses[mipLevel]->Create(prefilterEnvmapShader, swapChain, graphicsQueue, generalGraphicList, allocator, prefilterEnvmapPassViews, samplers);
+        }
     }
 
     {
@@ -570,7 +584,7 @@ void MVulkanEngine::createRenderPass()
         brdfLUTPassInfo.useSwapchainImages = false;
         brdfLUTPassInfo.imageAttachmentFormats = brdfLUTPassFormats;
         brdfLUTPassInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        brdfLUTPassInfo.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        brdfLUTPassInfo.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         brdfLUTPassInfo.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         brdfLUTPassInfo.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         brdfLUTPassInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1003,45 +1017,6 @@ void MVulkanEngine::createIrradianceCubemapTexture()
         graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
         graphicsQueue.WaitForQueueComplete();
     }
-
-    //spdlog::info("bbbbbbbbbbb");
-
-    //{
-    //    ImageCreateInfo imageinfo{};
-    //    imageinfo.width = 512;
-    //    imageinfo.height = 512;
-    //    imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-    //    imageinfo.mipLevels = 1;
-    //    imageinfo.arrayLength = 1;
-    //    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    //    imageinfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    //    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    //    //imageinfo.flag = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    //
-    //    ImageViewCreateInfo viewInfo{};
-    //    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-    //    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
-    //    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-    //    //viewInfo.levelCount = m_image->MipLevels();
-    //    viewInfo.levelCount = 1;
-    //    viewInfo.layerCount = 1;
-    //
-    //    generalGraphicList.Reset();
-    //    generalGraphicList.Begin();
-    //
-    //    brdfLUTTexture.Create(&generalGraphicList, device, imageinfo, viewInfo);
-    //    generalGraphicList.End();
-    //
-    //    VkSubmitInfo submitInfo{};
-    //    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //    submitInfo.commandBufferCount = 1;
-    //    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
-    //
-    //    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    //    graphicsQueue.WaitForQueueComplete();
-    //}
-
-    //spdlog::info("ccccccccccc");
 }
 
 void MVulkanEngine::preComputeIrradianceCubemap()
@@ -1056,12 +1031,12 @@ void MVulkanEngine::preComputeIrradianceCubemap()
     };
 
     glm::vec3 ups[6] = {
-        glm::vec3(0.f, 1.f, 0.f),
-        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
         glm::vec3(0.f, 0.f, 1.f),
         glm::vec3(0.f, 0.f, -1.f),
-        glm::vec3(0.f, 1.f, 0.f),
-        glm::vec3(0.f, 1.f, 0.f)
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f)
     };
 
     for (int i = 0; i < 6; i++) {
@@ -1085,7 +1060,7 @@ void MVulkanEngine::preComputeIrradianceCubemap()
         generalGraphicList.Reset();
         generalGraphicList.Begin();
 
-        recordCommandBuffer(0, irradianceConvolutionPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+        recordCommandBuffer(0, irradianceConvolutionPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size(), false);
 
         MVulkanImageCopyInfo copyInfo{};
         copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1097,6 +1072,36 @@ void MVulkanEngine::preComputeIrradianceCubemap()
         copyInfo.layerCount = 1;
 
         generalGraphicList.CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 512, 512, copyInfo);
+
+        generalGraphicList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+        graphicsQueue.WaitForQueueComplete();
+    }
+
+    {
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
+
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 6;
+        barrier.baseMipLevel = 0;
+        barrier.levelCount = 1;
+        barrier.image = irradianceTexture.GetImage();
+
+        std::vector<MVulkanImageMemoryBarrier> barriers(1, barrier);
+        generalGraphicList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
         generalGraphicList.End();
 
@@ -1123,12 +1128,12 @@ void MVulkanEngine::preFilterEnvmaps()
     };
 
     glm::vec3 ups[6] = {
-        glm::vec3(0.f, 1.f, 0.f),
-        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f),
         glm::vec3(0.f, 0.f, 1.f),
         glm::vec3(0.f, 0.f, -1.f),
-        glm::vec3(0.f, 1.f, 0.f),
-        glm::vec3(0.f, 1.f, 0.f)
+        glm::vec3(0.f, -1.f, 0.f),
+        glm::vec3(0.f, -1.f, 0.f)
     };
 
     for (auto mipLevel = 0; mipLevel < 5; mipLevel++) {
@@ -1155,14 +1160,14 @@ void MVulkanEngine::preFilterEnvmaps()
                 PreFilterEnvmapShader::UniformBuffer1 ubo1{};
                 ubo1.roughness = roughness;
 
-                prefilterEnvmapPass->GetShader()->SetUBO(0, &ubo0);
-                prefilterEnvmapPass->GetShader()->SetUBO(1, &ubo1);
+                prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(0, &ubo0);
+                prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(1, &ubo1);
             }
 
             generalGraphicList.Reset();
             generalGraphicList.Begin();
 
-            recordCommandBuffer(0, prefilterEnvmapPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+            recordCommandBuffer(0, prefilterEnvmapPasses[mipLevel], generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size(), false);
 
             MVulkanImageCopyInfo copyInfo{};
             copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1173,7 +1178,7 @@ void MVulkanEngine::preFilterEnvmaps()
             copyInfo.dstArrayLayer = i;
             copyInfo.layerCount = 1;
 
-            generalGraphicList.CopyImage(prefilterEnvmapPass->GetFrameBuffer(0).GetImage(0), preFilteredEnvTexture.GetImage(), mipWidth, mipHeight, copyInfo);
+            generalGraphicList.CopyImage(prefilterEnvmapPasses[mipLevel]->GetFrameBuffer(0).GetImage(0), preFilteredEnvTexture.GetImage(), mipWidth, mipHeight, copyInfo);
 
             generalGraphicList.End();
 
@@ -1187,6 +1192,36 @@ void MVulkanEngine::preFilterEnvmaps()
             graphicsQueue.WaitForQueueComplete();
         }
     }
+
+    {
+        generalGraphicList.Reset();
+        generalGraphicList.Begin();
+
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 6;
+        barrier.baseMipLevel = 0;
+        barrier.levelCount = 5;
+        barrier.image = preFilteredEnvTexture.GetImage();
+
+        std::vector<MVulkanImageMemoryBarrier> barriers(1, barrier);
+        generalGraphicList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+        generalGraphicList.End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+        graphicsQueue.WaitForQueueComplete();
+    }
 }
 
 void MVulkanEngine::preComputeLUT()
@@ -1194,18 +1229,7 @@ void MVulkanEngine::preComputeLUT()
     generalGraphicList.Reset();
     generalGraphicList.Begin();
 
-    recordCommandBuffer(0, brdfLUTPass, generalGraphicList, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1);
-
-    //MVulkanImageCopyInfo copyInfo{};
-    //copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //copyInfo.dstAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //copyInfo.srcMipLevel = 0;
-    //copyInfo.dstMipLevel = 0;
-    //copyInfo.srcArrayLayer = 0;
-    //copyInfo.dstArrayLayer = i;
-    //copyInfo.layerCount = 1;
-    //
-    //generalGraphicList.CopyImage(brdfLUTPass->GetFrameBuffer(0).GetImage(0), brdfLUTTexture.GetImage(), 512, 512, copyInfo);
+    recordCommandBuffer(0, brdfLUTPass, generalGraphicList, squadVertexBuffer, squadIndexBuffer, lightPassIndirectBuffer, 1, true);
 
     generalGraphicList.End();
 
@@ -1495,7 +1519,7 @@ void MVulkanEngine::createTempTexture()
 
 void MVulkanEngine::recordCommandBuffer(
     uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
-    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount)
+    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
     VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
 
@@ -1521,9 +1545,15 @@ void MVulkanEngine::recordCommandBuffer(
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = (float)extent.height;
     viewport.width = (float)extent.width;
-    viewport.height = -(float)extent.height;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     commandList.SetViewport(0, 1, &viewport);

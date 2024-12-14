@@ -40,27 +40,6 @@ void SceneLoader::Load(std::string path, Scene* scene)
     scene->GenerateIndirectDrawData();
 
     scene->CalculateBB();
-
-    //scene->GenerateIndirectDataAndBuffers();
-    //{
-    //    auto totalVertexs = scene->GetTotalVertexs();
-    //    auto totalIndeices = scene->GetTotalIndeices();
-    //
-    //    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
-    //    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
-    //
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
-    //
-    //    scene->SetIndirectVertexBuffer(vertexBuffer);
-    //    scene->SetIndirectIndexBuffer(indexBuffer);
-    //
-    //    scene->GenerateIndirectDrawCommand();
-    //    std::vector<VkDrawIndexedIndirectCommand> commands = scene->GetIndirectDrawCommands();
-    //    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
-    //    scene->SetIndirectBuffer(indirectCommandBuffer);
-    //}
 }
 
 void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
@@ -121,15 +100,6 @@ void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene*
 
     if (mesh->mNumVertices > 0) {
         scene->SetMesh(meshName, _mesh);
-    
-        //std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
-        //std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
-        //
-        //Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(_mesh->vertices.data()), sizeof(Vertex) * _mesh->vertices.size());
-        //Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(_mesh->indices.data()), sizeof(unsigned int) * _mesh->indices.size());
-        //
-        //scene->SetVertexBuffer(meshName, vertexBuffer);
-        //scene->SetIndexBuffer(meshName, indexBuffer);
     }
 }
 

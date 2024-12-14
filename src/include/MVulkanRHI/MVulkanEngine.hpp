@@ -147,7 +147,8 @@ private:
     //void recordFinalCommandBuffer(uint32_t imageIndex);
     void recordCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
-        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount);
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        bool flipY = true);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
 
@@ -170,7 +171,7 @@ private:
     uint32_t m_frameId = 0;
 
     std::shared_ptr<RenderPass> irradianceConvolutionPass;
-    std::shared_ptr<RenderPass> prefilterEnvmapPass;
+    std::vector<std::shared_ptr<RenderPass>> prefilterEnvmapPasses;
     std::shared_ptr<RenderPass> brdfLUTPass;
 
     std::shared_ptr<RenderPass> gbufferPass;

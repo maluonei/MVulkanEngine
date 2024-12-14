@@ -39,7 +39,7 @@ void main() {
 	if(metallicAndRoughnessTextureIdx!=-1)
 		MetallicAndRoughness.rgb = texture(textures[metallicAndRoughnessTextureIdx], texCoord).rgb;
 	else
-		MetallicAndRoughness.rgb = vec3(0.f, 0.f, 0.5f);
+		MetallicAndRoughness.rgb = vec3(0.f, 0.5f, 0.5f);
 
 	MatId.r = ubo1[instanceId].matId;
 }

@@ -175,6 +175,12 @@ vec3 F_Schlick(float cosTheta, float metallic)
 	return F;    
 }
 
+vec3 F_Schlick_roughness(float cosTheta, float metallic, float roughness)
+{
+    vec3 F0 = mix(vec3(0.04), vec3(1.f), metallic); // * material.specular
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}   
+
 // Specular BRDF composition --------------------------------------------
 
 vec3 BRDF(vec3 diffuseColor, vec3 lightColor, vec3 L, vec3 V, vec3 N, float metallic, float roughness)
@@ -218,6 +224,28 @@ vec3 rgb2srgb(vec3 color){
     return color;
 }
 
+vec3 IBL(vec3 N, vec3 V, vec3 R, float roughness, float metallic, vec3 albedo){
+     vec3 F = F_Schlick_roughness(max(dot(N, V), 0.0), metallic, roughness);
+            
+     vec3 kS = F;
+     vec3 kD = 1.0 - kS;
+     kD *= 1.0 - metallic;	  
+     
+     vec3 irradiance = texture(enviromentIrradiance, N).rgb;
+     vec3 diffuse      = irradiance * albedo;
+     
+     // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+     const float MAX_REFLECTION_LOD = 4.0;
+     vec3 prefilteredColor = textureLod(prefilteredEnvmap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+     vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+     vec3 ambient = (kD * diffuse + specular) * 1.0f;
+     //vec3 ambient = (kD * diffuse) * 1.0f;
+
+     return ambient;
+}
+
 void main(){
     vec4 gBufferValue0 = texture(gBufferNormal, texCoord);
     vec4 gBufferValue1 = texture(gBufferPosition, texCoord);
@@ -226,11 +254,11 @@ void main(){
     vec4 gBufferValue4 = texture(gMatId, texCoord);
 
     int matId = int(gBufferValue4.r);
-    vec3 fragNormal = gBufferValue0.rgb;
+    vec3 fragNormal = normalize(gBufferValue0.rgb);
     vec3 fragPos = gBufferValue1.rgb;
     vec2 fragUV = vec2(gBufferValue0.a, gBufferValue1.a);
     vec4 fragAlbedo = gBufferValue2.rgba;
-    float metalness = gBufferValue3.b;
+    float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
     
     vec3 fragcolor = vec3(0.f, 0.f, 0.f);
@@ -238,14 +266,33 @@ void main(){
     for(int i=0;i< ubo1.lightNum;i++){
         float ocllusion = PCF(i, fragPos);
 
-        vec3 L = -ubo1.lights[i].direction;
-        vec3 V = ubo1.cameraPos.xyz - fragPos;
-        V = normalize(V);
+        vec3 L = normalize(-ubo1.lights[i].direction);
+        vec3 V = normalize(ubo1.cameraPos.xyz - fragPos);
+        vec3 R = reflect(-V, fragNormal); 
 
-        {
-            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metalness, roughness);
+
+        if(matId==0){
+            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metallic, roughness);
             fragcolor += fragAlbedo.rgb * 0.04f; //ambient
         }
+        else if(matId==1){
+            fragcolor += IBL(fragNormal, V, R, roughness, metallic, fragAlbedo.rgb);
+        }
+        //{
+        //    //pbr diffuse and specular
+        //    fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metallic, roughness);
+        //    //fragcolor += fragAlbedo.rgb * 0.04f; //ambient
+        //}
+        //
+        //{
+        //    //IBL
+        //    if(matId==1){
+        //        fragcolor += IBL(fragNormal, V, R, roughness, metallic, fragAlbedo.rgb);
+        //    }
+        //    else{
+        //        fragcolor += fragAlbedo.rgb * 0.04f; //ambient
+        //    }
+        //}
     }
 
     color = vec4(fragcolor, 1.f);
