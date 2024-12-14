@@ -116,13 +116,6 @@ void MVulkanEngine::drawFrame()
 
         GbufferShader::UniformBufferObject1 ubo1[256];
 
-        std::vector<GbufferShader::UniformBufferObject2> ubo2(4);
-        ubo2[0].testValue = glm::vec4(1.f, 0.f, 0.f, 0.f);
-        ubo2[1].testValue = glm::vec4(0.f, 1.f, 0.f, 0.f);
-        ubo2[2].testValue = glm::vec4(0.f, 0.f, 1.f, 0.f);
-        ubo2[3].testValue = glm::vec4(0.f, 0.f, 0.f, 1.f);
-        gbufferPass->GetShader()->SetUBO(2, ubo2.data());
-
         auto meshNames = scene->GetMeshNames();
         auto drawIndexedIndirectCommands = scene->GetIndirectDrawCommands();
 
@@ -642,7 +635,7 @@ void MVulkanEngine::createRenderPass()
             }
         }
 
-        std::vector<VkSampler> samplers(wholeTextures.size(), linearSampler.GetSampler());
+        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
 
         gbufferPass->Create(gbufferShader, swapChain, graphicsQueue, generalGraphicList, allocator, bufferTextureViews, samplers);
     }
@@ -715,6 +708,7 @@ void MVulkanEngine::createRenderPass()
         gbufferViews[8][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
         std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
+        //samplers[0] = linearSampler.GetSampler();
         samplers[4] = nearestSampler.GetSampler();
 
         lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews, samplers);

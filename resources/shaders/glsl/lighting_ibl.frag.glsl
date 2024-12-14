@@ -278,21 +278,6 @@ void main(){
         else if(matId==1){
             fragcolor += IBL(fragNormal, V, R, roughness, metallic, fragAlbedo.rgb);
         }
-        //{
-        //    //pbr diffuse and specular
-        //    fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metallic, roughness);
-        //    //fragcolor += fragAlbedo.rgb * 0.04f; //ambient
-        //}
-        //
-        //{
-        //    //IBL
-        //    if(matId==1){
-        //        fragcolor += IBL(fragNormal, V, R, roughness, metallic, fragAlbedo.rgb);
-        //    }
-        //    else{
-        //        fragcolor += fragAlbedo.rgb * 0.04f; //ambient
-        //    }
-        //}
     }
 
     color = vec4(fragcolor, 1.f);

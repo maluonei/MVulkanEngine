@@ -93,18 +93,16 @@ void MVulkanDescriptorSetWrite::Update(
     VkDevice device,
     VkDescriptorSet set,
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
-    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos)
+    std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos,
+    std::vector<std::vector<VkDescriptorImageInfo>> seperateImageInfos,
+    std::vector<VkDescriptorImageInfo> seperateSamplers)
 {
-    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos.size();
-    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos.size();
+    auto bufferInfoCount = bufferInfos.size();
+    auto combinedImageInfosCount = combinedImageInfos.size();
+    auto separateImageInfosCount = seperateImageInfos.size();
+    auto separateSamplerInfosCount = seperateSamplers.size();
 
-    //std::vector<VkDescriptorBufferInfo> fullBufferInfos(bufferInfos.size());
-    //std::vector<VkDescriptorImageInfo> fullImageInfos(imageInfos.size());
-
-    //if (bufferInfoCount > 0) fullBufferInfos = bufferInfos[i];
-    //if (imageInfosCount > 0) fullImageInfos = imageInfos[i];
-
-    std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
+    std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + combinedImageInfosCount + separateImageInfosCount + separateSamplerInfosCount);
     for (auto binding = 0; binding < bufferInfoCount; binding++) {
         descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite[binding].dstSet = set;
@@ -115,50 +113,35 @@ void MVulkanDescriptorSetWrite::Update(
         descriptorWrite[binding].pBufferInfo = &(bufferInfos[binding][0]);
     }
 
-    for (auto binding = bufferInfoCount; binding < bufferInfoCount + imageInfosCount; binding++) {
+    for (auto binding = bufferInfoCount; binding < bufferInfoCount + combinedImageInfosCount; binding++) {
         descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite[binding].dstSet = set;
         descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
         descriptorWrite[binding].dstArrayElement = 0;
         descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrite[binding].descriptorCount = imageInfos[binding - bufferInfoCount].size();
-        descriptorWrite[binding].pImageInfo = &(imageInfos[binding - bufferInfoCount][0]);
+        descriptorWrite[binding].descriptorCount = combinedImageInfos[binding - bufferInfoCount].size();
+        descriptorWrite[binding].pImageInfo = &(combinedImageInfos[binding - bufferInfoCount][0]);
     }
 
-    //spdlog::info("**************************************");
-    vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
-}
+    for (auto binding = bufferInfoCount + combinedImageInfosCount; binding < bufferInfoCount + combinedImageInfosCount + separateImageInfosCount; binding++) {
+        descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[binding].dstSet = set;
+        descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
+        descriptorWrite[binding].dstArrayElement = 0;
+        descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptorWrite[binding].descriptorCount = seperateImageInfos[binding - bufferInfoCount - combinedImageInfosCount].size();
+        descriptorWrite[binding].pImageInfo = &(seperateImageInfos[binding - bufferInfoCount - combinedImageInfosCount][0]);
+    }
 
-//void MVulkanDescriptorSetWrite::Update(
-//    VkDevice device,
-//    VkDescriptorSet set,
-//    std::vector<VkDescriptorBufferInfo> bufferInfos,
-//    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos)
-//{
-//    auto bufferInfoCount = bufferInfos.size() == 0 ? 0 : bufferInfos[0].size();
-//    auto imageInfosCount = imageInfos.size() == 0 ? 0 : imageInfos[0].size();
-//
-//    std::vector<VkWriteDescriptorSet> descriptorWrite(bufferInfoCount + imageInfosCount);
-//    for (auto j = 0; j < bufferInfoCount; j++) {
-//        descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//        descriptorWrite[j].dstSet = set;
-//        descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
-//        descriptorWrite[j].dstArrayElement = 0;
-//        descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//        descriptorWrite[j].descriptorCount = bufferInfos[j].size();
-//        descriptorWrite[j].pBufferInfo = &(bufferInfos[j][0]);
-//    }
-//
-//    for (auto j = bufferInfoCount; j < bufferInfoCount + imageInfosCount; j++) {
-//        descriptorWrite[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//        descriptorWrite[j].dstSet = set;
-//        descriptorWrite[j].dstBinding = static_cast<uint32_t>(j);
-//        descriptorWrite[j].dstArrayElement = 0;
-//        descriptorWrite[j].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//        descriptorWrite[j].descriptorCount = imageInfos[j].size();
-//        descriptorWrite[j].pImageInfo = &(imageInfos[j - bufferInfoCount][0]);
-//    }
-//
-//    vkUpdateDescriptorSets(device, bufferInfoCount + imageInfosCount, descriptorWrite.data(), 0, nullptr);
-//}
-//
+    for (auto binding = bufferInfoCount + combinedImageInfosCount + separateImageInfosCount; binding < bufferInfoCount + combinedImageInfosCount + separateImageInfosCount + separateSamplerInfosCount; binding++) {
+        descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[binding].dstSet = set;
+        descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
+        descriptorWrite[binding].dstArrayElement = 0;
+        descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        descriptorWrite[binding].descriptorCount = 1;
+        descriptorWrite[binding].pImageInfo = &seperateSamplers[binding - bufferInfoCount - combinedImageInfosCount - separateImageInfosCount];
+    }
+
+    vkUpdateDescriptorSets(device, bufferInfoCount + combinedImageInfosCount + separateImageInfosCount + separateSamplerInfosCount, descriptorWrite.data(), 0, nullptr);
+}

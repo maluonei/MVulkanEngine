@@ -6,6 +6,11 @@
 #include "vector"
 #include "Utils/VulkanUtil.hpp"
 
+struct MVulkanDescriptorImageInfo {
+	VkDescriptorImageInfo imageInfo;
+	VkDescriptorType samplerType;
+};
+
 class MVulkanDescriptorSetAllocator {
 public:
 	MVulkanDescriptorSetAllocator();
@@ -56,7 +61,9 @@ public:
 		VkDevice device,
 		VkDescriptorSet set,
 		std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
-		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos);
+		std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos,
+		std::vector<std::vector<VkDescriptorImageInfo>> seperateImageInfos,
+		std::vector<VkDescriptorImageInfo> seperateSamplers);
 
 	void Update(
 		VkDevice device,

@@ -88,9 +88,46 @@ void Shader::compile(std::string shaderPath)
 
 		compiledShaderCode = readFile(outputShader.string());
 		compiledShaderPath = outputShader.string();
-		//compiledShaderCode_ui32 = readFileToUnsignedInt(outputShader.string());
 	}
-	else {
-		spdlog::error("unknown shader type");
+	else if (shaderPath.ends_with("hlsl")) {
+		size_t size = shaderPath.size();
+
+		fs::path glslShader = shaderRootPath / (shaderPath);
+		fs::path outputShader = shaderRootPath / (shaderPath.substr(0, size - 5) + ".spv");
+
+		if (!fs::exists(glslShader)) {
+			spdlog::error("source shader don't exist: {0}", shaderPath);
+		}
+
+		std::string phase = "";
+		if (shaderPath.substr(size - 9, 4) == "vert") {
+			phase = "vert";
+		}
+		else if (shaderPath.substr(size - 9, 4) == "frag") {
+			phase = "frag";
+		}
+		else if (shaderPath.substr(size - 9, 4) == "geom") {
+			phase = "geom";
+		}
+		//spdlog::info("phase: {0}", phase);
+
+		fs::path logFile = shaderRootPath / "log.txt";
+		std::string command = compilerPath.string() + " -V -D -e main -S " + phase + " " + glslShader.string() + " -o " + outputShader.string() + " --keep-uncalled > " + logFile.string();
+		int status = system(command.c_str());
+
+		//spdlog::info("command:, {0}", command);
+
+		if (status != 0) {
+			std::ifstream file(logFile.string());
+			std::string line;
+
+			spdlog::error("fail to compile shader:");
+			while (std::getline(file, line)) {
+				spdlog::error(line);
+			}
+		}
+
+		compiledShaderCode = readFile(outputShader.string());
+		compiledShaderPath = outputShader.string();
 	}
 }

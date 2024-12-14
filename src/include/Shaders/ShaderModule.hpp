@@ -107,14 +107,9 @@ public:
 		int padding1;
 	};
 
-	struct UniformBufferObject2
-	{
-		glm::vec3 testValue;
-	};
 private:
 	UniformBufferObject0 ubo0;
 	UniformBufferObject1 ubo1[256];
-	UniformBufferObject2 ubo2[4];
 };
 
 class SquadPhongShader:public ShaderModule {

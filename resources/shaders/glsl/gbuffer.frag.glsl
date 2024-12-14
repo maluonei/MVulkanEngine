@@ -1,7 +1,7 @@
 #version 450 core
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(binding = 3) uniform sampler2D textures[1024];
+layout(binding = 2) uniform sampler2D textures[1024];
 
 layout(location = 0)out vec4 Normal;
 layout(location = 1)out vec4 Position;
@@ -21,9 +21,6 @@ layout(std140, binding = 1) uniform TextureBuffer{
 	int padding2;
 } ubo1[256];
 
-layout(std140, binding = 2) uniform TestBufferArray{
-	vec4 testValue;
-} ubo2[4];
 
 void main() {
 	int diffuseTextureIdx = ubo1[instanceId].diffuseTextureIdx;

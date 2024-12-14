@@ -43,10 +43,14 @@ struct ShaderResourceInfo {
 struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> uniformBuffers;
 	std::vector<ShaderResourceInfo> storageBuffers;
-	std::vector<ShaderResourceInfo> samplers;
 
-	std::vector<MVulkanDescriptorSetLayoutBinding> GetUniformBufferBindings();
-	std::vector<MVulkanDescriptorSetLayoutBinding> GetSamplers();
+	std::vector<ShaderResourceInfo> combinedImageSamplers;
+	std::vector<ShaderResourceInfo> seperateSamplers;
+	std::vector<ShaderResourceInfo> seperateImages;
+
+	//std::vector<MVulkanDescriptorSetLayoutBinding> GetUniformBufferBindings();
+	//std::vector<MVulkanDescriptorSetLayoutBinding> GetCombinedImageSamplers();
+	//std::vector<MVulkanDescriptorSetLayoutBinding> GetSeperateImageSamplers();
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
 
 };

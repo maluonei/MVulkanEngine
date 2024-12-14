@@ -229,7 +229,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.uniformBuffers.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
     }
 
-    // 处理 sampled images (纹理)
+    // 处理 sampled images (纹理) -- glsl
     for (const auto& image : resources.sampled_images) {
         auto& type = compiler.get_type(image.type_id);
         uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
@@ -243,7 +243,41 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.samplers.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.combinedImageSamplers.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    // 处理 seperate images (纹理) -- hlsl
+    for (const auto& image : resources.separate_images) {
+        auto& type = compiler.get_type(image.type_id);
+        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+        //size_t size = compiler.get_declared_struct_size(type);
+        std::cout << "Separate Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.seperateImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    // 处理 seperate samplers (采样器) -- hlsl
+    for (const auto& sampler : resources.separate_samplers) {
+        auto& type = compiler.get_type(sampler.type_id);
+        uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+        uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+        //size_t size = compiler.get_declared_struct_size(type);
+        std::cout << "Separate Sampler: " << sampler.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.seperateSamplers.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     return out;
@@ -270,38 +304,54 @@ void MVulkanShaderReflector::test(Shader shader)
     std::cout << glslCode << std::endl;
 }
 
-std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetUniformBufferBindings()
-{
-    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
-
-    for (const auto& info : uniformBuffers) {
-        MVulkanDescriptorSetLayoutBinding binding;
-        binding.binding.binding = info.binding;
-        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        binding.binding.descriptorCount = 1;
-        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
-        binding.size = info.size;
-        bindings.push_back(binding);
-    }
-
-    return bindings;
-}
-
-std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetSamplers()
-{
-    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
-
-    for (const auto& info : samplers) {
-        MVulkanDescriptorSetLayoutBinding binding;
-        binding.binding.binding = info.binding;
-        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        binding.binding.descriptorCount = 1;
-        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
-        bindings.push_back(binding);
-    }
-
-    return bindings;
-}
+//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetUniformBufferBindings()
+//{
+//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
+//
+//    for (const auto& info : uniformBuffers) {
+//        MVulkanDescriptorSetLayoutBinding binding;
+//        binding.binding.binding = info.binding;
+//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//        binding.binding.descriptorCount = 1;
+//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+//        binding.size = info.size;
+//        bindings.push_back(binding);
+//    }
+//
+//    return bindings;
+//}
+//
+//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetCombinedImageSamplers()
+//{
+//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
+//
+//    for (const auto& info : combinedImageSamplers) {
+//        MVulkanDescriptorSetLayoutBinding binding;
+//        binding.binding.binding = info.binding;
+//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//        binding.binding.descriptorCount = 1;
+//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+//        bindings.push_back(binding);
+//    }
+//
+//    return bindings;
+//}
+//
+//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetSeperateImageSamplers()
+//{
+//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
+//
+//    for (const auto& info : seperateSamplers) {
+//        MVulkanDescriptorSetLayoutBinding binding;
+//        binding.binding.binding = info.binding;
+//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+//        binding.binding.descriptorCount = 1;
+//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+//        bindings.push_back(binding);
+//    }
+//
+//    return bindings;
+//}
 
 std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
 {
@@ -317,10 +367,30 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         bindings.push_back(binding);
     }
 
-    for (const auto& info : samplers) {
+    for (const auto& info : combinedImageSamplers) {
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.binding.descriptorCount = info.descriptorCount;
+        binding.binding.pImmutableSamplers = nullptr;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    for (const auto& info : seperateImages) {
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = info.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        binding.binding.descriptorCount = info.descriptorCount;
+        binding.binding.pImmutableSamplers = nullptr;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    for (const auto& info : seperateSamplers) {
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = info.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
         binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);

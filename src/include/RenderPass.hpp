@@ -54,7 +54,7 @@ public:
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
 	//void UpdateDescriptorSetWrite(std::vector<VkImageView> imageViews);
 
-	void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+	//void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
 	//void UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<VkImageView> imageViews);
 
 	void SetUBO(uint8_t index, void* data);
@@ -92,7 +92,8 @@ private:
 	//std::unordered_map<uint32_t, std::vector<MCBV>> m_uniformBuffers;
 	//std::unordered_map<uint32_t, std::vector<MVulkanSampler>> m_samplers;
 	std::vector<std::vector<MCBV>> m_uniformBuffers;
-	std::vector<std::vector<MVulkanSampler>> m_samplers;
+	//std::vector<std::vector<MVulkanSampler>> m_samplers;
+	std::vector<VkDescriptorType> m_samplerTypes;
 
 	MVulkanRenderPass m_renderPass;
 	MVulkanGraphicsPipeline m_pipeline;
@@ -101,7 +102,10 @@ private:
 	MVulkanDescriptorSetLayouts m_descriptorLayouts;
 	std::vector<MVulkanDescriptorSet> m_descriptorSets;
 
-	uint32_t m_cbvCount = 0, m_textureCount = 0;
+	uint32_t m_cbvCount = 0;
+	uint32_t m_separateSamplerCount = 0;
+	uint32_t m_separateImageCount = 0;
+	uint32_t m_combinedImageCount = 0;
 };
 
 

@@ -46,14 +46,37 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
 {
     for (auto i = 0; i < m_frameBuffers.size(); i++) {
         MVulkanDescriptorSetWrite write;
-        std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_textureCount);
-        for (auto binding = 0; binding < m_textureCount; binding++) {
-            imageInfos[binding].resize(imageViews[binding].size());
+
+        std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos(m_combinedImageCount);
+        std::vector<std::vector<VkDescriptorImageInfo>> separateImageInfos(m_separateImageCount);
+        std::vector<VkDescriptorImageInfo> separateSamplerInfos(m_separateSamplerCount);
+
+        for (auto binding = 0; binding < m_combinedImageCount; binding++) {
+            combinedImageInfos[binding].resize(imageViews[binding].size());
             for (auto j = 0; j < imageViews[binding].size(); j++) {
-                imageInfos[binding][j].sampler = samplers[binding];
-                imageInfos[binding][j].imageView = imageViews[binding][j];
-                imageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                combinedImageInfos[binding][j].sampler = samplers[binding];
+                combinedImageInfos[binding][j].imageView = imageViews[binding][j];
+                combinedImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             }
+        }
+
+        for (auto binding = 0; binding < m_separateImageCount; binding++) {
+            separateImageInfos[binding].resize(imageViews[binding].size());
+            for (auto j = 0; j < imageViews[binding].size(); j++) {
+                //separateImageInfos[binding][j].imageInfo.sampler = seperateSamplers[binding];
+                separateImageInfos[binding][j].sampler = nullptr;
+                separateImageInfos[binding][j].imageView = imageViews[binding][j];
+                separateImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+        }
+
+        //if (m_separateSamplerCount != 0) {
+        //    assert(samplers.size() == m_separateSamplerCount);
+        //}
+        for (auto binding = 0; binding < m_separateSamplerCount; binding++) {
+            separateSamplerInfos[binding].sampler = samplers[binding];
+            separateSamplerInfos[binding].imageView = nullptr;
+            separateSamplerInfos[binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
 
         std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_cbvCount);
@@ -67,36 +90,36 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
             }
         }
 
-        write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(), bufferInfos, imageInfos);
+        write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(), bufferInfos, combinedImageInfos, separateImageInfos, separateSamplerInfos);
     }
 }
 
-void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
-{
-    MVulkanDescriptorSetWrite write;
-    std::vector < std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        imageInfos[i].resize(imageViews.size());
-        for (auto j = 0; j < imageViews.size(); j++) {
-            imageInfos[i][j].sampler = samplers[j];
-            imageInfos[i][j].imageView = imageViews[i][j];
-            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-    }
-
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        bufferInfos[i].resize(m_cbvCount);
-
-        for (auto binding = 0; binding < m_cbvCount; binding++) {
-            bufferInfos[i][binding].buffer = m_uniformBuffers[i][binding].GetBuffer();
-            bufferInfos[i][binding].offset = 0;
-            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-        }
-    }
-
-    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos);
-}
+//void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+//{
+//    MVulkanDescriptorSetWrite write;
+//    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        imageInfos[i].resize(imageViews.size());
+//        for (auto j = 0; j < imageViews.size(); j++) {
+//            imageInfos[i][j].sampler = samplers[j];
+//            imageInfos[i][j].imageView = imageViews[i][j];
+//            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        }
+//    }
+//
+//    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        bufferInfos[i].resize(m_cbvCount);
+//
+//        for (auto binding = 0; binding < m_cbvCount; binding++) {
+//            bufferInfos[i][binding].buffer = m_uniformBuffers[i][binding].GetBuffer();
+//            bufferInfos[i][binding].offset = 0;
+//            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
+//        }
+//    }
+//
+//    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos);
+//}
 
 void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
@@ -114,30 +137,41 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
     m_descriptorSets = MVulkanDescriptorSet::CreateDescriptorSets(m_device.GetDevice(), allocator.Get(), layouts);
 
-    uint32_t cbvCount = 0;
-    uint32_t samplerCount = 0;
+     m_cbvCount = 0;
+     m_separateSamplerCount = 0;
+     m_separateImageCount = 0;
+     m_combinedImageCount = 0;
 
     for (auto binding = 0; binding < bindings.size(); binding++) {
         switch (bindings[binding].binding.descriptorType) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         {
-            cbvCount++;
+            m_cbvCount++;
             break;
         }
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
         {
-            samplerCount++;
+            m_combinedImageCount++;
             break;
         }
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+        {
+            m_separateSamplerCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        {
+            m_separateImageCount++;
+            break;
         }
     }
-
-    m_cbvCount = cbvCount;
-    m_textureCount = samplerCount;
+    }
 
     m_uniformBuffers.resize(m_info.frambufferCount);
+    //m_samplerTypes.resize(m_sepe);
+    //m_samplerTypes.resize(samplerCount);
     for (auto i = 0; i < m_info.frambufferCount; i++) {
-        m_uniformBuffers[i].resize(cbvCount);
+        m_uniformBuffers[i].resize(m_cbvCount);
         for (auto binding = 0; binding < bindings.size(); binding++) {
             switch (bindings[binding].binding.descriptorType) {
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -154,6 +188,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
             }
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             {
+                //m_samplerTypes
                 break;
             }
             }

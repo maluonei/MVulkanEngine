@@ -40,7 +40,7 @@ void ShaderModule::load()
 }
 
 
-TestShader::TestShader():ShaderModule("test.vet.glsl", "test.frag.glsl")
+TestShader::TestShader():ShaderModule("glsl/test.vet.glsl", "glsl/test.frag.glsl")
 {
 	sizes.resize(3);
 	sizes[0] = sizeof(ubo0);
@@ -74,7 +74,7 @@ void* TestShader::GetData(uint32_t binding, uint32_t index)
 }
 
 PhongShader::PhongShader()
-:ShaderModule("phong.vert.glsl", "phong.frag.glsl"){
+:ShaderModule("glsl/phong.vert.glsl", "glsl/phong.frag.glsl"){
 	sizes.resize(3);
 	sizes[0] = sizeof(ubo0);
 	sizes[1] = sizeof(ubo1);
@@ -107,7 +107,8 @@ void* PhongShader::GetData(uint32_t binding, uint32_t index)
 }
 
 GbufferShader::GbufferShader():
-	ShaderModule("gbuffer.vert.glsl", "gbuffer.frag.glsl")
+	//ShaderModule("gbuffer.vert.glsl", "gbuffer.frag.glsl")
+	ShaderModule("hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer.frag.hlsl")
 {
 }
 
@@ -118,8 +119,6 @@ size_t GbufferShader::GetBufferSizeBinding(uint32_t binding) const
 		return sizeof(UniformBufferObject0);
 	case 1:
 		return sizeof(UniformBufferObject1);
-	case 2:
-		return sizeof(UniformBufferObject2) * 4;
 	default:
 		return -1;
 	}
@@ -136,12 +135,7 @@ void GbufferShader::SetUBO(uint8_t index, void* data)
 			ubo1[i] = reinterpret_cast<UniformBufferObject1*>(data)[i];
 		}
 		return;
-	case 2:
-		for (auto i = 0; i < 4; i++) {
-			ubo2[i] = reinterpret_cast<UniformBufferObject2*>(data)[i];
-		}
-		return;
-}
+	}
 }
 
 void* GbufferShader::GetData(uint32_t binding, uint32_t index)
@@ -151,12 +145,10 @@ void* GbufferShader::GetData(uint32_t binding, uint32_t index)
 		return (void*)&ubo0;
 	case 1:
 		return (void*)&(ubo1[index]);
-	case 2:
-		return (void*)&(ubo2[index]);
 	}
 }
 
-SquadPhongShader::SquadPhongShader():ShaderModule("phong_sqad.vert.glsl", "phong_sqad.frag.glsl")
+SquadPhongShader::SquadPhongShader():ShaderModule("glsl/phong_sqad.vert.glsl", "glsl/phong_sqad.frag.glsl")
 {
 }
 
@@ -179,7 +171,7 @@ void* SquadPhongShader::GetData(uint32_t binding, uint32_t index)
 	return (void*)&ubo0;
 }
 
-ShadowShader::ShadowShader():ShaderModule("shadow.vert.glsl", "shadow.frag.glsl")
+ShadowShader::ShadowShader():ShaderModule("glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl")
 {
 }
 
@@ -198,7 +190,7 @@ void* ShadowShader::GetData(uint32_t binding, uint32_t index)
 	return (void*)&ubo0;
 }
 
-LightingPbrShader::LightingPbrShader() :ShaderModule("lighting_pbr.vert.glsl", "lighting_pbr.frag.glsl")
+LightingPbrShader::LightingPbrShader() :ShaderModule("glsl/lighting_pbr.vert.glsl", "glsl/lighting_pbr.frag.glsl")
 {
 
 }
@@ -237,7 +229,7 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 }
 
 
-LightingIBLShader::LightingIBLShader() :ShaderModule("lighting_ibl.vert.glsl", "lighting_ibl.frag.glsl")
+LightingIBLShader::LightingIBLShader() :ShaderModule("glsl/lighting_ibl.vert.glsl", "glsl/lighting_ibl.frag.glsl")
 {
 
 }
@@ -275,7 +267,7 @@ void* LightingIBLShader::GetData(uint32_t binding, uint32_t index)
 	}
 }
 
-SkyboxShader::SkyboxShader() :ShaderModule("skybox.vert.glsl", "skybox.frag.glsl")
+SkyboxShader::SkyboxShader() :ShaderModule("glsl/skybox.vert.glsl", "glsl/skybox.frag.glsl")
 {
 
 }
@@ -295,7 +287,7 @@ void* SkyboxShader::GetData(uint32_t binding, uint32_t index)
 	return (void*)&ubo0;
 }
 
-IrradianceConvolutionShader::IrradianceConvolutionShader() :ShaderModule("skybox.vert.glsl", "convolution_irradiance.frag.glsl")
+IrradianceConvolutionShader::IrradianceConvolutionShader() :ShaderModule("glsl/skybox.vert.glsl", "glsl/convolution_irradiance.frag.glsl")
 {
 
 }
@@ -315,7 +307,7 @@ void* IrradianceConvolutionShader::GetData(uint32_t binding, uint32_t index)
 	return (void*)&ubo0;
 }
 
-PreFilterEnvmapShader::PreFilterEnvmapShader() :ShaderModule("skybox.vert.glsl", "prefilterSpecular.frag.glsl")
+PreFilterEnvmapShader::PreFilterEnvmapShader() :ShaderModule("glsl/skybox.vert.glsl", "glsl/prefilterSpecular.frag.glsl")
 {
 
 }
@@ -352,7 +344,7 @@ void* PreFilterEnvmapShader::GetData(uint32_t binding, uint32_t index)
 	}
 }
 
-IBLBrdfShader::IBLBrdfShader() :ShaderModule("IBLbrdf.vert.glsl", "IBLbrdf.frag.glsl")
+IBLBrdfShader::IBLBrdfShader() :ShaderModule("glsl/IBLbrdf.vert.glsl", "glsl/IBLbrdf.frag.glsl")
 {
 
 }
