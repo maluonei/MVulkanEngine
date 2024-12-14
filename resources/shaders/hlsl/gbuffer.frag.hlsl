@@ -29,7 +29,7 @@ struct PSInput
 struct PSOutput
 {
     [[vk::location(0)]] float4 Normal : SV_TARGET0;
-    [[vk::location(1)]] float4 Position : SV_TARGET1;
+    [[vk::location(1)]] float4 Position : SV_TARGETt1;
     [[vk::location(2)]] float4 Albedo : SV_TARGET2;
     [[vk::location(3)]] float4 MetallicAndRoughness : SV_TARGET3;
     [[vk::location(4)]] uint4 MatId : SV_TARGET4;

@@ -200,8 +200,6 @@ size_t LightingPbrShader::GetBufferSizeBinding(uint32_t binding) const
 	switch (binding) {
 	case 0:
 		return sizeof(LightingPbrShader::UniformBuffer0);
-	case 1:
-		return sizeof(LightingPbrShader::DirectionalLightBuffer);
 	}
 	//return sizeof(DirectionalLightBuffer);
 }
@@ -212,9 +210,6 @@ void LightingPbrShader::SetUBO(uint8_t index, void* data)
 	case 0:
 		ubo0 = *reinterpret_cast<LightingPbrShader::UniformBuffer0*>(data);
 		return;
-	case 1:
-		ubo1 = *reinterpret_cast<LightingPbrShader::DirectionalLightBuffer*>(data);
-		return;
 	}
 }
 
@@ -223,13 +218,11 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 	switch (binding) {
 	case 0:
 		return (void*)&ubo0;
-	case 1:
-		return (void*)&ubo1;
 	}
 }
 
 
-LightingIBLShader::LightingIBLShader() :ShaderModule("glsl/lighting_ibl.vert.glsl", "glsl/lighting_ibl.frag.glsl")
+LightingIBLShader::LightingIBLShader() :ShaderModule("hlsl/lighting_ibl.vert.hlsl", "hlsl/lighting_ibl.frag.hlsl")
 {
 
 }
@@ -239,8 +232,6 @@ size_t LightingIBLShader::GetBufferSizeBinding(uint32_t binding) const
 	switch (binding) {
 	case 0:
 		return sizeof(LightingIBLShader::UniformBuffer0);
-	case 1:
-		return sizeof(LightingIBLShader::DirectionalLightBuffer);
 	}
 	//return sizeof(DirectionalLightBuffer);
 }
@@ -251,9 +242,6 @@ void LightingIBLShader::SetUBO(uint8_t index, void* data)
 	case 0:
 		ubo0 = *reinterpret_cast<LightingIBLShader::UniformBuffer0*>(data);
 		return;
-	case 1:
-		ubo1 = *reinterpret_cast<LightingIBLShader::DirectionalLightBuffer*>(data);
-		return;
 	}
 }
 
@@ -262,8 +250,6 @@ void* LightingIBLShader::GetData(uint32_t binding, uint32_t index)
 	switch (binding) {
 	case 0:
 		return (void*)&ubo0;
-	case 1:
-		return (void*)&ubo1;
 	}
 }
 

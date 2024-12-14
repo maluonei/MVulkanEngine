@@ -170,14 +170,11 @@ public:
 		float padding7;
 	};
 
-	struct DirectionalLightBuffer {
+	struct UniformBuffer0 {
 		Light lights[2];
 		glm::vec3 cameraPos;
 		int lightNum;
-	};
 
-
-	struct UniformBuffer0 {
 		int ResolusionWidth;
 		int ResolusionHeight;
 		int padding0;
@@ -186,7 +183,6 @@ public:
 
 private:
 	UniformBuffer0 ubo0;
-	DirectionalLightBuffer ubo1;
 };
 
 class LightingIBLShader :public ShaderModule {
@@ -215,23 +211,18 @@ public:
 		float padding7;
 	};
 
-	struct DirectionalLightBuffer {
+	struct UniformBuffer0 {
 		Light lights[2];
 		glm::vec3 cameraPos;
 		int lightNum;
-	};
 
-
-	struct UniformBuffer0 {
 		int ResolusionWidth;
 		int ResolusionHeight;
 		int padding0;
 		int padding1;
 	};
-
 private:
 	UniformBuffer0 ubo0;
-	DirectionalLightBuffer ubo1;
 };
 
 

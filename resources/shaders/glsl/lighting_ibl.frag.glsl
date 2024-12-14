@@ -4,16 +4,16 @@
 
 layout(location = 0)out vec4 color;
 
-layout(binding = 2) uniform sampler2D gBufferNormal;
-layout(binding = 3) uniform sampler2D gBufferPosition;
-layout(binding = 4) uniform sampler2D gAlbedo;
-layout(binding = 5) uniform sampler2D gMetallicAndRoughness;
-layout(binding = 6) uniform usampler2D gMatId;
-layout(binding = 7) uniform sampler2D shadowMaps[2];
+layout(binding = 1) uniform sampler2D gBufferNormal;
+layout(binding = 2) uniform sampler2D gBufferPosition;
+layout(binding = 3) uniform sampler2D gAlbedo;
+layout(binding = 4) uniform sampler2D gMetallicAndRoughness;
+layout(binding = 5) uniform usampler2D gMatId;
+layout(binding = 6) uniform sampler2D shadowMaps[2];
 
-layout(binding = 8) uniform samplerCube enviromentIrradiance;
-layout(binding = 9) uniform samplerCube prefilteredEnvmap;
-layout(binding = 10) uniform sampler2D brdfLUT;
+layout(binding = 7) uniform samplerCube enviromentIrradiance;
+layout(binding = 8) uniform samplerCube prefilteredEnvmap;
+layout(binding = 9) uniform sampler2D brdfLUT;
 
 layout(location = 0)in vec2 texCoord;
 
@@ -32,19 +32,17 @@ struct Light {
     float padding7;
 };
 
-layout(std430, binding = 1) uniform DirectionalLightBuffer{
+layout(std430, binding = 0) uniform UniformBuffer{
     Light lights[2];
     vec3 cameraPos;
     int lightNum;
-} ubo1;
 
-
-layout(std430, binding = 0) uniform UniformBuffer{
     int ResolusionWidth;
     int ResolusionHeight;
     int padding0;
     int padding1;
 } ubo0;
+
 
 const mat4 biasMat = mat4(
     0.5, 0.0, 0.0, 0.0,
@@ -127,19 +125,19 @@ float LinearDepth(float depth, float zNear, float zFar){
 float PCF(int lightIndex, vec3 fragPos){
     float ocllusion = 0.f;
 
-    vec4 shadowCoord = biasMat * ubo1.lights[lightIndex].shadowViewProj * vec4(fragPos, 1.f);
+    vec4 shadowCoord = biasMat * ubo0.lights[lightIndex].shadowViewProj * vec4(fragPos, 1.f);
     shadowCoord.xyz = shadowCoord.xyz / shadowCoord.w;
     shadowCoord.y = 1.f - shadowCoord.y;
 
-    float shadowDepth = texture(shadowMaps[ubo1.lights[lightIndex].shadowMapIndex], shadowCoord.xy).r;
+    float shadowDepth = texture(shadowMaps[ubo0.lights[lightIndex].shadowMapIndex], shadowCoord.xy).r;
     //float linearShadowDepth = LinearDepth(shadowDepth, ubo0.lights[lightIndex].cameraZnear, ubo0.lights[lightIndex].cameraZfar);
         
     for(int i=-3;i<=3;i+=1){
         for(int j=-3;j<=3;j+=1){
-            //float shadowDepth = texture(shadowMaps[ubo1.lights[lightIndex].shadowMapIndex], shadowCoord.xy + vec2(i,j)/vec2(ubo0.ResolusionWidth, ubo0.ResolusionHeight)).r;
+            //float shadowDepth = texture(shadowMaps[ubo0.lights[lightIndex].shadowMapIndex], shadowCoord.xy + vec2(i,j)/vec2(ubo0.ResolusionWidth, ubo0.ResolusionHeight)).r;
             //if ((shadowDepth+DepthBias) < shadowCoord.z) ocllusion+=1.f * gaussian_filter[i+3][j+3];
 
-            float shadowDepth = texture(shadowMaps[ubo1.lights[lightIndex].shadowMapIndex], shadowCoord.xy + (vec2(5.f,5.f) * poisson_points[i*7+j+24]) / vec2(ubo0.ResolusionWidth, ubo0.ResolusionHeight)).r;
+            float shadowDepth = texture(shadowMaps[ubo0.lights[lightIndex].shadowMapIndex], shadowCoord.xy + (vec2(5.f,5.f) * poisson_points[i*7+j+24]) / vec2(ubo0.ResolusionWidth, ubo0.ResolusionHeight)).r;
             if ((shadowDepth+DepthBias) < shadowCoord.z) ocllusion+=1.f;
         }
     }
@@ -263,16 +261,16 @@ void main(){
     
     vec3 fragcolor = vec3(0.f, 0.f, 0.f);
 
-    for(int i=0;i< ubo1.lightNum;i++){
+    for(int i=0;i< ubo0.lightNum;i++){
         float ocllusion = PCF(i, fragPos);
 
-        vec3 L = normalize(-ubo1.lights[i].direction);
-        vec3 V = normalize(ubo1.cameraPos.xyz - fragPos);
+        vec3 L = normalize(-ubo0.lights[i].direction);
+        vec3 V = normalize(ubo0.cameraPos.xyz - fragPos);
         vec3 R = reflect(-V, fragNormal); 
 
 
         if(matId==0){
-            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metallic, roughness);
+            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
             fragcolor += fragAlbedo.rgb * 0.04f; //ambient
         }
         else if(matId==1){

@@ -112,7 +112,7 @@ void Shader::compile(std::string shaderPath)
 		//spdlog::info("phase: {0}", phase);
 
 		fs::path logFile = shaderRootPath / "log.txt";
-		std::string command = compilerPath.string() + " -V -D -e main -S " + phase + " " + glslShader.string() + " -o " + outputShader.string() + " --keep-uncalled > " + logFile.string();
+		std::string command = compilerPath.string() + " -V -D -e main -Od -S " + phase + " " + glslShader.string() + " -o " + outputShader.string() + " --keep-uncalled > " + logFile.string();
 		int status = system(command.c_str());
 
 		//spdlog::info("command:, {0}", command);

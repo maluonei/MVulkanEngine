@@ -14,41 +14,44 @@ struct Light
     float padding7;
 };
 
-[[vk::binding(0, 0)]]
-cbuffer ubo0 : register(b0)
+struct UnifomBuffer0
 {
+    Light lights[2];
+
+    float3 cameraPos;
+    int lightNum;
+    
     int ResolutionWidth;
     int ResolutionHeight;
     int padding0;
     int padding1;
 };
 
-[[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+
+[[vk::binding(0, 0)]]
+cbuffer ubo : register(b0)
 {
-    Light lights[2];
+    UnifomBuffer0 ubo0;
+}
 
-    float3 cameraPos;
-    int lightNum;
-};
+[[vk::binding(1, 0)]]Texture2D<float4> gBufferNormal : register(t0);
+[[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
+[[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
+[[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
+[[vk::binding(5, 0)]]Texture2D<uint> gMatId : register(t4);
+[[vk::binding(6, 0)]]Texture2D shadowMaps[2] : register(t5);
 
-[[vk::binding(2, 0)]]Texture2D gBufferNormal : register(t2);
-[[vk::binding(3, 0)]]Texture2D gBufferPosition : register(t3);
-[[vk::binding(4, 0)]]Texture2D gAlbedo : register(t4);
-[[vk::binding(5, 0)]]Texture2D gMetallicAndRoughness : register(t5);
-[[vk::binding(6, 0)]]Texture2D<uint> gMatId : register(t6);
-[[vk::binding(7, 0)]]Texture2D shadowMaps[2] : register(t7);
+[[vk::binding(7, 0)]]TextureCube enviromentIrradiance : register(t6);
+[[vk::binding(8, 0)]]TextureCube prefilteredEnvmap : register(t7);
+[[vk::binding(9, 0)]]Texture2D<float4> brdfLUT : register(t8);
 
-[[vk::binding(8, 0)]]TextureCube enviromentIrradiance : register(t8);
-[[vk::binding(9, 0)]]TextureCube prefilteredEnvmap : register(t9);
-[[vk::binding(10, 0)]]Texture2D brdfLUT : register(t10);
-
-[[vk::binding(11, 0)]]SamplerState linearSampler : register(s0);
-[[vk::binding(12, 0)]]SamplerState nearestSampler : register(s1);
+[[vk::binding(10, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(11, 0)]]SamplerState nearestSampler : register(s1);
 
 struct PSInput
 {
     float2 texCoord : TEXCOORD0;
+    float3 normal : NORMAL;
     float4 position : SV_POSITION;
 };
 
@@ -58,10 +61,10 @@ struct PSOutput
 };
 
 static const float4x4 biasMat = float4x4(
-    0.5, 0.0, 0.0, 0.0,
-    0.0, 0.5, 0.0, 0.0,
+    0.5, 0.0, 0.0, 0.5,
+    0.0, 0.5, 0.0, 0.5,
     0.0, 0.0, 1.0, 0.0,
-    0.5, 0.5, 0.0, 1.0
+    0.0, 0.0, 0.0, 1.0
 );
 
 static const float DepthBias = 0.001f;
@@ -141,18 +144,18 @@ float PCF(int lightIndex, float3 fragPos)
 {
     float occlusion = 0.f;
 
-    float4 shadowCoord = mul(biasMat, mul(ubo1.light[lightIndex].shadowViewProj, float4(fragPos, 1.f)));
+    float4 shadowCoord = mul(biasMat, mul(ubo0.lights[lightIndex].shadowViewProj, float4(fragPos, 1.f)));
     shadowCoord.xyz /= shadowCoord.w;
     shadowCoord.y = 1.f - shadowCoord.y;
 
-    float shadowDepth = shadowMaps[ubo1.light[lightIndex].shadowMapIndices].Sample(linearSampler, shadowCoord.xy).r;
+    float shadowDepth = shadowMaps[ubo0.lights[lightIndex].shadowMapIndex].Sample(linearSampler, shadowCoord.xy).r;
 
     for (int i = -3; i <= 3; i++)
     {
         for (int j = -3; j <= 3; j++)
         {
-            float2 offset = poisson_points[i * 7 + j + 24] * float2(5.f, 5.f) / float2(ResolutionWidth, ResolutionHeight);
-            float shadowDepthSample = shadowMaps[ubo1.light[lightIndex].shadowMapIndices].Sample(linearSampler, shadowCoord.xy + offset).r;
+            float2 offset = poisson_points[i * 7 + j + 24] * float2(5.f, 5.f) / float2(ubo0.ResolutionWidth, ubo0.ResolutionHeight);
+            float shadowDepthSample = shadowMaps[ubo0.lights[lightIndex].shadowMapIndex].Sample(linearSampler, shadowCoord.xy + offset).r;
             if ((shadowDepthSample + DepthBias) < shadowCoord.z)
             {
                 occlusion += 1.f;
@@ -282,18 +285,18 @@ PSOutput main(PSInput input)
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 
-    for (int i = 0; i < ubo1.lightNum; i++)
+    for (int i = 0; i < ubo0.lightNum; i++)
     {
         float ocllusion = PCF(i, fragPos);
 
-        float3 L = normalize(-ubo1.lights[i].direction);
-        float3 V = normalize(ubo1.cameraPos.xyz - fragPos);
+        float3 L = normalize(-ubo0.lights[i].direction);
+        float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
         float3 R = reflect(-V, fragNormal);
 
 
         if (matId == 0)
         {
-            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo1.lights[i].intensity * ubo1.lights[i].color, L, V, fragNormal, metallic, roughness);
+            fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
             fragcolor += fragAlbedo.rgb * 0.04f; //ambient
         }
         else if (matId == 1)

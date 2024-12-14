@@ -159,23 +159,21 @@ void MVulkanEngine::drawFrame()
 
     //prepare lightingPass ubo
     {
-        LightingPbrShader::UniformBuffer0 ubo0{};
+        LightingIBLShader::UniformBuffer0 ubo0{};
+        ubo0.lightNum = 1;
+        ubo0.lights[0].direction = directionalLightCamera->GetDirection();
+        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetIntensity();
+        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetColor();
+        ubo0.lights[0].shadowMapIndex = 0;
+        ubo0.lights[0].shadowViewProj = directionalLightCamera->GetOrthoMatrix() * directionalLightCamera->GetViewMatrix();
+        ubo0.lights[0].cameraZnear = directionalLightCamera->GetZnear();
+        ubo0.lights[0].cameraZfar = directionalLightCamera->GetZfar();
+        ubo0.cameraPos = camera->GetPosition();
+
         ubo0.ResolusionWidth = shadowPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.ResolusionHeight = shadowPass->GetFrameBuffer(0).GetExtent2D().height;
 
-        LightingPbrShader::DirectionalLightBuffer ubo1{};
-        ubo1.lightNum = 1;
-        ubo1.lights[0].direction = directionalLightCamera->GetDirection();
-        ubo1.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetIntensity();
-        ubo1.lights[0].color = std::static_pointer_cast<DirectionalLight>(directionalLight)->GetColor();
-        ubo1.lights[0].shadowMapIndex = 0;
-        ubo1.lights[0].shadowViewProj = directionalLightCamera->GetOrthoMatrix() * directionalLightCamera->GetViewMatrix();
-        ubo1.lights[0].cameraZnear = directionalLightCamera->GetZnear();
-        ubo1.lights[0].cameraZfar = directionalLightCamera->GetZfar();
-        ubo1.cameraPos = camera->GetPosition();
-
         lightingPass->GetShader()->SetUBO(0, &ubo0);
-        lightingPass->GetShader()->SetUBO(1, &ubo1);
     }
 
     {
@@ -645,7 +643,7 @@ void MVulkanEngine::createRenderPass()
         shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
         RenderPassCreateInfo info{};
-        info.depthFormat = VK_FORMAT_D16_UNORM;
+        info.depthFormat = VK_FORMAT_D32_SFLOAT;
         info.frambufferCount = 1;
         info.extent = VkExtent2D(4096, 4096);
         info.useAttachmentResolve = false;
@@ -707,9 +705,12 @@ void MVulkanEngine::createRenderPass()
         gbufferViews[8] = std::vector<VkImageView>(1);
         gbufferViews[8][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
-        std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
-        //samplers[0] = linearSampler.GetSampler();
-        samplers[4] = nearestSampler.GetSampler();
+        //std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
+        //samplers[4] = nearestSampler.GetSampler();
+
+        std::vector<VkSampler> samplers(2);
+        samplers[0] = linearSampler.GetSampler();
+        samplers[1] = nearestSampler.GetSampler();
 
         lightingPass->Create(lightingShader, swapChain, graphicsQueue, generalGraphicList, allocator, gbufferViews, samplers);
         //lightingPass->GetFrameBuffer().GetDepthImage
