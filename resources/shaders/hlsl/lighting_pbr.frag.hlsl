@@ -238,9 +238,7 @@ PSOutput main(PSInput input)
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord);
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
-    //float4 gBufferValue4 = gMatId.Sample(nearestSampler, input.texCoord);
 
-    //int matId = int(gBufferValue4.r);
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;
     float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);

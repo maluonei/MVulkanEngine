@@ -21,11 +21,13 @@ Makefile
 # Ignore generated files
 *.o
 *.obj
-!resources
+*.spv
+log.txt
+!resources/textures
+!resources/models
+resources/shaders/*.txt
 # !resources/**/*.obj
 !3rdParty/VulkanSDK/binary/Windows/*.exe
 
 # Ignore macOS specific files
 .DS_Store
-
-resources/shaders/log.txt
