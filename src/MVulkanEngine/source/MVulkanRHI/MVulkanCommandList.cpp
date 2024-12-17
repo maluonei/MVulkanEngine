@@ -109,9 +109,6 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
         0, nullptr,
         1, &barrier
     );
-
-    //endSingleTimeCommands(commandBuffer);
-    //vkEndCommandBuffer(commandBuffer);
 }
 
 void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)

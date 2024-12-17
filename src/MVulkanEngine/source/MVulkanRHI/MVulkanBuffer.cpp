@@ -258,7 +258,7 @@ void MVulkanTexture::Clean(VkDevice device)
 }
 
 void MVulkanTexture::Create(
-    MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
+    MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
 {
     this->imageInfo = imageInfo;
     this->viewInfo = viewInfo;
@@ -271,7 +271,7 @@ void MVulkanTexture::Create(
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = layout;
     barrier.levelCount = image.GetMipLevel();
     barrier.baseArrayLayer = 0;
     barrier.layerCount = imageInfo.arrayLength;

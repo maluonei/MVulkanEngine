@@ -38,14 +38,9 @@ cbuffer ubo : register(b0)
 [[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
 [[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
 [[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
-//[[vk::binding(5, 0)]]Texture2D<uint> gMatId : register(t4);
-//[[vk::binding(6, 0)]]Texture2D shadowMaps[2] : register(t5);
+[[vk::binding(5, 0)]]Texture2D shadowMaps[2] : register(t4);
 
-[[vk::binding(5, 0)]]TextureCube enviromentIrradiance : register(t4);
-[[vk::binding(6, 0)]]TextureCube prefilteredEnvmap : register(t5);
-[[vk::binding(7, 0)]]Texture2D<float4> brdfLUT : register(t6);
-
-[[vk::binding(8, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
 
 struct PSInput
 {
@@ -139,6 +134,33 @@ float LinearDepth(float depth, float zNear, float zFar)
     return (2.f * depth * zDis) / (zFar + zNear - depth * zDis);
 }
 
+float PCF(int lightIndex, float3 fragPos)
+{
+    float occlusion = 0.f;
+
+    float4 shadowCoord = mul(biasMat, mul(ubo0.lights[lightIndex].shadowViewProj, float4(fragPos, 1.f)));
+    shadowCoord.xyz /= shadowCoord.w;
+    shadowCoord.y = 1.f - shadowCoord.y;
+
+    float shadowDepth = shadowMaps[ubo0.lights[lightIndex].shadowMapIndex].Sample(linearSampler, shadowCoord.xy).r;
+
+    for (int i = -3; i <= 3; i++)
+    {
+        for (int j = -3; j <= 3; j++)
+        {
+            float2 offset = poisson_points[i * 7 + j + 24] * float2(5.f, 5.f) / float2(ubo0.ResolutionWidth, ubo0.ResolutionHeight);
+            float shadowDepthSample = shadowMaps[ubo0.lights[lightIndex].shadowMapIndex].Sample(linearSampler, shadowCoord.xy + offset).r;
+            if ((shadowDepthSample + DepthBias) < shadowCoord.z)
+            {
+                occlusion += 1.f;
+            }
+        }
+    }
+
+    occlusion /= 49.f;
+    return occlusion;
+}
+
 float D_GGX(float dotNH, float roughness)
 {
     float alpha = roughness * roughness;
@@ -162,12 +184,6 @@ float3 F_Schlick(float cosTheta, float metallic)
     float3 F0 = lerp(float3(0.04), float3(1.f), metallic); // * material.specular
     float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
     return F;
-}
-
-float3 F_Schlick_roughness(float cosTheta, float metallic, float roughness)
-{
-    float3 F0 = lerp(float3(0.04), float3(1.f), metallic); // * material.specular
-    return F0 + (max(float3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 // Specular BRDF composition --------------------------------------------
@@ -214,28 +230,6 @@ float3 rgb2srgb(float3 color)
     return color;
 }
 
-float3 IBL(float3 N, float3 V, float3 R, float roughness, float metallic, float3 albedo)
-{
-    float3 F = F_Schlick_roughness(max(dot(N, V), 0.0), metallic, roughness);
-            
-    float3 kS = F;
-    float3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;
-     
-    float3 irradiance = enviromentIrradiance.Sample(linearSampler, N).rgb;
-    float3 diffuse = irradiance * albedo;
-     
-     // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
-    const float MAX_REFLECTION_LOD = 4.0;
-    float3 prefilteredColor = prefilteredEnvmap.SampleLevel(linearSampler, R, roughness * MAX_REFLECTION_LOD).rgb;
-    float2 brdf = brdfLUT.Sample(linearSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
-    float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-
-    float3 ambient = (kD * diffuse + specular) * 1.0f;
-
-    return ambient;
-}
-
 PSOutput main(PSInput input)
 {
     PSOutput output;
@@ -244,7 +238,9 @@ PSOutput main(PSInput input)
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord);
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
+    //float4 gBufferValue4 = gMatId.Sample(nearestSampler, input.texCoord);
 
+    //int matId = int(gBufferValue4.r);
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;
     float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);
@@ -254,10 +250,17 @@ PSOutput main(PSInput input)
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 
-    float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
-    float3 R = reflect(-V, fragNormal);
+    for (int i = 0; i < ubo0.lightNum; i++)
+    {
+        float ocllusion = PCF(i, fragPos);
 
-    fragcolor += IBL(fragNormal, V, R, roughness, metallic, fragAlbedo.rgb);
+        float3 L = normalize(-ubo0.lights[i].direction);
+        float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
+        float3 R = reflect(-V, fragNormal);
+
+        fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
+        fragcolor += fragAlbedo.rgb * 0.04f; //ambient
+    }
 
     output.color = float4(fragcolor, 1.f);
     

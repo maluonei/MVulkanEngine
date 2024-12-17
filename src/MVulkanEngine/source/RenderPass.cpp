@@ -70,9 +70,6 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
             }
         }
 
-        //if (m_separateSamplerCount != 0) {
-        //    assert(samplers.size() == m_separateSamplerCount);
-        //}
         for (auto binding = 0; binding < m_separateSamplerCount; binding++) {
             separateSamplerInfos[binding].sampler = samplers[binding];
             separateSamplerInfos[binding].imageView = nullptr;

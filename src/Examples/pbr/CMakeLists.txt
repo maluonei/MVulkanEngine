@@ -6,7 +6,7 @@ project(MVulkanEngine_PBR)
 set(CMAKE_CXX_STANDARD 20)
 
 
-add_executable(MVulkanEngine_PBR main.cpp pbr.hpp pbr.cpp "main.cpp")
+add_executable(MVulkanEngine_PBR "main.cpp" "pbr.hpp" "pbr.cpp")
 
 #message(STATUS "MVulkanEngine_include: ${MVulkanEngine_include}")
 # Ìí¼Ó°üº¬Ä¿Â¼

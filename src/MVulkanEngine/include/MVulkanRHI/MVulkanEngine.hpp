@@ -47,15 +47,12 @@ public:
     void Init();
     void Clean();
 
-    //void Run();
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
     inline MVulkanDevice GetDevice()const { return device; }
 
     void GenerateMipMap(MVulkanTexture texture);
     inline std::shared_ptr<Camera> GetCamera()const { return camera; }
-
-    //MVulkanSampler GetGlobalSampler()const;
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
@@ -149,46 +146,27 @@ public:
     bool RecreateSwapchain();
 
     void RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass);
+
+    MVulkanTexture GetPlaceHolderTexture();
+
 private: 
     void initVulkan();
-    //void renderLoop();
-    //void drawFrame();
-
-    //void createGlobalSamplers();
 
     void createInstance();
     void createDevice();
     void createSurface();
     void createSwapChain();
-    //void RecreateSwapChain();
+
     void transitionSwapchainImageFormat();
     void transitionFramebufferImageLayout();
-
-    //void createRenderPass();
 
     void createDescriptorSetAllocator();
 
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
-    //void createCamera();
 
-    //void createBufferAndLoadData();
-    //void createTexture();
-    //void createSkyboxTexture();
-    //void createIrradianceCubemapTexture();
-    //void preComputeIrradianceCubemap();
-    //void preFilterEnvmaps();
-    //void preComputeLUT();
-    //void createSampler();
-    //void loadModel();
-    //void loadScene();
-    //void createLight();
-    
     void createSyncObjects();
-    //void recordGbufferCommandBuffer(uint32_t imageIndex);
-    //void recordShadowCommandBuffer(uint32_t imageIndex);
-    //void recordFinalCommandBuffer(uint32_t imageIndex);
 
     void recordCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
@@ -212,22 +190,9 @@ private:
         VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
         const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
-    //void createTempTexture();
-    //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
+    void createPlaceHolderTexture();
 private:
-    //uint32_t m_frameId = 0;
-
-    //std::shared_ptr<RenderPass> irradianceConvolutionPass;
-    //std::vector<std::shared_ptr<RenderPass>> prefilterEnvmapPasses;
-    //std::shared_ptr<RenderPass> brdfLUTPass;
-    //
-    //std::shared_ptr<RenderPass> gbufferPass;
-    //std::shared_ptr<RenderPass> shadowPass;
-    //std::shared_ptr<RenderPass> lightingPass;
-    //std::shared_ptr<RenderPass> skyboxPass;
-
     uint16_t windowWidth = 800, windowHeight = 600;
-    //uint32_t m_frameId = 0;
 
     MWindow* window = nullptr;
 
@@ -250,19 +215,6 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    //std::shared_ptr<Buffer> squadVertexBuffer;
-    //std::shared_ptr<Buffer> squadIndexBuffer;
-
-    //MVulkanSampler linearSampler;
-    //MVulkanSampler nearestSampler;
-    //MVulkanTexture testTexture;
-    //MImage<unsigned char> image;
-
-    //MVulkanTexture skyboxTexture;
-    //MVulkanTexture irradianceTexture;
-    //MVulkanTexture preFilteredEnvTexture;
-    //MVulkanTexture brdfLUTTexture;
-
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
     std::vector<MVulkanFence> inFlightFences;
@@ -270,18 +222,7 @@ private:
 
     std::shared_ptr<Camera> camera;
 
-    //std::shared_ptr<Camera> directionalLightCamera;
-
-    //std::shared_ptr<Scene> scene;
-    //std::shared_ptr<Scene> cube;
-    //std::shared_ptr<Scene> sphere;
-    //std::shared_ptr<Scene> squad;
-    //
-    //std::shared_ptr<Light> directionalLight;
-    //
-    //std::vector<MVulkanSampler> globalSamplers;
-    //
-    //std::shared_ptr<Buffer> lightPassIndirectBuffer;
+    MVulkanTexture placeHolderTexture;
 };
 
 

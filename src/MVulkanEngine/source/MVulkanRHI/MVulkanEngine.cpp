@@ -122,7 +122,6 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     
     generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
    
-
     generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
@@ -165,8 +164,6 @@ MGraphicsCommandList MVulkanEngine::GetGraphicsList(int i)
 
 void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
-    //if (renderPass == nullptr);
-    //renderPass = std::make_shared<RenderPass>();
     renderPass->Create(shader, swapChain, graphicsQueue, generalGraphicList, allocator, imageViews, samplers);
 }
 
@@ -228,7 +225,6 @@ void MVulkanEngine::SetCamera(std::shared_ptr<Camera> camera)
     this->camera = camera;
 }
 
-
 bool MVulkanEngine::RecreateSwapchain()
 {
     return swapChain.Recreate(device, window->GetWindow(), surface);
@@ -237,6 +233,11 @@ bool MVulkanEngine::RecreateSwapchain()
 void MVulkanEngine::RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass)
 {
     renderPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+}
+
+MVulkanTexture MVulkanEngine::GetPlaceHolderTexture()
+{
+    return placeHolderTexture;
 }
 
 
@@ -254,6 +255,8 @@ void MVulkanEngine::initVulkan()
     createSwapChain();
     
     createDescriptorSetAllocator();
+
+    createPlaceHolderTexture();
 }
 
 void MVulkanEngine::createInstance()
@@ -278,47 +281,6 @@ void MVulkanEngine::createSwapChain()
 {
     swapChain.Create(device, window->GetWindow(), surface);
 }
-/*
-void MVulkanEngine::RecreateSwapChain()
-{
-
-    if (swapChain.Recreate(device, window->GetWindow(), surface)) {
-        gbufferPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
-        shadowPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
-        
-        lightingPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-        lightingPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
-
-        skyboxPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-        skyboxPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
-
-        //gbufferPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        //shadowPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        //lightingPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        //skyboxPass->TransitionFrameBufferImageLayout(transferQueue, transferList, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-        std::vector<std::vector<VkImageView>> gbufferViews(9);
-        for (auto i = 0; i < 5; i++) {
-            gbufferViews[i].resize(1);
-            gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
-        }
-        gbufferViews[5] = std::vector<VkImageView>(2);
-        gbufferViews[5][0] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[5][1] = shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[6] = std::vector<VkImageView>(1);
-        gbufferViews[6][0] = irradianceTexture.GetImageView();
-        gbufferViews[7] = std::vector<VkImageView>(1);
-        gbufferViews[7][0] = preFilteredEnvTexture.GetImageView();
-        gbufferViews[8] = std::vector<VkImageView>(1);
-        gbufferViews[8][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
-
-        std::vector<VkSampler> samplers(9, linearSampler.GetSampler());
-        samplers[4] = nearestSampler.GetSampler();
-
-        lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
-    }
-}
-*/
 
 void MVulkanEngine::transitionSwapchainImageFormat()
 {
@@ -570,6 +532,41 @@ void MVulkanEngine::present(
     }
 }
 
+void MVulkanEngine::createPlaceHolderTexture()
+{
+    ImageCreateInfo imageinfo{};
+    imageinfo.width = 1;
+    imageinfo.height = 1;
+    imageinfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    imageinfo.mipLevels = 1;
+    imageinfo.arrayLength = 1;
+    imageinfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    imageinfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    ImageViewCreateInfo viewInfo{};
+    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.flag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.levelCount = 1;
+    viewInfo.layerCount = 1;
+
+    generalGraphicList.Reset();
+    generalGraphicList.Begin();
+
+    placeHolderTexture.Create(&generalGraphicList, device, imageinfo, viewInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.WaitForQueueComplete();
+}
+
 void MVulkanEngine::recordCommandBuffer(
     uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
     std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
@@ -631,74 +628,3 @@ void MVulkanEngine::recordCommandBuffer(
 
     commandList.EndRenderPass();
 }
-
-//void RenderApplication::Init()
-//{
-//    init();
-//
-//    SetUp();
-//
-//    CreateRenderPass();
-//
-//    PreComputes();
-//}
-//
-//void RenderApplication::Run()
-//{
-//    while (!Singleton<MVulkanEngine>::instance().WindowShouldClose()) {
-//        renderLoop();
-//    }
-//}
-//
-//void RenderApplication::init()
-//{
-//    Singleton<MVulkanEngine>::instance().SetWindowRes(WIDTH, HEIGHT);
-//    Singleton<MVulkanEngine>::instance().Init();
-//}
-//
-//void RenderApplication::renderLoop()
-//{
-//    Singleton<MVulkanEngine>::instance().PollWindowEvents();
-//    Singleton<InputManager>::instance().DealInputs();
-//
-//    drawFrame();
-//}
-//
-//void RenderApplication::drawFrame()
-//{
-//    //spdlog::info("currentFrame:{0}", currentFrame);
-//    auto fence = Singleton<MVulkanEngine>::instance().GetInFlightFence(currentFrame);
-//
-//    fence.WaitForSignal(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-//
-//    uint32_t imageIndex;
-//    VkResult result = Singleton<MVulkanEngine>::instance().AcquireNextSwapchainImage(imageIndex, currentFrame);
-//    //spdlog::info("imageIndex:{0}", imageIndex);
-//    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-//        RecreateSwapchainAndRenderPasses();
-//        return;
-//    }
-//    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-//        throw std::runtime_error("failed to acquire swap chain image!");
-//    }
-//
-//    fence.Reset(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-//
-//    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(currentFrame);
-//    auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-//
-//    graphicsList.Reset();
-//    graphicsList.Begin();
-//
-//    UpdatePerFrame(imageIndex);
-//
-//    graphicsList.End();
-//
-//    std::function<void()> recreateSwapchain = [this]() {
-//        this->RecreateSwapchainAndRenderPasses();
-//        };
-//
-//    Singleton<MVulkanEngine>::instance().SubmitCommandsAndPresent(imageIndex, currentFrame, recreateSwapchain);
-//
-//    currentFrame = (currentFrame + 1) % Singleton<GlobalConfig>::instance().GetMaxFramesInFlight();
-//}

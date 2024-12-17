@@ -190,7 +190,7 @@ void* ShadowShader::GetData(uint32_t binding, uint32_t index)
 	return (void*)&ubo0;
 }
 
-LightingPbrShader::LightingPbrShader() :ShaderModule("glsl/lighting_pbr.vert.glsl", "glsl/lighting_pbr.frag.glsl")
+LightingPbrShader::LightingPbrShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr.frag.hlsl")
 {
 
 }
@@ -222,7 +222,7 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 }
 
 
-LightingIBLShader::LightingIBLShader() :ShaderModule("hlsl/lighting_ibl.vert.hlsl", "hlsl/lighting_ibl.frag.hlsl")
+LightingIBLShader::LightingIBLShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_ibl.frag.hlsl")
 {
 
 }
@@ -233,7 +233,6 @@ size_t LightingIBLShader::GetBufferSizeBinding(uint32_t binding) const
 	case 0:
 		return sizeof(LightingIBLShader::UniformBuffer0);
 	}
-	//return sizeof(DirectionalLightBuffer);
 }
 
 void LightingIBLShader::SetUBO(uint8_t index, void* data)

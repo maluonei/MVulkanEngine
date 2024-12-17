@@ -21,9 +21,6 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(32);
 
-    //descriptorPools.resize(DescriptorType::DESCRIPORTYPE_NUM);
-
-    //VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, descriptorPools.data()));
     VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
 
@@ -64,7 +61,6 @@ void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDesc
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &layout;
 
-    //sets.resize(_MAX_FRAMES_IN_FLIGHT);
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &set));
 }
 
@@ -78,7 +74,6 @@ std::vector<MVulkanDescriptorSet> MVulkanDescriptorSet::CreateDescriptorSets(VkD
     allocInfo.descriptorSetCount = layouts.size();
     allocInfo.pSetLayouts = layouts.data();
 
-    //sets.resize(_MAX_FRAMES_IN_FLIGHT);
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()));
 
     std::vector<MVulkanDescriptorSet> sets(layouts.size());

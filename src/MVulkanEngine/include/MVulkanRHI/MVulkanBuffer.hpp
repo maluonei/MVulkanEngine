@@ -210,7 +210,7 @@ public:
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 
-	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
+	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
 
 	inline VkImage GetImage() const { return image.GetImage(); }
 	inline VkImageView GetImageView() const { return image.GetImageView(); }
