@@ -28,22 +28,32 @@ void Shader::compile(std::string shaderPath)
 
 	spdlog::info("compilng shader: {0}", shaderPath);
 
+	bool needToCompile = false;
+
 	if (shaderPath.ends_with("glsl")) {
 		size_t size = shaderPath.size();
 
 		fs::path glslShader = shaderRootPath / (shaderPath);
 		fs::path outputShader = shaderRootPath / (shaderPath.substr(0, size - 5) + ".spv");
 
-		auto timeSourceFile = fs::last_write_time(glslShader);
-		auto timeOutputFile = fs::last_write_time(outputShader);
-		if (timeSourceFile > timeOutputFile) {
+		if (!fs::exists(glslShader)) {
+			spdlog::error("source shader don't exist: {0}", shaderPath);
+		}
 
-			if (!fs::exists(glslShader)) {
-				spdlog::error("source shader don't exist: {0}", shaderPath);
+		if (!fs::exists(outputShader)) {
+			needToCompile = true;
+		}
+		else {
+			auto timeSourceFile = fs::last_write_time(glslShader);
+			auto timeOutputFile = fs::last_write_time(outputShader);
+
+			if (timeSourceFile > timeOutputFile) {
+				needToCompile = true;
 			}
+		}
 
+		if (needToCompile) {
 			fs::path logFile = shaderRootPath / "log.txt";
-			//std::string shaderName = shaderPath.substr(0, shaderPath.size() - 5);
 			std::string command = compilerPath.string() + " -V " + glslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
 			int status = system(command.c_str());
 
@@ -57,7 +67,6 @@ void Shader::compile(std::string shaderPath)
 				}
 			}
 		}
-
 		compiledShaderCode = readFile(outputShader.string());
 		compiledShaderPath = outputShader.string();
 	}
@@ -71,9 +80,19 @@ void Shader::compile(std::string shaderPath)
 			spdlog::error("source shader don't exist: {0}", shaderPath);
 		}
 
-		auto timeSourceFile = fs::last_write_time(hlslShader);
-		auto timeOutputFile = fs::last_write_time(outputShader);
-		if (timeSourceFile > timeOutputFile) {
+		if (!fs::exists(outputShader)) {
+			needToCompile = true;
+		}
+		else {
+			auto timeSourceFile = fs::last_write_time(hlslShader);
+			auto timeOutputFile = fs::last_write_time(outputShader);
+
+			if (timeSourceFile > timeOutputFile) {
+				needToCompile = true;
+			}
+		}
+
+		if (needToCompile) {
 			std::string phase = "";
 			if (shaderPath.substr(size - 9, 4) == "vert") {
 				phase = "vert";
@@ -98,6 +117,7 @@ void Shader::compile(std::string shaderPath)
 					spdlog::error(line);
 				}
 			}
+
 		}
 
 		compiledShaderCode = readFile(outputShader.string());
