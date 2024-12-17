@@ -60,6 +60,8 @@ public:
     inline uint32_t GetUniformBufferOffsetAlignment() const {
         return alignment;
     }
+
+    void WaitIdle();
 private:
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;

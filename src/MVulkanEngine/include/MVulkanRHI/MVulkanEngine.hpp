@@ -32,7 +32,14 @@ class Scene;
 class RenderPass;
 class Light;
 
+enum class MQueueType {
+    GRAPHICS,
+    TRANSFER,
+    PRESENT,
+};
+
 class MVulkanEngine: public Singleton<MVulkanEngine> {
+//friend RenderApplication;
 public:
     MVulkanEngine();
     ~MVulkanEngine();
@@ -40,7 +47,7 @@ public:
     void Init();
     void Clean();
 
-    void Run();
+    //void Run();
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
     inline MVulkanDevice GetDevice()const { return device; }
@@ -48,7 +55,7 @@ public:
     void GenerateMipMap(MVulkanTexture texture);
     inline std::shared_ptr<Camera> GetCamera()const { return camera; }
 
-    MVulkanSampler GetGlobalSampler()const;
+    //MVulkanSampler GetGlobalSampler()const;
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
@@ -105,46 +112,84 @@ public:
     inline uint32_t GetUniformBufferOffsetAlignment() const {
         return device.GetUniformBufferOffsetAlignment();
     }
-private:
-    void initVulkan();
-    void renderLoop();
-    void drawFrame();
 
-    void createGlobalSamplers();
+    MVulkanCommandQueue GetCommandQueue(MQueueType type);
+    MGraphicsCommandList GetCommandList(MQueueType type);
+    MGraphicsCommandList GetGraphicsList(int i);
+
+    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+
+    inline VkExtent2D GetSwapchainImageExtent()const { return swapChain.GetSwapChainExtent(); }
+    inline VkFormat GetSwapchainImageFormat()const { return swapChain.GetSwapChainImageFormat(); }
+    inline uint32_t GetSwapchainImageCount()const { return swapChain.GetImageCount(); }
+
+    bool WindowShouldClose() const;
+    void PollWindowEvents();
+
+    VkResult AcquireNextSwapchainImage(uint32_t& imageIndex, uint32_t currentFrame);
+
+    inline MVulkanFence GetInFlightFence(uint32_t index) const { return inFlightFences[index]; }
+    inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return imageAvailableSemaphores[index]; }
+    inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return finalRenderFinishedSemaphores[index]; }
+
+    void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        bool flipY = true);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        bool flipY = true);
+
+    void SetCamera(std::shared_ptr<Camera> camera);
+
+    bool RecreateSwapchain();
+
+    void RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass);
+private: 
+    void initVulkan();
+    //void renderLoop();
+    //void drawFrame();
+
+    //void createGlobalSamplers();
 
     void createInstance();
     void createDevice();
     void createSurface();
     void createSwapChain();
-    void RecreateSwapChain();
+    //void RecreateSwapChain();
     void transitionSwapchainImageFormat();
     void transitionFramebufferImageLayout();
 
-    void createRenderPass();
+    //void createRenderPass();
 
     void createDescriptorSetAllocator();
 
     void createCommandQueue();
     void createCommandAllocator();
     void createCommandList();
-    void createCamera();
+    //void createCamera();
 
-    void createBufferAndLoadData();
-    void createTexture();
-    void createSkyboxTexture();
-    void createIrradianceCubemapTexture();
-    void preComputeIrradianceCubemap();
-    void preFilterEnvmaps();
-    void preComputeLUT();
-    void createSampler();
+    //void createBufferAndLoadData();
+    //void createTexture();
+    //void createSkyboxTexture();
+    //void createIrradianceCubemapTexture();
+    //void preComputeIrradianceCubemap();
+    //void preFilterEnvmaps();
+    //void preComputeLUT();
+    //void createSampler();
     //void loadModel();
-    void loadScene();
-    void createLight();
+    //void loadScene();
+    //void createLight();
     
     void createSyncObjects();
     //void recordGbufferCommandBuffer(uint32_t imageIndex);
     //void recordShadowCommandBuffer(uint32_t imageIndex);
     //void recordFinalCommandBuffer(uint32_t imageIndex);
+
     void recordCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
@@ -163,21 +208,23 @@ private:
         VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage,
         VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence = VK_NULL_HANDLE);
 
-    void present(VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, const uint32_t* imageIndex);
+    void present(
+        VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
+        const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
-    void createTempTexture();
+    //void createTempTexture();
     //std::vector<VkDescriptorBufferInfo> generateDescriptorBufferInfos(std::vector<VkBuffer> buffers, std::vector<ShaderResourceInfo> resourceInfos);
 private:
-    uint32_t m_frameId = 0;
+    //uint32_t m_frameId = 0;
 
-    std::shared_ptr<RenderPass> irradianceConvolutionPass;
-    std::vector<std::shared_ptr<RenderPass>> prefilterEnvmapPasses;
-    std::shared_ptr<RenderPass> brdfLUTPass;
-
-    std::shared_ptr<RenderPass> gbufferPass;
-    std::shared_ptr<RenderPass> shadowPass;
-    std::shared_ptr<RenderPass> lightingPass;
-    std::shared_ptr<RenderPass> skyboxPass;
+    //std::shared_ptr<RenderPass> irradianceConvolutionPass;
+    //std::vector<std::shared_ptr<RenderPass>> prefilterEnvmapPasses;
+    //std::shared_ptr<RenderPass> brdfLUTPass;
+    //
+    //std::shared_ptr<RenderPass> gbufferPass;
+    //std::shared_ptr<RenderPass> shadowPass;
+    //std::shared_ptr<RenderPass> lightingPass;
+    //std::shared_ptr<RenderPass> skyboxPass;
 
     uint16_t windowWidth = 800, windowHeight = 600;
     //uint32_t m_frameId = 0;
@@ -203,17 +250,17 @@ private:
     MGraphicsCommandList presentList;
     MGraphicsCommandList transferList;
 
-    std::shared_ptr<Buffer> squadVertexBuffer;
-    std::shared_ptr<Buffer> squadIndexBuffer;
+    //std::shared_ptr<Buffer> squadVertexBuffer;
+    //std::shared_ptr<Buffer> squadIndexBuffer;
 
-    MVulkanSampler linearSampler;
-    MVulkanSampler nearestSampler;
-    MVulkanTexture testTexture;
-    MImage<unsigned char> image;
+    //MVulkanSampler linearSampler;
+    //MVulkanSampler nearestSampler;
+    //MVulkanTexture testTexture;
+    //MImage<unsigned char> image;
 
-    MVulkanTexture skyboxTexture;
-    MVulkanTexture irradianceTexture;
-    MVulkanTexture preFilteredEnvTexture;
+    //MVulkanTexture skyboxTexture;
+    //MVulkanTexture irradianceTexture;
+    //MVulkanTexture preFilteredEnvTexture;
     //MVulkanTexture brdfLUTTexture;
 
     std::vector<MVulkanSemaphore> imageAvailableSemaphores;
@@ -223,16 +270,19 @@ private:
 
     std::shared_ptr<Camera> camera;
 
-    std::shared_ptr<Camera> directionalLightCamera;
+    //std::shared_ptr<Camera> directionalLightCamera;
 
-    std::shared_ptr<Scene> scene;
-    std::shared_ptr<Scene> cube;
-    std::shared_ptr<Scene> sphere;
-    std::shared_ptr<Light> directionalLight;
-
-    std::vector<MVulkanSampler> globalSamplers;
-
-    std::shared_ptr<Buffer> lightPassIndirectBuffer;
+    //std::shared_ptr<Scene> scene;
+    //std::shared_ptr<Scene> cube;
+    //std::shared_ptr<Scene> sphere;
+    //std::shared_ptr<Scene> squad;
+    //
+    //std::shared_ptr<Light> directionalLight;
+    //
+    //std::vector<MVulkanSampler> globalSamplers;
+    //
+    //std::shared_ptr<Buffer> lightPassIndirectBuffer;
 };
+
 
 #endif

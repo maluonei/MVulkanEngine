@@ -5,6 +5,8 @@ project(MVulkanEngine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+add_definitions(-DPROJECT_ROOT="${PROJECT_SOURCE_DIR}")
+
 # 设置子文件夹
 add_subdirectory("3rdParty")
 

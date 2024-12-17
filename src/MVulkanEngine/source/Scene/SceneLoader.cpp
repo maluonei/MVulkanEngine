@@ -2,6 +2,7 @@
 #include "Scene/Scene.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Managers/TextureManager.hpp"
+#include <spdlog/spdlog.h>
 
 int SceneLoader::g_meshId = 0;
 
@@ -71,14 +72,12 @@ void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene*
     spdlog::info("mesh.name: " + meshName);
     spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
 
-
     // 遍历网格的索引
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
 
         for (unsigned int j = 0; j < face.mNumIndices; j++) {
             _mesh->indices.push_back(face.mIndices[j]);
-            //spdlog::info("indices:" + std::to_string(face.mIndices[j] + currentVertexNum));
         }
     }
 
@@ -129,8 +128,8 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
         std::shared_ptr<PhongMaterial> mat = std::make_shared<PhongMaterial>();
 
         if (aimaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
-            std::cout << "Diffuse texture: " << texturePath.C_Str() << std::endl;
-            
+            spdlog::info("Diffuse texture:{0}", texturePath.C_Str());
+
             MImage<unsigned char> diffuseImage;
             std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
 
@@ -152,15 +151,15 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
         }
 
         if (aimaterial->GetTexture(aiTextureType_SPECULAR, 0, &texturePath) == AI_SUCCESS) {
-            std::cout << "Specular texture: " << texturePath.C_Str() << std::endl;
+            spdlog::info("Specular texture:{0}", texturePath.C_Str());
         }
 
         if (aimaterial->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS) {
-            std::cout << "Normal map: " << texturePath.C_Str() << std::endl;
+            spdlog::info("Normal texture:{0}", texturePath.C_Str());
         }
 
         if (aimaterial->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &texturePath) == AI_SUCCESS) {
-            std::cout << "roughness map: " << texturePath.C_Str() << std::endl;
+            spdlog::info("roughness texture:{0}", texturePath.C_Str());
 
             MImage<unsigned char> roughnessImage;
             std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
@@ -181,15 +180,15 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
         }
 
         if (aimaterial->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS) {
-            std::cout << "metalness map: " << texturePath.C_Str() << std::endl;
+            spdlog::info("metalness texture:{0}", texturePath.C_Str());
         }
 
         if (aimaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, mat->roughness)) {
-            std::cout << "AI_MATKEY_ROUGHNESS_FACTOR: " << mat->roughness << std::endl;
+            spdlog::info("AI_MATKEY_ROUGHNESS_FACTOR:{0}", mat->roughness);
         }
 
         if (aimaterial->Get(AI_MATKEY_METALLIC_FACTOR, mat->metallic)) {
-            std::cout << "AI_MATKEY_METALLIC_FACTOR: " << mat->metallic << std::endl;
+            spdlog::info("AI_MATKEY_METALLIC_FACTOR:{0}", mat->metallic);
         }
 
         scene->AddMaterial(mat);

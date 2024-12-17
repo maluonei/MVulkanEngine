@@ -1,1 +1,1 @@
-G:\codes\MVulkanEngine\resources\shaders\glsl/skybox.frag.glsl
+G:/codes/MVulkanEngine\resources\shaders\glsl/skybox.frag.glsl

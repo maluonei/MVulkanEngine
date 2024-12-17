@@ -1,5 +1,6 @@
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "Scene/Scene.hpp"
+#include <spdlog/spdlog.h>
 
 MVulkanShader::MVulkanShader()
 {
@@ -84,8 +85,9 @@ void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;  // 每顶点
 
     // 输出步进值和绑定点信息
-    std::cout << "Binding: " << binding_description.binding
-        << ", Stride: " << binding_description.stride << std::endl;
+    //std::cout << "Binding: " << binding_description.binding
+    //    << ", Stride: " << binding_description.stride << std::endl;
+    spdlog::info("Binding:{0}, Stride:{1}", binding_description.binding, binding_description.stride);
 
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;  // 每实例
 }
@@ -141,9 +143,10 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
 
     // 使用的最终 attribute_descriptions
     for (const auto& attr : attribute_descriptions) {
-        std::cout << "Location: " << attr.location
-            << ", Format: " << attr.format
-            << ", Offset: " << attr.offset << std::endl;
+        //std::cout << "Location: " << attr.location
+        //    << ", Format: " << attr.format
+        //    << ", Offset: " << attr.offset << std::endl;
+        spdlog::info("Location:{0}, Offset{1}", attr.location, attr.offset);
     }
 
     size_t bindingDescription_stride = 0;
@@ -173,16 +176,14 @@ MVulkanDescriptorSet MVulkanShaderReflector::GenerateDescriptorSet()
         uint32_t set = compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = compiler.get_declared_struct_size(type);
-        std::cout << "Uniform Buffer: " << ub.name << " - Set: " << set << ", Binding: " << binding << ", size: "<< size <<std::endl;
-        //compiler.get_decoration(ub.id, )
-        
+        spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
     }
 
     // 处理 sampled images (纹理)
     for (const auto& image : resources.sampled_images) {
         uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
-        std::cout << "Sampled Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
     }
 
     return MVulkanDescriptorSet();
@@ -218,12 +219,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = compiler.get_declared_struct_size(type);
        
-        std::cout << "Uniform Buffer: " << ub.name << " - Set: " << set << ", Binding: " << binding << ", size: " << size << std::endl;
+        spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
             arrayLength = type.array[0];
-            std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
+            //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
         }
 
         out.uniformBuffers.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
@@ -234,13 +235,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         auto& type = compiler.get_type(image.type_id);
         uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
-        //size_t size = compiler.get_declared_struct_size(type);
-        std::cout << "Sampled Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
             arrayLength = type.array[0];
-            std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
         out.combinedImageSamplers.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
@@ -251,13 +252,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         auto& type = compiler.get_type(image.type_id);
         uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
-        //size_t size = compiler.get_declared_struct_size(type);
-        std::cout << "Separate Image: " << image.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
             arrayLength = type.array[0];
-            std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
         out.seperateImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
@@ -268,13 +269,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         auto& type = compiler.get_type(sampler.type_id);
         uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
         uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
-        //size_t size = compiler.get_declared_struct_size(type);
-        std::cout << "Separate Sampler: " << sampler.name << " - Set: " << set << ", Binding: " << binding << std::endl;
+
+        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}", sampler.name, set, binding);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
             arrayLength = type.array[0];
-            std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
+            //std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
         }
 
         out.seperateSamplers.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
@@ -303,55 +304,6 @@ void MVulkanShaderReflector::test(Shader shader)
     // 输出 GLSL 代码
     std::cout << glslCode << std::endl;
 }
-
-//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetUniformBufferBindings()
-//{
-//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
-//
-//    for (const auto& info : uniformBuffers) {
-//        MVulkanDescriptorSetLayoutBinding binding;
-//        binding.binding.binding = info.binding;
-//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//        binding.binding.descriptorCount = 1;
-//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
-//        binding.size = info.size;
-//        bindings.push_back(binding);
-//    }
-//
-//    return bindings;
-//}
-//
-//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetCombinedImageSamplers()
-//{
-//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
-//
-//    for (const auto& info : combinedImageSamplers) {
-//        MVulkanDescriptorSetLayoutBinding binding;
-//        binding.binding.binding = info.binding;
-//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//        binding.binding.descriptorCount = 1;
-//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
-//        bindings.push_back(binding);
-//    }
-//
-//    return bindings;
-//}
-//
-//std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetSeperateImageSamplers()
-//{
-//    std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
-//
-//    for (const auto& info : seperateSamplers) {
-//        MVulkanDescriptorSetLayoutBinding binding;
-//        binding.binding.binding = info.binding;
-//        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-//        binding.binding.descriptorCount = 1;
-//        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
-//        bindings.push_back(binding);
-//    }
-//
-//    return bindings;
-//}
 
 std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
 {

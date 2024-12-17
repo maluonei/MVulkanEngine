@@ -3,40 +3,6 @@
 #include <filesystem>
 
 namespace fs = std::filesystem;
-//std::vector<uint32_t> CompileGLSLToSPIRV(const std::string& sourceCode, std::string inputFileName, shaderc_shader_kind kind) {
-//	// 创建编译器对象
-//	shaderc::Compiler compiler;
-//	shaderc::CompileOptions options;
-//
-//	// 编译 GLSL 为 SPIR-V
-//	shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(sourceCode, kind, inputFileName.c_str(), options);
-//
-//	// 检查编译状态
-//	if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-//		std::cerr << "Shader compilation failed: " << module.GetErrorMessage() << std::endl;
-//		return {};
-//	}
-//
-//	// 将 SPIR-V 字节码存储到 vector 中并返回
-//	return { module.cbegin(), module.cend() };
-//}
-//
-//Shader::Shader(std::string vertPath, std::string fragPath)
-//{
-//	std::vector<unsigned int> vertShaderCodeSpirV;
-//	std::vector<unsigned int> fragShaderCodeSpirV;
-//
-//	std::string vertShaderCode = readFileToString(vertPath);
-//	std::string fragShaderCode = readFileToString(fragPath);
-//
-//	std::vector<unsigned int> vertShaderCodeSpirv;
-//	std::vector<unsigned int> fragShaderCodeSpirv;
-//
-//	auto vertSpirv = CompileGLSLToSPIRV(vertShaderCode, vertPath, shaderc_vertex_shader);
-//	auto fragSpirv = CompileGLSLToSPIRV(fragShaderCode, fragPath, shaderc_fragment_shader);
-//	
-//}
-//
 
 Shader::Shader()
 {
@@ -55,9 +21,10 @@ void Shader::Compile() {
 
 void Shader::compile(std::string shaderPath)
 {
-	fs::path shaderRootPath = fs::current_path().parent_path().parent_path().append("resources").append("shaders");
-	//spdlog::info("shaderRootPath:", shaderRootPath.string());
-	fs::path compilerPath = fs::current_path().parent_path().append("ShaderCompilers").append("glslangValidator.exe");
+	fs::path projectRootPath = PROJECT_ROOT;
+	fs::path shaderRootPath = projectRootPath / "resources" / "shaders";
+
+	fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "glslangValidator.exe";
 
 	spdlog::info("compilng shader: {0}", shaderPath);
 

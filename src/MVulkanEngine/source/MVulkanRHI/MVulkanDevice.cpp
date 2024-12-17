@@ -68,11 +68,6 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
-            //std::cout << "Vulkan API Version: "
-            //    << VK_VERSION_MAJOR(deviceProperties.apiVersion) << "."
-            //    << VK_VERSION_MINOR(deviceProperties.apiVersion) << "."
-            //    << VK_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
-
             alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
@@ -239,6 +234,11 @@ VkFormat MVulkanDevice::FindDepthFormat()
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
     );
+}
+
+void MVulkanDevice::WaitIdle()
+{
+    vkDeviceWaitIdle(logicalDevice);
 }
 
 VkFormat MVulkanDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
