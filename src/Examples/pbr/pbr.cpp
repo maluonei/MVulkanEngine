@@ -261,6 +261,11 @@ void PBR::Clean()
     m_shadowPass->Clean();
 
     m_linearSampler.Clean();
+
+    m_squad->Clean();
+    m_scene->Clean();
+
+    MRenderApplication::Clean();
 }
 
 void PBR::loadScene()

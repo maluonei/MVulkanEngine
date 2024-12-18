@@ -2,6 +2,25 @@
 #include <spdlog/spdlog.h>
 #include <MVulkanRHI/MVulkanEngine.hpp>
 
+Scene::~Scene() {
+
+}
+
+void Scene::Clean()
+{
+    for (auto buffer : m_vertexBufferMap) {
+        buffer.second->Clean();
+    }
+
+    for (auto buffer : m_indexBufferMap) {
+        buffer.second->Clean();
+    }
+
+    m_indirectBuffer->Clean();
+    m_indirectIndexBuffer->Clean();
+    m_indirectVertexBuffer->Clean();
+}
+
 void Scene::GenerateIndirectDrawData()
 {
     std::vector<std::string> names = GetMeshNames();

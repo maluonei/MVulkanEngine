@@ -38,6 +38,11 @@ class Light;
 
 class Scene {
 public:
+    Scene() = default;
+    ~Scene();
+
+    void Clean();
+
     inline void SetMesh(std::string name, std::shared_ptr<Mesh> mesh){
         if (m_meshMap.find(name) != m_meshMap.end())
             spdlog::error("mesh: {} already exist", name);
@@ -88,8 +93,6 @@ public:
 
     void GenerateIndirectDataAndBuffers();
 private:
-    //void calculateBB();
-
     BoundingBox m_bbx;
 
     std::vector<Vertex>     m_totalVertexs;

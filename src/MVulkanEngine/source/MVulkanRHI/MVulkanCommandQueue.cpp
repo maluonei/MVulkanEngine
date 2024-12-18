@@ -9,6 +9,11 @@ void MVulkanCommandQueue::SetQueue(VkQueue _queue)
 	m_queue = _queue;
 }
 
+void MVulkanCommandQueue::Clean()
+{
+	vkQueueWaitIdle(m_queue);
+}
+
 void MVulkanCommandQueue::SubmitCommands(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
 	VK_CHECK_RESULT(vkQueueSubmit(m_queue, submitCount, pSubmits, fence));

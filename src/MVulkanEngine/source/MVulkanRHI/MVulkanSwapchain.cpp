@@ -37,15 +37,13 @@ bool MVulkanSwapchain::Recreate()
 
 void MVulkanSwapchain::Clean()
 {
-    m_swapChainImages.clear();
-    m_swapChainImageViews.clear();
-
     for (int i = 0; i < m_swapChainImages.size(); i++) {
-        vkDestroyImage(m_device.GetDevice(), m_swapChainImages[i], nullptr);
         vkDestroyImageView(m_device.GetDevice(), m_swapChainImageViews[i], nullptr);
     }
-
+    
     vkDestroySwapchainKHR(m_device.GetDevice(), m_swapChain, nullptr);
+    m_swapChainImages.clear();
+    m_swapChainImageViews.clear();
 }
 
 VkResult MVulkanSwapchain::AcquireNextImage(VkSemaphore semephore, VkFence fence, uint32_t* imageIndex)
@@ -127,9 +125,7 @@ void MVulkanSwapchain::createSwapchainImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(m_device.GetDevice(), &createInfo, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create image views!");
-        }
+        VK_CHECK_RESULT(vkCreateImageView(m_device.GetDevice(), &createInfo, nullptr, &m_swapChainImageViews[i]));
     }
 }
 

@@ -19,6 +19,10 @@ public:
 		return m_textureMapIdx[name];
 	}
 
+	bool ExistTexture(const std::string& name);
+
+	void Clean();
+
 	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextureVector();
 
 protected:

@@ -22,6 +22,20 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
 
 void RenderPass::Clean()
 {
+    for (auto i = 0; i < m_uniformBuffers.size(); i++) {
+        for (auto j = 0; j < m_uniformBuffers[i].size(); j++) {
+            m_uniformBuffers[i][j].Clean();
+        }
+        m_uniformBuffers[i].clear();
+    }
+    m_uniformBuffers.clear();
+
+    m_descriptorLayouts.Clean();
+
+    for (auto descriptorSet : m_descriptorSets) {
+        descriptorSet.Clean();
+    }
+
     m_pipeline.Clean();
 
     for (auto frameBuffer : m_frameBuffers) {
@@ -106,7 +120,11 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
 
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
-    m_descriptorSets = MVulkanDescriptorSet::CreateDescriptorSets(m_device.GetDevice(), allocator.Get(), layouts);
+
+    m_descriptorSets.resize(layouts.size());
+    for (auto i = 0; i < layouts.size(); i++) {
+        m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
+    }
 
      m_cbvCount = 0;
      m_separateSamplerCount = 0;

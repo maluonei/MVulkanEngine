@@ -8,6 +8,13 @@
 #include <iostream>
 #include "spdlog/spdlog.h"
 
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator) {
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, messenger, pAllocator);
+    }
+}
+
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
@@ -65,6 +72,7 @@ void MVulkanInstance::Create()
 
 void MVulkanInstance::Clean()
 {
+    DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
     vkDestroyInstance(m_instance, nullptr);
 }
 

@@ -119,6 +119,7 @@ class MVulkanCommandQueue {
 public:
 	MVulkanCommandQueue();
 	void SetQueue(VkQueue queue);
+	void Clean();
 	
 	void SubmitCommands(
 		uint32_t submitCount,

@@ -12,6 +12,7 @@ void MVulkanPipeline::Create()
 
 void MVulkanPipeline::Clean()
 {
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
     vkDestroyPipeline(m_device, m_pipeline, nullptr);
 }
 

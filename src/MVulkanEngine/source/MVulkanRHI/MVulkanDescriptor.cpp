@@ -21,7 +21,8 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(32);
+    poolInfo.maxSets = static_cast<uint32_t>(1024);
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool));
 }
@@ -65,10 +66,13 @@ void MVulkanDescriptorSetLayouts::Clean()
     vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr);
 }
 
-MVulkanDescriptorSet::MVulkanDescriptorSet(VkDescriptorSet _set):m_set(_set){}
+//MVulkanDescriptorSet::MVulkanDescriptorSet(VkDescriptorSet _set):m_set(_set){}
 
 void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout)
 {
+    m_device = device;
+    m_pool = pool;
+
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = pool;
@@ -78,24 +82,9 @@ void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDesc
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &m_set));
 }
 
-std::vector<MVulkanDescriptorSet> MVulkanDescriptorSet::CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts)
+void MVulkanDescriptorSet::Clean()
 {
-    std::vector<VkDescriptorSet> descriptorSets(layouts.size());
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = pool;
-    allocInfo.descriptorSetCount = layouts.size();
-    allocInfo.pSetLayouts = layouts.data();
-
-    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()));
-
-    std::vector<MVulkanDescriptorSet> sets(layouts.size());
-    for (auto i = 0; i < descriptorSets.size(); i++) {
-        sets[i] = MVulkanDescriptorSet(descriptorSets[i]);
-    }
-
-    return sets;
+    VK_CHECK_RESULT(vkFreeDescriptorSets(m_device, m_pool, 1, &m_set));
 }
 
 void MVulkanDescriptorSetWrite::Update(

@@ -9,10 +9,6 @@ MVulkanCommandList::MVulkanCommandList(VkDevice device, const MVulkanCommandList
     Create(device, info);
 }
 
-//MVulkanCommandList::~MVulkanCommandList()
-//{
-//    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-//}
 
 void MVulkanCommandList::Begin()
 {
@@ -196,13 +192,10 @@ void MVulkanCommandList::Create(VkDevice device, const MVulkanCommandListCreateI
 
 void MVulkanCommandList::Clean()
 {
-    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+    vkFreeCommandBuffers(m_device, m_commandPool, 1, &m_commandBuffer);
+    //vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
-//void MVulkanCommandList::Clean()
-//{
-//    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-//}
 
 void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);

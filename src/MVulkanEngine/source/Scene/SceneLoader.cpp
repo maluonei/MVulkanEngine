@@ -135,14 +135,16 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
 
             std::string diffusePath = (currentSceneRootPath / texturePath.C_Str()).string();
 
-            if (diffuseImage.Load(diffusePath)) {
-                std::vector<MImage<unsigned char>*> images(1);
-                images[0] = &diffuseImage;
-                //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-                Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
-            }
+            if (!Singleton<TextureManager>::instance().ExistTexture(diffusePath)) {
+                if (diffuseImage.Load(diffusePath)) {
+                    std::vector<MImage<unsigned char>*> images(1);
+                    images[0] = &diffuseImage;
+                    //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+                    Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
 
-            Singleton<TextureManager>::instance().Put(diffusePath, texture);
+                Singleton<TextureManager>::instance().Put(diffusePath, texture);
+            }
             mat->diffuseTexture = diffusePath;
         }
         else {
@@ -165,15 +167,19 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
 
             std::string roughnessPath = (currentSceneRootPath / texturePath.C_Str()).string();
-            if (roughnessImage.Load(roughnessPath)) {
-                std::vector<MImage<unsigned char>*> images(1);
-                images[0] = &roughnessImage;
-                //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-                Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
-            }
 
-            Singleton<TextureManager>::instance().Put(roughnessPath, texture);
+            if (!Singleton<TextureManager>::instance().ExistTexture(roughnessPath)) {
+                if (roughnessImage.Load(roughnessPath)) {
+                    std::vector<MImage<unsigned char>*> images(1);
+                    images[0] = &roughnessImage;
+                    //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+                    Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
+
+                Singleton<TextureManager>::instance().Put(roughnessPath, texture);
+            }
             mat->metallicAndRoughnessTexture = roughnessPath;
+
         }
         else {
             mat->metallicAndRoughnessTexture = "";

@@ -51,6 +51,7 @@ void MVulkanBuffer::UnMap()
 
 void MVulkanBuffer::Clean()
 {
+    vkFreeMemory(m_device, m_bufferMemory, nullptr);
     vkDestroyBuffer(m_device, m_buffer, nullptr);
     if(m_bufferView)
         vkDestroyBufferView(m_device, m_bufferView, nullptr);
@@ -63,6 +64,7 @@ Buffer::Buffer(BufferType type) :m_dataBuffer(BufferType::SHADER_INPUT), m_stagi
 
 void Buffer::Clean()
 {
+    m_stagingBuffer.Clean();
     m_dataBuffer.Clean();
 }
 
@@ -79,8 +81,6 @@ void Buffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice de
     m_stagingBuffer.UnMap();
 
     commandList->CopyBuffer(m_stagingBuffer.GetBuffer(), m_dataBuffer.GetBuffer(), info.size);
-
-    m_stagingBuffer.Clean();
 }
 
 MCBV::MCBV():m_dataBuffer(BufferType::CBV)
@@ -91,6 +91,7 @@ MCBV::MCBV():m_dataBuffer(BufferType::CBV)
 void MCBV::Clean()
 {
     m_dataBuffer.UnMap();
+    m_dataBuffer.Clean();
 }
 
 void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
@@ -176,9 +177,9 @@ void MVulkanImage::CreateImageView(ImageViewCreateInfo info)
 
 void MVulkanImage::Clean()
 {
+    vkFreeMemory(m_device, m_imageMemory, nullptr);
     vkDestroyImageView(m_device, m_view, nullptr);
     vkDestroyImage(m_device, m_image, nullptr);
-    vkFreeMemory(m_device, m_imageMemory, nullptr);
 }
 
 MVulkanTexture::MVulkanTexture():m_image(), m_stagingBuffer(BufferType::STAGING_BUFFER)
@@ -187,8 +188,11 @@ MVulkanTexture::MVulkanTexture():m_image(), m_stagingBuffer(BufferType::STAGING_
 
 void MVulkanTexture::Clean()
 {
-    m_stagingBuffer.Clean();
-    m_image.Clean();
+    if (m_stagingBufferUsed)
+        m_stagingBuffer.Clean();
+
+    if(m_imageValid)
+        m_image.Clean();
 }
 
 void MVulkanTexture::Create(
@@ -196,6 +200,7 @@ void MVulkanTexture::Create(
 {
     m_imageInfo = imageInfo;
     m_viewInfo = viewInfo;
+    m_imageValid = true;
 
     m_image.CreateImage(device, m_imageInfo);
     m_image.CreateImageView(m_viewInfo);

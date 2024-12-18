@@ -60,9 +60,6 @@ public:
 	ShaderReflectorOut GenerateShaderReflactorOut();
 
 	void GenerateVertexInputBindingDescription();
-
-	void test(Shader shader);
-
 private:
 	Shader m_shader;
 

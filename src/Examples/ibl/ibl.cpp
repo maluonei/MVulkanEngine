@@ -410,6 +410,12 @@ void IBL::Clean()
     m_skyboxTexture.Clean();
     m_irradianceTexture.Clean();
     m_preFilteredEnvTexture.Clean();
+
+    m_squad->Clean();
+    m_cube->Clean();
+    m_sphere->Clean();
+
+    MRenderApplication::Clean();
 }
 
 void IBL::loadScene()

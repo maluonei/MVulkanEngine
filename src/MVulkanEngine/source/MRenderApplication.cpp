@@ -21,6 +21,11 @@ void MRenderApplication::Run()
     }
 }
 
+void MRenderApplication::Clean()
+{
+    Singleton<MVulkanEngine>::instance().Clean();
+}
+
 void MRenderApplication::init()
 {
     Singleton<MVulkanEngine>::instance().SetWindowRes(WIDTH, HEIGHT);

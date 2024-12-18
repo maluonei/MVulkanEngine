@@ -1,5 +1,21 @@
 #include "Managers/TextureManager.hpp"
 
+bool TextureManager::ExistTexture(const std::string& name)
+{
+    return m_textureMap.find(name)!= m_textureMap.end();
+}
+
+void TextureManager::Clean()
+{
+    for (auto texture : m_textureMap) {
+        if (texture.first.size() != 0 && texture.first != "")
+            texture.second->Clean();
+    }
+
+    m_textureMapIdx.clear();
+    m_textureMap.clear();
+}
+
 std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateTextureVector()
 {
     m_textureMapIdx.clear();

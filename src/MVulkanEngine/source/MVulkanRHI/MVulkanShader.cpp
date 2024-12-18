@@ -140,7 +140,7 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
         //std::cout << "Location: " << attr.location
         //    << ", Format: " << attr.format
         //    << ", Offset: " << attr.offset << std::endl;
-        spdlog::info("Location:{0}, Offset{1}", attr.location, attr.offset);
+        spdlog::info("Location:{0}, Offset:{1}", attr.location, attr.offset);
     }
 
     size_t bindingDescription_stride = 0;
@@ -276,27 +276,6 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
     return out;
-}
-
-void MVulkanShaderReflector::test(Shader shader)
-{
-    // 加载 SPIR-V 文件
-    std::vector<uint32_t> spirvBinary = loadSPIRV(shader.GetCompiledShaderPath());
-
-    // 创建 SPIRV-Cross 的 GLSL 编译器
-    spirv_cross::CompilerGLSL glslCompiler(spirvBinary);
-
-    // 可选：设置 GLSL 编译选项
-    spirv_cross::CompilerGLSL::Options options;
-    options.version = 460;  // 设置 GLSL 版本
-    options.es = false;     // 如果是 OpenGL ES，可以设置为 true
-    glslCompiler.set_common_options(options);
-
-    // 将 SPIR-V 反编译为 GLSL 代码
-    std::string glslCode = glslCompiler.compile();
-
-    // 输出 GLSL 代码
-    std::cout << glslCode << std::endl;
 }
 
 std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()

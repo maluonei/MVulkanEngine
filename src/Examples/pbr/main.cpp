@@ -4,4 +4,5 @@ int main() {
 	PBR pbr;
 	pbr.Init();
 	pbr.Run();
+	pbr.Clean();
 }

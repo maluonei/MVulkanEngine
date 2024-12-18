@@ -43,6 +43,7 @@ class MVulkanEngine: public Singleton<MVulkanEngine> {
 public:
     MVulkanEngine();
     ~MVulkanEngine();
+    void Clean();
 
     void Init();
 
@@ -149,7 +150,6 @@ public:
     MVulkanTexture GetPlaceHolderTexture();
 
 private: 
-    void Clean();
     void initVulkan();
 
     void createInstance();

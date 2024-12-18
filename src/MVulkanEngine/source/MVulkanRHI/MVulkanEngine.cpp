@@ -24,8 +24,7 @@ MVulkanEngine::MVulkanEngine()
 
 MVulkanEngine::~MVulkanEngine()
 {
-    Clean();
-    //delete m_window;
+    
 }
 
 void MVulkanEngine::Init()
@@ -37,15 +36,23 @@ void MVulkanEngine::Init()
 
 void MVulkanEngine::Clean()
 {
+    Singleton<TextureManager>::instance().Clean();
+
     m_placeHolderTexture.Clean();
+
+    m_allocator.Clean();
     
-    m_commandAllocator.Clean();
+    m_graphicsQueue.Clean();
+    m_transferQueue.Clean();
+    m_presentQueue.Clean();
+
     m_generalGraphicList.Clean();
     m_transferList.Clean();
     m_presentList.Clean();
     for (auto list : m_graphicsLists) {
         list.Clean();
     }
+    m_commandAllocator.Clean();
 
     for (auto i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++)
     {

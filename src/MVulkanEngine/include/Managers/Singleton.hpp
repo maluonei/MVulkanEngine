@@ -16,6 +16,8 @@ public:
     }
     Singleton(const Singleton&) = delete;
     Singleton& operator =(const Singleton&) = delete;
+
+    //virtual void DestroySingleton() = 0;
 protected:
     Singleton() {
         InitSingleton();

@@ -150,6 +150,7 @@ public:
 	{
 		m_imageInfo = imageInfo;
 		m_viewInfo = viewInfo;
+		m_imageValid = true;
 	
 		m_image.CreateImage(device, imageInfo);
 		m_image.CreateImageView(viewInfo);
@@ -168,7 +169,9 @@ public:
 		BufferCreateInfo binfo;
 		binfo.size = imageDatas.size() * imageInfo.width * imageInfo.height * 4;
 		binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
 		m_stagingBuffer.Create(device, binfo);
+		m_stagingBufferUsed = true;
 	
 		for (auto layer = 0; layer < imageDatas.size(); layer++) {
 		
@@ -200,8 +203,11 @@ private:
 	ImageCreateInfo		m_imageInfo;
 	ImageViewCreateInfo m_viewInfo;
 
-	uint32_t			m_mipLevels;
+	uint32_t			m_mipLevels = 1;
+
+	bool				m_imageValid = false;
 	MVulkanImage		m_image;
+	bool				m_stagingBufferUsed = false;
 	MVulkanBuffer		m_stagingBuffer;
 };
 

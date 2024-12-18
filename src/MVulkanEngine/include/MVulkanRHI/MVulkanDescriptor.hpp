@@ -43,15 +43,15 @@ private:
 class MVulkanDescriptorSet {
 public:
 	MVulkanDescriptorSet() = default;
-	MVulkanDescriptorSet(VkDescriptorSet _set);
 
 	void Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout);
-
-	static std::vector<MVulkanDescriptorSet> CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts);
+	void Clean();
 
 	inline VkDescriptorSet Get() { return m_set; }
 private:
-	VkDescriptorSet m_set;
+	VkDevice			m_device;
+	VkDescriptorPool	m_pool;
+	VkDescriptorSet		m_set;
 };
 
 class MVulkanDescriptorSetWrite {
