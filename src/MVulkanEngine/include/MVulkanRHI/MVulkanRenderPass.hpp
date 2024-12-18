@@ -28,12 +28,13 @@ public:
 
 	void Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, VkImageLayout initialLayout, VkImageLayout finalLayout);
 	void Create(MVulkanDevice device, RenderPassFormatsInfo formats);
-	void Clean(VkDevice device);
+	void Clean();
 
-	inline VkRenderPass Get() const { return renderPass; }
+	inline VkRenderPass Get() const { return m_renderPass; }
 
 private:
-	VkRenderPass renderPass;
+	VkRenderPass	m_renderPass;
+	VkDevice		m_device;
 
 };
 

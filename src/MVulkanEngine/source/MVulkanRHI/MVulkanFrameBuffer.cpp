@@ -8,9 +8,10 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 
 void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo creatInfo)
 {
+    m_device = device.GetDevice();
     m_info = creatInfo;
 
-    colorBuffers.resize(creatInfo.numAttachments);
+    m_colorBuffers.resize(creatInfo.numAttachments);
     std::vector<VkImageView> attachments;
     attachments.resize(creatInfo.numAttachments + 1);
 
@@ -23,8 +24,8 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     }
     else {
         for (auto i = 0; i < creatInfo.numAttachments; i++) {
-            colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
-            attachments[i] = colorBuffers[i].GetImageView();
+            m_colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
+            attachments[i] = m_colorBuffers[i].GetImageView();
         }
     }
 
@@ -32,8 +33,8 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
         attachments[creatInfo.numAttachments] = creatInfo.depthView;
     }
     else {
-        depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
-        attachments[creatInfo.numAttachments] = depthBuffer.GetImageView();
+        m_depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
+        attachments[creatInfo.numAttachments] = m_depthBuffer.GetImageView();
     }
 
     if(creatInfo.useAttachmentResolve)
@@ -51,16 +52,18 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     framebufferInfo.height = creatInfo.extent.height;
     framebufferInfo.layers = 1;
 
-    if (vkCreateFramebuffer(device.GetDevice(), &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+    if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
     }
 }
 
-void MVulkanFrameBuffer::Clean(VkDevice device)
+void MVulkanFrameBuffer::Clean()
 {
-    for (auto i = 0; i < colorBuffers.size(); i++) {
-        colorBuffers[i].Clean(device);
+    if (!m_info.useSwapchainImageViews) {
+        for (auto i = 0; i < m_colorBuffers.size(); i++) {
+            m_colorBuffers[i].Clean();
+        }
     }
-    depthBuffer.Clean(device);
-    vkDestroyFramebuffer(device, frameBuffer, nullptr);
+    m_depthBuffer.Clean();
+    vkDestroyFramebuffer(m_device, m_frameBuffer, nullptr);
 }

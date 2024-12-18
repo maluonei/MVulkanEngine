@@ -10,7 +10,7 @@
 struct FrameBufferCreateInfo {
 	bool useAttachmentResolve = false;
 	bool useSwapchainImageViews = false;
-	//bool finalFrameBuffer = false;
+
 	VkRenderPass renderPass;
 	VkExtent2D extent;
 	uint16_t numAttachments;
@@ -19,11 +19,8 @@ struct FrameBufferCreateInfo {
 
 	MVulkanSwapchain swapChain;
 	uint32_t swapChainImageIndex;
-	//VkImageView* swapchainImageViews = nullptr;
-	//VkImage* swapchainImages = nullptr;
 	VkImageView* colorAttachmentResolvedViews = nullptr;
 
-	//bool reuseDepthView = false;
 	VkImageView depthView = nullptr;
 };
 
@@ -32,10 +29,10 @@ public:
 	MVulkanFrameBuffer();
 
 	void Create(MVulkanDevice device, FrameBufferCreateInfo creatInfo);
-	void Clean(VkDevice device);
+	void Clean();
 
 	inline VkImage GetImage(int i) const {
-		if (i < 0 || i >= colorBuffers.size()) {
+		if (i < 0 || i >= m_colorBuffers.size()) {
 			spdlog::error("invalid index:", i);
 		}
 
@@ -43,38 +40,39 @@ public:
 			return m_swapChain.GetImage(i);
 		}
 		
-		return colorBuffers[i].GetImage();
+		return m_colorBuffers[i].GetImage();
 	}
 
 	inline VkImageView GetImageView(int i) const {
-		if (i < 0 || i >= colorBuffers.size()) {
+		if (i < 0 || i >= m_colorBuffers.size()) {
 			spdlog::error("invalid index:", i);
 		}
 		if (m_info.useSwapchainImageViews) {
 			return m_swapChain.GetImageView(i);
 		}
 
-		return colorBuffers[i].GetImageView();
+		return m_colorBuffers[i].GetImageView();
 	}
 
-	inline VkImage GetDepthImage() const { return depthBuffer.GetImage(); }
+	inline VkImage GetDepthImage() const { return m_depthBuffer.GetImage(); }
 
-	inline VkImageView GetDepthImageView() const { return depthBuffer.GetImageView(); }
+	inline VkImageView GetDepthImageView() const { return m_depthBuffer.GetImageView(); }
 
-	inline VkFramebuffer Get() const { return frameBuffer; }
+	inline VkFramebuffer Get() const { return m_frameBuffer; }
 
-	inline const uint32_t ColorAttachmentsCount() const { return static_cast<uint32_t>(colorBuffers.size()); }
+	inline const uint32_t ColorAttachmentsCount() const { return static_cast<uint32_t>(m_colorBuffers.size()); }
 
 	inline const VkExtent2D GetExtent2D()const { return m_info.extent; }
 
 private:
-	FrameBufferCreateInfo m_info;
-	MVulkanSwapchain m_swapChain;
+	VkDevice					m_device;
+	FrameBufferCreateInfo		m_info;
+	MVulkanSwapchain			m_swapChain;
 
-	VkFramebuffer frameBuffer;
+	VkFramebuffer				m_frameBuffer;
 
-	std::vector<MVulkanAttachmentBuffer> colorBuffers;
-	MVulkanAttachmentBuffer depthBuffer;
+	std::vector<MVulkanAttachmentBuffer> m_colorBuffers;
+	MVulkanAttachmentBuffer		m_depthBuffer;
 };
 
 #endif

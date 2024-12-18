@@ -4,4 +4,5 @@ int main() {
 	IBL ibl;
 	ibl.Init();
 	ibl.Run();
+	ibl.Clean();
 }

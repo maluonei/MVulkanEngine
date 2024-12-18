@@ -30,9 +30,9 @@ public:
 	//virtual std::shared_ptr<Camera> GetLightCamera(BoundingBox bbx) = 0;
 
 private:
-	glm::vec3 m_color;
-	float m_intensity;
-	LightType m_type;
+	glm::vec3	m_color;
+	float		m_intensity;
+	LightType	m_type;
 };
 
 #endif // !

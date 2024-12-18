@@ -58,14 +58,14 @@ void MVulkanInstance::Create()
         createInfo.pNext = nullptr;
     }
 
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+    if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
 }
 
 void MVulkanInstance::Clean()
 {
-    vkDestroyInstance(instance, nullptr);
+    vkDestroyInstance(m_instance, nullptr);
 }
 
 void MVulkanInstance::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
@@ -82,7 +82,7 @@ void MVulkanInstance::SetupDebugMessenger() {
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
 
-    if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+    if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
         throw std::runtime_error("failed to set up debug messenger!");
     }
 }

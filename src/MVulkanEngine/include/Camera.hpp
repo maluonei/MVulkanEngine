@@ -20,69 +20,70 @@ class Camera {
 private:
 	bool useOrtho = false;
 
-	glm::mat4 projMatrix;
-	glm::mat4 viewMatrix;
-	glm::mat4 orthoMatrix;
+	glm::mat4 m_projMatrix;
+	glm::mat4 m_viewMatrix;
+	glm::mat4 m_orthoMatrix;
 	//Frustum frustum;
 
+	float m_fov;
+	float m_aspect_ratio;
+	float m_zNear;
+	float m_zFar;
+
+	glm::vec3 m_position;
+	glm::vec3 m_direction;
+	glm::vec3 m_UP = { 0.f, 1.f, 0.f };
+
+	glm::vec3 m_forward;
+	glm::vec3 m_up;
+	glm::vec3 m_right;
+
 	void UpdateViewMatrix() {
-		viewMatrix = glm::mat4();
-		viewMatrix = glm::lookAt(position, position+direction, UP);
+		m_viewMatrix = glm::mat4();
+		m_viewMatrix = glm::lookAt(m_position, m_position+ m_direction, m_UP);
 	}
 
 public:
-	float fov;
-	float aspect_ratio;
-	float zNear;
-	float zFar;
-
-	glm::vec3 position;
-	glm::vec3 direction;
-	glm::vec3 UP = { 0.f, 1.f, 0.f };
-
-	glm::vec3 forward;
-	glm::vec3 up;
-	glm::vec3 right;
 
 	Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar);
 	Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _fov, float _aspect_ratio, float _zNear, float _zFar);
 
-	inline float GetZnear()const { return zNear; }
-	inline float GetZfar()const { return zFar; }
+	inline float GetZnear()const { return m_zNear; }
+	inline float GetZfar()const { return m_zFar; }
 
 	inline void SetOrth(bool _flag) {
 		useOrtho = true;
 	}
 
 	inline glm::vec3 GetPosition() const {
-		return position;
+		return m_position;
 	}
 
 	inline glm::vec3 GetDirection() const {
-		return direction;
+		return m_direction;
 	}
 
 	inline glm::mat4 GetProjMatrix()const {
-		if (IsOrtho()) return orthoMatrix;
-		else return projMatrix;
+		if (IsOrtho()) return m_orthoMatrix;
+		else return m_projMatrix;
 	}
 
 	inline glm::mat4 GetViewMatrix() {
 		UpdateViewMatrix();
-		return viewMatrix;
+		return m_viewMatrix;
 	}
 
 	inline glm::mat4 GetOrthoMatrix() const {
-		return orthoMatrix;
+		return m_orthoMatrix;
 	}
 
 	inline glm::mat4* GetProjMatrixPtr() {
-		if (IsOrtho()) return &orthoMatrix;
-		else return &projMatrix;
+		if (IsOrtho()) return &m_orthoMatrix;
+		else return &m_projMatrix;
 	}
 
 	inline glm::mat4* GetViewMatrixPtr() {
-		return &viewMatrix;
+		return &m_viewMatrix;
 	}
 
 	inline bool IsOrtho() const {
@@ -94,11 +95,11 @@ public:
 	}
 
 	inline glm::vec3 GetUp() {
-		return up;
+		return m_up;
 	}
 
 	inline glm::vec3 GetRight() {
-		return right;
+		return m_right;
 	}
 
 	void Move(Direction direction, float scale);

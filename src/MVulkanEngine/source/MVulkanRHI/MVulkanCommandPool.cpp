@@ -6,7 +6,9 @@ MVulkanCommandAllocator::MVulkanCommandAllocator()
 
 void MVulkanCommandAllocator::Create(MVulkanDevice device)
 {
-    if (commandPools.size() == 0) {
+    m_device = device.GetDevice();
+
+    if (m_commandPools.size() == 0) {
         QueueType queueTypes[] = { GRAPHICS_QUEUE, COMPUTE_QUEUE, TRANSFER_QUEUE, PRESENT_QUEUE };
 
         for (auto queueType : queueTypes) {
@@ -17,19 +19,19 @@ void MVulkanCommandAllocator::Create(MVulkanDevice device)
             poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolInfo.queueFamilyIndex = device.GetQueueFamilyIndices(queueType);
 
-            if (vkCreateCommandPool(device.GetDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+            if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create command pool!");
             }
 
-            commandPools.insert({ queueType , commandPool });
+            m_commandPools.insert({ queueType , commandPool });
         }
     }
 }
 
-void MVulkanCommandAllocator::Clean(VkDevice device)
+void MVulkanCommandAllocator::Clean()
 {
-    for (auto pair : commandPools) {
-        vkDestroyCommandPool(device, pair.second, nullptr);
+    for (auto pair : m_commandPools) {
+        vkDestroyCommandPool(m_device, pair.second, nullptr);
     }
-    commandPools.clear();
+    m_commandPools.clear();
 }

@@ -15,17 +15,14 @@ class MVulkanDescriptorSetAllocator {
 public:
 	MVulkanDescriptorSetAllocator();
 	void Create(VkDevice device);
+	void Clean();
 	inline VkDescriptorPool Get() {
-		//if (type >= descriptorPools.size()) {
-		//	return nullptr;
-		//}
-		//return descriptorPools[type];
-		return descriptorPool;
+		return m_descriptorPool;
 	}
 
 private:
-	//std::vector<VkDescriptorPool> descriptorPools;
-	VkDescriptorPool descriptorPool;
+	VkDevice			m_device;
+	VkDescriptorPool	m_descriptorPool;
 };
 
 
@@ -36,9 +33,11 @@ public:
 
 	void Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings);
 	void Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings);
-	inline VkDescriptorSetLayout Get()const { return layout; }
+	void Clean();
+	inline VkDescriptorSetLayout Get()const { return m_layout; }
 private:
-	VkDescriptorSetLayout layout;
+	VkDevice				m_device;
+	VkDescriptorSetLayout	m_layout;
 };
 
 class MVulkanDescriptorSet {
@@ -50,9 +49,9 @@ public:
 
 	static std::vector<MVulkanDescriptorSet> CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts);
 
-	inline VkDescriptorSet Get() { return set; }
+	inline VkDescriptorSet Get() { return m_set; }
 private:
-	VkDescriptorSet set;
+	VkDescriptorSet m_set;
 };
 
 class MVulkanDescriptorSetWrite {
@@ -72,6 +71,6 @@ public:
 		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos);
 
 private:
-	VkWriteDescriptorSet write;
+	VkWriteDescriptorSet m_write;
 };
 #endif

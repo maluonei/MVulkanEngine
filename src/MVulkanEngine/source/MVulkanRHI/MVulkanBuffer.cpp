@@ -2,27 +2,16 @@
 #include <stdexcept>
 #include <MVulkanRHI/MVulkanEngine.hpp>
 
-//uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-//    VkPhysicalDeviceMemoryProperties memProperties;
-//    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-//
-//    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-//        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-//            return i;
-//        }
-//    }
-//
-//    throw std::runtime_error("failed to find suitable memory type!");
-//}
-
-MVulkanBuffer::MVulkanBuffer(BufferType _type):type(_type)
+MVulkanBuffer::MVulkanBuffer(BufferType _type):m_type(_type)
 {
 
 }
 
+
 void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 {
-    bufferSize = info.size;
+    m_device = device.GetDevice();
+    m_bufferSize = info.size;
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -30,147 +19,88 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     bufferInfo.usage = info.usage;
     bufferInfo.sharingMode = info.sharingMode;
 
-    VK_CHECK_RESULT(vkCreateBuffer(device.GetDevice(), &bufferInfo, nullptr, &buffer));
+    VK_CHECK_RESULT(vkCreateBuffer(m_device, &bufferInfo, nullptr, &m_buffer));
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device.GetDevice(), buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(m_device, m_buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(type));
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(m_type));
 
-    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &bufferMemory));
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory));
 
-    vkBindBufferMemory(device.GetDevice(), buffer, bufferMemory, 0);
-
-    //vkMapMemory(device.GetDevice(), bufferMemory, 0, bufferSize, 0, &mappedData);
-    //Map(device.GetDevice());
+    vkBindBufferMemory(device.GetDevice(), m_buffer, m_bufferMemory, 0);
 }
 
-void MVulkanBuffer::LoadData(VkDevice device, const void* data, uint32_t offset, uint32_t datasize)
+void MVulkanBuffer::LoadData(const void* data, uint32_t offset, uint32_t datasize)
 {
-    memcpy((char*)mappedData + offset, data, datasize);
+    memcpy((char*)m_mappedData + offset, data, datasize);
 }
 
-void MVulkanBuffer::Map(VkDevice device)
+void MVulkanBuffer::Map()
 {
-    vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mappedData);
+    vkMapMemory(m_device, m_bufferMemory, 0, m_bufferSize, 0, &m_mappedData);
 }
 
-void MVulkanBuffer::UnMap(VkDevice device)
+void MVulkanBuffer::UnMap()
 {
-    vkUnmapMemory(device, bufferMemory);
+    vkUnmapMemory(m_device, m_bufferMemory);
 }
 
-void MVulkanBuffer::Clean(VkDevice device)
+void MVulkanBuffer::Clean()
 {
-    //UnMap(device);
-    vkDestroyBuffer(device, buffer, nullptr);
-    //vkDestroyBufferView(device, bufferView, nullptr);
+    vkDestroyBuffer(m_device, m_buffer, nullptr);
+    if(m_bufferView)
+        vkDestroyBufferView(m_device, m_bufferView, nullptr);
 }
 
-//VertexBuffer::VertexBuffer():dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
-//{
-//
-//}
-//
-//void VertexBuffer::Clean(VkDevice device)
-//{
-//    dataBuffer.Clean(device);
-//}
-//
-//void VertexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
-//{
-//    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-//    dataBuffer.Create(device, info);
-//
-//    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-//    stagingBuffer.Create(device, info);
-//
-//    stagingBuffer.Map(device.GetDevice());
-//    stagingBuffer.LoadData(device.GetDevice(), data);
-//    stagingBuffer.UnMap(device.GetDevice());
-//
-//    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
-//
-//    stagingBuffer.Clean(device.GetDevice());
-//}
-//
-//IndexBuffer::IndexBuffer() :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING)
-//{
-//
-//}
-//
-//void IndexBuffer::Clean(VkDevice device)
-//{
-//    dataBuffer.Clean(device);
-//}
-//
-//void IndexBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
-//{
-//    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-//    dataBuffer.Create(device, info);
-//
-//    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-//    stagingBuffer.Create(device, info);
-//
-//    stagingBuffer.Map(device.GetDevice());
-//    stagingBuffer.LoadData(device.GetDevice(), data);
-//    stagingBuffer.UnMap(device.GetDevice());
-//
-//    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
-//
-//    stagingBuffer.Clean(device.GetDevice());
-//}
-
-Buffer::Buffer(BufferType type) :dataBuffer(BufferType::SHADER_INPUT), stagingBuffer(BufferType::STAGING_BUFFER), m_type(type)
+Buffer::Buffer(BufferType type) :m_dataBuffer(BufferType::SHADER_INPUT), m_stagingBuffer(BufferType::STAGING_BUFFER), m_type(type)
 {
 
 }
 
-void Buffer::Clean(VkDevice device)
+void Buffer::Clean()
 {
-    dataBuffer.Clean(device);
+    m_dataBuffer.Clean();
 }
 
 void Buffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
 {
-    //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     info.usage = BufferType2VkBufferUsageFlagBits(m_type);
-    dataBuffer.Create(device, info);
+    m_dataBuffer.Create(device, info);
 
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    stagingBuffer.Create(device, info);
+    m_stagingBuffer.Create(device, info);
 
-    stagingBuffer.Map(device.GetDevice());
-    stagingBuffer.LoadData(device.GetDevice(), data, 0, info.size);
-    stagingBuffer.UnMap(device.GetDevice());
+    m_stagingBuffer.Map();
+    m_stagingBuffer.LoadData(data, 0, info.size);
+    m_stagingBuffer.UnMap();
 
-    commandList->CopyBuffer(stagingBuffer.GetBuffer(), dataBuffer.GetBuffer(), info.size);
+    commandList->CopyBuffer(m_stagingBuffer.GetBuffer(), m_dataBuffer.GetBuffer(), info.size);
 
-    stagingBuffer.Clean(device.GetDevice());
+    m_stagingBuffer.Clean();
 }
 
-MCBV::MCBV():dataBuffer(BufferType::CBV)
+MCBV::MCBV():m_dataBuffer(BufferType::CBV)
 {
 
 }
 
-void MCBV::Clean(VkDevice device)
+void MCBV::Clean()
 {
-    dataBuffer.UnMap(device);
-    dataBuffer.Clean(device);
+    m_dataBuffer.UnMap();
 }
 
 void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
 {
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
-    dataBuffer.Create(device, info);
+    m_dataBuffer.Create(device, info);
 
-    dataBuffer.Map(device.GetDevice());
-    dataBuffer.LoadData(device.GetDevice(), data, 0, info.size);
+    m_dataBuffer.Map();
+    m_dataBuffer.LoadData(data, 0, info.size);
 
 }
 
@@ -179,18 +109,20 @@ void MCBV::Create( MVulkanDevice device, BufferCreateInfo info)
     info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     m_info = info;
 
-    dataBuffer.Create(device, info);
+    m_dataBuffer.Create(device, info);
 
-    dataBuffer.Map(device.GetDevice());
+    m_dataBuffer.Map();
 }
 
-void MCBV::UpdateData(MVulkanDevice device, float offset, void* data)
+void MCBV::UpdateData(float offset, void* data)
 {
-    dataBuffer.LoadData(device.GetDevice(), data, offset, dataBuffer.GetBufferSize());
+    m_dataBuffer.LoadData(data, offset, m_dataBuffer.GetBufferSize());
 }
 
 void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
 {
+    m_device = device.GetDevice();
+
     // 创建 Image
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -210,7 +142,7 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     // 设置 image 格式、尺寸等
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
 
-    mipLevel = info.mipLevels;
+    m_mipLevel = info.mipLevels;
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.GetDevice(), m_image, &memRequirements);
@@ -220,12 +152,12 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, info.properties);
 
-    VK_CHECK_RESULT(vkAllocateMemory(device.GetDevice(), &allocInfo, nullptr, &m_imageMemory));
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocInfo, nullptr, &m_imageMemory));
 
-    vkBindImageMemory(device.GetDevice(), m_image, m_imageMemory, 0);
+    vkBindImageMemory(m_device, m_image, m_imageMemory, 0);
 }
 
-void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo info)
+void MVulkanImage::CreateImageView(ImageViewCreateInfo info)
 {
     // 创建 ImageView
     VkImageViewCreateInfo viewInfo = {};
@@ -239,40 +171,42 @@ void MVulkanImage::CreateImageView(MVulkanDevice device, ImageViewCreateInfo inf
     viewInfo.subresourceRange.baseArrayLayer = info.baseArrayLayer;
     viewInfo.subresourceRange.layerCount = info.layerCount;
 
-    VK_CHECK_RESULT(vkCreateImageView(device.GetDevice(), &viewInfo, nullptr, &m_view));
+    VK_CHECK_RESULT(vkCreateImageView(m_device, &viewInfo, nullptr, &m_view));
 }
 
-void MVulkanImage::Clean(VkDevice device)
+void MVulkanImage::Clean()
 {
-    vkDestroyImageView(device, m_view, nullptr);
-    vkDestroyImage(device, m_image, nullptr);
-    vkFreeMemory(device, m_imageMemory, nullptr);
+    vkDestroyImageView(m_device, m_view, nullptr);
+    vkDestroyImage(m_device, m_image, nullptr);
+    vkFreeMemory(m_device, m_imageMemory, nullptr);
 }
 
-MVulkanTexture::MVulkanTexture():image(), stagingBuffer(BufferType::STAGING_BUFFER)
+MVulkanTexture::MVulkanTexture():m_image(), m_stagingBuffer(BufferType::STAGING_BUFFER)
 {
 }
 
-void MVulkanTexture::Clean(VkDevice device)
+void MVulkanTexture::Clean()
 {
+    m_stagingBuffer.Clean();
+    m_image.Clean();
 }
 
 void MVulkanTexture::Create(
     MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
 {
-    this->imageInfo = imageInfo;
-    this->viewInfo = viewInfo;
+    m_imageInfo = imageInfo;
+    m_viewInfo = viewInfo;
 
-    image.CreateImage(device, imageInfo);
-    image.CreateImageView(device, viewInfo);
+    m_image.CreateImage(device, m_imageInfo);
+    m_image.CreateImageView(m_viewInfo);
 
     MVulkanImageMemoryBarrier barrier{};
-    barrier.image = image.GetImage();
+    barrier.image = m_image.GetImage();
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     barrier.newLayout = layout;
-    barrier.levelCount = image.GetMipLevel();
+    barrier.levelCount = m_image.GetMipLevel();
     barrier.baseArrayLayer = 0;
     barrier.layerCount = imageInfo.arrayLength;
 
@@ -281,19 +215,20 @@ void MVulkanTexture::Create(
 
 void IndirectBuffer::Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
-    drawCommand.indexCount = indexCount;
-    drawCommand.instanceCount = instanceCount;
-    drawCommand.firstIndex = firstIndex;
-    drawCommand.vertexOffset = vertexOffset;
-    drawCommand.firstInstance = firstInstance;
+    m_drawCommand.indexCount = indexCount;
+    m_drawCommand.instanceCount = instanceCount;
+    m_drawCommand.firstIndex = firstIndex;
+    m_drawCommand.vertexOffset = vertexOffset;
+    m_drawCommand.firstInstance = firstInstance;
 
     BufferCreateInfo info;
     info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-    info.size = sizeof(drawCommand);
+    info.size = sizeof(m_drawCommand);
 
-    indirectBuffer.Create(device, info);
+    m_indirectBuffer.Create(device, info);
 
-    indirectBuffer.Map(device.GetDevice());
-    indirectBuffer.LoadData(device.GetDevice(), &drawCommand, 0, info.size);
-    indirectBuffer.UnMap(device.GetDevice());
+    m_indirectBuffer.Map();
+    m_indirectBuffer.LoadData(&m_drawCommand, 0, info.size);
+    m_indirectBuffer.UnMap();
 }
+

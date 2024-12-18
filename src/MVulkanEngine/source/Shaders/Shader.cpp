@@ -11,12 +11,12 @@ Shader::Shader()
 
 Shader::Shader(std::string _path, ShaderStageFlagBits _stage)
 {
-	shaderPath = _path;
-	shaderStage = _stage;
+	m_shaderPath = _path;
+	m_shaderStage = _stage;
 }
 
 void Shader::Compile() {
-	compile(shaderPath);
+	compile(m_shaderPath);
 }
 
 void Shader::compile(std::string shaderPath)
@@ -67,8 +67,8 @@ void Shader::compile(std::string shaderPath)
 				}
 			}
 		}
-		compiledShaderCode = readFile(outputShader.string());
-		compiledShaderPath = outputShader.string();
+		m_compiledShaderCode = readFile(outputShader.string());
+		m_compiledShaderPath = outputShader.string();
 	}
 	else if (shaderPath.ends_with("hlsl")) {
 		size_t size = shaderPath.size();
@@ -120,7 +120,7 @@ void Shader::compile(std::string shaderPath)
 
 		}
 
-		compiledShaderCode = readFile(outputShader.string());
-		compiledShaderPath = outputShader.string();
+		m_compiledShaderCode = readFile(outputShader.string());
+		m_compiledShaderPath = outputShader.string();
 	}
 }

@@ -9,6 +9,8 @@ MVulkanDescriptorSetAllocator::MVulkanDescriptorSetAllocator()
 
 void MVulkanDescriptorSetAllocator::Create(VkDevice device)
 {
+    m_device = device;
+
     std::vector<VkDescriptorPoolSize> poolSizes(DescriptorType::DESCRIPORTYPE_NUM);
     for (int type = 0; type < DescriptorType::DESCRIPORTYPE_NUM; type++) {
         poolSizes[type].type = DescriptorType2VkDescriptorType((DescriptorType)type);
@@ -21,10 +23,15 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(32);
 
-    VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
+    VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool));
 }
 
-MVulkanDescriptorSetLayouts::MVulkanDescriptorSetLayouts(VkDescriptorSetLayout _layout):layout(_layout){}
+void MVulkanDescriptorSetAllocator::Clean()
+{
+    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+}
+
+MVulkanDescriptorSetLayouts::MVulkanDescriptorSetLayouts(VkDescriptorSetLayout _layout):m_layout(_layout){}
 
 void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings)
 {
@@ -33,11 +40,13 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescript
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout));
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
 }
 
 void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings)
 {
+    m_device = device;
+
     std::vector<VkDescriptorSetLayoutBinding> bindings2;
     for (auto i = 0; i < bindings.size(); i++) {
         bindings2.push_back(bindings[i].binding);
@@ -48,10 +57,15 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDes
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings2.data();
 
-    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout));
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
 }
 
-MVulkanDescriptorSet::MVulkanDescriptorSet(VkDescriptorSet _set):set(_set){}
+void MVulkanDescriptorSetLayouts::Clean()
+{
+    vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr);
+}
+
+MVulkanDescriptorSet::MVulkanDescriptorSet(VkDescriptorSet _set):m_set(_set){}
 
 void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout)
 {
@@ -61,7 +75,7 @@ void MVulkanDescriptorSet::Create(VkDevice device, VkDescriptorPool pool, VkDesc
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &layout;
 
-    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &set));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &m_set));
 }
 
 std::vector<MVulkanDescriptorSet> MVulkanDescriptorSet::CreateDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout> layouts)

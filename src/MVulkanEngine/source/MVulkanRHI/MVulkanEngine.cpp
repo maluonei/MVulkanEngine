@@ -19,49 +19,66 @@
 
 MVulkanEngine::MVulkanEngine()
 {
-    window = new MWindow();
+    m_window = new MWindow();
 }
 
 MVulkanEngine::~MVulkanEngine()
 {
-    delete window;
+    Clean();
+    //delete m_window;
 }
 
 void MVulkanEngine::Init()
 {
-    window->Init(windowWidth, windowHeight);
+    m_window->Init(m_windowWidth, m_windowHeight);
 
     initVulkan();
 }
 
 void MVulkanEngine::Clean()
 {
-    window->Clean();
+    m_placeHolderTexture.Clean();
+    
+    m_commandAllocator.Clean();
+    m_generalGraphicList.Clean();
+    m_transferList.Clean();
+    m_presentList.Clean();
+    for (auto list : m_graphicsLists) {
+        list.Clean();
+    }
 
-    commandAllocator.Clean(device.GetDevice());
+    for (auto i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++)
+    {
+        m_imageAvailableSemaphores[i].Clean();
+        m_finalRenderFinishedSemaphores[i].Clean();
+        m_inFlightFences[i].Clean();
+    }
 
-    device.Clean();
-    vkDestroySurfaceKHR(instance.GetInstance(), surface, nullptr);
-    instance.Clean();
+    m_swapChain.Clean();
+    m_window->Clean();
+
+    m_device.Clean();
+    vkDestroySurfaceKHR(m_instance.GetInstance(), m_surface, nullptr);
+    m_instance.Clean();
 }
 
 void MVulkanEngine::SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight)
 {
-    windowWidth = _windowWidth;
-    windowHeight = _windowHeight;
+    m_windowWidth = _windowWidth;
+    m_windowHeight = _windowHeight;
 }
 
 void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
 {
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(device.GetPhysicalDevice(), texture.GetImageInfo().format, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(m_device.GetPhysicalDevice(), texture.GetImageInfo().format, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    generalGraphicList.Reset();
-    generalGraphicList.Begin();
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
 
     MVulkanImageMemoryBarrier barrier{};
     barrier.image = texture.GetImage();
@@ -81,7 +98,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-        generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        m_generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         std::vector<VkImageBlit> blits(1);
         blits[0] = VkImageBlit();
@@ -98,7 +115,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         blits[0].dstSubresource.baseArrayLayer = 0;
         blits[0].dstSubresource.layerCount = 1;
     
-        generalGraphicList.BlitImage(
+        m_generalGraphicList.BlitImage(
             texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             texture.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             blits,
@@ -109,7 +126,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
-        generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        m_generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         if (mipWidth > 1) mipWidth /= 2;
         if (mipHeight > 1) mipHeight /= 2;
     }
@@ -120,66 +137,66 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     
-    generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    m_generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
    
-    generalGraphicList.End();
+    m_generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
-MVulkanCommandQueue MVulkanEngine::GetCommandQueue(MQueueType type)
+MVulkanCommandQueue& MVulkanEngine::GetCommandQueue(MQueueType type)
 {
     switch (type) {
     case MQueueType::GRAPHICS:
-        return graphicsQueue;
+        return m_graphicsQueue;
     case MQueueType::TRANSFER:
-        return transferQueue;
+        return m_transferQueue;
     case MQueueType::PRESENT:
-        return presentQueue;
+        return m_presentQueue;
     }
 }
 
-MGraphicsCommandList MVulkanEngine::GetCommandList(MQueueType type)
+MGraphicsCommandList& MVulkanEngine::GetCommandList(MQueueType type)
 {
     switch (type) {
     case MQueueType::GRAPHICS:
-        return generalGraphicList;
+        return m_generalGraphicList;
     case MQueueType::TRANSFER:
-        return transferList;
+        return m_transferList;
     case MQueueType::PRESENT:
-        return presentList;
+        return m_presentList;
     }
 }
 
-MGraphicsCommandList MVulkanEngine::GetGraphicsList(int i)
+MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
 {
-    return graphicsLists[i];
+    return m_graphicsLists[i];
 }
 
 void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
-    renderPass->Create(shader, swapChain, graphicsQueue, generalGraphicList, allocator, imageViews, samplers);
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers);
 }
 
 bool MVulkanEngine::WindowShouldClose() const
 {
-    return window->WindowShouldClose(); 
+    return m_window->WindowShouldClose();
 }
 
 void MVulkanEngine::PollWindowEvents()
 {
-    window->WindowPollEvents();
+    m_window->WindowPollEvents();
 }
 
 VkResult MVulkanEngine::AcquireNextSwapchainImage(uint32_t& imageIndex, uint32_t currentFrame)
 {
-    return swapChain.AcquireNextImage(device.GetDevice(), imageAvailableSemaphores[currentFrame].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
+    return m_swapChain.AcquireNextImage(m_imageAvailableSemaphores[currentFrame].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
 }
 
 void MVulkanEngine::SubmitCommandsAndPresent(
@@ -188,56 +205,56 @@ void MVulkanEngine::SubmitCommandsAndPresent(
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores3[] = { imageAvailableSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore waitSemaphores3[] = { m_imageAvailableSemaphores[currentFrame].GetSemaphore() };
     VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores3;
     submitInfo.pWaitDstStageMask = waitStages3;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
+    submitInfo.pCommandBuffers = &m_graphicsLists[currentFrame].GetBuffer();
 
-    VkSemaphore signalSemaphores3[] = { finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore signalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores3;
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, inFlightFences[currentFrame].GetFence());
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_inFlightFences[currentFrame].GetFence());
+    m_graphicsQueue.WaitForQueueComplete();
 
-    VkSemaphore transferSignalSemaphores3[] = { finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
-    vkDeviceWaitIdle(device.GetDevice());
-    present(swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
+    vkDeviceWaitIdle(m_device.GetDevice());
+    present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
 }
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
-    recordCommandBuffer(frameIndex, renderPass, graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
+    recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
 }
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
-    recordCommandBuffer(frameIndex, renderPass, generalGraphicList, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
+    recordCommandBuffer(frameIndex, renderPass, m_generalGraphicList, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
 }
 
 void MVulkanEngine::SetCamera(std::shared_ptr<Camera> camera)
 {
-    this->camera = camera;
+    m_camera = camera;
 }
 
 bool MVulkanEngine::RecreateSwapchain()
 {
-    return swapChain.Recreate(device, window->GetWindow(), surface);
+    return m_swapChain.Recreate();
 }
 
 void MVulkanEngine::RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass)
 {
-    renderPass->RecreateFrameBuffers(swapChain, transferQueue, transferList, swapChain.GetSwapChainExtent());
+    renderPass->RecreateFrameBuffers(m_swapChain, m_transferQueue, m_transferList, m_swapChain.GetSwapChainExtent());
 }
 
 MVulkanTexture MVulkanEngine::GetPlaceHolderTexture()
 {
-    return placeHolderTexture;
+    return m_placeHolderTexture;
 }
 
 
@@ -261,31 +278,31 @@ void MVulkanEngine::initVulkan()
 
 void MVulkanEngine::createInstance()
 {
-    instance.Create();
-    instance.SetupDebugMessenger();
+    m_instance.Create();
+    m_instance.SetupDebugMessenger();
 }
 
 void MVulkanEngine::createDevice()
 {
-    device.Create(instance.GetInstance(), surface);
+    m_device.Create(m_instance.GetInstance(), m_surface);
 }
 
 void MVulkanEngine::createSurface()
 {
-    if (glfwCreateWindowSurface(instance.GetInstance(), window->GetWindow(), nullptr, &surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(m_instance.GetInstance(), m_window->GetWindow(), nullptr, &m_surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 }
 
 void MVulkanEngine::createSwapChain()
 {
-    swapChain.Create(device, window->GetWindow(), surface);
+    m_swapChain.Create(m_device, m_window->GetWindow(), m_surface);
 }
 
 void MVulkanEngine::transitionSwapchainImageFormat()
 {
-    transferList.Reset();
-    transferList.Begin();
+    m_transferList.Reset();
+    m_transferList.Begin();
 
     MVulkanImageMemoryBarrier barrier{};
     barrier.srcAccessMask = 0;
@@ -293,30 +310,30 @@ void MVulkanEngine::transitionSwapchainImageFormat()
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    std::vector<VkImage> images = swapChain.GetSwapChainImages();
+    std::vector<VkImage> images = m_swapChain.GetSwapChainImages();
     std::vector<MVulkanImageMemoryBarrier> barriers;
     for (auto i = 0; i < images.size(); i++) {
         barrier.image = images[i];
         barriers.push_back(barrier);
     }
 
-    transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    m_transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    transferList.End();
+    m_transferList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
 
-    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    transferQueue.WaitForQueueComplete();
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::transitionFramebufferImageLayout()
 {
-    transferList.Reset();
-    transferList.Begin();
+    m_transferList.Reset();
+    m_transferList.Begin();
 
     MVulkanImageMemoryBarrier barrier{};
     barrier.srcAccessMask = 0;
@@ -326,72 +343,72 @@ void MVulkanEngine::transitionFramebufferImageLayout()
 
     std::vector<MVulkanImageMemoryBarrier> barriers;
 
-    transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    m_transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    transferList.End();
+    m_transferList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
 
-    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    transferQueue.WaitForQueueComplete();
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::createDescriptorSetAllocator()
 {
-    allocator.Create(device.GetDevice());
+    m_allocator.Create(m_device.GetDevice());
 }
 
 void MVulkanEngine::createCommandQueue()
 {
-    graphicsQueue.SetQueue(device.GetQueue(QueueType::GRAPHICS_QUEUE));
-    transferQueue.SetQueue(device.GetQueue(QueueType::TRANSFER_QUEUE));
-    presentQueue.SetQueue(device.GetQueue(QueueType::PRESENT_QUEUE));
+    m_graphicsQueue.SetQueue(m_device.GetQueue(QueueType::GRAPHICS_QUEUE));
+    m_transferQueue.SetQueue(m_device.GetQueue(QueueType::TRANSFER_QUEUE));
+    m_presentQueue.SetQueue(m_device.GetQueue(QueueType::PRESENT_QUEUE));
 }
 
 void MVulkanEngine::createCommandAllocator()
 {
-    commandAllocator.Create(device);
+    m_commandAllocator.Create(m_device);
 }
 
 void MVulkanEngine::createCommandList()
 {
-    VkCommandListCreateInfo info;
-    info.commandPool = commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
+    MVulkanCommandListCreateInfo info;
+    info.commandPool = m_commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
     info.commandBufferCount = 1;
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    graphicsLists.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_graphicsLists.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     for (int i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
-        graphicsLists[i].Create(device.GetDevice(), info);
+        m_graphicsLists[i].Create(m_device.GetDevice(), info);
     }
 
-    generalGraphicList.Create(device.GetDevice(), info);
+    m_generalGraphicList.Create(m_device.GetDevice(), info);
 
-    info.commandPool = commandAllocator.Get(QueueType::TRANSFER_QUEUE);
-    transferList.Create(device.GetDevice(), info);
+    info.commandPool = m_commandAllocator.Get(QueueType::TRANSFER_QUEUE);
+    m_transferList.Create(m_device.GetDevice(), info);
 
-    info.commandPool = commandAllocator.Get(QueueType::PRESENT_QUEUE);
-    presentList.Create(device.GetDevice(), info);
+    info.commandPool = m_commandAllocator.Get(QueueType::PRESENT_QUEUE);
+    m_presentList.Create(m_device.GetDevice(), info);
 }
 
 void MVulkanEngine::createSyncObjects()
 {
-    imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
-    finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
-    inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
     for (size_t i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
-        imageAvailableSemaphores[i].Create(device.GetDevice());
-        finalRenderFinishedSemaphores[i].Create(device.GetDevice());
-        inFlightFences[i].Create(device.GetDevice());
+        m_imageAvailableSemaphores[i].Create(m_device.GetDevice());
+        m_finalRenderFinishedSemaphores[i].Create(m_device.GetDevice());
+        m_inFlightFences[i].Create(m_device.GetDevice());
     }
 }
 
 void MVulkanEngine::renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore) {
-    graphicsLists[currentFrame].Reset();
+    m_graphicsLists[currentFrame].Reset();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -403,14 +420,14 @@ void MVulkanEngine::renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSem
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &graphicsLists[currentFrame].GetBuffer();
+    submitInfo.pCommandBuffers = &m_graphicsLists[currentFrame].GetBuffer();
 
     VkSemaphore signalSemaphores[] = { signalSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
 VkSubmitInfo MVulkanEngine::generateSubmitInfo(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitSemaphoreStage, std::vector<VkSemaphore> signalSemaphores) {
@@ -454,17 +471,17 @@ void MVulkanEngine::transitionImageLayout(
     VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence
 )
 {
-    generalGraphicList.Reset();
-    generalGraphicList.Begin();
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
 
-    generalGraphicList.TransitionImageLayout(barrier, srcStage, dstStage);
+    m_generalGraphicList.TransitionImageLayout(barrier, srcStage, dstStage);
 
-    generalGraphicList.End();
+    m_generalGraphicList.End();
 
-    VkSubmitInfo submitInfo = generateSubmitInfo(&generalGraphicList.GetBuffer(), waitSemaphores, waitSemaphoreStage, signalSemaphores);
+    VkSubmitInfo submitInfo = generateSubmitInfo(&m_generalGraphicList.GetBuffer(), waitSemaphores, waitSemaphoreStage, signalSemaphores);
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, fence);
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, fence);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::transitionImageLayouts(
@@ -472,17 +489,17 @@ void MVulkanEngine::transitionImageLayouts(
     VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence
 )
 {
-    generalGraphicList.Reset();
-    generalGraphicList.Begin();
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
 
-    generalGraphicList.TransitionImageLayout(barriers, srcStage, dstStage);
+    m_generalGraphicList.TransitionImageLayout(barriers, srcStage, dstStage);
 
-    generalGraphicList.End();
+    m_generalGraphicList.End();
 
-    VkSubmitInfo submitInfo = generateSubmitInfo(&generalGraphicList.GetBuffer(), waitSemaphores, waitSemaphoreStage, signalSemaphores);
+    VkSubmitInfo submitInfo = generateSubmitInfo(&m_generalGraphicList.GetBuffer(), waitSemaphores, waitSemaphoreStage, signalSemaphores);
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, fence);
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, fence);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size)
@@ -490,19 +507,19 @@ void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* dat
     BufferCreateInfo vertexInfo;
     vertexInfo.size = size;
 
-    transferList.Reset();
-    transferList.Begin();
-    buffer->CreateAndLoadData(&transferList, device, vertexInfo, data);
+    m_transferList.Reset();
+    m_transferList.Begin();
+    buffer->CreateAndLoadData(&m_transferList, m_device, vertexInfo, data);
 
-    transferList.End();
+    m_transferList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
 
-    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    transferQueue.WaitForQueueComplete();
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::present(
@@ -520,10 +537,10 @@ void MVulkanEngine::present(
 
     presentInfo.pImageIndices = imageIndex;
 
-    VkResult result = presentQueue.Present(&presentInfo);
+    VkResult result = m_presentQueue.Present(&presentInfo);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window->GetWindowResized()) {
-        window->SetWindowResized(false);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window->GetWindowResized()) {
+        m_window->SetWindowResized(false);
         recreateSwapchain();
         //RecreateSwapChain();
     }
@@ -551,20 +568,20 @@ void MVulkanEngine::createPlaceHolderTexture()
     viewInfo.levelCount = 1;
     viewInfo.layerCount = 1;
 
-    generalGraphicList.Reset();
-    generalGraphicList.Begin();
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
 
-    placeHolderTexture.Create(&generalGraphicList, device, imageinfo, viewInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_placeHolderTexture.Create(&m_generalGraphicList, m_device, imageinfo, viewInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    generalGraphicList.End();
+    m_generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
 
-    graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::recordCommandBuffer(
@@ -613,7 +630,7 @@ void MVulkanEngine::recordCommandBuffer(
     scissor.extent = extent;
     commandList.SetScissor(0, 1, &scissor);
 
-    renderPass->LoadCBV(device.GetUniformBufferOffsetAlignment());
+    renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
 
     auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
     commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);

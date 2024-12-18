@@ -135,10 +135,9 @@ void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
 
 void Scene::GenerateIndirectDataAndBuffers()
 {
-    if (m_indirectVertexBuffer != nullptr) m_indirectVertexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    if (m_indirectIndexBuffer != nullptr) m_indirectIndexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    if (m_indirectBuffer != nullptr) m_indirectBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-
+    //if (m_indirectVertexBuffer != nullptr) m_indirectVertexBuffer->Clean();
+    //if (m_indirectIndexBuffer != nullptr) m_indirectIndexBuffer->Clean();
+    //if (m_indirectBuffer != nullptr) m_indirectBuffer->Clean();
     auto totalVertexs = GetTotalVertexs();
     auto totalIndeices = GetTotalIndeices();
 

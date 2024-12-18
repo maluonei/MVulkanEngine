@@ -6,7 +6,7 @@
 #include "MVulkanDevice.hpp"
 #include "map"
 
-struct VkCommandListCreateInfo {
+struct MVulkanCommandListCreateInfo {
 	VkCommandPool commandPool;
 	VkCommandBufferLevel level;
 	uint32_t commandBufferCount;
@@ -15,16 +15,18 @@ struct VkCommandListCreateInfo {
 class MVulkanCommandAllocator {
 public:
 	MVulkanCommandAllocator();
+	//~MVulkanCommandAllocator();
 	void Create(MVulkanDevice device);
-	void Clean(VkDevice device);
+	void Clean();
 
 	inline VkCommandPool Get(QueueType type) {
-		return commandPools[type];
+		return m_commandPools[type];
 	}
 
 private:
 	//VkCommandPool commandPool;
-	std::map<QueueType, VkCommandPool> commandPools;
+	VkDevice							m_device;
+	std::map<QueueType, VkCommandPool>	m_commandPools;
 };
 
 struct MVulkanImageCopyInfo {
@@ -58,7 +60,8 @@ struct MVulkanImageMemoryBarrier {
 class MVulkanCommandList {
 public:
 	MVulkanCommandList();
-	MVulkanCommandList(VkDevice device, const VkCommandListCreateInfo& info);
+	MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	//~MVulkanCommandList();
 
 	void Begin();
 	void End();
@@ -79,19 +82,19 @@ public:
 		VkImage dstImage, VkImageLayout dstLayout, 
 		std::vector<VkImageBlit> blits, VkFilter filter);
 
-	void Create(VkDevice device, const VkCommandListCreateInfo& info);
-	void Clean(VkDevice _device);
+	void Create(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	void Clean();
 
 	inline VkCommandBuffer& GetBuffer() {
-		return commandBuffer;
+		return m_commandBuffer;
 	};
 
 protected:
 	//void endSingleTimeCommands(VkDevice device);
-
-	VkCommandPool		 commandPool;
-	VkCommandBuffer      commandBuffer;
-	VkCommandBufferLevel level;
+	VkDevice			 m_device;
+	VkCommandPool		 m_commandPool;
+	VkCommandBuffer      m_commandBuffer;
+	VkCommandBufferLevel m_level;
 };
 
 class MGraphicsCommandList :public MVulkanCommandList {
@@ -126,10 +129,9 @@ public:
 
 	VkResult Present(VkPresentInfoKHR* presentInfo);
 
-	inline VkQueue Get() const { return queue; }
-
+	inline VkQueue Get() const { return m_queue; }
 private:
-	VkQueue queue;
+	VkQueue m_queue;
 };
 
 

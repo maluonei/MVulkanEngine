@@ -67,27 +67,27 @@ void MWindow::Init(uint16_t width, uint16_t height)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    window = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
+    m_window = glfwCreateWindow(width, height, "MVulkanEngine", nullptr, nullptr);
 
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
     
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorEnterCallback(window, cursor_enter_callback);
+    glfwSetKeyCallback(m_window, key_callback);
+    glfwSetCursorPosCallback(m_window, cursor_position_callback);
+    glfwSetMouseButtonCallback(m_window, mouse_button_callback);
+    glfwSetCursorEnterCallback(m_window, cursor_enter_callback);
 }
 
 void MWindow::Clean()
 {
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(m_window);
 
     glfwTerminate();
 }
 
 bool MWindow::WindowShouldClose()
 {
-    return glfwWindowShouldClose(window);
+    return glfwWindowShouldClose(m_window);
 }
 
 void MWindow::WindowPollEvents()

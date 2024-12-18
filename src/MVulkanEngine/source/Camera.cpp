@@ -3,27 +3,27 @@
 #include <spdlog/spdlog.h>
 
 Camera::Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar)
-	:fov(_fov), aspect_ratio(_aspect_ratio), zNear(_zNear), zFar(_zFar), position(_position), direction(_direction)
+	:m_fov(_fov), m_aspect_ratio(_aspect_ratio), m_zNear(_zNear), m_zFar(_zFar), m_position(_position), m_direction(_direction)
 {
-	forward = glm::normalize(_direction);
-	right = glm::normalize(glm::cross(forward, UP));
-	up = glm::normalize(glm::cross(right, forward));
+	m_forward = glm::normalize(_direction);
+	m_right = glm::normalize(glm::cross(m_forward, m_UP));
+	m_up = glm::normalize(glm::cross(m_right, m_forward));
 
-	projMatrix = glm::perspective(glm::radians(fov), aspect_ratio, zNear, zFar);
-	orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, zNear, zFar);
+	m_projMatrix = glm::perspective(glm::radians(m_fov), m_aspect_ratio, m_zNear, m_zFar);
+	m_orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, m_zNear, m_zFar);
 	//orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.001f, 10000.f);
 	UpdateViewMatrix();
 }
 
 Camera::Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _fov, float _aspect_ratio, float _zNear, float _zFar)
-	:fov(_fov), aspect_ratio(_aspect_ratio), zNear(_zNear), zFar(_zFar), position(_position), direction(_direction), UP(_up)
+	:m_fov(_fov), m_aspect_ratio(_aspect_ratio), m_zNear(_zNear), m_zFar(_zFar), m_position(_position), m_direction(_direction), m_UP(_up)
 {
-	forward = glm::normalize(_direction);
-	right = glm::normalize(glm::cross(forward, UP));
-	up = glm::normalize(glm::cross(right, forward));
+	m_forward = glm::normalize(_direction);
+	m_right = glm::normalize(glm::cross(m_forward, m_UP));
+	m_up = glm::normalize(glm::cross(m_right, m_forward));
 
-	projMatrix = glm::perspective(glm::radians(fov), aspect_ratio, zNear, zFar);
-	orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, zNear, zFar);
+	m_projMatrix = glm::perspective(glm::radians(m_fov), m_aspect_ratio, m_zNear, m_zFar);
+	m_orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, m_zNear, m_zFar);
 	//orthoMatrix = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.001f, 10000.f);
 	UpdateViewMatrix();
 }
@@ -32,13 +32,13 @@ void Camera::Move(Direction direction, float scale)
 {
 	switch (direction) {
 	case Direction::Forward:
-		position += scale * forward;
+		m_position += scale * m_forward;
 		break;
 	case Direction::Right:
-		position += scale * right;
+		m_position += scale * m_right;
 		break;
 	case Direction::Up:
-		position += scale * up;
+		m_position += scale * m_up;
 		break;
 	}
 }
@@ -50,20 +50,16 @@ void Camera::Rotate(float pitch, float yaw)
 
 	float currentPitch, currentYaw;
 
-	//spdlog::info("direction:" + std::to_string(direction.x) + "," + std::to_string(direction.y) + "," + std::to_string(direction.z));
-	//spdlog::info("before direction:" + std::to_string(direction.x) + "," + std::to_string(direction.y) + "," + std::to_string(direction.z));
-	DirectionToPitchYaw(direction, currentPitch, currentYaw);
+	DirectionToPitchYaw(m_direction, currentPitch, currentYaw);
 
-	//spdlog::info("currentPitch:" + std::to_string(currentPitch) + ", currentYaw" + std::to_string(currentYaw));
 	currentPitch+=pitch;
 	currentYaw-=yaw;
 
 	currentYaw = glm::clamp(currentYaw, -glm::pi<float>() / 2.f, glm::pi<float>() / 2.f);
 
-	PitchYawToDirection(currentPitch, currentYaw, direction);
-	//spdlog::info("after direction:" + std::to_string(direction.x) + "," + std::to_string(direction.y) + "," + std::to_string(direction.z));
+	PitchYawToDirection(currentPitch, currentYaw, m_direction);
 
-	forward = glm::normalize(direction);
-	right = glm::normalize(glm::cross(forward, UP));
-	up = glm::normalize(glm::cross(right, forward));
+	m_forward = glm::normalize(m_direction);
+	m_right = glm::normalize(glm::cross(m_forward, m_UP));
+	m_up = glm::normalize(glm::cross(m_right, m_forward));
 }

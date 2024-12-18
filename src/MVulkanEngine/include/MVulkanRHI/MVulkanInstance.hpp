@@ -14,11 +14,11 @@ public:
     void Create();
     void Clean();
     void SetupDebugMessenger();
-    inline VkInstance GetInstance()const { return instance; }
+    inline VkInstance GetInstance()const { return m_instance; }
 
 private:
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
+    VkInstance m_instance;
+    VkDebugUtilsMessengerEXT m_debugMessenger;
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 

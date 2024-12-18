@@ -13,56 +13,60 @@ public:
 	MVulkanSwapchain();
 
 	void Create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
-	bool Recreate(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
+	bool Recreate();
 
-	void Clean(VkDevice device);
-	VkResult AcquireNextImage(VkDevice device, VkSemaphore semephore, VkFence fence, uint32_t* imageIndex);
+	void Clean();
+	VkResult AcquireNextImage(VkSemaphore semephore, VkFence fence, uint32_t* imageIndex);
 
-	inline VkFormat GetSwapChainImageFormat() const { return surfaceFormat.format; }
+	inline VkFormat GetSwapChainImageFormat() const { return m_surfaceFormat.format; }
 	inline std::vector<VkImage> GetSwapChainImages() const {
-		return swapChainImages;
+		return m_swapChainImages;
 	};
 
 	inline VkImage GetImage(int i)const {
-		return swapChainImages[i];
+		return m_swapChainImages[i];
 	}
 
 	inline std::vector<VkImageView> GetSwapChainImageViews() const {
-		return swapChainImageViews;
+		return m_swapChainImageViews;
 	};
 
 	inline VkImageView GetImageView(int i)const {
-		return swapChainImageViews[i];
+		return m_swapChainImageViews[i];
 	}
 
 	inline VkExtent2D GetSwapChainExtent() const {
-		return swapChainExtent;
+		return m_swapChainExtent;
 	}
 
-	inline VkSwapchainKHR Get()const { return swapChain; }
-	inline VkSwapchainKHR* GetPtr(){ return &swapChain; }
+	inline VkSwapchainKHR Get()const { return m_swapChain; }
+	inline VkSwapchainKHR* GetPtr(){ return &m_swapChain; }
 
-	inline uint32_t GetImageCount() const { return static_cast<uint32_t>(swapChainImages.size()); }
+	inline uint32_t GetImageCount() const { return static_cast<uint32_t>(m_swapChainImages.size()); }
 private:
-	VkSwapchainKHR swapChain;
+	MVulkanDevice			m_device;
+	VkSurfaceKHR			m_surface;
+	GLFWwindow*				m_window;
 
-	SwapChainSupportDetails swapChainSupport;
-	VkSurfaceFormatKHR surfaceFormat;
-	VkPresentModeKHR presentMode;
+	VkSwapchainKHR			m_swapChain;
 
-	std::vector<VkImage> swapChainImages;
-	VkExtent2D swapChainExtent;
-	std::vector<VkImageView> swapChainImageViews;
+	SwapChainSupportDetails m_swapChainSupport;
+	VkSurfaceFormatKHR		m_surfaceFormat;
+	VkPresentModeKHR		m_presentMode;
 
-	void create(MVulkanDevice device, GLFWwindow* window, VkSurfaceKHR surface);
-	void createImageViews(VkDevice device);
+	std::vector<VkImage>	m_swapChainImages;
+	VkExtent2D				m_swapChainExtent;
+	std::vector<VkImageView> m_swapChainImageViews;
+
+	void create();
+	void createSwapchainImageViews();
 
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 
-    VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
-	VkExtent2D getCurrentSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+	VkExtent2D getCurrentSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 };
 
 #endif

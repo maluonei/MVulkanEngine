@@ -4,10 +4,15 @@ MVulkanCommandList::MVulkanCommandList() {
 
 }
 
-MVulkanCommandList::MVulkanCommandList(VkDevice device, const VkCommandListCreateInfo& info)
+MVulkanCommandList::MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info)
 {
     Create(device, info);
 }
+
+//MVulkanCommandList::~MVulkanCommandList()
+//{
+//    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+//}
 
 void MVulkanCommandList::Begin()
 {
@@ -17,28 +22,28 @@ void MVulkanCommandList::Begin()
     begin_info.flags = 0;
     begin_info.pInheritanceInfo = nullptr;
 
-    VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &begin_info));
+    VK_CHECK_RESULT(vkBeginCommandBuffer(m_commandBuffer, &begin_info));
 }
 
 void MVulkanCommandList::End()
 {
-    VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+    VK_CHECK_RESULT(vkEndCommandBuffer(m_commandBuffer));
 }
 
 void MVulkanCommandList::Reset()
 {
     //vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-    vkResetCommandBuffer(commandBuffer, 0);
+    vkResetCommandBuffer(m_commandBuffer, 0);
 }
 
 void MVulkanCommandList::BeginRenderPass(VkRenderPassBeginInfo* info)
 {
-    vkCmdBeginRenderPass(commandBuffer, info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer, info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void MVulkanCommandList::EndRenderPass()
 {
-    vkCmdEndRenderPass(commandBuffer);
+    vkCmdEndRenderPass(m_commandBuffer);
 }
 
 void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -47,7 +52,7 @@ void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDe
     copyRegion.size = size;
 
     vkCmdCopyBuffer(
-        commandBuffer,
+        m_commandBuffer,
         srcBuffer,
         dstBuffer,
         1,
@@ -77,7 +82,7 @@ void MVulkanCommandList::TransitionImageLayout(std::vector<MVulkanImageMemoryBar
     }
 
     vkCmdPipelineBarrier(
-        commandBuffer,
+        m_commandBuffer,
         sourceStage, destinationStage,
         0,
         0, nullptr,
@@ -102,7 +107,7 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
     barrier.subresourceRange.layerCount = _barrier.layerCount;
 
     vkCmdPipelineBarrier(
-        commandBuffer,
+        m_commandBuffer,
         sourceStage, destinationStage,
         0,
         0, nullptr,
@@ -130,7 +135,7 @@ void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage,
         1
     };
 
-    vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo)
@@ -153,7 +158,7 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
     copyRegion.extent.depth = 1;
 
     vkCmdCopyImage(
-        commandBuffer,
+        m_commandBuffer,
         srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  // Դimage���䲼��
         dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // Ŀ��image���䲼��
         1,
@@ -163,82 +168,88 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
 
 void MVulkanCommandList::BlitImage(VkImage srcImage, VkImageLayout srcLayout, VkImage dstImage, VkImageLayout dstLayout, std::vector<VkImageBlit> blits, VkFilter filter)
 {
-    vkCmdBlitImage(commandBuffer,
+    vkCmdBlitImage(m_commandBuffer,
         srcImage, srcLayout,
         dstImage, dstLayout,
         static_cast<uint32_t>(blits.size()), blits.data(),
         filter);
 }
 
-void MVulkanCommandList::Create(VkDevice device, const VkCommandListCreateInfo& info)
+void MVulkanCommandList::Create(VkDevice device, const MVulkanCommandListCreateInfo& info)
 {
+    m_device = device;
+
     VkCommandBufferAllocateInfo buffer_alloc_info{};
-    commandPool = info.commandPool;
-    level = info.level;
+    m_commandPool = info.commandPool;
+    m_level = info.level;
 
     buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     buffer_alloc_info.pNext = nullptr;
-    buffer_alloc_info.commandPool = commandPool;
+    buffer_alloc_info.commandPool = m_commandPool;
     buffer_alloc_info.level = info.level;
     buffer_alloc_info.commandBufferCount = info.commandBufferCount;
 
-    //VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &buffer_alloc_info, &commandBuffer));
-    if (vkAllocateCommandBuffers(device, &buffer_alloc_info, &commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(m_device, &buffer_alloc_info, &m_commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("fail to create commandBuffer");
     }
 }
 
-void MVulkanCommandList::Clean(VkDevice _device)
+void MVulkanCommandList::Clean()
 {
-    
+    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
+//void MVulkanCommandList::Clean()
+//{
+//    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+//}
+
 void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
 void MGraphicsCommandList::SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport)
 {
-    vkCmdSetViewport(commandBuffer, firstViewport, viewportNum, viewport);
+    vkCmdSetViewport(m_commandBuffer, firstViewport, viewportNum, viewport);
 }
 
 void MGraphicsCommandList::SetScissor(uint32_t firstScissor, uint32_t scissorNum, VkRect2D* scissor)
 {
-    vkCmdSetScissor(commandBuffer, firstScissor, scissorNum, scissor);
+    vkCmdSetScissor(m_commandBuffer, firstScissor, scissorNum, scissor);
 }
 
 void MGraphicsCommandList::BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffer, const VkDeviceSize* offset)
 {
-    vkCmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, buffer, offset);;
+    vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, bindingCount, buffer, offset);;
 }
 
 void MGraphicsCommandList::BindIndexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer buffer, const VkDeviceSize* offset)
 {
-    vkCmdBindIndexBuffer(commandBuffer, buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(m_commandBuffer, buffer, 0, VK_INDEX_TYPE_UINT32);
 }
 
 void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
 {
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
 }
 
 void MGraphicsCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
-    vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+    vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void MGraphicsCommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 {
-    vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 void MGraphicsCommandList::DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
-    vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
+    vkCmdDrawIndexedIndirect(m_commandBuffer, buffer, offset, drawCount, stride);
 }
 
 void MComputeCommandList::BindPipeline(VkPipeline pipeline) {
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
 

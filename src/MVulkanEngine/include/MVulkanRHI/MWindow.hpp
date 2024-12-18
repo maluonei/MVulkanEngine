@@ -16,21 +16,21 @@ public:
     void Init(uint16_t width, uint16_t height);
     void Clean();
     inline GLFWwindow* GetWindow()const {
-        return window;
+        return m_window;
     }
 
     bool WindowShouldClose();
     void WindowPollEvents();
     inline glm::vec2 GetMousePosition() {
         double mousePosX, mousePosY;
-        glfwGetCursorPos(window, &mousePosX, &mousePosY);
+        glfwGetCursorPos(m_window, &mousePosX, &mousePosY);
         return glm::vec2(mousePosX, mousePosY);
     }
-    inline bool GetWindowResized() const { return windowResized; }
-    inline void SetWindowResized(bool flag) { windowResized = flag; }
+    inline bool GetWindowResized() const { return m_windowResized; }
+    inline void SetWindowResized(bool flag) { m_windowResized = flag; }
 private:
-    bool windowResized = false;
-    GLFWwindow* window = nullptr;
+    bool        m_windowResized = false;
+    GLFWwindow* m_window = nullptr;
 };
 
 

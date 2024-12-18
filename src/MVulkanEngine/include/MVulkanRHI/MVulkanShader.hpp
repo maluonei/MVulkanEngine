@@ -17,15 +17,16 @@ public:
 	void Init(std::string path, ShaderStageFlagBits stage);
 
 	void Create(VkDevice device);
-	void Clean(VkDevice device);
-	inline VkShaderModule GetShaderModule() const { return shaderModule; }
-	inline Shader GetShader() { return shader; }
+	void Clean();
+	inline VkShaderModule GetShaderModule() const { return m_shaderModule; }
+	inline Shader GetShader() { return m_shader; }
 
 private:
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
+	VkShaderModule createShaderModule(const std::vector<char>& code);
 
-	Shader shader;
-	VkShaderModule shaderModule;
+	VkDevice			m_device;
+	Shader				m_shader;
+	VkShaderModule		m_shaderModule;
 };
 
 struct ShaderResourceInfo {
@@ -37,7 +38,6 @@ struct ShaderResourceInfo {
 	uint32_t offset;
 
 	uint32_t descriptorCount;
-	//ShaderResourceInfo(const std::string& _name, uint32_t _set, )
 };
 
 struct ShaderReflectorOut {
@@ -48,18 +48,13 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> seperateSamplers;
 	std::vector<ShaderResourceInfo> seperateImages;
 
-	//std::vector<MVulkanDescriptorSetLayoutBinding> GetUniformBufferBindings();
-	//std::vector<MVulkanDescriptorSetLayoutBinding> GetCombinedImageSamplers();
-	//std::vector<MVulkanDescriptorSetLayoutBinding> GetSeperateImageSamplers();
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
-
 };
 
 class MVulkanShaderReflector {
 public:
 	MVulkanShaderReflector(Shader shader);
 
-	//void loadShader(Shader shader);
 	PipelineVertexInputStateInfo GenerateVertexInputAttributes();
 	MVulkanDescriptorSet GenerateDescriptorSet();
 	ShaderReflectorOut GenerateShaderReflactorOut();
@@ -69,12 +64,11 @@ public:
 	void test(Shader shader);
 
 private:
-	Shader shader;
+	Shader m_shader;
 
-	std::vector<uint32_t> spirvBinary;
-	// ´´½¨ SPIRV-Cross µÄ GLSL ±àÒëÆ÷
-	spirv_cross::CompilerGLSL compiler;
-	spirv_cross::ShaderResources resources;
+	std::vector<uint32_t>			m_spirvBinary;
+	spirv_cross::CompilerGLSL		m_compiler;
+	spirv_cross::ShaderResources	m_resources;
 };
 
 #endif

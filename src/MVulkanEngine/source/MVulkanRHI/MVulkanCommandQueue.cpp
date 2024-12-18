@@ -6,21 +6,21 @@ MVulkanCommandQueue::MVulkanCommandQueue()
 
 void MVulkanCommandQueue::SetQueue(VkQueue _queue)
 {
-	queue = _queue;
+	m_queue = _queue;
 }
 
 void MVulkanCommandQueue::SubmitCommands(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
-	VK_CHECK_RESULT(vkQueueSubmit(queue, submitCount, pSubmits, fence));
+	VK_CHECK_RESULT(vkQueueSubmit(m_queue, submitCount, pSubmits, fence));
 }
 
 
 void MVulkanCommandQueue::WaitForQueueComplete()
 {
-	VK_CHECK_RESULT(vkQueueWaitIdle(queue));
+	VK_CHECK_RESULT(vkQueueWaitIdle(m_queue));
 }
 
 VkResult MVulkanCommandQueue::Present(VkPresentInfoKHR* presentInfo)
 {
-	return vkQueuePresentKHR(queue, presentInfo);
+	return vkQueuePresentKHR(m_queue, presentInfo);
 }

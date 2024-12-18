@@ -11,8 +11,8 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 }
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
-    MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList,
-    MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+    MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+    MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     SetShader(shader);
     CreateRenderPass();
@@ -22,20 +22,20 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
 
 void RenderPass::Clean()
 {
-    m_pipeline.Clean(m_device.GetDevice());
+    m_pipeline.Clean();
 
     for (auto frameBuffer : m_frameBuffers) {
-        frameBuffer.Clean(m_device.GetDevice());
+        frameBuffer.Clean();
     }
 
-    m_renderPass.Clean(m_device.GetDevice());
+    m_renderPass.Clean();
 }
 
-void RenderPass::RecreateFrameBuffers(MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList, VkExtent2D extent) {
+void RenderPass::RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent) {
     m_info.extent = extent;
 
     for (auto frameBuffer : m_frameBuffers) {
-        frameBuffer.Clean(m_device.GetDevice());
+        frameBuffer.Clean();
     }
     m_frameBuffers.clear();
 
@@ -91,34 +91,8 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
     }
 }
 
-//void RenderPass::UpdateDescriptorSetWrite(MVulkanDescriptorSet descriptorSet, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
-//{
-//    MVulkanDescriptorSetWrite write;
-//    std::vector<std::vector<VkDescriptorImageInfo>> imageInfos(m_info.frambufferCount);
-//    for (auto i = 0; i < m_info.frambufferCount; i++) {
-//        imageInfos[i].resize(imageViews.size());
-//        for (auto j = 0; j < imageViews.size(); j++) {
-//            imageInfos[i][j].sampler = samplers[j];
-//            imageInfos[i][j].imageView = imageViews[i][j];
-//            imageInfos[i][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//        }
-//    }
-//
-//    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos(m_info.frambufferCount);
-//    for (auto i = 0; i < m_info.frambufferCount; i++) {
-//        bufferInfos[i].resize(m_cbvCount);
-//
-//        for (auto binding = 0; binding < m_cbvCount; binding++) {
-//            bufferInfos[i][binding].buffer = m_uniformBuffers[i][binding].GetBuffer();
-//            bufferInfos[i][binding].offset = 0;
-//            bufferInfos[i][binding].range = m_shader->GetBufferSizeBinding(binding);
-//        }
-//    }
-//
-//    write.Update(m_device.GetDevice(), descriptorSet.Get(), bufferInfos, imageInfos);
-//}
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -165,8 +139,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
     }
 
     m_uniformBuffers.resize(m_info.frambufferCount);
-    //m_samplerTypes.resize(m_sepe);
-    //m_samplerTypes.resize(samplerCount);
+
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         m_uniformBuffers[i].resize(m_cbvCount);
         for (auto binding = 0; binding < bindings.size(); binding++) {
@@ -194,11 +167,11 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator allocator, std::ve
 
     UpdateDescriptorSetWrite(imageViews, samplers);
 
-    m_pipeline.Create(m_device, m_info.pipelineCreateInfo,
+    m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
         m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size());
 
-    m_shader->Clean(m_device.GetDevice());
+    m_shader->Clean();
 }
 
 void RenderPass::CreateRenderPass()
@@ -220,7 +193,7 @@ void RenderPass::CreateRenderPass()
 }
 
 void RenderPass::CreateFrameBuffers(
-    MVulkanSwapchain swapChain, MVulkanCommandQueue commandQueue, MGraphicsCommandList commandList)
+    MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList)
 {
     commandList.Reset();
     commandList.Begin();
@@ -269,7 +242,7 @@ void RenderPass::SetUBO(uint8_t index, void* data) {
     m_shader->SetUBO(index, data);
 }
 
-void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue queue, MGraphicsCommandList commandList, VkImageLayout oldLayout, VkImageLayout newLayout) {
+void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList, VkImageLayout oldLayout, VkImageLayout newLayout) {
     commandList.Reset();
     commandList.Begin();
 
@@ -308,7 +281,7 @@ void RenderPass::LoadCBV(uint32_t alignment) {
                 //uint32_t alignment = Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment();
                 uint32_t offset = j * alignment;
                 //spdlog::info("alignment, {}", alignment);
-                m_uniformBuffers[i][binding].UpdateData(m_device, offset, (void*)(m_shader->GetData(binding, j)));
+                m_uniformBuffers[i][binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
             }
         }
     }
@@ -320,7 +293,7 @@ void RenderPass::UpdateCBVData()
 }
 
 
-MVulkanDescriptorSet RenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocator allocator)
+MVulkanDescriptorSet RenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator)
 {
     MVulkanDescriptorSet descriptorSet;
     descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get());

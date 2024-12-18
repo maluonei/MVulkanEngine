@@ -13,8 +13,6 @@ class MImage {
 public:
     bool Load(fs::path imagePath)
     {
-        //int texWidth, texHeight, texChannels;
-        //const char* path = imagePath.string().c_str();
         stbi_uc* pixels = stbi_load(imagePath.string().c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         //VkDeviceSize imageSize = texWidth * texHeight * 4;
 

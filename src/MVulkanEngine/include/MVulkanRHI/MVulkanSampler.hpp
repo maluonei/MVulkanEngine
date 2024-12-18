@@ -11,10 +11,11 @@ class MVulkanSampler {
 public:
 
 	void Create(MVulkanDevice device, MVulkanSamplerCreateInfo info);
-	void Clean(VkDevice device);
+	void Clean();
 	inline VkSampler GetSampler() const { return m_sampler; }
 
 private:
-	MVulkanSamplerCreateInfo m_info;
-	VkSampler m_sampler;
+	MVulkanSamplerCreateInfo	m_info;
+	VkSampler					m_sampler;
+	VkDevice					m_device;
 };

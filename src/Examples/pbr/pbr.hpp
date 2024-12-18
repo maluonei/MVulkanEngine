@@ -24,9 +24,8 @@ public:
 	virtual void CreateRenderPass();
 
 	virtual void PreComputes();
+	virtual void Clean();
 private:
-	void createSkyboxTexture();
-
 	void loadScene();
 	void createLight();
 	void createCamera();
@@ -35,23 +34,19 @@ private:
 	void createLightCamera();
 
 private:
-	std::shared_ptr<RenderPass> gbufferPass;
-	std::shared_ptr<RenderPass> shadowPass;
-	std::shared_ptr<RenderPass> lightingPass;
-	std::shared_ptr<RenderPass> skyboxPass;
+	std::shared_ptr<RenderPass> m_gbufferPass;
+	std::shared_ptr<RenderPass> m_shadowPass;
+	std::shared_ptr<RenderPass> m_lightingPass;
 
-	MVulkanSampler linearSampler;
+	MVulkanSampler				m_linearSampler;
 
-	MVulkanTexture skyboxTexture;
+	std::shared_ptr<Scene>		m_scene;
+	std::shared_ptr<Scene>		m_squad;
 
-	std::shared_ptr<Scene> scene;
-	std::shared_ptr<Scene> cube;
-	std::shared_ptr<Scene> squad;
+	std::shared_ptr<Light>		m_directionalLight;
 
-	std::shared_ptr<Light> directionalLight;
-
-	std::shared_ptr<Camera> directionalLightCamera;
-	std::shared_ptr<Camera> camera;
+	std::shared_ptr<Camera>		m_directionalLightCamera;
+	std::shared_ptr<Camera>		m_camera;
 };
 
 

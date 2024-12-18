@@ -17,15 +17,15 @@ public:
 	Shader(std::string path, ShaderStageFlagBits _stage);
 
 	void Compile();
-	inline ShaderStageFlagBits GetShaderStage()const { return shaderStage; }
-	inline std::vector<char> GetCompiledShaderCode() const { return compiledShaderCode; }
-	inline std::string GetCompiledShaderPath() const { return compiledShaderPath; };
+	inline ShaderStageFlagBits GetShaderStage()const { return m_shaderStage; }
+	inline std::vector<char> GetCompiledShaderCode() const { return m_compiledShaderCode; }
+	inline std::string GetCompiledShaderPath() const { return m_compiledShaderPath; };
 private:
 	void compile(std::string shaderPath);
-	ShaderStageFlagBits shaderStage;
-	std::string shaderPath;
-	std::string compiledShaderPath;
-	std::vector<char> compiledShaderCode;
+	ShaderStageFlagBits m_shaderStage;
+	std::string			m_shaderPath;
+	std::string			m_compiledShaderPath;
+	std::vector<char>	m_compiledShaderCode;
 };
 
 

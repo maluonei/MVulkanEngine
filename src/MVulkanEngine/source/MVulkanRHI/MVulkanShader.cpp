@@ -14,55 +14,51 @@ MVulkanShader::MVulkanShader(std::string path, ShaderStageFlagBits stage)
 
 void MVulkanShader::Init(std::string path, ShaderStageFlagBits stage)
 {
-	shader = Shader(path, stage);
+	m_shader = Shader(path, stage);
 }
 
 void MVulkanShader::Create(VkDevice device)
 {
-	shader.Compile();
+    m_device = device;
+    m_shader.Compile();
 
-    shaderModule = createShaderModule(device, shader.GetCompiledShaderCode());
+    m_shaderModule = createShaderModule(m_shader.GetCompiledShaderCode());
 }
 
-VkShaderModule MVulkanShader::createShaderModule(VkDevice device, const std::vector<char>& code) {
+VkShaderModule MVulkanShader::createShaderModule(const std::vector<char>& code) {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    if (vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
         throw std::runtime_error("failed to create shader module!");
     }
 
     return shaderModule;
 }
 
-void MVulkanShader::Clean(VkDevice device)
+void MVulkanShader::Clean()
 {
-    vkDestroyShaderModule(device, shaderModule, nullptr);
+    vkDestroyShaderModule(m_device, m_shaderModule, nullptr);
 }
 
 MVulkanShaderReflector::MVulkanShaderReflector(Shader _shader)
-    :shader(_shader), 
-    spirvBinary(loadSPIRV(shader.GetCompiledShaderPath())),
-    compiler(spirv_cross::CompilerGLSL(spirvBinary))
+    :m_shader(_shader), 
+    m_spirvBinary(loadSPIRV(m_shader.GetCompiledShaderPath())),
+    m_compiler(spirv_cross::CompilerGLSL(m_spirvBinary))
 {
-    resources = compiler.get_shader_resources();
+    m_resources = m_compiler.get_shader_resources();
 }
-
-//void MVulkanShaderReflector::loadShader(Shader _shader)
-//{
-//
-//}
 
 void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
 {
     uint32_t stride = 0;  // 顶点步进值
     uint32_t binding = 0;  // 假设绑定点为 0
 
-    for (const auto& input : resources.stage_inputs) {
-        const spirv_cross::SPIRType& type = compiler.get_type(input.type_id);
+    for (const auto& input : m_resources.stage_inputs) {
+        const spirv_cross::SPIRType& type = m_compiler.get_type(input.type_id);
 
         // 假设是 32 位宽度的浮点数，计算每个变量的大小
         uint32_t size = 0;
@@ -85,8 +81,6 @@ void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;  // 每顶点
 
     // 输出步进值和绑定点信息
-    //std::cout << "Binding: " << binding_description.binding
-    //    << ", Stride: " << binding_description.stride << std::endl;
     spdlog::info("Binding:{0}, Stride:{1}", binding_description.binding, binding_description.stride);
 
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;  // 每实例
@@ -103,13 +97,13 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
     uint32_t location = 0;  // 用于跟踪输入的位置
 
     // 遍历着色器的输入变量
-    for (const auto& input : resources.stage_inputs) {
+    for (const auto& input : m_resources.stage_inputs) {
         // 获取变量的类型信息
-        const spirv_cross::SPIRType& type = compiler.get_type(input.type_id);
+        const spirv_cross::SPIRType& type = m_compiler.get_type(input.type_id);
 
         // 创建 VkVertexInputAttributeDescription 并设置属性
         VkVertexInputAttributeDescription attribute_description = {};
-        attribute_description.location = compiler.get_decoration(input.id, spv::DecorationLocation);
+        attribute_description.location = m_compiler.get_decoration(input.id, spv::DecorationLocation);
         //attribute_description.location = location;
         attribute_description.binding = 0;  // 绑定点，通常为 0，具体根据你的需求调整
         attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;  // 默认假设是 float3 类型
@@ -170,19 +164,19 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
 
 MVulkanDescriptorSet MVulkanShaderReflector::GenerateDescriptorSet()
 {
-    for (const auto& ub : resources.uniform_buffers) {
-        auto& type = compiler.get_type(ub.type_id);
+    for (const auto& ub : m_resources.uniform_buffers) {
+        auto& type = m_compiler.get_type(ub.type_id);
         // 获取 Descriptor Set 和绑定点
-        uint32_t set = compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
-        size_t size = compiler.get_declared_struct_size(type);
+        uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
+        size_t size = m_compiler.get_declared_struct_size(type);
         spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
     }
 
     // 处理 sampled images (纹理)
-    for (const auto& image : resources.sampled_images) {
-        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    for (const auto& image : m_resources.sampled_images) {
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
         spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
     }
 
@@ -195,7 +189,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     std::string entryPointName;
 
     ShaderReflectorOut out;
-    auto shader_stage = compiler.get_entry_points_and_stages();
+    auto shader_stage = m_compiler.get_entry_points_and_stages();
     for (const auto& _stage : shader_stage) {
         switch (_stage.execution_model) {
         case spv::ExecutionModel::ExecutionModelVertex:
@@ -212,12 +206,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
 
-    for (const auto& ub : resources.uniform_buffers) {
-        auto& type = compiler.get_type(ub.type_id);
+    for (const auto& ub : m_resources.uniform_buffers) {
+        auto& type = m_compiler.get_type(ub.type_id);
         // 获取 Descriptor Set 和绑定点
-        uint32_t set = compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(ub.id, spv::DecorationBinding);
-        size_t size = compiler.get_declared_struct_size(type);
+        uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
+        size_t size = m_compiler.get_declared_struct_size(type);
        
         spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
 
@@ -231,10 +225,10 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
     // 处理 sampled images (纹理) -- glsl
-    for (const auto& image : resources.sampled_images) {
-        auto& type = compiler.get_type(image.type_id);
-        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    for (const auto& image : m_resources.sampled_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
         spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
 
@@ -248,10 +242,10 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
     // 处理 seperate images (纹理) -- hlsl
-    for (const auto& image : resources.separate_images) {
-        auto& type = compiler.get_type(image.type_id);
-        uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    for (const auto& image : m_resources.separate_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
         spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
 
@@ -265,10 +259,10 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
     // 处理 seperate samplers (采样器) -- hlsl
-    for (const auto& sampler : resources.separate_samplers) {
-        auto& type = compiler.get_type(sampler.type_id);
-        uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
-        uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+    for (const auto& sampler : m_resources.separate_samplers) {
+        auto& type = m_compiler.get_type(sampler.type_id);
+        uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(sampler.id, spv::DecorationBinding);
 
         spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}", sampler.name, set, binding);
 

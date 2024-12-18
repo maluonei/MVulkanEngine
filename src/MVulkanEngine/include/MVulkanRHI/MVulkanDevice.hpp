@@ -32,8 +32,8 @@ class MVulkanDevice {
 public:
     MVulkanDevice();
 
-    inline VkDevice& GetDevice() { return logicalDevice; }
-    inline VkPhysicalDevice& GetPhysicalDevice() { return physicalDevice; }
+    inline VkDevice& GetDevice() { return m_logicalDevice; }
+    inline VkPhysicalDevice& GetPhysicalDevice() { return m_physicalDevice; }
 
     void Create(VkInstance instance, VkSurfaceKHR surface);
     void Clean();
@@ -44,7 +44,7 @@ public:
 
     inline VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const{
         VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+        vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProperties);
 
         return deviceProperties;
     }
@@ -63,17 +63,17 @@ public:
 
     void WaitIdle();
 private:
-    VkPhysicalDevice physicalDevice;
-    VkDevice logicalDevice;
-    QueueFamilyIndices indices;
-    VkSampleCountFlagBits maxSmaaFlag;
+    VkPhysicalDevice        m_physicalDevice;
+    VkDevice                m_logicalDevice;
+    QueueFamilyIndices      m_indices;
+    VkSampleCountFlagBits   m_maxSmaaFlag;
 
-    VkQueue graphicsQueue;
-    VkQueue computeQueue;
-    VkQueue transferQueue;
-    VkQueue presentQueue;
+    VkQueue                 m_graphicsQueue;
+    VkQueue                 m_computeQueue;
+    VkQueue                 m_transferQueue;
+    VkQueue                 m_presentQueue;
 
-    uint32_t alignment = 0;
+    uint32_t                alignment = 0;
 
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     void createLogicalDevice(VkInstance instance, VkSurfaceKHR surface);

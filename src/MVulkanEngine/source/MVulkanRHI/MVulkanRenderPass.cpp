@@ -8,6 +8,8 @@ MVulkanRenderPass::MVulkanRenderPass()
 
 void MVulkanRenderPass::Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, VkImageLayout initialLayout, VkImageLayout finalLayout)
 {
+    m_device = device.GetDevice();
+
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = imageFormat;
     colorAttachment.samples = device.GetMaxSmaaFlag();
@@ -78,13 +80,15 @@ void MVulkanRenderPass::Create(MVulkanDevice device, VkFormat imageFormat, VkFor
     renderPassInfo.pDependencies = &dependency;
 
 
-    if (vkCreateRenderPass(device.GetDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
 void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo formats)
 {
+    m_device = device.GetDevice();
+
     std::vector<VkAttachmentDescription> colorAttachments(formats.imageFormats.size());
     for (auto i = 0; i < formats.imageFormats.size(); i++) {
         VkAttachmentDescription colorAttachment{};
@@ -203,12 +207,12 @@ void MVulkanRenderPass::Create(MVulkanDevice device, RenderPassFormatsInfo forma
     renderPassInfo.pDependencies = &dependency;
 
 
-    if (vkCreateRenderPass(device.GetDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
-void MVulkanRenderPass::Clean(VkDevice device)
+void MVulkanRenderPass::Clean()
 {
-    vkDestroyRenderPass(device, renderPass, nullptr);
+    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 }

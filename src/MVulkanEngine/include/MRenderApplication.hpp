@@ -14,8 +14,9 @@ public:
     virtual void RecreateSwapchainAndRenderPasses() = 0;
     virtual void CreateRenderPass() = 0;
     virtual void PreComputes() = 0;
+    virtual void Clean() = 0;
 protected:
-    uint32_t currentFrame = 0;
+    uint32_t m_currentFrame = 0;
 
     uint16_t WIDTH = 1280;
     uint16_t HEIGHT = 800;

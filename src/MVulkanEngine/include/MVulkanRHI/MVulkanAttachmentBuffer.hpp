@@ -9,33 +9,19 @@
 
 class MVulkanAttachmentBuffer {
 public:
+	MVulkanAttachmentBuffer() = default;
 	void Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format);
-	void Clean(VkDevice device);
+	void Clean();
 
-	inline VkImage GetImage()const { return image.GetImage(); }
-	inline VkImageView GetImageView()const { return image.GetImageView(); }
+	inline VkImage GetImage()const { return m_image.GetImage(); }
+	inline VkImageView GetImageView()const { return m_image.GetImageView(); }
 
 private:
-	AttachmentType attachmentType;
-	MVulkanImage image;
+
+	AttachmentType		m_attachmentType;
+	MVulkanImage		m_image;
+
+	bool				isActive = false;
 };
-
-//class MVulkanDepthBuffer {
-//public:
-//	void Create(MVulkanDevice device, VkExtent2D extent, VkFormat depthFormat);
-//	void Clean(VkDevice device);
-//
-//	inline VkImage GetImage()const { return depthImage.GetImage(); }
-//	inline VkImageView GetImageView()const { return depthImage.GetImageView(); }
-//	//static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-//private:
-//	MVulkanImage depthImage;
-//	//VkImage depthImage;
-//	//VkDeviceMemory depthImageMemory;
-//	//VkImageView depthImageView;
-//};
-
-
-
 #endif
 

@@ -45,14 +45,13 @@ public:
     ~MVulkanEngine();
 
     void Init();
-    void Clean();
 
     void SetWindowRes(uint16_t _windowWidth, uint16_t _windowHeight);
 
-    inline MVulkanDevice GetDevice()const { return device; }
+    inline MVulkanDevice GetDevice()const { return m_device; }
 
     void GenerateMipMap(MVulkanTexture texture);
-    inline std::shared_ptr<Camera> GetCamera()const { return camera; }
+    inline std::shared_ptr<Camera> GetCamera()const { return m_camera; }
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
@@ -90,44 +89,44 @@ public:
         viewInfo.layerCount = images.size();
         viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        generalGraphicList.Reset();
-        generalGraphicList.Begin();
+        m_generalGraphicList.Reset();
+        m_generalGraphicList.Begin();
 
-        texture->CreateAndLoadData(&generalGraphicList, device, imageInfo, viewInfo, images, 0);
+        texture->CreateAndLoadData(&m_generalGraphicList, m_device, imageInfo, viewInfo, images, 0);
 
-        generalGraphicList.End();
+        m_generalGraphicList.End();
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &generalGraphicList.GetBuffer();
+        submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
 
-        graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        graphicsQueue.WaitForQueueComplete();
+        m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        m_graphicsQueue.WaitForQueueComplete();
     }
 
     inline uint32_t GetUniformBufferOffsetAlignment() const {
-        return device.GetUniformBufferOffsetAlignment();
+        return m_device.GetUniformBufferOffsetAlignment();
     }
 
-    MVulkanCommandQueue GetCommandQueue(MQueueType type);
-    MGraphicsCommandList GetCommandList(MQueueType type);
-    MGraphicsCommandList GetGraphicsList(int i);
+    MVulkanCommandQueue& GetCommandQueue(MQueueType type);
+    MGraphicsCommandList& GetCommandList(MQueueType type);
+    MGraphicsCommandList& GetGraphicsList(int i);
 
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
 
-    inline VkExtent2D GetSwapchainImageExtent()const { return swapChain.GetSwapChainExtent(); }
-    inline VkFormat GetSwapchainImageFormat()const { return swapChain.GetSwapChainImageFormat(); }
-    inline uint32_t GetSwapchainImageCount()const { return swapChain.GetImageCount(); }
+    inline VkExtent2D GetSwapchainImageExtent()const { return m_swapChain.GetSwapChainExtent(); }
+    inline VkFormat GetSwapchainImageFormat()const { return m_swapChain.GetSwapChainImageFormat(); }
+    inline uint32_t GetSwapchainImageCount()const { return m_swapChain.GetImageCount(); }
 
     bool WindowShouldClose() const;
     void PollWindowEvents();
 
     VkResult AcquireNextSwapchainImage(uint32_t& imageIndex, uint32_t currentFrame);
 
-    inline MVulkanFence GetInFlightFence(uint32_t index) const { return inFlightFences[index]; }
-    inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return imageAvailableSemaphores[index]; }
-    inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return finalRenderFinishedSemaphores[index]; }
+    inline MVulkanFence GetInFlightFence(uint32_t index) const { return m_inFlightFences[index]; }
+    inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return m_imageAvailableSemaphores[index]; }
+    inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return m_finalRenderFinishedSemaphores[index]; }
 
     void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
 
@@ -150,6 +149,7 @@ public:
     MVulkanTexture GetPlaceHolderTexture();
 
 private: 
+    void Clean();
     void initVulkan();
 
     void createInstance();
@@ -192,37 +192,35 @@ private:
 
     void createPlaceHolderTexture();
 private:
-    uint16_t windowWidth = 800, windowHeight = 600;
+    uint16_t m_windowWidth = 800, m_windowHeight = 600;
 
-    MWindow* window = nullptr;
+    MWindow*                m_window = nullptr;
+    bool                    m_enableValidationLayer;
+    MVulkanInstance         m_instance;
+    MVulkanDevice           m_device;
+    MVulkanSwapchain        m_swapChain;
 
-    bool enableValidationLayer;
-    
-    MVulkanInstance instance;
-    MVulkanDevice device;
-    MVulkanSwapchain swapChain;
+    MVulkanDescriptorSetAllocator m_allocator;
 
-    MVulkanDescriptorSetAllocator allocator;
+    VkSurfaceKHR            m_surface;
+    MVulkanCommandQueue     m_graphicsQueue;
+    MVulkanCommandQueue     m_presentQueue;
+    MVulkanCommandQueue     m_transferQueue;
+    MVulkanCommandAllocator m_commandAllocator;
 
-    VkSurfaceKHR surface;
-    MVulkanCommandQueue graphicsQueue;
-    MVulkanCommandQueue presentQueue;
-    MVulkanCommandQueue transferQueue;
-    MVulkanCommandAllocator commandAllocator;
+    std::vector<MGraphicsCommandList> m_graphicsLists;
+    MGraphicsCommandList    m_generalGraphicList;
+    MGraphicsCommandList    m_presentList;
+    MGraphicsCommandList    m_transferList;
 
-    std::vector<MGraphicsCommandList> graphicsLists;
-    MGraphicsCommandList generalGraphicList;
-    MGraphicsCommandList presentList;
-    MGraphicsCommandList transferList;
-
-    std::vector<MVulkanSemaphore> imageAvailableSemaphores;
-    std::vector<MVulkanSemaphore> finalRenderFinishedSemaphores;
-    std::vector<MVulkanFence> inFlightFences;
+    std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
+    std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;
+    std::vector<MVulkanFence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
-    std::shared_ptr<Camera> camera;
+    std::shared_ptr<Camera> m_camera;
 
-    MVulkanTexture placeHolderTexture;
+    MVulkanTexture m_placeHolderTexture;
 };
 
 

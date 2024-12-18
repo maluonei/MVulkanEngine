@@ -28,8 +28,6 @@ static size_t VertexSize[] = {
 };
 
 struct Mesh {
-    //glm::mat4 transform;
-    //MVulkanDescriptorSet descriptorSet;
     uint32_t matId;
 
     std::vector<Vertex> vertices;
@@ -94,19 +92,19 @@ private:
 
     BoundingBox m_bbx;
 
-    std::vector<Vertex> m_totalVertexs;
-    std::vector<uint32_t> m_totalIndeices;
+    std::vector<Vertex>     m_totalVertexs;
+    std::vector<uint32_t>   m_totalIndeices;
     std::shared_ptr<Buffer> m_indirectBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectVertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectIndexBuffer = nullptr;
     std::vector<VkDrawIndexedIndirectCommand> m_indirectCommands;
 
-    std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshMap;
-    std::unordered_map<std::string, std::shared_ptr<Buffer>> m_vertexBufferMap;
-    std::unordered_map<std::string, std::shared_ptr<Buffer>> m_indexBufferMap;
-    std::vector<std::shared_ptr<PhongMaterial>> m_materials;
+    std::unordered_map<std::string, std::shared_ptr<Mesh>>      m_meshMap;
+    std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_vertexBufferMap;
+    std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_indexBufferMap;
+    std::vector<std::shared_ptr<PhongMaterial>>                 m_materials;
 
-    std::unordered_map<std::string, std::shared_ptr<Light>> m_lightMap;
+    std::unordered_map<std::string, std::shared_ptr<Light>>     m_lightMap;
 };
 
 #endif

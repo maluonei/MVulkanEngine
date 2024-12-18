@@ -62,8 +62,8 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
 
     for (const auto& device : devices) {
         if (isDeviceSuitable(device, surface)) {
-            physicalDevice = device;
-            maxSmaaFlag = getMaxUsableSampleCount();
+            m_physicalDevice = device;
+            m_maxSmaaFlag = getMaxUsableSampleCount();
             
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -72,7 +72,7 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
 
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
             spdlog::info("Vulkan API Version:{0}.{1}.{2}", VK_VERSION_MAJOR(deviceProperties.apiVersion), VK_VERSION_MINOR(deviceProperties.apiVersion), VK_VERSION_PATCH(deviceProperties.apiVersion));
-            spdlog::info("maxSmaaFlag:{0}", int(maxSmaaFlag));
+            spdlog::info("maxSmaaFlag:{0}", int(m_maxSmaaFlag));
             spdlog::info("VkPhysicalDeviceLimits.maxDrawIndirectCount:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndirectCount));
             spdlog::info("VkPhysicalDeviceLimits.maxDrawIndexedIndexValue:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndexedIndexValue));
             spdlog::info("Max descriptor set sampled images:{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
@@ -83,7 +83,7 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
         }
     }
 
-    if (physicalDevice == VK_NULL_HANDLE) {
+    if (m_physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("failed to find a suitable GPU!");
     }
 }
@@ -118,18 +118,18 @@ QueueFamilyIndices MVulkanDevice::QueryQueueFamilyIndices(VkPhysicalDevice devic
 
 void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surface)
 {
-    indices = QueryQueueFamilyIndices(physicalDevice, surface);
+    m_indices = QueryQueueFamilyIndices(m_physicalDevice, surface);
 
     VkDeviceQueueCreateInfo queueCreateInfo{};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+    queueCreateInfo.queueFamilyIndex = m_indices.graphicsFamily.value();
     queueCreateInfo.queueCount = 1;
 
     float queuePriority = 1.0f;
     queueCreateInfo.pQueuePriorities = &queuePriority;
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos(3, queueCreateInfo);
-    queueCreateInfos[1].queueFamilyIndex = indices.computeFamily.value();
-    queueCreateInfos[2].queueFamilyIndex = indices.transferFamily.value();
+    queueCreateInfos[1].queueFamilyIndex = m_indices.computeFamily.value();
+    queueCreateInfos[2].queueFamilyIndex = m_indices.transferFamily.value();
 
     //VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
     //descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
@@ -172,14 +172,14 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice) != VK_SUCCESS) {
+    if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
 
-    vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
-    vkGetDeviceQueue(logicalDevice, indices.computeFamily.value(), 0, &computeQueue);
-    vkGetDeviceQueue(logicalDevice, indices.transferFamily.value(), 0, &transferQueue);
-    vkGetDeviceQueue(logicalDevice, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(m_logicalDevice, m_indices.graphicsFamily.value(), 0, &m_graphicsQueue);
+    vkGetDeviceQueue(m_logicalDevice, m_indices.computeFamily.value(), 0, &m_computeQueue);
+    vkGetDeviceQueue(m_logicalDevice, m_indices.transferFamily.value(), 0, &m_transferQueue);
+    vkGetDeviceQueue(m_logicalDevice, m_indices.presentFamily.value(), 0, &m_presentQueue);
 }
 
 std::vector<VkQueueFamilyProperties> MVulkanDevice::GetQueueFamilyProperties(VkPhysicalDevice device)
@@ -238,14 +238,14 @@ VkFormat MVulkanDevice::FindDepthFormat()
 
 void MVulkanDevice::WaitIdle()
 {
-    vkDeviceWaitIdle(logicalDevice);
+    vkDeviceWaitIdle(m_logicalDevice);
 }
 
 VkFormat MVulkanDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
     for (VkFormat format : candidates) {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+        vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
 
         if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
             return format;
@@ -261,7 +261,7 @@ VkFormat MVulkanDevice::findSupportedFormat(const std::vector<VkFormat>& candida
 VkSampleCountFlagBits MVulkanDevice::getMaxUsableSampleCount()
 {
     VkPhysicalDeviceProperties physicalDeviceProperties;
-    vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+    vkGetPhysicalDeviceProperties(m_physicalDevice, &physicalDeviceProperties);
 
     VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
     if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
@@ -287,15 +287,15 @@ void MVulkanDevice::Create(VkInstance instance, VkSurfaceKHR surface)
 
 void MVulkanDevice::Clean()
 {
-    vkDestroyDevice(logicalDevice, nullptr);
+    vkDestroyDevice(m_logicalDevice, nullptr);
 }
 
 uint32_t MVulkanDevice::GetQueueFamilyIndices(QueueType type) {
     switch (type) {
-    case GRAPHICS_QUEUE: return indices.graphicsFamily.value();
-    case COMPUTE_QUEUE: return indices.computeFamily.value();
-    case TRANSFER_QUEUE: return indices.transferFamily.value();
-    case PRESENT_QUEUE:return indices.presentFamily.value();
+    case GRAPHICS_QUEUE: return m_indices.graphicsFamily.value();
+    case COMPUTE_QUEUE: return m_indices.computeFamily.value();
+    case TRANSFER_QUEUE: return m_indices.transferFamily.value();
+    case PRESENT_QUEUE:return m_indices.presentFamily.value();
     default:return -1;
     }
 }
@@ -303,18 +303,18 @@ uint32_t MVulkanDevice::GetQueueFamilyIndices(QueueType type) {
 VkQueue MVulkanDevice::GetQueue(QueueType type)
 {
     switch (type) {
-    case GRAPHICS_QUEUE: return graphicsQueue;
-    case COMPUTE_QUEUE: return computeQueue;
-    case TRANSFER_QUEUE: return transferQueue;
-    case PRESENT_QUEUE: return presentQueue;
-    default: return graphicsQueue;
+    case GRAPHICS_QUEUE: return m_graphicsQueue;
+    case COMPUTE_QUEUE: return m_computeQueue;
+    case TRANSFER_QUEUE: return m_transferQueue;
+    case PRESENT_QUEUE: return m_presentQueue;
+    default: return m_graphicsQueue;
     }
 }
 
 uint32_t MVulkanDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {

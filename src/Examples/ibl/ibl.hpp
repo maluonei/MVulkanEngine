@@ -24,6 +24,7 @@ public:
 	virtual void CreateRenderPass();
 
 	virtual void PreComputes();
+	virtual void Clean();
 private:
 	void preComputeIrradianceCubemap();
 	void preFilterEnvmaps();
@@ -36,25 +37,25 @@ private:
 	void createCamera();
 	void createSamplers();
 private:
-	std::shared_ptr<RenderPass> irradianceConvolutionPass;
-	std::vector<std::shared_ptr<RenderPass>> prefilterEnvmapPasses;
-	std::shared_ptr<RenderPass> brdfLUTPass;
+	std::shared_ptr<RenderPass>					m_irradianceConvolutionPass;
+	std::vector<std::shared_ptr<RenderPass>>	m_prefilterEnvmapPasses;
+	std::shared_ptr<RenderPass>					m_brdfLUTPass;
 
-	std::shared_ptr<RenderPass> gbufferPass;
-	std::shared_ptr<RenderPass> lightingPass;
-	std::shared_ptr<RenderPass> skyboxPass;
+	std::shared_ptr<RenderPass> m_gbufferPass;
+	std::shared_ptr<RenderPass> m_lightingPass;
+	std::shared_ptr<RenderPass> m_skyboxPass;
 
-	MVulkanSampler linearSampler;
+	MVulkanSampler				m_linearSampler;
 
-	MVulkanTexture skyboxTexture;
-	MVulkanTexture irradianceTexture;
-	MVulkanTexture preFilteredEnvTexture;
+	MVulkanTexture				m_skyboxTexture;
+	MVulkanTexture				m_irradianceTexture;
+	MVulkanTexture				m_preFilteredEnvTexture;
 
-	std::shared_ptr<Scene> cube;
-	std::shared_ptr<Scene> sphere;
-	std::shared_ptr<Scene> squad;
+	std::shared_ptr<Scene>		m_cube;
+	std::shared_ptr<Scene>		m_sphere;
+	std::shared_ptr<Scene>		m_squad;
 
-	std::shared_ptr<Camera> camera;
+	std::shared_ptr<Camera>		m_camera;
 };
 
 #endif

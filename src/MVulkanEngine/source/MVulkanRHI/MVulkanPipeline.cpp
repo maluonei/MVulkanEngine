@@ -10,14 +10,17 @@ void MVulkanPipeline::Create()
 {
 }
 
-void MVulkanPipeline::Clean(VkDevice device)
+void MVulkanPipeline::Clean()
 {
-    vkDestroyPipeline(device, pipeline, nullptr);
+    vkDestroyPipeline(m_device, m_pipeline, nullptr);
 }
 
-void MVulkanGraphicsPipeline::Create(MVulkanDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
     PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments)
 {
+    m_device = device;
+    m_info = info;
+
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -122,7 +125,7 @@ void MVulkanGraphicsPipeline::Create(MVulkanDevice device, MVulkanPilelineCreate
     pipelineLayoutInfo.pSetLayouts = &layout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    if (vkCreatePipelineLayout(device.GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -138,12 +141,12 @@ void MVulkanGraphicsPipeline::Create(MVulkanDevice device, MVulkanPilelineCreate
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = m_pipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(device.GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 }

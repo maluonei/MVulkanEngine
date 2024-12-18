@@ -38,12 +38,12 @@ void MRenderApplication::renderLoop()
 void MRenderApplication::drawFrame()
 {
     //spdlog::info("currentFrame:{0}", currentFrame);
-    auto fence = Singleton<MVulkanEngine>::instance().GetInFlightFence(currentFrame);
+    auto fence = Singleton<MVulkanEngine>::instance().GetInFlightFence(m_currentFrame);
 
-    fence.WaitForSignal(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    fence.WaitForSignal();
 
     uint32_t imageIndex;
-    VkResult result = Singleton<MVulkanEngine>::instance().AcquireNextSwapchainImage(imageIndex, currentFrame);
+    VkResult result = Singleton<MVulkanEngine>::instance().AcquireNextSwapchainImage(imageIndex, m_currentFrame);
     //spdlog::info("imageIndex:{0}", imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         RecreateSwapchainAndRenderPasses();
@@ -53,9 +53,9 @@ void MRenderApplication::drawFrame()
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    fence.Reset(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    fence.Reset();
 
-    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(currentFrame);
+    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
     auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
 
     graphicsList.Reset();
@@ -69,7 +69,7 @@ void MRenderApplication::drawFrame()
         this->RecreateSwapchainAndRenderPasses();
         };
 
-    Singleton<MVulkanEngine>::instance().SubmitCommandsAndPresent(imageIndex, currentFrame, recreateSwapchain);
+    Singleton<MVulkanEngine>::instance().SubmitCommandsAndPresent(imageIndex, m_currentFrame, recreateSwapchain);
 
-    currentFrame = (currentFrame + 1) % Singleton<GlobalConfig>::instance().GetMaxFramesInFlight();
+    m_currentFrame = (m_currentFrame + 1) % Singleton<GlobalConfig>::instance().GetMaxFramesInFlight();
 }

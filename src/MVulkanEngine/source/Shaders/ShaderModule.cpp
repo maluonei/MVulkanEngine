@@ -8,14 +8,14 @@ ShaderModule::ShaderModule(const std::string& vertPath, const std::string& fragP
 
 void ShaderModule::Create(VkDevice device)
 {
-	vertShader.Create(device);
-	fragShader.Create(device);
+	m_vertShader.Create(device);
+	m_fragShader.Create(device);
 }
 
-void ShaderModule::Clean(VkDevice device)
+void ShaderModule::Clean()
 {
-	vertShader.Clean(device);
-	fragShader.Clean(device);
+	m_vertShader.Clean();
+	m_fragShader.Clean();
 }
 
 size_t ShaderModule::GetBufferSizeBinding(uint32_t binding) const
@@ -35,8 +35,8 @@ void* ShaderModule::GetData(uint32_t binding, uint32_t index)
 
 void ShaderModule::load()
 {
-	vertShader = MVulkanShader(m_vertPath, ShaderStageFlagBits::VERTEX);
-	fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT);
+	m_vertShader = MVulkanShader(m_vertPath, ShaderStageFlagBits::VERTEX);
+	m_fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT);
 }
 
 

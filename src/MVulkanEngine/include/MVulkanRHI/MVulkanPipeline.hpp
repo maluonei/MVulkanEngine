@@ -21,19 +21,21 @@ public:
 	MVulkanPipeline();
 
 	void Create();
-	void Clean(VkDevice device);
-	inline VkPipeline Get() const { return pipeline; }
-	inline VkPipelineLayout GetLayout() const { return pipelineLayout; }
+	void Clean();
+	inline VkPipeline Get() const { return m_pipeline; }
+	inline VkPipelineLayout GetLayout() const { return m_pipelineLayout; }
 protected:
-	VkPipeline pipeline;
-	VkPipelineLayout pipelineLayout;
+	VkDevice					m_device;
+	VkPipeline					m_pipeline;
+	VkPipelineLayout			m_pipelineLayout;
+	MVulkanPilelineCreateInfo	m_info;
 };
 
 
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
-	void Create(MVulkanDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+	void Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
 		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments);
 
 private:

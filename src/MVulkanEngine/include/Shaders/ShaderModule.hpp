@@ -12,10 +12,10 @@ class ShaderModule {
 public:
 	ShaderModule(const std::string& vertPath, const std::string& fragPath);
 	void Create(VkDevice device);
-	void Clean(VkDevice device);
+	void Clean();
 
-	inline MVulkanShader GetVertexShader() const{return vertShader;}
-	inline MVulkanShader GetFragmentShader() const{return fragShader;}
+	inline MVulkanShader GetVertexShader() const{return m_vertShader;}
+	inline MVulkanShader GetFragmentShader() const{return m_fragShader;}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t index, void* data);
@@ -26,11 +26,11 @@ protected:
 private:
 	void load();
 
-	MVulkanShader vertShader;
-	MVulkanShader fragShader;
+	MVulkanShader	m_vertShader;
+	MVulkanShader	m_fragShader;
 
-	std::string m_vertPath;
-	std::string m_fragPath;
+	std::string		m_vertPath;
+	std::string		m_fragPath;
 
 };
 

@@ -6,26 +6,29 @@
 
 class MVulkanFence {
 public:
-
+	MVulkanFence() = default;
+	~MVulkanFence();
 	void Create(VkDevice device);
-	void Clean(VkDevice device);
-	void WaitForSignal(VkDevice device);
-	void Reset(VkDevice device);
-	inline VkFence GetFence() const {return fence;}
+	void Clean();
+	void WaitForSignal();
+	void Reset();
+	inline VkFence GetFence() const {return m_fence;}
 
 private:
-	VkFence fence;
+	VkDevice	m_device;
+	VkFence		m_fence;
 };
 
 class MVulkanSemaphore {
 public:
 
 	void Create(VkDevice device);
-	void Clean(VkDevice device);
-	inline VkSemaphore GetSemaphore() const {return semaphore;}
+	void Clean();
+	inline VkSemaphore GetSemaphore() const {return m_semaphore;}
 
 private:
-	VkSemaphore semaphore;
+	VkDevice	m_device;
+	VkSemaphore m_semaphore;
 };
 
 #endif

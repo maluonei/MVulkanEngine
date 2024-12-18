@@ -1,34 +1,8 @@
 #include "MVulkanRHI/MVulkanAttachmentBuffer.hpp"
 
-//void MVulkanDepthBuffer::Create(MVulkanDevice device, VkExtent2D extent, VkFormat depthFormat)
-//{
-//	//createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-//	//depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-//
-//	ImageCreateInfo imageInfo{};
-//	imageInfo.width = extent.width;
-//	imageInfo.height = extent.height;
-//	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-//	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-//	imageInfo.format = depthFormat;
-//	imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-//	depthImage.CreateImage(device, imageInfo);
-//
-//	ImageViewCreateInfo viewInfo{};
-//	viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
-//	viewInfo.format = depthFormat;
-//	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-//	depthImage.CreateImageView(device, viewInfo);
-//}
-//
-//void MVulkanDepthBuffer::Clean(VkDevice device)
-//{
-//	depthImage.Clean(device);
-//}
-
 void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format)
 {
-	attachmentType = type;
+	m_attachmentType = type;
 
 	ImageCreateInfo imageInfo{};
 	imageInfo.width = extent.width;
@@ -45,7 +19,7 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 	viewInfo.format = format;
 	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 
-	switch (attachmentType) {
+	switch (m_attachmentType) {
 	case COLOR_ATTACHMENT:
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -69,11 +43,16 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 		break;
 	}
 
-	image.CreateImage(device, imageInfo);
-	image.CreateImageView(device, viewInfo);
+	m_image.CreateImage(device, imageInfo);
+	m_image.CreateImageView(viewInfo);
+
+	isActive = true;
 }
 
-void MVulkanAttachmentBuffer::Clean(VkDevice device)
+void MVulkanAttachmentBuffer::Clean()
 {
-	image.Clean(device);
+	if(isActive)
+		m_image.Clean();
+
+	isActive = false;
 }

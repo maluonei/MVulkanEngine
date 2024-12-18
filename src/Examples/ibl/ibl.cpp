@@ -45,23 +45,23 @@ void IBL::SetUp()
 
 void IBL::UpdatePerFrame(uint32_t imageIndex)
 {
-    //prepare gbufferPass ubo
+    //prepare m_gbufferPass ubo
     {
         GbufferShader::UniformBufferObject0 ubo0{};
         ubo0.Model = glm::mat4(1.f);
-        ubo0.View = camera->GetViewMatrix();
-        ubo0.Projection = camera->GetProjMatrix();
-        gbufferPass->GetShader()->SetUBO(0, &ubo0);
+        ubo0.View = m_camera->GetViewMatrix();
+        ubo0.Projection = m_camera->GetProjMatrix();
+        m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         GbufferShader::UniformBufferObject1 ubo1[256];
 
-        auto meshNames = sphere->GetMeshNames();
-        auto drawIndexedIndirectCommands = sphere->GetIndirectDrawCommands();
+        auto meshNames = m_sphere->GetMeshNames();
+        auto drawIndexedIndirectCommands = m_sphere->GetIndirectDrawCommands();
 
         for (auto i = 0; i < meshNames.size(); i++) {
             auto name = meshNames[i];
-            auto mesh = sphere->GetMesh(name);
-            auto mat = sphere->GetMaterial(mesh->matId);
+            auto mesh = m_sphere->GetMesh(name);
+            auto mat = m_sphere->GetMaterial(mesh->matId);
             auto indirectCommand = drawIndexedIndirectCommands[i];
             if (mat->diffuseTexture != "") {
                 auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
@@ -86,60 +86,60 @@ void IBL::UpdatePerFrame(uint32_t imageIndex)
                 ubo1[indirectCommand.firstInstance].matId = 0;
             }
         }
-        gbufferPass->GetShader()->SetUBO(1, &ubo1);
+        m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
-    //prepare lightingPass ubo
+    //prepare m_lightingPass ubo
     {
         LightingIBLShader::UniformBuffer0 ubo0{};
         ubo0.lightNum = 0;
-        ubo0.cameraPos = camera->GetPosition();
+        ubo0.cameraPos = m_camera->GetPosition();
         ubo0.ResolusionWidth = 0;
         ubo0.ResolusionHeight = 0;
 
-        lightingPass->GetShader()->SetUBO(0, &ubo0);
+        m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
     {
         SkyboxShader::UniformBuffer0 ubo0{};
-        ubo0.View = camera->GetViewMatrix();
-        ubo0.Projection = camera->GetProjMatrix();
+        ubo0.View = m_camera->GetViewMatrix();
+        ubo0.Projection = m_camera->GetProjMatrix();
 
-        skyboxPass->GetShader()->SetUBO(0, &ubo0);
+        m_skyboxPass->GetShader()->SetUBO(0, &ubo0);
     }
 
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, gbufferPass, currentFrame, sphere->GetIndirectVertexBuffer(), sphere->GetIndirectIndexBuffer(), sphere->GetIndirectBuffer(), sphere->GetIndirectDrawCommands().size());
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, lightingPass, currentFrame, squad->GetIndirectVertexBuffer(), squad->GetIndirectIndexBuffer(), squad->GetIndirectBuffer(), squad->GetIndirectDrawCommands().size());
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, skyboxPass, currentFrame, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_skyboxPass, m_currentFrame, m_cube->GetIndirectVertexBuffer(), m_cube->GetIndirectIndexBuffer(), m_cube->GetIndirectBuffer(), m_cube->GetIndirectDrawCommands().size());
 }
 
 void IBL::RecreateSwapchainAndRenderPasses()
 {
     if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(gbufferPass);
+        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
 
-        lightingPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(lightingPass);
+        m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
 
-        skyboxPass->GetRenderPassCreateInfo().depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(skyboxPass);
+        m_skyboxPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_skyboxPass);
 
         std::vector<std::vector<VkImageView>> gbufferViews(7);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
-            gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+            gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
         gbufferViews[4] = std::vector<VkImageView>(1);
-        gbufferViews[4][0] = irradianceTexture.GetImageView();
+        gbufferViews[4][0] = m_irradianceTexture.GetImageView();
         gbufferViews[5] = std::vector<VkImageView>(1);
-        gbufferViews[5][0] = preFilteredEnvTexture.GetImageView();
+        gbufferViews[5][0] = m_preFilteredEnvTexture.GetImageView();
         gbufferViews[6] = std::vector<VkImageView>(1);
-        gbufferViews[6][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
+        gbufferViews[6][0] = m_brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = linearSampler.GetSampler();
+        samplers[0] = m_linearSampler.GetSampler();
 
-        lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
+        m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
     }
 }
 
@@ -168,20 +168,20 @@ void IBL::CreateRenderPass()
         irradianceConvolusionPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
         irradianceConvolusionPassInfo.depthView = nullptr;
 
-        irradianceConvolutionPass = std::make_shared<RenderPass>(device, irradianceConvolusionPassInfo);
+        m_irradianceConvolutionPass = std::make_shared<RenderPass>(device, irradianceConvolusionPassInfo);
 
         std::shared_ptr<ShaderModule> irradianceConvolusionShader = std::make_shared<IrradianceConvolutionShader>();
         std::vector<std::vector<VkImageView>> irradianceConvolusionPassViews(1);
         irradianceConvolusionPassViews[0] = std::vector<VkImageView>(1);
-        irradianceConvolusionPassViews[0][0] = skyboxTexture.GetImageView();
+        irradianceConvolusionPassViews[0][0] = m_skyboxTexture.GetImageView();
 
-        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
-        Singleton<MVulkanEngine>::instance().CreateRenderPass(irradianceConvolutionPass, irradianceConvolusionShader, irradianceConvolusionPassViews, samplers);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(m_irradianceConvolutionPass, irradianceConvolusionShader, irradianceConvolusionPassViews, samplers);
     }
 
     {
-        prefilterEnvmapPasses.resize(5);
+        m_prefilterEnvmapPasses.resize(5);
         for (auto mipLevel = 0; mipLevel < 5; mipLevel++) {
             RenderPassCreateInfo prefilterEnvmapPassInfo{};
             std::vector<VkFormat> prefilterEnvmapPassFormats(0);
@@ -206,23 +206,23 @@ void IBL::CreateRenderPass()
             prefilterEnvmapPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
             prefilterEnvmapPassInfo.depthView = nullptr;
 
-            prefilterEnvmapPasses[mipLevel] = std::make_shared<RenderPass>(device, prefilterEnvmapPassInfo);
+            m_prefilterEnvmapPasses[mipLevel] = std::make_shared<RenderPass>(device, prefilterEnvmapPassInfo);
 
             std::shared_ptr<ShaderModule> prefilterEnvmapShader;
             if (mipLevel == 0) {
                 prefilterEnvmapShader = std::make_shared<PreFilterEnvmapShader>();
             }
             else {
-                prefilterEnvmapShader = prefilterEnvmapPasses[0]->GetShader();
+                prefilterEnvmapShader = m_prefilterEnvmapPasses[0]->GetShader();
             }
             std::vector<std::vector<VkImageView>> prefilterEnvmapPassViews(1);
             prefilterEnvmapPassViews[0] = std::vector<VkImageView>(1);
-            prefilterEnvmapPassViews[0][0] = skyboxTexture.GetImageView();
+            prefilterEnvmapPassViews[0][0] = m_skyboxTexture.GetImageView();
 
-            std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+            std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
             Singleton<MVulkanEngine>::instance().CreateRenderPass(
-                prefilterEnvmapPasses[mipLevel], prefilterEnvmapShader, prefilterEnvmapPassViews, samplers);
+                m_prefilterEnvmapPasses[mipLevel], prefilterEnvmapShader, prefilterEnvmapPassViews, samplers);
         }
     }
 
@@ -248,7 +248,7 @@ void IBL::CreateRenderPass()
         brdfLUTPassInfo.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
         brdfLUTPassInfo.depthView = nullptr;
 
-        brdfLUTPass = std::make_shared<RenderPass>(device, brdfLUTPassInfo);
+        m_brdfLUTPass = std::make_shared<RenderPass>(device, brdfLUTPassInfo);
 
         std::shared_ptr<ShaderModule> brdfLUTShader = std::make_shared<IBLBrdfShader>();
         std::vector<std::vector<VkImageView>> brdfLUTPassViews(0);
@@ -256,7 +256,7 @@ void IBL::CreateRenderPass()
         std::vector<VkSampler> samplers(0);
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            brdfLUTPass, brdfLUTShader, brdfLUTPassViews, samplers);
+            m_brdfLUTPass, brdfLUTShader, brdfLUTPassViews, samplers);
     }
 
     {
@@ -283,7 +283,7 @@ void IBL::CreateRenderPass()
         info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
         info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
-        gbufferPass = std::make_shared<RenderPass>(device, info);
+        m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
         std::vector<std::vector<VkImageView>> bufferTextureViews(1);
@@ -302,10 +302,10 @@ void IBL::CreateRenderPass()
             }
         }
 
-        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            gbufferPass, gbufferShader, bufferTextureViews, samplers);
+            m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
     }
 
     {
@@ -326,28 +326,28 @@ void IBL::CreateRenderPass()
         info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
         //info.reuseDepthView = true;
-        info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
-        lightingPass = std::make_shared<RenderPass>(device, info);
+        m_lightingPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingIBLShader>();
         std::vector<std::vector<VkImageView>> gbufferViews(7);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
-            gbufferViews[i][0] = gbufferPass->GetFrameBuffer(0).GetImageView(i);
+            gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
         gbufferViews[4] = std::vector<VkImageView>(1);
-        gbufferViews[4][0] = irradianceTexture.GetImageView();
+        gbufferViews[4][0] = m_irradianceTexture.GetImageView();
         gbufferViews[5] = std::vector<VkImageView>(1);
-        gbufferViews[5][0] = preFilteredEnvTexture.GetImageView();
+        gbufferViews[5][0] = m_preFilteredEnvTexture.GetImageView();
         gbufferViews[6] = std::vector<VkImageView>(1);
-        gbufferViews[6][0] = brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
+        gbufferViews[6][0] = m_brdfLUTPass->GetFrameBuffer(0).GetImageView(0);
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = linearSampler.GetSampler();
+        samplers[0] = m_linearSampler.GetSampler();
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            lightingPass, lightingShader, gbufferViews, samplers);
+            m_lightingPass, lightingShader, gbufferViews, samplers);
     }
 
     {
@@ -371,19 +371,19 @@ void IBL::CreateRenderPass()
         info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
         info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
         info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-        info.depthView = gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
-        skyboxPass = std::make_shared<RenderPass>(device, info);
+        m_skyboxPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> skyboxShader = std::make_shared<SkyboxShader>();
         std::vector<std::vector<VkImageView>> skyboxPassViews(1);
         skyboxPassViews[0] = std::vector<VkImageView>(1);
-        skyboxPassViews[0][0] = skyboxTexture.GetImageView();
+        skyboxPassViews[0][0] = m_skyboxTexture.GetImageView();
 
-        std::vector<VkSampler> samplers(1, linearSampler.GetSampler());
+        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            skyboxPass, skyboxShader, skyboxPassViews, samplers);
+            m_skyboxPass, skyboxShader, skyboxPassViews, samplers);
     }
 }
 
@@ -394,27 +394,44 @@ void IBL::PreComputes()
     preComputeLUT();
 }
 
+void IBL::Clean()
+{
+    m_irradianceConvolutionPass->Clean();
+    for (auto pass : m_prefilterEnvmapPasses) {
+        pass->Clean();
+    }
+    m_brdfLUTPass->Clean();
+
+    m_gbufferPass->Clean();
+    m_lightingPass->Clean();
+    m_skyboxPass->Clean();
+
+    m_linearSampler.Clean();
+    m_skyboxTexture.Clean();
+    m_irradianceTexture.Clean();
+    m_preFilteredEnvTexture.Clean();
+}
 
 void IBL::loadScene()
 { 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
 
-    cube = std::make_shared<Scene>();
+    m_cube = std::make_shared<Scene>();
     fs::path cubePath = resourcePath / "cube.obj";
-    Singleton<SceneLoader>::instance().Load(cubePath.string(), cube.get());
+    Singleton<SceneLoader>::instance().Load(cubePath.string(), m_cube.get());
 
-    sphere = std::make_shared<Scene>();
+    m_sphere = std::make_shared<Scene>();
     fs::path spherePath = resourcePath / "sphere.obj";
-    Singleton<SceneLoader>::instance().Load(spherePath.string(), sphere.get());
+    Singleton<SceneLoader>::instance().Load(spherePath.string(), m_sphere.get());
 
-    squad = std::make_shared<Scene>();
+    m_squad = std::make_shared<Scene>();
     fs::path squadPath = resourcePath / "squad.obj";
-    Singleton<SceneLoader>::instance().Load(squadPath.string(), squad.get());
+    Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
 
-    squad->GenerateIndirectDataAndBuffers();
-    cube->GenerateIndirectDataAndBuffers();
-    sphere->GenerateIndirectDataAndBuffers();
+    m_squad->GenerateIndirectDataAndBuffers();
+    m_cube->GenerateIndirectDataAndBuffers();
+    m_sphere->GenerateIndirectDataAndBuffers();
 }
 
 void IBL::createCamera()
@@ -428,9 +445,9 @@ void IBL::createCamera()
     float zNear = 0.01f;
     float zFar = 1000.f;
 
-    camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
-    //spdlog::info("create camera");
-    Singleton<MVulkanEngine>::instance().SetCamera(camera);
+    m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    //spdlog::info("create m_camera");
+    Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
 }
 
 void IBL::createSamplers()
@@ -440,7 +457,7 @@ void IBL::createSamplers()
         info.minFilter = VK_FILTER_LINEAR;
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+        m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
 }
 
@@ -464,14 +481,14 @@ void IBL::preComputeIrradianceCubemap()
             ubo0.View = cam->GetViewMatrix();
             ubo0.Projection = cam->GetProjMatrix();
 
-            irradianceConvolutionPass->GetShader()->SetUBO(0, &ubo0);
+            m_irradianceConvolutionPass->GetShader()->SetUBO(0, &ubo0);
         }
 
         generalGraphicList.Reset();
         generalGraphicList.Begin();
 
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, irradianceConvolutionPass, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size(), false);
-        //recordCommandBuffer(0, irradianceConvolutionPass, generalGraphicList, cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size(), false);
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_irradianceConvolutionPass, m_cube->GetIndirectVertexBuffer(), m_cube->GetIndirectIndexBuffer(), m_cube->GetIndirectBuffer(), m_cube->GetIndirectDrawCommands().size(), false);
+        //recordCommandBuffer(0, m_irradianceConvolutionPass, generalGraphicList, m_cube->GetIndirectVertexBuffer(), m_cube->GetIndirectIndexBuffer(), m_cube->GetIndirectBuffer(), m_cube->GetIndirectDrawCommands().size(), false);
 
         MVulkanImageCopyInfo copyInfo{};
         copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -482,7 +499,7 @@ void IBL::preComputeIrradianceCubemap()
         copyInfo.dstArrayLayer = i;
         copyInfo.layerCount = 1;
 
-        generalGraphicList.CopyImage(irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), irradianceTexture.GetImage(), 512, 512, copyInfo);
+        generalGraphicList.CopyImage(m_irradianceConvolutionPass->GetFrameBuffer(0).GetImage(0), m_irradianceTexture.GetImage(), 512, 512, copyInfo);
 
         generalGraphicList.End();
 
@@ -509,7 +526,7 @@ void IBL::preComputeIrradianceCubemap()
         barrier.layerCount = 6;
         barrier.baseMipLevel = 0;
         barrier.levelCount = 1;
-        barrier.image = irradianceTexture.GetImage();
+        barrier.image = m_irradianceTexture.GetImage();
 
         std::vector<MVulkanImageMemoryBarrier> barriers(1, barrier);
         generalGraphicList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
@@ -554,14 +571,14 @@ void IBL::preFilterEnvmaps()
                 PreFilterEnvmapShader::UniformBuffer1 ubo1{};
                 ubo1.roughness = roughness;
 
-                prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(0, &ubo0);
-                prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(1, &ubo1);
+                m_prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(0, &ubo0);
+                m_prefilterEnvmapPasses[mipLevel]->GetShader()->SetUBO(1, &ubo1);
             }
 
             generalGraphicList.Reset();
             generalGraphicList.Begin();
 
-            Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, prefilterEnvmapPasses[mipLevel], cube->GetIndirectVertexBuffer(), cube->GetIndirectIndexBuffer(), cube->GetIndirectBuffer(), cube->GetIndirectDrawCommands().size(), false);
+            Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_prefilterEnvmapPasses[mipLevel], m_cube->GetIndirectVertexBuffer(), m_cube->GetIndirectIndexBuffer(), m_cube->GetIndirectBuffer(), m_cube->GetIndirectDrawCommands().size(), false);
 
             MVulkanImageCopyInfo copyInfo{};
             copyInfo.srcAspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -572,7 +589,7 @@ void IBL::preFilterEnvmaps()
             copyInfo.dstArrayLayer = i;
             copyInfo.layerCount = 1;
 
-            generalGraphicList.CopyImage(prefilterEnvmapPasses[mipLevel]->GetFrameBuffer(0).GetImage(0), preFilteredEnvTexture.GetImage(), mipWidth, mipHeight, copyInfo);
+            generalGraphicList.CopyImage(m_prefilterEnvmapPasses[mipLevel]->GetFrameBuffer(0).GetImage(0), m_preFilteredEnvTexture.GetImage(), mipWidth, mipHeight, copyInfo);
 
             generalGraphicList.End();
 
@@ -600,7 +617,7 @@ void IBL::preFilterEnvmaps()
         barrier.layerCount = 6;
         barrier.baseMipLevel = 0;
         barrier.levelCount = 5;
-        barrier.image = preFilteredEnvTexture.GetImage();
+        barrier.image = m_preFilteredEnvTexture.GetImage();
 
         std::vector<MVulkanImageMemoryBarrier> barriers(1, barrier);
         generalGraphicList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
@@ -626,7 +643,7 @@ void IBL::preComputeLUT()
     generalGraphicList.Reset();
     generalGraphicList.Begin();
 
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, brdfLUTPass, squad->GetIndirectVertexBuffer(), squad->GetIndirectIndexBuffer(), squad->GetIndirectBuffer(), squad->GetIndirectDrawCommands().size(), true);
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_brdfLUTPass, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), true);
 
     generalGraphicList.End();
 
@@ -681,7 +698,7 @@ void IBL::createSkyboxTexture()
     generalGraphicList.Reset();
     generalGraphicList.Begin();
 
-    skyboxTexture.CreateAndLoadData(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, images);
+    m_skyboxTexture.CreateAndLoadData(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, images);
     generalGraphicList.End();
 
     VkSubmitInfo submitInfo{};
@@ -721,7 +738,7 @@ void IBL::createIrradianceCubemapTexture()
         generalGraphicList.Reset();
         generalGraphicList.Begin();
 
-        irradianceTexture.Create(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        m_irradianceTexture.Create(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         generalGraphicList.End();
 
         VkSubmitInfo submitInfo{};
@@ -755,7 +772,7 @@ void IBL::createIrradianceCubemapTexture()
         generalGraphicList.Reset();
         generalGraphicList.Begin();
 
-        preFilteredEnvTexture.Create(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        m_preFilteredEnvTexture.Create(&generalGraphicList, Singleton<MVulkanEngine>::instance().GetDevice(), imageinfo, viewInfo, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         generalGraphicList.End();
 
         VkSubmitInfo submitInfo{};

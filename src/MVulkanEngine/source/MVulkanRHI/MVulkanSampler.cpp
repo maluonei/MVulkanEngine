@@ -4,6 +4,7 @@
 void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
 {
     m_info = info;
+    m_device = device.GetDevice();
 
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -31,7 +32,7 @@ void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
 	vkCreateSampler(device.GetDevice(), &samplerInfo, nullptr, &m_sampler);
 }
 
-void MVulkanSampler::Clean(VkDevice device)
+void MVulkanSampler::Clean()
 {
-    vkDestroySampler(device, m_sampler, nullptr);
+    vkDestroySampler(m_device, m_sampler, nullptr);
 }
