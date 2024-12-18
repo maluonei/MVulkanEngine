@@ -1,12 +1,15 @@
 # MVulkanEngine
 
-##TODO List
+##TODO List  
+1.compute pipeline  
+2.raytracing pipeline  
+3.culling  
+4.gui  
+Current Function:
 
-1.compute pipeline
+pbr:  
+use PCF as soft shadow
+![PBR](images/pbr.png)
 
-2.raytracing pipeline
-
-3.culling
-
-4.gui
-
+ibl:
+![IBL](images/ibl.png)
