@@ -218,7 +218,7 @@ private:
     std::vector<MVulkanFence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
-    std::shared_ptr<Camera> m_camera;
+    std::shared_ptr<Camera> m_camera = nullptr;
 
     MVulkanTexture m_placeHolderTexture;
 };

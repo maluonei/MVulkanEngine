@@ -5,8 +5,8 @@
 2.raytracing pipeline  
 3.culling  
 4.gui  
-Current Function:
 
+Current Function:  
 pbr:  
 use PCF as soft shadow
 ![PBR](images/pbr.png)

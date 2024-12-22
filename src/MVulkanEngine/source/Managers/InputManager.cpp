@@ -10,7 +10,9 @@ void InputManager::DealMouseMoveInput()
 	if (!cursorEnter) {
 		glm::vec2 dMousePos = mousePos - previousPos;
 
-		Singleton<MVulkanEngine>::instance().GetCamera()->Rotate(dMousePos.x, dMousePos.y);
+		if (Singleton<MVulkanEngine>::instance().GetCamera() != nullptr) {
+			Singleton<MVulkanEngine>::instance().GetCamera()->Rotate(dMousePos.x, dMousePos.y);
+		}
 	}
 	previousPos = mousePos;
 }

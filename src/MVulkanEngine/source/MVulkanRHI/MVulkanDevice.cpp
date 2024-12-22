@@ -203,7 +203,23 @@ bool MVulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
     for (const auto& extension : availableExtensions) {
-        //spdlog::info(extension.extensionName);
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+bool MVulkanDevice::checkRayracingExtensionSupport(VkPhysicalDevice device)
+{
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(raytracingExtensions.begin(), raytracingExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
         requiredExtensions.erase(extension.extensionName);
     }
 
@@ -214,6 +230,9 @@ bool MVulkanDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surfa
     QueueFamilyIndices indices = QueryQueueFamilyIndices(device, surface); 
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
+    bool rayTracingSupported = checkRayracingExtensionSupport(device);
+
+    if (rayTracingSupported) m_supportRayTracing = true;
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {

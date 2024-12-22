@@ -292,6 +292,12 @@ void MVulkanEngine::createInstance()
 void MVulkanEngine::createDevice()
 {
     m_device.Create(m_instance.GetInstance(), m_surface);
+    if (m_device.SupportRayTracing()) {
+        spdlog::info("Device support raytracing");
+    }
+    else {
+        spdlog::warn("Device don't support raytracing");
+    }
 }
 
 void MVulkanEngine::createSurface()

@@ -62,6 +62,10 @@ public:
     }
 
     void WaitIdle();
+
+    const inline bool SupportRayTracing() const {
+        return m_supportRayTracing;
+    }
 private:
     VkPhysicalDevice        m_physicalDevice;
     VkDevice                m_logicalDevice;
@@ -74,6 +78,7 @@ private:
     VkQueue                 m_presentQueue;
 
     uint32_t                alignment = 0;
+    bool                    m_supportRayTracing = false;
 
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     void createLogicalDevice(VkInstance instance, VkSurfaceKHR surface);
@@ -83,6 +88,8 @@ private:
     QueueFamilyIndices QueryQueueFamilyIndices(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    bool checkRayracingExtensionSupport(VkPhysicalDevice device);
+
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkSampleCountFlagBits getMaxUsableSampleCount();
