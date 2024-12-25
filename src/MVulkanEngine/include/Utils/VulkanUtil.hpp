@@ -44,6 +44,7 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_MAINTENANCE3_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     VK_KHR_UNIFORM_BUFFER_STANDARD_LAYOUT_EXTENSION_NAME,
+    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
 };
 
 const std::vector<const char*> raytracingExtensions = {
@@ -66,21 +67,12 @@ enum class MVulkanTextureType {
     TEXTURE_2D,
     TEXTURE_CUBEMAP,
 };
-//struct MDescriptorBufferInfo {
-//    VkDescriptorBufferInfo bufferInfo;
-//    uint32_t binding;
-//};
-//
-//struct MDescriptorImageInfo {
-//    VkDescriptorImageInfo imageInfo;
-//    uint32_t binding;
-//};
 
 enum QueueType {
     GRAPHICS_QUEUE,
     COMPUTE_QUEUE,
     TRANSFER_QUEUE,
-    PRESENT_QUEUE
+    PRESENT_QUEUE,
 };
 
 enum BufferType {
@@ -92,6 +84,9 @@ enum BufferType {
     INDIRECT_BUFFER,
     VERTEX_BUFFER,
     INDEX_BUFFER,
+    STORAGE_BUFFER,
+    ACCELERATION_STRUCTURE_STORAGE_BUFFER,
+    ACCELERATION_STRUCTURE_BUILD_INPUT_BUFFER,
     NONE
 };
 
@@ -100,6 +95,10 @@ enum ShaderStageFlagBits {
     FRAGMENT = 0x02,
     GEOMETRY = 0x04,
     COMPUTE = 0x08,
+    RAYGEN = 0X10,
+    MISS = 0X20,
+    CLOESTHIT = 0X40,
+    ANYHIT = 0X80,
 };
 
 enum DescriptorType {
@@ -115,10 +114,17 @@ enum AttachmentType {
 
 inline VkBufferUsageFlagBits BufferType2VkBufferUsageFlagBits(BufferType type) {
     switch (type) {
-    case VERTEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    case INDEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    case INDIRECT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+    case VERTEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+    case INDEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+    case INDIRECT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     case STAGING_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    case STORAGE_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    case CBV: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    case ACCELERATION_STRUCTURE_STORAGE_BUFFER: return VkBufferUsageFlagBits(
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    case ACCELERATION_STRUCTURE_BUILD_INPUT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
     case NONE: spdlog::error("BufferType2VkBufferUsageFlagBits: NONE buffer type is not supported!"); return VkBufferUsageFlagBits(0);
     default: spdlog::error("BufferType2VkBufferUsageFlagBits: unknown buffer type!"); return VkBufferUsageFlagBits(0);
     }
@@ -130,6 +136,10 @@ inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderSta
     case FRAGMENT: return VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
     case GEOMETRY: return VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT;
     case COMPUTE: return VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
+    case RAYGEN: return VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    case MISS: return VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR;
+    case ANYHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+    case CLOESTHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     default: return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
     }
 }
@@ -200,15 +210,15 @@ static std::vector<unsigned int> readFileToUnsignedInt(const std::string& filena
 static std::string readFileToString(const std::string& path) {
     std::ifstream file(path);
 
-    // ¼ì²éÎÄ¼þÊÇ·ñ³É¹¦´ò¿ª
+    // ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ç·ï¿½É¹ï¿½ï¿½ï¿½
     if (!file.is_open()) {
         throw std::runtime_error("fail to open file!");
     }
 
-    // Ê¹ÓÃ std::ostringstream ¶ÁÈ¡ÎÄ¼þÄÚÈÝµ½ string
+    // Ê¹ï¿½ï¿½ std::ostringstream ï¿½ï¿½È¡ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ýµï¿½ string
     std::ostringstream buffer;
-    buffer << file.rdbuf();  // ½«ÎÄ¼þÁ÷ÄÚÈÝ¸´ÖÆµ½»º³åÇø
-    std::string fileContents = buffer.str();  // ×ª»»Îª std::string
+    buffer << file.rdbuf();  // ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    std::string fileContents = buffer.str();  // ×ªï¿½ï¿½Îª std::string
 }
 
 static std::vector<uint32_t> loadSPIRV(const std::string& filename) {

@@ -245,4 +245,30 @@ void MComputeCommandList::BindPipeline(VkPipeline pipeline) {
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
+void MRaytracingCommandList::BindPipeline(VkPipeline pipeline)
+{
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
+}
+
+void MRaytracingCommandList::BuildAccelerationStructure(
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   collectedRangeInfo)
+{
+    static auto vkCmdBuildAccelerationStructuresKHR           = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device, "vkCmdBuildAccelerationStructuresKHR"));
+    vkCmdBuildAccelerationStructuresKHR(m_commandBuffer, collectedBuildInfo.size(), collectedBuildInfo.data(), collectedRangeInfo.data());
+}
+
+//static auto vkGetAccelerationStructureBuildSizesKHR       = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkGetAccelerationStructureBuildSizesKHR"));
+//static auto vkCreateAccelerationStructureKHR              = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkCreateAccelerationStructureKHR"));
+//static auto vkCmdBuildAccelerationStructuresKHR           = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkCmdBuildAccelerationStructuresKHR"));
+//static auto vkDestroyAccelerationStructureKHR             = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkDestroyAccelerationStructureKHR"));
+//static auto vkCmdCopyAccelerationStructureKHR             = reinterpret_cast<PFN_vkCmdCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkCmdCopyAccelerationStructureKHR"));
+//static auto vkCmdWriteAccelerationStructuresPropertiesKHR = reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkCmdWriteAccelerationStructuresPropertiesKHR"));
+//VK_CHECK_NULLPTR(vkGetAccelerationStructureBuildSizesKHR, "RHIBuildRayTracingBLAS: vkGetAccelerationStructureBuildSizesKHR is nullptr", return);
+//VK_CHECK_NULLPTR(vkCreateAccelerationStructureKHR, "RHIBuildRayTracingBLAS: vkCreateAccelerationStructureKHR is nullptr", return);
+//VK_CHECK_NULLPTR(vkCmdBuildAccelerationStructuresKHR, "RHIBuildRayTracingBLAS: vkCmdBuildAccelerationStructuresKHR is nullptr", return);
+//VK_CHECK_NULLPTR(vkDestroyAccelerationStructureKHR, "RHIBuildRayTracingBLAS: vkDestroyAccelerationStructureKHR is nullptr", return);
+//VK_CHECK_NULLPTR(vkCmdCopyAccelerationStructureKHR, "RHIBuildRayTracingBLAS: vkCmdCopyAccelerationStructureKHR is nullptr", return);
+//VK_CHECK_NULLPTR(vkCmdWriteAccelerationStructuresPropertiesKHR, "RHIBuildRayTracingBLAS: vkCmdWriteAccelerationStructuresPropertiesKHR is nullptr", return);
+
 

@@ -1,6 +1,7 @@
 #include "Scene/Scene.hpp"
 #include <spdlog/spdlog.h>
 #include <MVulkanRHI/MVulkanEngine.hpp>
+#include "MVulkanRHI/MVulkanBuffer.hpp"
 
 Scene::~Scene() {
 
@@ -8,6 +9,15 @@ Scene::~Scene() {
 
 void Scene::Clean()
 {
+    for(auto mesh:m_meshMap)
+    {
+        if(mesh.second->m_vertexBuffer)
+        {
+            mesh.second->m_vertexBuffer->Clean();
+            mesh.second->m_indexBuffer->Clean();
+        }
+    }
+    
     for (auto buffer : m_vertexBufferMap) {
         buffer.second->Clean();
     }
@@ -46,7 +56,7 @@ std::vector<std::string> Scene::GetMeshNames()
 {
 	std::vector<std::string> keys;
 
-    keys.reserve(m_meshMap.size()); // Ô¤Áô¿Õ¼äÌá¸ßÐÔÄÜ
+    keys.reserve(m_meshMap.size()); // Ô¤ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for (const auto& pair : m_meshMap) {
         keys.push_back(pair.first);
     }
@@ -126,37 +136,10 @@ void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
         mesh.second->matId += baseMatId;
         this->m_meshMap.insert(std::make_pair(mesh.first, mesh.second));
     }
-
-    //spdlog::info("m_indirectCommands.size(): {0}", m_indirectCommands.size());
-
-    //{
-    //    this->m_indirectVertexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    //    this->m_indirectIndexBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    //
-    //    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
-    //    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
-    //
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(m_totalVertexs.data()), sizeof(Vertex) * m_totalVertexs.size());
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(m_totalIndeices.data()), sizeof(unsigned int) * m_totalIndeices.size());
-    //
-    //    this->SetIndirectVertexBuffer(vertexBuffer);
-    //    this->SetIndirectIndexBuffer(indexBuffer);
-    //
-    //    this->m_indirectBuffer->Clean(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    //    this->GenerateIndirectDrawCommand();
-    //    std::vector<VkDrawIndexedIndirectCommand> commands = this->GetIndirectDrawCommands();
-    //    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
-    //    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
-    //    this->SetIndirectBuffer(indirectCommandBuffer);
-    //}
-    //spdlog::info("m_indirectCommands.size(): {0}", m_indirectCommands.size());
 }
 
 void Scene::GenerateIndirectDataAndBuffers()
 {
-    //if (m_indirectVertexBuffer != nullptr) m_indirectVertexBuffer->Clean();
-    //if (m_indirectIndexBuffer != nullptr) m_indirectIndexBuffer->Clean();
-    //if (m_indirectBuffer != nullptr) m_indirectBuffer->Clean();
     auto totalVertexs = GetTotalVertexs();
     auto totalIndeices = GetTotalIndeices();
 
@@ -174,4 +157,19 @@ void Scene::GenerateIndirectDataAndBuffers()
     std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
     Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
     SetIndirectBuffer(indirectCommandBuffer);
+}
+
+void Scene::GenerateMeshBuffers()
+{
+    for(auto pair:m_meshMap)
+    {
+        auto name = pair.first;
+        auto mesh = pair.second;
+
+        mesh->m_vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+        mesh->m_indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+        
+        Singleton<MVulkanEngine>::instance().CreateBuffer(mesh->m_vertexBuffer, (const void*)(mesh->vertices.data()), sizeof(Vertex) * mesh->vertices.size());
+        Singleton<MVulkanEngine>::instance().CreateBuffer(mesh->m_indexBuffer, (const void*)(mesh->indices.data()), sizeof(unsigned int) * mesh->indices.size());
+    }
 }

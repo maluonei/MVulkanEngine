@@ -16,7 +16,8 @@ void MVulkanPipeline::Clean()
     vkDestroyPipeline(m_device, m_pipeline, nullptr);
 }
 
-void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
+void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, 
+    VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
     PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments)
 {
     m_device = device;
@@ -42,11 +43,6 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexAttributeDescriptions = vertexStateInfo.attribDesc.data();
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexStateInfo.attribDesc.size());
-
-    //VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    //vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    //vertexInputInfo.vertexBindingDescriptionCount = 0;
-    //vertexInputInfo.vertexAttributeDescriptionCount = 0;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -126,9 +122,7 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
     pipelineLayoutInfo.pSetLayouts = &layout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create pipeline layout!");
-    }
+    VK_CHECK_RESULT(vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -147,7 +141,82 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create graphics pipeline!");
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline));
+
+}
+
+void MVulkanRaytracingPipeline::Create(VkDevice device)
+{
+    //enum StageIndices
+    //{
+    //    eRaygen,
+    //    eMiss,
+    //    eClosestHit,
+    //    eShaderGroupCount
+    //};
+//
+    //std::array<VkPipelineShaderStageCreateInfo, eShaderGroupCount> stages{};
+    //VkPipelineShaderStageCreateInfo              stage{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    //stage.pName = "main";  // All the same entry point
+    //// Raygen
+    //stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rgen.spv", true, defaultSearchPaths, true));
+    //stage.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    //stages[eRaygen] = stage;
+    //// Miss
+    //stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rmiss.spv", true, defaultSearchPaths, true));
+    //stage.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+    //stages[eMiss] = stage;
+    //// Hit Group - Closest Hit
+    //stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rchit.spv", true, defaultSearchPaths, true));
+    //stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    //stages[eClosestHit] = stage;
+//
+    //std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_rtShaderGroups;
+//
+    //VkRayTracingPipelineCreateInfoKHR pipelineCreateInfo = {};
+    //pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+    //pipelineCreateInfo.stageCount = 3;
+    //pipelineCreateInfo.pStages = stages;  // ��ɫ���׶�����
+    //pipelineCreateInfo.groupCount = m_rtShaderGroups.size();
+    //pipelineCreateInfo.pGroups = m_rtShaderGroups.data(); // ��ɫ��������
+    //pipelineCreateInfo.maxRecursionDepth = 3;
+    //pipelineCreateInfo.layout = pipelineLayout;
+//
+    //// ��������
+    //VkPipeline rayTracingPipeline;
+    //VkResult result = vkCreateRaytracingPipeline(device, VK_NULL_HANDLE, &pipelineCreateInfo, nullptr, &m_pipeline);
+    //if (result != VK_SUCCESS) {
+    //    // �������
+    //}
+}
+
+void MVulkanComputePipeline::Create(VkDevice device, VkShaderModule compShaderModule, VkDescriptorSetLayout layout)
+{
+    m_device = device;
+
+    VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
+    computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    computeShaderStageInfo.module = compShaderModule;
+    computeShaderStageInfo.pName = "main";
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &layout;
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline layout!");
     }
+
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.layout = m_pipelineLayout;
+    pipelineInfo.stage = computeShaderStageInfo;
+
+    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline!");
+    }
+
+    //vkDestroyShaderModule(device, computeShaderModule, nullptr);
 }

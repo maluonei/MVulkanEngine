@@ -198,6 +198,9 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         case spv::ExecutionModelFragment:
             stage = ShaderStageFlagBits::FRAGMENT;
             break;
+        case spv::ExecutionModelGLCompute:
+            stage = ShaderStageFlagBits::COMPUTE;
+            break;
         default:
             stage = ShaderStageFlagBits::VERTEX;
             break;
@@ -222,6 +225,24 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         }
 
         out.uniformBuffers.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
+    }
+
+    for (const auto& sb : m_resources.storage_buffers) {
+        auto& type = m_compiler.get_type(sb.type_id);
+        // 获取 Descriptor Set 和绑定点
+        uint32_t set = m_compiler.get_decoration(sb.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
+        size_t size = m_compiler.get_declared_struct_size(type);
+
+        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", sb.name, set, binding, size);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.storageBuffers.push_back(ShaderResourceInfo{ sb.name, stage, set, binding, size, 0, arrayLength });
     }
 
     // 处理 sampled images (纹理) -- glsl
@@ -258,6 +279,23 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.seperateImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
+    //storage Images
+    for (const auto& image : m_resources.storage_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
+
+        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.storageImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
     // 处理 seperate samplers (采样器) -- hlsl
     for (const auto& sampler : m_resources.separate_samplers) {
         auto& type = m_compiler.get_type(sampler.type_id);
@@ -292,6 +330,16 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         bindings.push_back(binding);
     }
 
+    for (const auto& info : storageBuffers) {
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = info.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        binding.binding.descriptorCount = info.descriptorCount;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        binding.size = info.size;
+        bindings.push_back(binding);
+    }
+
     for (const auto& info : combinedImageSamplers) {
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
@@ -306,6 +354,16 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        binding.binding.descriptorCount = info.descriptorCount;
+        binding.binding.pImmutableSamplers = nullptr;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    for (const auto& info : storageImages) {
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = info.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);

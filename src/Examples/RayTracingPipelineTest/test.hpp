@@ -6,6 +6,7 @@
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "MVulkanRHI/MVulkanRaytracing.hpp"
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -26,9 +27,12 @@ public:
 	virtual void PreComputes();
 	virtual void Clean();
 private:
-
+	void loadScene();
+	
 private:
+	std::shared_ptr<Scene> m_scene;
 
+	MVulkanRaytracing rayTracing;
 };
 
 #endif

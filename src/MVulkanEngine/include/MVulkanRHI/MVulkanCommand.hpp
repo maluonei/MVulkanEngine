@@ -4,6 +4,7 @@
 
 #include "vulkan/vulkan_core.h"
 #include "MVulkanDevice.hpp"
+//#include "MVulkanRHI/MVulkanRaytracing.hpp"
 #include "map"
 
 struct MVulkanCommandListCreateInfo {
@@ -115,6 +116,27 @@ public:
 	void BindPipeline(VkPipeline pipeline);
 };
 
+class MRaytracingCommandList:public MVulkanCommandList
+{
+public:
+	void BindPipeline(VkPipeline pipeline);
+	//VkDeviceSize BuildAccelerationStructure(std::vector<AccelerationStructureBuildData>& blasBuildData,
+	//										std::vector<AccelKHR>&						 blasAccel,
+	//										const std::vector<VkDeviceAddress>&          scratchAddress,
+	//										VkDeviceSize                                 hintMaxBudget,
+	//										VkDeviceSize                                 currentBudget,
+	//										uint32_t& currentQueryIdx);
+
+	void BuildAccelerationStructure(std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
+									std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   collectedRangeInfo);
+
+	//void WriteAccelerationStructuresProperties();
+	
+private:
+	
+};
+
+
 class MVulkanCommandQueue {
 public:
 	MVulkanCommandQueue();
@@ -134,7 +156,5 @@ public:
 private:
 	VkQueue m_queue;
 };
-
-
 
 #endif

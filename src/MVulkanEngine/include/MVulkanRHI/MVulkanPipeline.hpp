@@ -43,4 +43,15 @@ private:
 
 
 };
+
+class MVulkanRaytracingPipeline :public MVulkanPipeline {
+public:
+	void Create(VkDevice device);
+};
+
+class MVulkanComputePipeline :public MVulkanPipeline {
+public:
+	void Create(VkDevice device, VkShaderModule compShaderModule, VkDescriptorSetLayout layout);
+};
+
 #endif

@@ -42,6 +42,11 @@ public:
         return true;
     }
 
+    ~MImage() {
+        if(data !=nullptr)
+            stbi_image_free(data);
+    }
+
 	inline T* GetData() { return data; }
 
 	inline const int Width() const { return texWidth; }

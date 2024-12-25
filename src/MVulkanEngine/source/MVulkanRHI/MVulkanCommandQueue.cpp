@@ -29,3 +29,5 @@ VkResult MVulkanCommandQueue::Present(VkPresentInfoKHR* presentInfo)
 {
 	return vkQueuePresentKHR(m_queue, presentInfo);
 }
+
+

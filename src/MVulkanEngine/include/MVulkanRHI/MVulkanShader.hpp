@@ -47,6 +47,7 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> combinedImageSamplers;
 	std::vector<ShaderResourceInfo> seperateSamplers;
 	std::vector<ShaderResourceInfo> seperateImages;
+	std::vector<ShaderResourceInfo> storageImages;
 
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
 };

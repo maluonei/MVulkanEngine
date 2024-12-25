@@ -8,7 +8,7 @@
 #include<MVulkanRHI/MVulkanBuffer.hpp>
 #include<MVulkanRHI/MVulkanSampler.hpp>
 
-class ShaderModule {
+class ShaderModule{
 public:
 	ShaderModule(const std::string& vertPath, const std::string& fragPath);
 	void Create(VkDevice device);
@@ -31,7 +31,6 @@ private:
 
 	std::string		m_vertPath;
 	std::string		m_fragPath;
-
 };
 
 class TestShader : public ShaderModule {
@@ -323,6 +322,37 @@ public:
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
 
+class ComputeShaderModule {
+public:
+	ComputeShaderModule(const std::string& compPath);
+	void Create(VkDevice device);
+	void Clean();
 
+	inline MVulkanShader GetComputeShader() const { return m_compShader; }
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t index, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+protected:
+	void load();
+
+	MVulkanShader	m_compShader;
+
+	std::string		m_compPath;
+};
+
+class TestCompShader :public ComputeShaderModule {
+public:
+	TestCompShader();
+
+	//virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	//virtual void SetUBO(uint8_t index, void* data);
+	//virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+
+protected:
+
+};
 
 #endif

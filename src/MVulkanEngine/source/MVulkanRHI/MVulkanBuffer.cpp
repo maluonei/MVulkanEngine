@@ -28,10 +28,24 @@ void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, BufferType2VkMemoryPropertyFlags(m_type));
+    VkMemoryAllocateFlagsInfo memoryAllocateFlagsInfo = {};
+    if (info.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+        memoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+        memoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT; // è®¾ç½®æ­¤æ ‡å¿—
+        memoryAllocateFlagsInfo.pNext = nullptr;
+        allocInfo.pNext = &memoryAllocateFlagsInfo;
+    }
 
     VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory));
 
     vkBindBufferMemory(device.GetDevice(), m_buffer, m_bufferMemory, 0);
+
+    //only storage buffer need device address
+    if (info.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        deviceAddressInfo.buffer = m_buffer;
+        m_deviceAddress = vkGetBufferDeviceAddress(m_device, &deviceAddressInfo);
+    }
 }
 
 void MVulkanBuffer::LoadData(const void* data, uint32_t offset, uint32_t datasize)
@@ -68,6 +82,21 @@ void Buffer::Clean()
     m_dataBuffer.Clean();
 }
 
+void Buffer::Create(MVulkanDevice device, BufferCreateInfo info)
+{
+    info.usage = BufferType2VkBufferUsageFlagBits(m_type);
+    m_dataBuffer.Create(device, info);
+
+    info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    m_stagingBuffer.Create(device, info);
+
+    //m_stagingBuffer.Map();
+    //m_stagingBuffer.LoadData(data, 0, info.size);
+    //m_stagingBuffer.UnMap();
+//
+    //commandList->CopyBuffer(m_stagingBuffer.GetBuffer(), m_dataBuffer.GetBuffer(), info.size);
+}
+
 void Buffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data)
 {
     info.usage = BufferType2VkBufferUsageFlagBits(m_type);
@@ -96,11 +125,7 @@ void MCBV::Clean()
 
 void MCBV::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
 {
-    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-
-    m_dataBuffer.Create(device, info);
-
-    m_dataBuffer.Map();
+    Create(device, info);
     m_dataBuffer.LoadData(data, 0, info.size);
 
 }
@@ -120,11 +145,43 @@ void MCBV::UpdateData(float offset, void* data)
     m_dataBuffer.LoadData(data, offset, m_dataBuffer.GetBufferSize());
 }
 
+
+StorageBuffer::StorageBuffer() :m_dataBuffer(BufferType::STORAGE_BUFFER)
+{
+}
+
+void StorageBuffer::Clean()
+{
+    m_dataBuffer.UnMap();
+    m_dataBuffer.Clean();
+}
+
+void StorageBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data)
+{
+    Create(device, info);
+    m_dataBuffer.LoadData(data, 0, info.size);
+}
+
+void StorageBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
+{
+    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    m_info = info;
+
+    m_dataBuffer.Create(device, info);
+
+    m_dataBuffer.Map();
+}
+
+void StorageBuffer::UpdateData(float offset, void* data)
+{
+    m_dataBuffer.LoadData(data, offset, m_dataBuffer.GetBufferSize());
+}
+
 void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
 {
     m_device = device.GetDevice();
 
-    // ´´½¨ Image
+    // ï¿½ï¿½ï¿½ï¿½ Image
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -133,14 +190,14 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = info.mipLevels;
     imageInfo.arrayLayers = info.arrayLength;
-    imageInfo.format = info.format; //ÏÔ´æÖÐÊý¾Ý´æ´¢¸ñÊ½
+    imageInfo.format = info.format; //ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´æ´¢ï¿½ï¿½Ê½
     imageInfo.tiling = info.tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = info.usage;
     imageInfo.samples = info.samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = info.flag;
-    // ÉèÖÃ image ¸ñÊ½¡¢³ß´çµÈ
+    // ï¿½ï¿½ï¿½ï¿½ image ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ß´ï¿½ï¿½
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
 
     m_mipLevel = info.mipLevels;
@@ -160,12 +217,12 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
 
 void MVulkanImage::CreateImageView(ImageViewCreateInfo info)
 {
-    // ´´½¨ ImageView
+    // ï¿½ï¿½ï¿½ï¿½ ImageView
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = m_image;
     viewInfo.viewType = info.viewType;
-    viewInfo.format = info.format; //gpuÖÐÊý¾Ý·ÃÎÊ¸ñÊ½
+    viewInfo.format = info.format; //gpuï¿½ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½Ê¸ï¿½Ê½
     viewInfo.subresourceRange.aspectMask = info.flag;
     viewInfo.subresourceRange.baseMipLevel = info.baseMipLevel;
     viewInfo.subresourceRange.levelCount = info.levelCount;
@@ -217,23 +274,3 @@ void MVulkanTexture::Create(
 
     commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
-
-void IndirectBuffer::Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
-{
-    m_drawCommand.indexCount = indexCount;
-    m_drawCommand.instanceCount = instanceCount;
-    m_drawCommand.firstIndex = firstIndex;
-    m_drawCommand.vertexOffset = vertexOffset;
-    m_drawCommand.firstInstance = firstInstance;
-
-    BufferCreateInfo info;
-    info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-    info.size = sizeof(m_drawCommand);
-
-    m_indirectBuffer.Create(device, info);
-
-    m_indirectBuffer.Map();
-    m_indirectBuffer.LoadData(&m_drawCommand, 0, info.size);
-    m_indirectBuffer.UnMap();
-}
-

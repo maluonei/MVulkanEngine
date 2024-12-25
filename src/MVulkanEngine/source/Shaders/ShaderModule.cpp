@@ -348,3 +348,41 @@ void* IBLBrdfShader::GetData(uint32_t binding, uint32_t index)
 {
 	return nullptr;
 }
+
+ComputeShaderModule::ComputeShaderModule(const std::string& compPath):m_compPath(compPath)
+{
+	load();
+}
+
+void ComputeShaderModule::Create(VkDevice device)
+{
+	m_compShader.Create(device);
+}
+
+void ComputeShaderModule::Clean()
+{
+	m_compShader.Clean();
+}
+
+size_t ComputeShaderModule::GetBufferSizeBinding(uint32_t binding) const
+{
+	return size_t();
+}
+
+void ComputeShaderModule::SetUBO(uint8_t index, void* data)
+{
+}
+
+void* ComputeShaderModule::GetData(uint32_t binding, uint32_t index)
+{
+	return nullptr;
+}
+
+void ComputeShaderModule::load()
+{
+	m_compShader = MVulkanShader(m_compPath, ShaderStageFlagBits::COMPUTE);
+}
+
+TestCompShader::TestCompShader() :ComputeShaderModule("hlsl/test.comp.hlsl")
+{
+}

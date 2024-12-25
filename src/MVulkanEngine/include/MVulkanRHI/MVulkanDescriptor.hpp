@@ -59,9 +59,11 @@ public:
 	void Update(
 		VkDevice device,
 		VkDescriptorSet set,
-		std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos,
+		std::vector<std::vector<VkDescriptorBufferInfo>> constantBufferInfos,
+		std::vector<std::vector<VkDescriptorBufferInfo>> storageBufferInfos,
 		std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos,
 		std::vector<std::vector<VkDescriptorImageInfo>> seperateImageInfos,
+		std::vector<std::vector<VkDescriptorImageInfo>> storageImageInfos,
 		std::vector<VkDescriptorImageInfo> seperateSamplers);
 
 	void Update(

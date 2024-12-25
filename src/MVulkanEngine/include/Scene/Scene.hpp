@@ -2,14 +2,13 @@
 #ifndef SCENE_HPP
 #define SCENE_HPP
 
-#include <assimp/Importer.hpp>      // °üº¬AssimpµÄImporter
-#include <assimp/scene.h>           // °üº¬AssimpµÄsceneÊý¾Ý½á¹¹
-#include <assimp/postprocess.h>     // °üº¬AssimpµÄºó´¦Àí±êÖ¾
+#include <assimp/Importer.hpp>      // ï¿½ï¿½ï¿½ï¿½Assimpï¿½ï¿½Importer
+#include <assimp/scene.h>           // ï¿½ï¿½ï¿½ï¿½Assimpï¿½ï¿½sceneï¿½ï¿½ï¿½Ý½á¹¹
+#include <assimp/postprocess.h>     // ï¿½ï¿½ï¿½ï¿½Assimpï¿½Äºï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
 #include <memory>
 #include <glm/glm.hpp>
 #include <vector>
 #include <map>
-#include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanDescriptor.hpp"
 #include "Material.hpp"
 #include <spdlog/spdlog.h>
@@ -27,11 +26,16 @@ static size_t VertexSize[] = {
     sizeof(Vertex::texcoord),
 };
 
+class Buffer;
+
 struct Mesh {
     uint32_t matId;
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
+
+    std::shared_ptr<Buffer> m_vertexBuffer = nullptr;
+    std::shared_ptr<Buffer> m_indexBuffer = nullptr;
 };
 
 class Light;
@@ -83,8 +87,6 @@ public:
     inline void AddMaterial(std::shared_ptr<PhongMaterial> material){m_materials.push_back(material);}
     inline std::shared_ptr<PhongMaterial> GetMaterial(int index){return m_materials[index];}
 
-    //inline std::vector<std::shared_ptr<PhongMaterial>> GetMaterial(int index) { return m_materials[index]; }
-
     inline BoundingBox GetBoundingBox() const { return m_bbx; }
 
     void CalculateBB();
@@ -92,9 +94,14 @@ public:
     void AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform);
 
     void GenerateIndirectDataAndBuffers();
+    void GenerateMeshBuffers();
+
+    inline auto GetNumTriangles() const{return m_totalIndeices.size()/3;}
+    inline auto GetNumVertices() const{return m_totalVertexs.size();}
 private:
     BoundingBox m_bbx;
 
+    //uint32_t                m_numTriangles = 0;
     std::vector<Vertex>     m_totalVertexs;
     std::vector<uint32_t>   m_totalIndeices;
     std::shared_ptr<Buffer> m_indirectBuffer = nullptr;

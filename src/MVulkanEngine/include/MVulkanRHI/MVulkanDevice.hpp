@@ -71,6 +71,7 @@ private:
     VkDevice                m_logicalDevice;
     QueueFamilyIndices      m_indices;
     VkSampleCountFlagBits   m_maxSmaaFlag;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rtProperties{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
 
     VkQueue                 m_graphicsQueue;
     VkQueue                 m_computeQueue;
@@ -93,6 +94,8 @@ private:
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkSampleCountFlagBits getMaxUsableSampleCount();
+
+    void initRaytracing();
 };
 
 

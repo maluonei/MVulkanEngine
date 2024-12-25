@@ -103,6 +103,9 @@ void Shader::compile(std::string shaderPath)
 			else if (shaderPath.substr(size - 9, 4) == "geom") {
 				phase = "geom";
 			}
+			else if (shaderPath.substr(size - 9, 4) == "comp") {
+				phase = "comp";
+			}
 
 			fs::path logFile = shaderRootPath / "log.txt";
 			std::string command = compilerPath.string() + " -V -D -e main -Od -S " + phase + " " + hlslShader.string() + " -o " + outputShader.string() + " --keep-uncalled > " + logFile.string();

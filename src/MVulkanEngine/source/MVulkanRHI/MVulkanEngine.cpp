@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include "Camera.hpp"
 #include "Scene/Scene.hpp"
+#include "ComputePass.hpp"
 
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "RenderPass.hpp"
@@ -157,6 +158,7 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
     m_graphicsQueue.WaitForQueueComplete();
 }
 
+
 MVulkanCommandQueue& MVulkanEngine::GetCommandQueue(MQueueType type)
 {
     switch (type) {
@@ -186,9 +188,17 @@ MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
     return m_graphicsLists[i];
 }
 
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, 
+    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers);
+}
+
+void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader, 
+    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers)
+{
+    computePass->Create(shader, m_allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
 }
 
 bool MVulkanEngine::WindowShouldClose() const
@@ -292,12 +302,6 @@ void MVulkanEngine::createInstance()
 void MVulkanEngine::createDevice()
 {
     m_device.Create(m_instance.GetInstance(), m_surface);
-    if (m_device.SupportRayTracing()) {
-        spdlog::info("Device support raytracing");
-    }
-    else {
-        spdlog::warn("Device don't support raytracing");
-    }
 }
 
 void MVulkanEngine::createSurface()
@@ -405,6 +409,9 @@ void MVulkanEngine::createCommandList()
 
     info.commandPool = m_commandAllocator.Get(QueueType::PRESENT_QUEUE);
     m_presentList.Create(m_device.GetDevice(), info);
+
+    info.commandPool = m_commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
+    m_raytracingList.Create(m_device.GetDevice(), info);
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -533,6 +540,26 @@ void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* dat
 
     m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     m_transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
+{
+    //texture = std::make_shared<MVulkanTexture>();
+
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
+
+    texture->Create(&m_generalGraphicList, m_device, imageInfo, viewInfo, layout);
+
+    m_generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::present(

@@ -14,6 +14,15 @@ struct BufferCreateInfo {
 	uint32_t arrayLength = 1;
 };
 
+struct StorageImageCreateInfo {
+	uint32_t width = 0;
+	uint32_t height = 0;
+	uint32_t depth = 1;
+
+	VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+};
+
+
 class MVulkanBuffer {
 public:
 	MVulkanBuffer(BufferType _type);
@@ -30,6 +39,8 @@ public:
 	inline uint32_t GetBufferSize() const {
 		return m_bufferSize;
 	}
+
+	inline const VkDeviceAddress& GetBufferAddress() const {return m_deviceAddress;}
 protected:
 
 	VkDevice			m_device;
@@ -39,6 +50,8 @@ protected:
 	VkBuffer			m_buffer;
 	VkBufferView		m_bufferView = nullptr;
 	VkDeviceMemory		m_bufferMemory;
+
+	VkDeviceAddress		m_deviceAddress;
 };
 
 class MSRV :public MVulkanBuffer {
@@ -68,14 +81,35 @@ private:
 	MVulkanBuffer		m_dataBuffer;
 };
 
+class StorageBuffer {
+public:
+	StorageBuffer();
+	//~MCBV();
+	void Clean();
+
+	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, void* data);
+	void Create(MVulkanDevice device, BufferCreateInfo info);
+	void UpdateData(float offset = 0, void* data = nullptr);
+	inline VkBuffer& GetBuffer() { return m_dataBuffer.GetBuffer(); }
+	inline VkDeviceMemory& GetBufferMemory() { return m_dataBuffer.GetBufferMemory(); }
+	const inline uint32_t GetArrayLength() const { return m_info.arrayLength; }
+	const inline uint32_t GetBufferSize() const { return m_info.size; }
+private:
+
+	BufferCreateInfo	m_info;
+	MVulkanBuffer		m_dataBuffer;
+};
+
 class Buffer {
 public:
 	Buffer(BufferType type = BufferType::NONE);
 	void Clean();
 
+	void Create(MVulkanDevice device, BufferCreateInfo info);
 	void CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDevice device, BufferCreateInfo info, const void* data);
 	inline VkBuffer& GetBuffer() { return m_dataBuffer.GetBuffer(); }
-	inline VkDeviceMemory& GetBufferMemory() { return m_dataBuffer.GetBufferMemory(); }
+	inline const VkDeviceAddress& GetBufferAddress() { return m_dataBuffer.GetBufferAddress(); }
+	inline const VkDeviceMemory& GetBufferMemory() { return m_dataBuffer.GetBufferMemory(); }
 private:
 
 	BufferType		m_type;
@@ -211,16 +245,32 @@ private:
 	MVulkanBuffer		m_stagingBuffer;
 };
 
-class IndirectBuffer {
-public:
-	IndirectBuffer() = default;
+//class IndirectBuffer {
+//public:
+//	IndirectBuffer() = default;
+//
+//	void Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,int32_t  vertexOffset, uint32_t firstInstance);
+//	void Clean();
+//private:
+//	VkDrawIndexedIndirectCommand	m_drawCommand;
+//	MVulkanBuffer					m_indirectBuffer;
+//};
 
-	void Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,int32_t  vertexOffset, uint32_t firstInstance);
-	void Clean();
-private:
-	VkDrawIndexedIndirectCommand	m_drawCommand;
-	MVulkanBuffer					m_indirectBuffer;
-};
+//class StorageBuffer
+//{
+//public:
+//	StorageBuffer() = default;
+//
+//	void Create(MVulkanDevice device, uint32_t size);
+//	void LoadData(void* data, uint32_t size, uint32_t offset=0);
+//	void Clean();
+//
+//	inline const VkDeviceAddress& GetAddress(){return m_storageBuffer.GetBufferAddress();}
+//
+//private:
+//	MVulkanBuffer					m_storageBuffer;
+//	MVulkanBuffer					m_stagingBuffer;
+//};
 
 
 #endif

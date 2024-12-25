@@ -30,12 +30,14 @@ class MWindow;
 class Camera;
 class Scene;
 class RenderPass;
+class ComputePass;
 class Light;
 
 enum class MQueueType {
     GRAPHICS,
     TRANSFER,
     PRESENT,
+    RAYTRACING,
 };
 
 class MVulkanEngine: public Singleton<MVulkanEngine> {
@@ -55,6 +57,8 @@ public:
     inline std::shared_ptr<Camera> GetCamera()const { return m_camera; }
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
+
+    void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
 
     template<class T>
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
@@ -112,9 +116,14 @@ public:
 
     MVulkanCommandQueue& GetCommandQueue(MQueueType type);
     MGraphicsCommandList& GetCommandList(MQueueType type);
+    inline MRaytracingCommandList& GetRaytracingCommandList(){return m_raytracingList;}
     MGraphicsCommandList& GetGraphicsList(int i);
 
-    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, 
+        std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+    void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
+        std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
+        std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers);
 
     inline VkExtent2D GetSwapchainImageExtent()const { return m_swapChain.GetSwapChainExtent(); }
     inline VkFormat GetSwapchainImageFormat()const { return m_swapChain.GetSwapChainImageFormat(); }
@@ -212,6 +221,7 @@ private:
     MGraphicsCommandList    m_generalGraphicList;
     MGraphicsCommandList    m_presentList;
     MGraphicsCommandList    m_transferList;
+    MRaytracingCommandList  m_raytracingList;
 
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;

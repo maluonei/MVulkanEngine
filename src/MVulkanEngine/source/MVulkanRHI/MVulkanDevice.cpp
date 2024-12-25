@@ -79,6 +79,14 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             spdlog::info("deviceProperties.limits.maxPushConstantsSize:{0}", static_cast<int>(deviceProperties.limits.maxPushConstantsSize));
             spdlog::info("deviceProperties.limits.minUniformBufferOffsetAlignment:{0}", static_cast<int>(deviceProperties.limits.minUniformBufferOffsetAlignment));
             spdlog::info("device.alignment: {0}", alignment);
+            
+            if (m_supportRayTracing) {
+                spdlog::info("device support raytracing");
+                initRaytracing();
+            }
+            else {
+                spdlog::warn("device don't support raytracing");
+            }
             break;
         }
     }
@@ -135,11 +143,29 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     //descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     //descriptorIndexingFeatures.nullDescriptor = VK_TRUE;  // ∆Ù”√ nullDescriptor Ãÿ–‘
 
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures = {};
+    rayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    rayTracingFeatures.rayTracingPipeline = VK_TRUE;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures = {};
+    accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    accelerationStructureFeatures.accelerationStructure = VK_TRUE;
+    //accelerationStructureFeatures.accelerationStructureHostCommands = VK_TRUE;
+    accelerationStructureFeatures.pNext = &rayTracingFeatures;
+
+    VkPhysicalDeviceBufferDeviceAddressFeatures deviceAddressFeatures = {};
+    deviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    deviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+    if (m_supportRayTracing) {
+        deviceAddressFeatures.pNext = &accelerationStructureFeatures;
+    }
+
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
     descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
     descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.pNext = &deviceAddressFeatures;
 
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
@@ -159,8 +185,12 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     //createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.pEnabledFeatures = nullptr;
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    std::vector<const char*> enabledExtensionNames = deviceExtensions;
+    if (m_supportRayTracing) {
+        enabledExtensionNames.insert(enabledExtensionNames.end(), raytracingExtensions.begin(), raytracingExtensions.end());
+    } 
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
+    createInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
 
     createInfo.pNext = &deviceFeatures2;
 
@@ -175,6 +205,7 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
+
 
     vkGetDeviceQueue(m_logicalDevice, m_indices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_logicalDevice, m_indices.computeFamily.value(), 0, &m_computeQueue);
@@ -291,6 +322,18 @@ VkSampleCountFlagBits MVulkanDevice::getMaxUsableSampleCount()
     if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
     return VK_SAMPLE_COUNT_1_BIT;
+}
+
+void MVulkanDevice::initRaytracing()
+{
+    VkPhysicalDeviceProperties2 prop2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+    prop2.pNext = &m_rtProperties;
+    vkGetPhysicalDeviceProperties2(m_physicalDevice, &prop2);
+
+    spdlog::info("maxRayRecursionDepth:{0}", m_rtProperties.maxRayRecursionDepth);
+    spdlog::info("shaderGroupBaseAlignment:{0}", m_rtProperties.shaderGroupBaseAlignment);
+    spdlog::info("maxRayDispatchInvocationCount:{0}", m_rtProperties.maxRayDispatchInvocationCount);
+    spdlog::info("maxRayHitAttributeSize:{0}", m_rtProperties.maxRayHitAttributeSize);
 }
 
 MVulkanDevice::MVulkanDevice()
