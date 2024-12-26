@@ -21,6 +21,17 @@ public:
 
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers);
 
+	std::shared_ptr<ComputeShaderModule> GetShader() const { return m_shader; }
+	inline MVulkanComputePipeline GetPipeline()const { return m_pipeline; }
+	inline MVulkanDescriptorSet GetDescriptorSet() const { return m_descriptorSet; }
+	inline MVulkanDescriptorSetLayouts GetDescriptorSetLayout() const { return m_descriptorLayout; }
+
+	StorageBuffer GetStorageBufferByBinding(uint32_t binding);
+
+	//void LoadConstantAndStorageBuffer(uint32_t alignment);
+	void LoadConstantBuffer(uint32_t alignment);
+	void LoadStorageBuffer(uint32_t alignment);
+
 private:
 	void setShader(std::shared_ptr<ComputeShaderModule> shader);
 

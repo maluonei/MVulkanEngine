@@ -196,6 +196,10 @@ void MVulkanCommandList::Clean()
     //vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
+//void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+//{
+//    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+//}
 
 void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -221,11 +225,6 @@ void MGraphicsCommandList::BindIndexBuffers(uint32_t firstBinding, uint32_t bind
     vkCmdBindIndexBuffer(m_commandBuffer, buffer, 0, VK_INDEX_TYPE_UINT32);
 }
 
-void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
-{
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
-}
-
 void MGraphicsCommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
@@ -241,9 +240,25 @@ void MGraphicsCommandList::DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceS
     vkCmdDrawIndexedIndirect(m_commandBuffer, buffer, offset, drawCount, stride);
 }
 
+void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+{
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+}
+
 void MComputeCommandList::BindPipeline(VkPipeline pipeline) {
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
+
+void MComputeCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+{
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+}
+
+void MComputeCommandList::Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+{
+    vkCmdDispatch(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
+}
+
 
 void MRaytracingCommandList::BindPipeline(VkPipeline pipeline)
 {
@@ -256,6 +271,11 @@ void MRaytracingCommandList::BuildAccelerationStructure(
 {
     static auto vkCmdBuildAccelerationStructuresKHR           = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device, "vkCmdBuildAccelerationStructuresKHR"));
     vkCmdBuildAccelerationStructuresKHR(m_commandBuffer, collectedBuildInfo.size(), collectedBuildInfo.data(), collectedRangeInfo.data());
+}
+
+void MRaytracingCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+{
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
 }
 
 //static auto vkGetAccelerationStructureBuildSizesKHR       = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkGetAccelerationStructureBuildSizesKHR"));

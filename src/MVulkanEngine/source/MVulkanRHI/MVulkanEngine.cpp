@@ -168,6 +168,8 @@ MVulkanCommandQueue& MVulkanEngine::GetCommandQueue(MQueueType type)
         return m_transferQueue;
     case MQueueType::PRESENT:
         return m_presentQueue;
+    case MQueueType::COMPUTE:
+        return m_computeQueue;
     }
 }
 
@@ -180,6 +182,8 @@ MGraphicsCommandList& MVulkanEngine::GetCommandList(MQueueType type)
         return m_transferList;
     case MQueueType::PRESENT:
         return m_presentList;
+    //case MQueueType::COMPUTE:
+    //    return m_computeList;
     }
 }
 
@@ -216,8 +220,8 @@ VkResult MVulkanEngine::AcquireNextSwapchainImage(uint32_t& imageIndex, uint32_t
     return m_swapChain.AcquireNextImage(m_imageAvailableSemaphores[currentFrame].GetSemaphore(), VK_NULL_HANDLE, &imageIndex);
 }
 
-void MVulkanEngine::SubmitCommandsAndPresent(
-    uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain)
+void MVulkanEngine::SubmitGraphicsCommands(
+    uint32_t imageIndex, uint32_t currentFrame)
 {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -241,8 +245,43 @@ void MVulkanEngine::SubmitCommandsAndPresent(
     VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
     vkDeviceWaitIdle(m_device.GetDevice());
-    present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
+    //present(m_swapChain.GetPtr(), currentFrame, &imageIndex, recreateSwapchain);
+    //present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
 }
+
+//void MVulkanEngine::SubmitCommandsAndPresent(
+//    uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain)
+//{
+//    VkSubmitInfo submitInfo{};
+//    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//
+//    VkSemaphore waitSemaphores3[] = { m_imageAvailableSemaphores[currentFrame].GetSemaphore() };
+//    VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+//    submitInfo.waitSemaphoreCount = 1;
+//    submitInfo.pWaitSemaphores = waitSemaphores3;
+//    submitInfo.pWaitDstStageMask = waitStages3;
+//
+//    submitInfo.commandBufferCount = 1;
+//    submitInfo.pCommandBuffers = &m_graphicsLists[currentFrame].GetBuffer();
+//
+//    VkSemaphore signalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+//    submitInfo.signalSemaphoreCount = 1;
+//    submitInfo.pSignalSemaphores = signalSemaphores3;
+//
+//    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_inFlightFences[currentFrame].GetFence());
+//    m_graphicsQueue.WaitForQueueComplete();
+//
+//    VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+//
+//    vkDeviceWaitIdle(m_device.GetDevice());
+//    present(m_swapChain.GetPtr(), currentFrame, &imageIndex, recreateSwapchain);
+//    //present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
+//}
+
+//void MVulkanEngine::SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame)
+//{
+//
+//}
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
@@ -252,6 +291,12 @@ void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<Ren
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
     recordCommandBuffer(frameIndex, renderPass, m_generalGraphicList, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
+}
+
+void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+    uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) 
+{
+    recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ);
 }
 
 void MVulkanEngine::SetCamera(std::shared_ptr<Camera> camera)
@@ -383,6 +428,7 @@ void MVulkanEngine::createCommandQueue()
     m_graphicsQueue.SetQueue(m_device.GetQueue(QueueType::GRAPHICS_QUEUE));
     m_transferQueue.SetQueue(m_device.GetQueue(QueueType::TRANSFER_QUEUE));
     m_presentQueue.SetQueue(m_device.GetQueue(QueueType::PRESENT_QUEUE));
+    m_computeQueue.SetQueue(m_device.GetQueue(QueueType::COMPUTE_QUEUE));
 }
 
 void MVulkanEngine::createCommandAllocator()
@@ -410,8 +456,13 @@ void MVulkanEngine::createCommandList()
     info.commandPool = m_commandAllocator.Get(QueueType::PRESENT_QUEUE);
     m_presentList.Create(m_device.GetDevice(), info);
 
-    info.commandPool = m_commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
-    m_raytracingList.Create(m_device.GetDevice(), info);
+    if (m_device.SupportRayTracing()) {
+        info.commandPool = m_commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
+        m_raytracingList.Create(m_device.GetDevice(), info);
+    }
+
+    info.commandPool = m_commandAllocator.Get(QueueType::COMPUTE_QUEUE);
+    m_computeList.Create(m_device.GetDevice(), info);
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -522,6 +573,34 @@ void MVulkanEngine::transitionImageLayouts(
     m_graphicsQueue.WaitForQueueComplete();
 }
 
+void MVulkanEngine::Present(uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
+{
+    VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = waitSemaphore;
+
+    presentInfo.swapchainCount = 1;
+    auto swapchain = m_swapChain.Get();
+    presentInfo.pSwapchains = &swapchain;
+
+    presentInfo.pImageIndices = imageIndex;
+
+    VkResult result = m_presentQueue.Present(&presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window->GetWindowResized()) {
+        m_window->SetWindowResized(false);
+        recreateSwapchain();
+        //RecreateSwapChain();
+    }
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+}
+
 void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size)
 {
     BufferCreateInfo vertexInfo;
@@ -562,32 +641,32 @@ void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCr
     m_graphicsQueue.WaitForQueueComplete();
 }
 
-void MVulkanEngine::present(
-    VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
-    const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
-{
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = waitSemaphore;
-
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-
-    presentInfo.pImageIndices = imageIndex;
-
-    VkResult result = m_presentQueue.Present(&presentInfo);
-
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window->GetWindowResized()) {
-        m_window->SetWindowResized(false);
-        recreateSwapchain();
-        //RecreateSwapChain();
-    }
-    else if (result != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-}
+//void MVulkanEngine::present(
+//    VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
+//    const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
+//{
+//    VkPresentInfoKHR presentInfo{};
+//    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+//
+//    presentInfo.waitSemaphoreCount = 1;
+//    presentInfo.pWaitSemaphores = waitSemaphore;
+//
+//    presentInfo.swapchainCount = 1;
+//    presentInfo.pSwapchains = swapChains;
+//
+//    presentInfo.pImageIndices = imageIndex;
+//
+//    VkResult result = m_presentQueue.Present(&presentInfo);
+//
+//    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window->GetWindowResized()) {
+//        m_window->SetWindowResized(false);
+//        recreateSwapchain();
+//        //RecreateSwapChain();
+//    }
+//    else if (result != VK_SUCCESS) {
+//        throw std::runtime_error("failed to present swap chain image!");
+//    }
+//}
 
 void MVulkanEngine::createPlaceHolderTexture()
 {
@@ -684,4 +763,18 @@ void MVulkanEngine::recordCommandBuffer(
     commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
 
     commandList.EndRenderPass();
+}
+
+void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+    uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+{
+    m_computeList.BindPipeline(computePass->GetPipeline().Get());
+
+    computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
+    computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSet = computePass->GetDescriptorSet().Get();
+    m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+    m_computeList.Dispatch(groupCountX, groupCountY, groupCountZ);
 }

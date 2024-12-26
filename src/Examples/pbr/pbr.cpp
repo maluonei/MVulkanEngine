@@ -24,8 +24,15 @@ void PBR::SetUp()
     loadScene();
 }
 
-void PBR::UpdatePerFrame(uint32_t imageIndex)
+void PBR::ComputeAndDraw(uint32_t imageIndex)
 {
+    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+    auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+
+    graphicsList.Reset();
+    graphicsList.Begin();
+
+
     //prepare gbufferPass ubo
     {
         GbufferShader::UniformBufferObject0 ubo0{};
@@ -99,6 +106,9 @@ void PBR::UpdatePerFrame(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+
+    graphicsList.End();
+    Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()

@@ -60,21 +60,23 @@ void MRenderApplication::drawFrame()
 
     fence.Reset();
 
-    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-    auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    ComputeAndDraw(imageIndex);
+    //auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+    //auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    //
+    //graphicsList.Reset();
+    //graphicsList.Begin();
+    //
+    //UpdatePerFrame(imageIndex);
+    //
+    //graphicsList.End();
 
-    graphicsList.Reset();
-    graphicsList.Begin();
-
-    UpdatePerFrame(imageIndex);
-
-    graphicsList.End();
+    //Singleton<MVulkanEngine>::instance().SubmitCommands(imageIndex, m_currentFrame);
 
     std::function<void()> recreateSwapchain = [this]() {
         this->RecreateSwapchainAndRenderPasses();
         };
-
-    Singleton<MVulkanEngine>::instance().SubmitCommandsAndPresent(imageIndex, m_currentFrame, recreateSwapchain);
+    Singleton<MVulkanEngine>::instance().Present(m_currentFrame, &imageIndex, recreateSwapchain);
 
     m_currentFrame = (m_currentFrame + 1) % Singleton<GlobalConfig>::instance().GetMaxFramesInFlight();
 }

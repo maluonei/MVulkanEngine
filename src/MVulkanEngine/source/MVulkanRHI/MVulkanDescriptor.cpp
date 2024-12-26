@@ -165,5 +165,5 @@ void MVulkanDescriptorSetWrite::Update(
         descriptorWrite[binding].pImageInfo = &seperateSamplers[binding - constantBufferInfoCount - storageBufferInfoCount - combinedImageInfosCount - separateImageInfosCount - storageImageInfosCount];
     }
 
-    vkUpdateDescriptorSets(device, constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + separateSamplerInfosCount , descriptorWrite.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device, constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount , descriptorWrite.data(), 0, nullptr);
 }

@@ -37,6 +37,7 @@ enum class MQueueType {
     GRAPHICS,
     TRANSFER,
     PRESENT,
+    COMPUTE,
     RAYTRACING,
 };
 
@@ -116,6 +117,7 @@ public:
 
     MVulkanCommandQueue& GetCommandQueue(MQueueType type);
     MGraphicsCommandList& GetCommandList(MQueueType type);
+    inline MComputeCommandList& GetComputeCommandList() { return m_computeList; }
     inline MRaytracingCommandList& GetRaytracingCommandList(){return m_raytracingList;}
     MGraphicsCommandList& GetGraphicsList(int i);
 
@@ -138,7 +140,9 @@ public:
     inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return m_imageAvailableSemaphores[index]; }
     inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return m_finalRenderFinishedSemaphores[index]; }
 
-    void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
+    void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame);
+    //void SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame);
+    //void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
 
     void RecordCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
@@ -150,6 +154,9 @@ public:
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
         bool flipY = true);
 
+    void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
     void SetCamera(std::shared_ptr<Camera> camera);
 
     bool RecreateSwapchain();
@@ -157,6 +164,9 @@ public:
     void RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass);
 
     MVulkanTexture GetPlaceHolderTexture();
+
+    void Present(
+        uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
 private: 
     void initVulkan();
@@ -182,6 +192,9 @@ private:
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
         bool flipY = true);
 
+    void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
 
     VkSubmitInfo generateSubmitInfo(std::vector<VkCommandBuffer> commandBuffer, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitSemaphoreStage, std::vector<VkSemaphore> signalSemaphores);
@@ -195,9 +208,13 @@ private:
         VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage,
         VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitSemaphoreStage, VkSemaphore* signalSemaphores, VkFence fence = VK_NULL_HANDLE);
 
-    void present(
-        VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
-        const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
+    //void present(
+    //    VkSwapchainKHR* swapChains, uint32_t currentFrame,
+    //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
+
+    //void present(
+    //    VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
+    //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
     void createPlaceHolderTexture();
 private:
@@ -215,12 +232,14 @@ private:
     MVulkanCommandQueue     m_graphicsQueue;
     MVulkanCommandQueue     m_presentQueue;
     MVulkanCommandQueue     m_transferQueue;
+    MVulkanCommandQueue     m_computeQueue;
     MVulkanCommandAllocator m_commandAllocator;
 
     std::vector<MGraphicsCommandList> m_graphicsLists;
     MGraphicsCommandList    m_generalGraphicList;
     MGraphicsCommandList    m_presentList;
     MGraphicsCommandList    m_transferList;
+    MComputeCommandList     m_computeList;
     MRaytracingCommandList  m_raytracingList;
 
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;

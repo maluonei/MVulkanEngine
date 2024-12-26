@@ -109,7 +109,6 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
     }
 }
 
-
 void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
@@ -300,9 +299,7 @@ void RenderPass::LoadCBV(uint32_t alignment) {
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         for (auto binding = 0; binding < m_cbvCount; binding++) {
             for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
-                //uint32_t alignment = Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment();
                 uint32_t offset = j * alignment;
-                //spdlog::info("alignment, {}", alignment);
                 m_uniformBuffers[i][binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
             }
         }

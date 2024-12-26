@@ -18,7 +18,8 @@ class Light;
 class IBL : public MRenderApplication {
 public:
 	virtual void SetUp();
-	virtual void UpdatePerFrame(uint32_t imageIndex);
+	//virtual void UpdatePerFrame(uint32_t imageIndex);
+	virtual void ComputeAndDraw(uint32_t imageIndex);
 
 	virtual void RecreateSwapchainAndRenderPasses();
 	virtual void CreateRenderPass();

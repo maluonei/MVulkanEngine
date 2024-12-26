@@ -77,6 +77,7 @@ public:
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel=0, uint32_t baseArrayLayer=0);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
+	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set) = 0;
 
 	void BlitImage(
 		VkImage srcImage, VkImageLayout srcLayout,
@@ -114,6 +115,8 @@ public:
 class MComputeCommandList :public MVulkanCommandList {
 public:
 	void BindPipeline(VkPipeline pipeline);
+	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
+	void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 };
 
 class MRaytracingCommandList:public MVulkanCommandList
@@ -130,7 +133,7 @@ public:
 	void BuildAccelerationStructure(std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
 									std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   collectedRangeInfo);
 
-	//void WriteAccelerationStructuresProperties();
+	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	
 private:
 	

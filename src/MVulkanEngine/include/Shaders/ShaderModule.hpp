@@ -342,17 +342,38 @@ protected:
 	std::string		m_compPath;
 };
 
+class TestSquadShader :public ShaderModule {
+public:
+	TestSquadShader();
+};
+
 class TestCompShader :public ComputeShaderModule {
+public:
+	struct Constants {
+		uint32_t Width;
+		uint32_t Height;
+	};
+
+	struct InputBuffer {
+		float data[256];
+	};
+
+	struct OutputBuffer {
+		float data[256];
+	};
+
 public:
 	TestCompShader();
 
-	//virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	//virtual void SetUBO(uint8_t index, void* data);
-	//virtual void* GetData(uint32_t binding, uint32_t index = 0);
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t index, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 
 protected:
-
+	Constants constant0;
+	InputBuffer input1;
+	OutputBuffer output2;
 };
 
 #endif

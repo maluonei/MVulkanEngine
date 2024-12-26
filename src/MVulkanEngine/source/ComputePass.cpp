@@ -200,6 +200,42 @@ void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>>
         combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos);
 }
 
+StorageBuffer ComputePass::GetStorageBufferByBinding(uint32_t binding)
+{
+    return m_storageBuffer[binding - m_cbvCount];
+}
+
+//void ComputePass::LoadConstantAndStorageBuffer(uint32_t alignment)
+//{
+//    for (auto binding = 0; binding < m_cbvCount; binding++) {
+//        for (auto j = 0; j < m_constantBuffer[binding].GetArrayLength(); j++) {
+//            uint32_t offset = j * alignment;
+//            m_constantBuffer[binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
+//        }
+//    }
+//}
+
+void ComputePass::LoadConstantBuffer(uint32_t alignment)
+{
+    for (auto binding = 0; binding < m_cbvCount; binding++) {
+        for (auto j = 0; j < m_constantBuffer[binding].GetArrayLength(); j++) {
+            uint32_t offset = j * alignment;
+            m_constantBuffer[binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
+        }
+    }
+}
+
+void ComputePass::LoadStorageBuffer(uint32_t alignment)
+{
+    for (auto binding = 0; binding < m_storageBufferCount; binding++) {
+        auto _binding = binding + m_cbvCount;
+        for (auto j = 0; j < m_storageBuffer[binding].GetArrayLength(); j++) {
+            uint32_t offset = j * alignment;
+            m_storageBuffer[binding].UpdateData(offset, (void*)(m_shader->GetData(_binding, j)));
+        }
+    }
+}
+
 void ComputePass::setShader(std::shared_ptr<ComputeShaderModule> shader)
 {
     m_shader = shader;

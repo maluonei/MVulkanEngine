@@ -1,19 +1,72 @@
 #include "ComputePipelineTest.hpp"
 #include "ComputePass.hpp"
+#include "RenderPass.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
+#include "Scene/SceneLoader.hpp"
+#include "Scene/Scene.hpp"
 
 void ComputePipelineTest::SetUp()
 {
 	createSampler();
 	createTestTexture();
+
+	loadScene();
 }
 
-void ComputePipelineTest::UpdatePerFrame(uint32_t imageIndex)
+void ComputePipelineTest::ComputeAndDraw(uint32_t imageIndex)
 {
+	auto computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
+	auto computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
+
+	computeList.Reset();
+	computeList.Begin();
+
+	{
+		TestCompShader::Constants constant;
+		constant.Width = 16;
+		constant.Height = 16;
+
+		auto shader = m_testComputePass->GetShader();
+		shader->SetUBO(0, &constant);
+
+		TestCompShader::InputBuffer input;
+		for (auto i = 0; i < 16 * 16; i+=4) {
+			input.data[i] = 0;
+			input.data[i+1] = 1;
+			input.data[i+2] = 2;
+			input.data[i+3] = 3;
+		}
+
+		shader->SetUBO(1, &input);
+	}
+
+	Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_testComputePass, 16, 16, 1);
+
+	computeList.End();
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &computeList.GetBuffer();
+
+	computeQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+	computeQueue.WaitForQueueComplete();
+
+	auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+	auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+
+	graphicsList.Reset();
+	graphicsList.Begin();
+
+	Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_testRenderPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+
+	graphicsList.End();
+	Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
 }
 
 void ComputePipelineTest::RecreateSwapchainAndRenderPasses()
 {
+
 }
 
 void ComputePipelineTest::CreateRenderPass()
@@ -44,6 +97,36 @@ void ComputePipelineTest::CreateRenderPass()
 			storageBufferSizes, storageImageCreateInfo, seperateImageViews, samplers);
 		spdlog::info("m_testComputePass create success!");
 	}
+
+	{
+        std::vector<VkFormat> testSquadPassFormats;
+		testSquadPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = testSquadPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_testRenderPass->GetFrameBuffer(0).GetDepthImageView();
+
+		m_testRenderPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> testSquadShader = std::make_shared<TestSquadShader>();
+        std::vector<std::vector<VkImageView>> gbufferViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+			m_testRenderPass, testSquadShader, gbufferViews, samplers);
+    }
 }
 
 void ComputePipelineTest::PreComputes()
@@ -88,4 +171,16 @@ void ComputePipelineTest::createSampler()
 		info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
 	}
+}
+
+void ComputePipelineTest::loadScene()
+{
+	fs::path projectRootPath = PROJECT_ROOT;
+	fs::path resourcePath = projectRootPath.append("resources").append("models");
+
+	m_squad = std::make_shared<Scene>();
+	fs::path squadPath = resourcePath / "squad.obj";
+	Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
+
+	m_squad->GenerateIndirectDataAndBuffers();
 }

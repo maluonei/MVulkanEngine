@@ -1,3 +1,10 @@
+// 常量值，例如数组的宽度
+[[vk::binding(0, 0)]]cbuffer Constants : register(b0)
+{
+    uint Width; // 输入数据的宽度
+    uint Height; // 输入数据的宽度
+}
+
 // 输入/输出的缓冲区资源
 [[vk::binding(1, 0)]] StructuredBuffer<float> InputBuffer : register(u0);  // 输入缓冲区
 [[vk::binding(2, 0)]] RWStructuredBuffer<float> OutputBuffer : register(u1); // 输出缓冲区
@@ -6,12 +13,7 @@
 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
-// 常量值，例如数组的宽度
-[[vk::binding(0, 0)]]cbuffer Constants : register(b0)
-{
-    uint Width; // 输入数据的宽度
-    uint Height; // 输入数据的宽度
-}
+
 
 // 定义线程组的大小
 [numthreads(16, 16, 1)]

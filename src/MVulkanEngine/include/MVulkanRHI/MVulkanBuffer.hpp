@@ -41,6 +41,8 @@ public:
 	}
 
 	inline const VkDeviceAddress& GetBufferAddress() const {return m_deviceAddress;}
+
+	inline void* GetData()const { return m_mappedData; }
 protected:
 
 	VkDevice			m_device;
@@ -94,6 +96,8 @@ public:
 	inline VkDeviceMemory& GetBufferMemory() { return m_dataBuffer.GetBufferMemory(); }
 	const inline uint32_t GetArrayLength() const { return m_info.arrayLength; }
 	const inline uint32_t GetBufferSize() const { return m_info.size; }
+
+	inline void* GetMappedData()const { return m_dataBuffer.GetData();}
 private:
 
 	BufferCreateInfo	m_info;

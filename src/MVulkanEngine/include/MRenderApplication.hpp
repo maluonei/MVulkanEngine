@@ -9,7 +9,8 @@ public:
     void Run();
 
     virtual void SetUp() = 0;
-    virtual void UpdatePerFrame(uint32_t imageInde) = 0;
+    //virtual void UpdatePerFrame(uint32_t imageInde) = 0;
+    virtual void ComputeAndDraw(uint32_t imageInde) = 0;
 
     virtual void RecreateSwapchainAndRenderPasses() = 0;
     virtual void CreateRenderPass() = 0;

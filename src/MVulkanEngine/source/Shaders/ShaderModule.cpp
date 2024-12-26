@@ -386,3 +386,49 @@ void ComputeShaderModule::load()
 TestCompShader::TestCompShader() :ComputeShaderModule("hlsl/test.comp.hlsl")
 {
 }
+
+size_t TestCompShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(TestCompShader::Constants);
+	case 1:
+		return sizeof(TestCompShader::InputBuffer);
+	case 2:
+		return sizeof(TestCompShader::OutputBuffer);
+	}
+}
+
+void TestCompShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+	{
+		constant0 = *reinterpret_cast<TestCompShader::Constants*>(data);
+		break;
+	}
+	case 1:
+	{
+		input1 = *reinterpret_cast<TestCompShader::InputBuffer*>(data);
+		break;
+	}
+	case 2:
+	{
+		output2 = *reinterpret_cast<TestCompShader::OutputBuffer*>(data);
+		break;
+	}
+	}
+}
+
+void* TestCompShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+		case 0: return reinterpret_cast<void*>(&constant0);
+		case 1: return reinterpret_cast<void*>(&input1);
+		case 2: return reinterpret_cast<void*>(&output2);
+	}
+}
+
+TestSquadShader::TestSquadShader() :ShaderModule("hlsl/test_squad.vert.hlsl", "hlsl/test_squad.frag.hlsl")
+{
+}
