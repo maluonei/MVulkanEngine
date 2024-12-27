@@ -114,7 +114,6 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
                  imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
                  imageInfo.width = storageImageCreateInfos[_binding][i].width;
                  imageInfo.height = storageImageCreateInfos[_binding][i].height;
-                 //imageInfo.depth = storageImageCreateInfos[_binding].depth;
                  imageInfo.format = storageImageCreateInfos[_binding][i].format;
 
                  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -131,6 +130,27 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
              break;
          }
          }
+     }
+
+     {
+         std::vector<MVulkanImageMemoryBarrier> barriers;
+         for (auto i = 0; i < m_storageImageCount; i++) {
+             for (auto j = 0; j < m_storageImages[i].size(); j++) {
+                 MVulkanImageMemoryBarrier barrier{};
+                 barrier.image = m_storageImages[i][j]->GetImage();
+                 barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                 barrier.baseArrayLayer = 0;
+                 barrier.layerCount = 1;
+                 barrier.levelCount = 1;
+                 barrier.srcAccessMask = 0;
+                 barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                 barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                 barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+                 barriers.push_back(barrier);
+             }
+         }
+
+         Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
      }
 
      UpdateDescriptorSetWrite(seperateImageViews, samplers);

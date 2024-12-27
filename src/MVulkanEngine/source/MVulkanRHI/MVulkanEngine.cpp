@@ -319,6 +319,39 @@ MVulkanTexture MVulkanEngine::GetPlaceHolderTexture()
     return m_placeHolderTexture;
 }
 
+void MVulkanEngine::TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
+
+    m_generalGraphicList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    m_generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
+
+    m_generalGraphicList.TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    m_generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
+}
 
 void MVulkanEngine::initVulkan()
 {

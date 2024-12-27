@@ -6,6 +6,7 @@
 #include <vector>
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanSampler.hpp"
+#include "Shaders/ShaderModule.hpp"
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -33,6 +34,8 @@ private:
 	void loadScene();
 
 private:
+	TestCompShader::InputBuffer input;
+
 	std::shared_ptr<ComputePass>	m_testComputePass;
 	std::shared_ptr<RenderPass>		m_testRenderPass;
 

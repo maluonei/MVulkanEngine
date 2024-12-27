@@ -199,6 +199,7 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.flags = info.flag;
     // ���� image ��ʽ���ߴ��
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
+    //spdlog::info("create image:{0}", static_cast<void*>(m_image));
 
     m_mipLevel = info.mipLevels;
 

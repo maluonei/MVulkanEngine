@@ -355,11 +355,11 @@ public:
 	};
 
 	struct InputBuffer {
-		float data[256];
+		float data[16 * 16];
 	};
 
 	struct OutputBuffer {
-		float data[256];
+		float data[16 * 16];
 	};
 
 public:

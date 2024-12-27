@@ -13,23 +13,22 @@
 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
-
-
 // 定义线程组的大小
 [numthreads(16, 16, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
-    float2 texCoord = float2(threadID.x/16.f, threadID.y/16.f);
+    float2 texCoord = float2(threadID.x/(float)(Width), threadID.y/(float)(Height));
+    //float2 texCoord = float2(threadID.x/256.f, threadID.y/256.f);
 
     // 从 UAV（Unordered Access View）读取输入
     float value1 = InputBuffer[threadID.x + threadID.y * Width];
-    float value2 = InputTexture.Sample(linearSampler, texCoord);
+    float3 value2 = InputTexture.Sample(linearSampler, texCoord).rgb;
 
     // 执行计算
     float result1 = value1 * value1;
-    float result2 = value2 * value2;
+    //float result2 = value2;
 
     // 将结果写回到 UAV
     OutputBuffer[threadID.x + threadID.y * Width] = result1;
-    OutputTexture[texCoord] = float4(result2); // 使用索引直接写入
+    OutputTexture[float2(threadID.x, threadID.y)] = float4(value2, 1.f); // 使用索引直接写入
 }

@@ -11,6 +11,13 @@ void ComputePipelineTest::SetUp()
 	createTestTexture();
 
 	loadScene();
+
+	for (auto i = 0; i < 16 * 16; i += 4) {
+		input.data[i] = 0;
+		input.data[i + 1] = 1;
+		input.data[i + 2] = 2;
+		input.data[i + 3] = 3;
+	}
 }
 
 void ComputePipelineTest::ComputeAndDraw(uint32_t imageIndex)
@@ -28,14 +35,6 @@ void ComputePipelineTest::ComputeAndDraw(uint32_t imageIndex)
 
 		auto shader = m_testComputePass->GetShader();
 		shader->SetUBO(0, &constant);
-
-		TestCompShader::InputBuffer input;
-		for (auto i = 0; i < 16 * 16; i+=4) {
-			input.data[i] = 0;
-			input.data[i+1] = 1;
-			input.data[i+2] = 2;
-			input.data[i+3] = 3;
-		}
 
 		shader->SetUBO(1, &input);
 	}
@@ -110,9 +109,9 @@ void ComputePipelineTest::CreateRenderPass()
         info.imageAttachmentFormats = testSquadPassFormats;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
         //info.depthView = m_testRenderPass->GetFrameBuffer(0).GetDepthImageView();
