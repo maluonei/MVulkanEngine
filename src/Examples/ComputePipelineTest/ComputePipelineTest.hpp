@@ -34,7 +34,7 @@ private:
 	void loadScene();
 
 private:
-	TestCompShader::InputBuffer input;
+	TestCompShader::InputBuffer		input;
 
 	std::shared_ptr<ComputePass>	m_testComputePass;
 	std::shared_ptr<RenderPass>		m_testRenderPass;

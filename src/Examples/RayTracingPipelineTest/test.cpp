@@ -11,7 +11,7 @@ void RayTracingPipelineTest::SetUp()
     rayTracing.TestCreateAccelerationStructure(m_scene);
 }
 
-void RayTracingPipelineTest::UpdatePerFrame(uint32_t imageIndex)
+void RayTracingPipelineTest::ComputeAndDraw(uint32_t imageIndex)
 {
 }
 

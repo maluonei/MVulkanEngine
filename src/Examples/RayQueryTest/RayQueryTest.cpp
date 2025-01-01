@@ -1,10 +1,11 @@
-#include "pbr.hpp"
+#include "RayQueryTest.hpp"
 
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Scene/SceneLoader.hpp"
 #include "Scene/Scene.hpp"
 #include "Managers/TextureManager.hpp"
 #include "RenderPass.hpp"
+#include "ComputePass.hpp"
 #include "Camera.hpp"
 #include "Scene/Light/DirectionalLight.hpp"
 #include "Shaders/ShaderModule.hpp"
@@ -14,24 +15,23 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-
-void PBR::SetUp()
+void RayQueryPbr::SetUp()
 {
     createSamplers();
     createLight();
     createCamera();
 
     loadScene();
+    createAS();
 }
 
-void PBR::ComputeAndDraw(uint32_t imageIndex)
+void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
 {
     auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
     auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
 
     graphicsList.Reset();
     graphicsList.Begin();
-
 
     //prepare gbufferPass ubo
     {
@@ -70,66 +70,51 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
-    //prepare shadowPass ubo
-    {
-        ShadowShader::ShadowUniformBuffer ubo0{};
-        ubo0.shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        m_shadowPass->GetShader()->SetUBO(0, &ubo0);
-    }
-
     //prepare lightingPass ubo
     {
-        LightingPbrShader::UniformBuffer0 ubo0{};
+        LightingPbrRayQueryShader::UniformBuffer0 ubo0{};
         ubo0.lightNum = 1;
-        ubo0.lights[0].direction = m_directionalLightCamera->GetDirection();
+        ubo0.lights[0].direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
         ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
         ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
-        ubo0.lights[0].shadowMapIndex = 0;
-        ubo0.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        ubo0.lights[0].cameraZnear = m_directionalLightCamera->GetZnear();
-        ubo0.lights[0].cameraZfar = m_directionalLightCamera->GetZfar();
+        ubo0.lightNum = 1;
         ubo0.cameraPos = m_camera->GetPosition();
-
-        ubo0.ResolusionWidth = m_shadowPass->GetFrameBuffer(0).GetExtent2D().width;
-        ubo0.ResolusionHeight = m_shadowPass->GetFrameBuffer(0).GetExtent2D().height;
 
         m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
-
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    //spdlog::info("gbuffer generation donw");
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
 }
 
-void PBR::RecreateSwapchainAndRenderPasses()
+void RayQueryPbr::RecreateSwapchainAndRenderPasses()
 {
     if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_shadowPass);
 
         m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
 
-        std::vector<std::vector<VkImageView>> gbufferViews(5);
+        std::vector<std::vector<VkImageView>> gbufferViews(4);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
             gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
-        gbufferViews[4] = std::vector<VkImageView>(2);
-        gbufferViews[4][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[4][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
         std::vector<VkSampler> samplers(1);
         samplers[0] = m_linearSampler.GetSampler();
 
-        m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
+        auto tlas = m_rayTracing.GetTLAS();
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
+
+        m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers, accelerationStructures);
     }
 }
 
-void PBR::CreateRenderPass()
+void RayQueryPbr::CreateRenderPass()
 {
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
     
@@ -175,40 +160,10 @@ void PBR::CreateRenderPass()
                 }
             }
         }
-
         std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
-    }
-
-    {
-        std::vector<VkFormat> shadowFormats(0);
-        shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-
-        RenderPassCreateInfo info{};
-        info.depthFormat = VK_FORMAT_D32_SFLOAT;
-        info.frambufferCount = 1;
-        info.extent = VkExtent2D(4096, 4096);
-        info.useAttachmentResolve = false;
-        info.useSwapchainImages = false;
-        info.imageAttachmentFormats = shadowFormats;
-        info.colorAttachmentResolvedViews = nullptr;
-        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        m_shadowPass = std::make_shared<RenderPass>(device, info);
-
-        std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
-        std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
-        shadowShaderTextures[0].resize(0);
-
-        std::vector<VkSampler> samplers(0);
-
-        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_shadowPass, shadowShader, shadowShaderTextures, samplers);
     }
 
     {
@@ -232,36 +187,34 @@ void PBR::CreateRenderPass()
 
         m_lightingPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader>();
-        std::vector<std::vector<VkImageView>> gbufferViews(5);
+        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrRayQueryShader>();
+        std::vector<std::vector<VkImageView>> gbufferViews(4);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
             gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
-        gbufferViews[4] = std::vector<VkImageView>(2);
-        gbufferViews[4][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[4][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
         std::vector<VkSampler> samplers(1);
         samplers[0] = m_linearSampler.GetSampler();
 
-        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_lightingPass, lightingShader, gbufferViews, samplers);
-    }
+        auto tlas = m_rayTracing.GetTLAS();
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
 
-    createLightCamera();
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_lightingPass, lightingShader, gbufferViews, samplers, accelerationStructures);
+    }
 }
 
-void PBR::PreComputes()
+void RayQueryPbr::PreComputes()
 {
 
 }
 
-void PBR::Clean()
+void RayQueryPbr::Clean()
 {
     m_gbufferPass->Clean();
     m_lightingPass->Clean();
-    m_shadowPass->Clean();
+    //m_shadowPass->Clean();
 
     m_linearSampler.Clean();
 
@@ -271,7 +224,7 @@ void PBR::Clean()
     MRenderApplication::Clean();
 }
 
-void PBR::loadScene()
+void RayQueryPbr::loadScene()
 {
     m_scene = std::make_shared<Scene>();
 
@@ -329,9 +282,16 @@ void PBR::loadScene()
 
     m_squad->GenerateIndirectDataAndBuffers();
     m_scene->GenerateIndirectDataAndBuffers();
+    m_scene->GenerateMeshBuffers();
 }
 
-void PBR::createLight()
+void RayQueryPbr::createAS()
+{
+    m_rayTracing.Create(Singleton<MVulkanEngine>::instance().GetDevice());
+    m_rayTracing.TestCreateAccelerationStructure(m_scene);
+}
+
+void RayQueryPbr::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
@@ -339,7 +299,7 @@ void PBR::createLight()
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
-void PBR::createCamera()
+void RayQueryPbr::createCamera()
 {
     glm::vec3 position(-1.f, 0.f, 4.f);
     glm::vec3 center(0.f);
@@ -354,7 +314,7 @@ void PBR::createCamera()
     Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
 }
 
-void PBR::createSamplers()
+void RayQueryPbr::createSamplers()
 {
     {
         MVulkanSamplerCreateInfo info{};
@@ -363,19 +323,4 @@ void PBR::createSamplers()
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
-}
-
-void PBR::createLightCamera()
-{
-    VkExtent2D extent = m_shadowPass->GetFrameBuffer(0).GetExtent2D();
-
-    glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
-    glm::vec3 position = -50.f * direction;
-
-    float fov = 60.f;
-    float aspect = (float)extent.width / (float)extent.height;
-    float zNear = 0.001f;
-    float zFar = 60.f;
-    m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
-    m_directionalLightCamera->SetOrth(true);
 }

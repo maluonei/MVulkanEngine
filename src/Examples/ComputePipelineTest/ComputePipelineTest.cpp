@@ -12,7 +12,7 @@ void ComputePipelineTest::SetUp()
 
 	loadScene();
 
-	for (auto i = 0; i < 16 * 16; i += 4) {
+	for (auto i = 0; i < 256 * 256; i += 4) {
 		input.data[i] = 0;
 		input.data[i + 1] = 1;
 		input.data[i + 2] = 2;
@@ -30,8 +30,8 @@ void ComputePipelineTest::ComputeAndDraw(uint32_t imageIndex)
 
 	{
 		TestCompShader::Constants constant;
-		constant.Width = 16;
-		constant.Height = 16;
+		constant.Width = 256;
+		constant.Height = 256;
 
 		auto shader = m_testComputePass->GetShader();
 		shader->SetUBO(0, &constant);
@@ -76,13 +76,13 @@ void ComputePipelineTest::CreateRenderPass()
 		m_testComputePass = std::make_shared<ComputePass>(device);
 
 		std::vector<uint32_t> storageBufferSizes(2);
-		storageBufferSizes[0] = 16 * 16 * sizeof(float);
-		storageBufferSizes[1] = 16 * 16 * sizeof(float);
+		storageBufferSizes[0] = 256 * 256 * sizeof(float);
+		storageBufferSizes[1] = 256 * 256 * sizeof(float);
 
 		std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfo(1);
 		storageImageCreateInfo[0].resize(1);
-		storageImageCreateInfo[0][0].width = 16;
-		storageImageCreateInfo[0][0].height = 16;
+		storageImageCreateInfo[0][0].width = 256;
+		storageImageCreateInfo[0][0].height = 256;
 		storageImageCreateInfo[0][0].depth = 1;
 		storageImageCreateInfo[0][0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 

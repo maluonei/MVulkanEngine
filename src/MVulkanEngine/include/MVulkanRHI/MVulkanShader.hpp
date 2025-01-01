@@ -49,6 +49,8 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> seperateImages;
 	std::vector<ShaderResourceInfo> storageImages;
 
+	std::vector<ShaderResourceInfo> accelarationStructs;
+
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
 };
 

@@ -1,34 +1,34 @@
-// ³£Á¿Öµ£¬ÀýÈçÊý×éµÄ¿í¶È
+// ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½
 [[vk::binding(0, 0)]]cbuffer Constants : register(b0)
 {
-    uint Width; // ÊäÈëÊý¾ÝµÄ¿í¶È
-    uint Height; // ÊäÈëÊý¾ÝµÄ¿í¶È
+    uint Width; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÝµÄ¿ï¿½ï¿½ï¿½
+    uint Height; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÝµÄ¿ï¿½ï¿½ï¿½
 }
 
-// ÊäÈë/Êä³öµÄ»º³åÇø×ÊÔ´
-[[vk::binding(1, 0)]] StructuredBuffer<float> InputBuffer : register(u0);  // ÊäÈë»º³åÇø
-[[vk::binding(2, 0)]] RWStructuredBuffer<float> OutputBuffer : register(u1); // Êä³ö»º³åÇø
-[[vk::binding(3, 0)]] Texture2D<float4> InputTexture : register(t0);  // ÊäÈë»º³åÇø
-[[vk::binding(4, 0)]] RWTexture2D<float4> OutputTexture : register(t1); // Êä³ö»º³åÇø
+// ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´
+[[vk::binding(1, 0)]] StructuredBuffer<float> InputBuffer : register(u0);  // ï¿½ï¿½ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+[[vk::binding(2, 0)]] RWStructuredBuffer<float> OutputBuffer : register(u1); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+[[vk::binding(3, 0)]] Texture2D<float4> InputTexture : register(t0);  // ï¿½ï¿½ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+[[vk::binding(4, 0)]] RWTexture2D<float4> OutputTexture : register(t1); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
-// ¶¨ÒåÏß³Ì×éµÄ´óÐ¡
+// ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
 [numthreads(16, 16, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
     float2 texCoord = float2(threadID.x/(float)(Width), threadID.y/(float)(Height));
     //float2 texCoord = float2(threadID.x/256.f, threadID.y/256.f);
 
-    // ´Ó UAV£¨Unordered Access View£©¶ÁÈ¡ÊäÈë
+    // ï¿½ï¿½ UAVï¿½ï¿½Unordered Access Viewï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
     float value1 = InputBuffer[threadID.x + threadID.y * Width];
     float3 value2 = InputTexture.Sample(linearSampler, texCoord).rgb;
 
-    // Ö´ÐÐ¼ÆËã
+    // Ö´ï¿½Ð¼ï¿½ï¿½ï¿½
     float result1 = value1 * value1;
     //float result2 = value2;
 
-    // ½«½á¹ûÐ´»Øµ½ UAV
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½Øµï¿½ UAV
     OutputBuffer[threadID.x + threadID.y * Width] = result1;
-    OutputTexture[float2(threadID.x, threadID.y)] = float4(value2, 1.f); // Ê¹ÓÃË÷ÒýÖ±½ÓÐ´Èë
+    OutputTexture[float2(threadID.x, threadID.y)] = float4(value2, 1.f); // Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ð´ï¿½ï¿½
 }

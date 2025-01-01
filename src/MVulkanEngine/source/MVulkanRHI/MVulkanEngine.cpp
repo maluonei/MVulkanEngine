@@ -193,16 +193,16 @@ MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
 }
 
 void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, 
-    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers);
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers, accelerationStructures);
 }
 
 void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers)
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
-    computePass->Create(shader, m_allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
+    computePass->Create(shader, m_allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers, accelerationStructures);
 }
 
 bool MVulkanEngine::WindowShouldClose() const

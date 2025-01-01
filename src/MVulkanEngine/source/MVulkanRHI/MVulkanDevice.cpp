@@ -139,13 +139,14 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     queueCreateInfos[1].queueFamilyIndex = m_indices.computeFamily.value();
     queueCreateInfos[2].queueFamilyIndex = m_indices.transferFamily.value();
 
-    //VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
-    //descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-    //descriptorIndexingFeatures.nullDescriptor = VK_TRUE;  // ∆Ù”√ nullDescriptor Ãÿ–‘
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
+    rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+    rayQueryFeatures.rayQuery = VK_TRUE;
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures = {};
     rayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
     rayTracingFeatures.rayTracingPipeline = VK_TRUE;
+    rayTracingFeatures.pNext = &rayQueryFeatures;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures = {};
     accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;

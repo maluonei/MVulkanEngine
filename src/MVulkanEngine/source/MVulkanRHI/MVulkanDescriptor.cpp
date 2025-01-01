@@ -95,7 +95,8 @@ void MVulkanDescriptorSetWrite::Update(
     std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos,
     std::vector<std::vector<VkDescriptorImageInfo>> seperateImageInfos,
     std::vector<std::vector<VkDescriptorImageInfo>> storageImageInfos,
-    std::vector<VkDescriptorImageInfo> seperateSamplers)
+    std::vector<VkDescriptorImageInfo> seperateSamplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
     auto constantBufferInfoCount = constantBufferInfos.size();
     auto storageBufferInfoCount = storageBufferInfos.size();
@@ -103,8 +104,9 @@ void MVulkanDescriptorSetWrite::Update(
     auto separateImageInfosCount = seperateImageInfos.size();
     auto storageImageInfosCount = storageImageInfos.size();
     auto separateSamplerInfosCount = seperateSamplers.size();
+    auto accelerationStructuresCount = accelerationStructures.size();
 
-    std::vector<VkWriteDescriptorSet> descriptorWrite(constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount);
+    std::vector<VkWriteDescriptorSet> descriptorWrite(constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount + accelerationStructuresCount);
     for (auto binding = 0; binding < constantBufferInfoCount; binding++) {
         descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite[binding].dstSet = set;
@@ -165,5 +167,25 @@ void MVulkanDescriptorSetWrite::Update(
         descriptorWrite[binding].pImageInfo = &seperateSamplers[binding - constantBufferInfoCount - storageBufferInfoCount - combinedImageInfosCount - separateImageInfosCount - storageImageInfosCount];
     }
 
-    vkUpdateDescriptorSets(device, constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount , descriptorWrite.data(), 0, nullptr);
+    std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureWrites(accelerationStructuresCount);
+    for (auto binding = 
+        constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount; 
+        binding < constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + separateSamplerInfosCount + storageImageInfosCount + accelerationStructuresCount; 
+        binding++) 
+    {
+        auto idx = binding - (constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount);
+        accelerationStructureWrites[idx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+        accelerationStructureWrites[idx].accelerationStructureCount = 1;
+        accelerationStructureWrites[idx].pAccelerationStructures = &accelerationStructures[idx];
+        
+        descriptorWrite[binding].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[binding].dstSet = set;
+        descriptorWrite[binding].dstBinding = static_cast<uint32_t>(binding);
+        descriptorWrite[binding].dstArrayElement = 0;
+        descriptorWrite[binding].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        descriptorWrite[binding].descriptorCount = 1;
+        descriptorWrite[binding].pNext = &accelerationStructureWrites[idx];
+    }
+
+    vkUpdateDescriptorSets(device, constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount + accelerationStructuresCount , descriptorWrite.data(), 0, nullptr);
 }

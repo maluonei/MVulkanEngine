@@ -7,17 +7,22 @@ ComputePass::ComputePass(MVulkanDevice device)
 	m_device = device;
 }
 
+void ComputePass::Clean()
+{
+
+}
+
 void ComputePass::Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDescriptorSetAllocator& allocator, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers)
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
     setShader(shader);
-    CreatePipeline(allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
+    CreatePipeline(allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers, accelerationStructures);
 }
 
 void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers)
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
 	MVulkanShaderReflector compReflector(m_shader->GetComputeShader().GetShader());
 
@@ -153,14 +158,14 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
          Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
      }
 
-     UpdateDescriptorSetWrite(seperateImageViews, samplers);
+     UpdateDescriptorSetWrite(seperateImageViews, samplers, accelerationStructures);
      
      m_pipeline.Create(m_device.GetDevice(), m_shader->GetComputeShader().GetShaderModule(), m_descriptorLayout.Get());
 
      m_shader->Clean();
 }
 
-void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers)
+void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
     MVulkanDescriptorSetWrite write;
 
@@ -217,7 +222,7 @@ void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>>
 
     write.Update(m_device.GetDevice(), m_descriptorSet.Get(), 
         constantBufferInfos, storageBufferInfos, 
-        combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos);
+        combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos, accelerationStructures);
 }
 
 StorageBuffer ComputePass::GetStorageBufferByBinding(uint32_t binding)

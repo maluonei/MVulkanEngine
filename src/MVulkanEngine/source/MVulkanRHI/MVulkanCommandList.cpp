@@ -267,10 +267,17 @@ void MRaytracingCommandList::BindPipeline(VkPipeline pipeline)
 
 void MRaytracingCommandList::BuildAccelerationStructure(
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   collectedRangeInfo)
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR>   collectedRangeInfo)
 {
+    //const VkAccelerationStructureBuildRangeInfoKHR* rangeInfos = collectedRangeInfo.data();
+
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   rangeInfos(collectedRangeInfo.size());
+    for (auto i = 0; i < collectedRangeInfo.size(); i++) {
+        rangeInfos[i] = &collectedRangeInfo[i];
+    }
+
     static auto vkCmdBuildAccelerationStructuresKHR           = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(m_device, "vkCmdBuildAccelerationStructuresKHR"));
-    vkCmdBuildAccelerationStructuresKHR(m_commandBuffer, collectedBuildInfo.size(), collectedBuildInfo.data(), collectedRangeInfo.data());
+    vkCmdBuildAccelerationStructuresKHR(m_commandBuffer, collectedBuildInfo.size(), collectedBuildInfo.data(), rangeInfos.data());
 }
 
 void MRaytracingCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)

@@ -46,12 +46,16 @@ public:
 	RenderPass(MVulkanDevice device, RenderPassCreateInfo info);
 	void Create(std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+		MVulkanDescriptorSetAllocator& allocator, 
+		std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent);
-	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+	
+	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void SetUBO(uint8_t index, void* data);
 	void LoadCBV(uint32_t alignment);
@@ -74,7 +78,9 @@ public:
 
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 private:
-	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers);
+	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
+		std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList);
 	void SetShader(std::shared_ptr<ShaderModule> shader);
@@ -98,6 +104,8 @@ private:
 	uint32_t m_separateSamplerCount = 0;
 	uint32_t m_separateImageCount = 0;
 	uint32_t m_combinedImageCount = 0;
+
+	uint32_t m_asCount = 0;
 };
 
 

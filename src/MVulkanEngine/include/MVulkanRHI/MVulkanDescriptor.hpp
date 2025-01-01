@@ -64,7 +64,10 @@ public:
 		std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos,
 		std::vector<std::vector<VkDescriptorImageInfo>> seperateImageInfos,
 		std::vector<std::vector<VkDescriptorImageInfo>> storageImageInfos,
-		std::vector<VkDescriptorImageInfo> seperateSamplers);
+		std::vector<VkDescriptorImageInfo> seperateSamplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructures
+		);
+		
 
 	void Update(
 		VkDevice device,

@@ -313,6 +313,21 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.seperateSamplers.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
     }
 
+    for (const auto& as : m_resources.acceleration_structures) {
+        auto& type = m_compiler.get_type(as.type_id);
+        uint32_t set = m_compiler.get_decoration(as.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(as.id, spv::DecorationBinding);
+
+        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}", as.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+        }
+
+        out.accelarationStructs.push_back(ShaderResourceInfo{ as.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
     return out;
 }
 
@@ -374,6 +389,16 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        binding.binding.descriptorCount = info.descriptorCount;
+        binding.binding.pImmutableSamplers = nullptr;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
+        bindings.push_back(binding);
+    }
+
+    for (const auto& info : accelarationStructs) {
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = info.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
         binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);

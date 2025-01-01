@@ -131,7 +131,7 @@ public:
 	//										uint32_t& currentQueryIdx);
 
 	void BuildAccelerationStructure(std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
-									std::vector<VkAccelerationStructureBuildRangeInfoKHR*>   collectedRangeInfo);
+									std::vector<VkAccelerationStructureBuildRangeInfoKHR>   collectedRangeInfo);
 
 	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	

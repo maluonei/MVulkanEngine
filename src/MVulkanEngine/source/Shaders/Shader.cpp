@@ -24,13 +24,15 @@ void Shader::compile(std::string shaderPath)
 	fs::path projectRootPath = PROJECT_ROOT;
 	fs::path shaderRootPath = projectRootPath / "resources" / "shaders";
 
-	fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "glslangValidator.exe";
+	//fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "glslangValidator.exe";
 
 	spdlog::info("compilng shader: {0}", shaderPath);
 
 	bool needToCompile = false;
 
 	if (shaderPath.ends_with("glsl")) {
+		fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "glslangValidator.exe";
+
 		size_t size = shaderPath.size();
 
 		fs::path glslShader = shaderRootPath / (shaderPath);
@@ -54,7 +56,7 @@ void Shader::compile(std::string shaderPath)
 
 		if (needToCompile) {
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -V " + glslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
+			std::string command = compilerPath.string() + " -V --target-env vulkan1.3 " + glslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
 			int status = system(command.c_str());
 
 			if (status != 0) {
@@ -71,6 +73,8 @@ void Shader::compile(std::string shaderPath)
 		m_compiledShaderPath = outputShader.string();
 	}
 	else if (shaderPath.ends_with("hlsl")) {
+		fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "dxc.exe";
+
 		size_t size = shaderPath.size();
 
 		fs::path hlslShader = shaderRootPath / (shaderPath);
@@ -95,20 +99,23 @@ void Shader::compile(std::string shaderPath)
 		if (needToCompile) {
 			std::string phase = "";
 			if (shaderPath.substr(size - 9, 4) == "vert") {
-				phase = "vert";
+				phase = "vs_6_0";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "frag") {
-				phase = "frag";
+				phase = "ps_6_0";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "geom") {
-				phase = "geom";
+				phase = "gs_6_0";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "comp") {
-				phase = "comp";
+				phase = "cs_6_0";
 			}
 
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -V -D -e main -Od -S " + phase + " " + hlslShader.string() + " -o " + outputShader.string() + " --keep-uncalled > " + logFile.string();
+			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -F0 " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
+			
+			
+			//spdlog::info("comnmand: {0}", command);
 			int status = system(command.c_str());
 
 			if (status != 0) {

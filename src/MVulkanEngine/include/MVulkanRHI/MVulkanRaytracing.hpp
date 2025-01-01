@@ -140,8 +140,8 @@
 struct BLASBuildInfo {
     VkAccelerationStructureGeometryKHR          geometry;
     VkAccelerationStructureBuildGeometryInfoKHR geometryInfo;
-    VkAccelerationStructureBuildRangeInfoKHR* rangeInfo;
-    VkAccelerationStructureKHR* blas;
+    VkAccelerationStructureBuildRangeInfoKHR rangeInfo;
+    VkAccelerationStructureKHR blas;
     Buffer asBuffer;
     Buffer scrathBuffer;
 };
@@ -150,8 +150,8 @@ struct TLASBuildInfo {
     VkAccelerationStructureGeometryKHR          geometry;
     VkAccelerationStructureGeometryInstancesDataKHR instancesData;
     VkAccelerationStructureBuildGeometryInfoKHR geometryInfo;
-    VkAccelerationStructureBuildRangeInfoKHR* rangeInfo;
-    VkAccelerationStructureKHR* tlas;
+    VkAccelerationStructureBuildRangeInfoKHR rangeInfo;
+    VkAccelerationStructureKHR tlas;
     Buffer instancetBuffer;
     Buffer asBuffer;
     Buffer scrathBuffer;
@@ -167,10 +167,26 @@ public:
     
     void TestCreateAccelerationStructure(const std::shared_ptr<Scene>& scene);
     
+    VkAccelerationStructureKHR GetTLAS() {
+        return m_tlasBuildInfo.tlas;
+    }
+
 private:
     void CreateBLAS(const std::shared_ptr<Mesh>& mesh, BLASBuildInfo& blasBuildInfo);
     void CreateTLAS(std::vector<Buffer> asBuffers, TLASBuildInfo& tlasBuildInfo);
 
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR>    m_buildInfos;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR>       m_rangeInfos;
+    std::vector<VkAccelerationStructureKHR>                     m_blas;
+    std::vector<Buffer>                                         m_asBuffers;
+    std::vector<Buffer>                                         m_scrathBuffers;
+
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR>    m_tlasBuildInfos;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR>       m_tlasRangeInfos;
+    TLASBuildInfo                                               m_tlasBuildInfo;
+
+    //Buffer                                                      m_tlasBuffer;
+    //Buffer                                                      m_tlasScrathBuffer;
 
     MVulkanDevice m_device;
 };

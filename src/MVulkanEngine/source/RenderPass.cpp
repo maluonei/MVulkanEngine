@@ -12,12 +12,14 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
     MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-    MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+    MVulkanDescriptorSetAllocator& allocator, 
+    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     SetShader(shader);
     CreateRenderPass();
     CreateFrameBuffers(swapChain, commandQueue, commandList);
-    CreatePipeline(allocator, imageViews, samplers);
+    CreatePipeline(allocator, imageViews, samplers, accelerationStructure);
 }
 
 void RenderPass::Clean()
@@ -56,7 +58,9 @@ void RenderPass::RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanComman
     CreateFrameBuffers(swapChain, commandQueue, commandList);
 }
 
-void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+void RenderPass::UpdateDescriptorSetWrite(
+    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     for (auto i = 0; i < m_frameBuffers.size(); i++) {
         MVulkanDescriptorSetWrite write;
@@ -78,7 +82,6 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
         for (auto binding = 0; binding < m_separateImageCount; binding++) {
             separateImageInfos[binding].resize(imageViews[binding].size());
             for (auto j = 0; j < imageViews[binding].size(); j++) {
-                //separateImageInfos[binding][j].imageInfo.sampler = seperateSamplers[binding];
                 separateImageInfos[binding][j].sampler = nullptr;
                 separateImageInfos[binding][j].imageView = imageViews[binding][j];
                 separateImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -105,11 +108,13 @@ void RenderPass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> 
 
         write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(), 
             constantBufferInfos, storageBufferInfos, 
-            combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos);
+            combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos, accelerationStructure);
     }
 }
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers)
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
+    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -133,6 +138,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
     m_separateSamplerCount = 0;
     m_separateImageCount = 0;
     m_combinedImageCount = 0;
+    m_asCount = 0;
 
     for (auto binding = 0; binding < bindings.size(); binding++) {
         switch (bindings[binding].binding.descriptorType) {
@@ -154,6 +160,11 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         {
             m_separateImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+        {
+            m_asCount++;
             break;
         }
     }
@@ -186,7 +197,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
         }
     }
 
-    UpdateDescriptorSetWrite(imageViews, samplers);
+    UpdateDescriptorSetWrite(imageViews, samplers, accelerationStructure);
 
     m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
