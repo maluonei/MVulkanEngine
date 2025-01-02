@@ -6,10 +6,10 @@
 }
 
 // ����/����Ļ�������Դ
-[[vk::binding(1, 0)]] StructuredBuffer<float> InputBuffer : register(u0);  // ���뻺����
-[[vk::binding(2, 0)]] RWStructuredBuffer<float> OutputBuffer : register(u1); // ���������
-[[vk::binding(3, 0)]] Texture2D<float4> InputTexture : register(t0);  // ���뻺����
-[[vk::binding(4, 0)]] RWTexture2D<float4> OutputTexture : register(t1); // ���������
+[[vk::binding(1, 0)]] StructuredBuffer<float> InputBuffer : register(t0);  // ���뻺����
+[[vk::binding(2, 0)]] RWStructuredBuffer<float> OutputBuffer : register(u0); // ���������
+[[vk::binding(3, 0)]] Texture2D<float4> InputTexture : register(t1);  // ���뻺����
+[[vk::binding(4, 0)]] RWTexture2D<float4> OutputTexture : register(u1); // ���������
 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
