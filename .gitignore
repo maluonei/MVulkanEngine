@@ -12,10 +12,10 @@ cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 
-!3rdParty\dxc\
-!3rdParty\dxc\dxc.exe
-!3rdParty\dxc\dxcompiler.dll
-!3rdParty\dxc\dxil.dll
+!3rdParty/dxc/
+!3rdParty/dxc/dxc.exe
+!3rdParty/dxc/dxcompiler.dll
+!3rdParty/dxc/dxil.dll
 
 # Ignore executables and libraries
 *.exe
