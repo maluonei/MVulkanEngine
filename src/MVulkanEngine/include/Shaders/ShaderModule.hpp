@@ -405,4 +405,72 @@ protected:
 	OutputBuffer output2;
 };
 
+class LightingPbrSSRShader :public ShaderModule {
+public:
+	LightingPbrSSRShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct Light {
+		glm::mat4 shadowViewProj;
+
+		glm::vec3 direction;
+		float intensity;
+
+		glm::vec3 color;
+		int shadowMapIndex;
+
+		float cameraZnear;
+		float cameraZfar;
+		float padding6;
+		float padding7;
+	};
+
+	struct UniformBuffer0 {
+		Light lights[2];
+		glm::vec3 cameraPos;
+		int lightNum;
+
+		int ResolusionWidth;
+		int ResolusionHeight;
+		int GbufferWidth;
+		int GbufferHeight;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+};
+
+class SSRShader :public ShaderModule {
+public:
+	SSRShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct UniformBuffer0 {
+		glm::mat4 viewProj;
+		
+		glm::vec3 cameraPos;
+		float padding0;
+
+		int GbufferWidth;
+		int GbufferHeight;
+		int padding1;
+		int padding2;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+};
+
 #endif

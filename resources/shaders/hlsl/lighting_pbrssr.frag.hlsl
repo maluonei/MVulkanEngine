@@ -23,8 +23,8 @@ struct UnifomBuffer0
     
     int ResolutionWidth;
     int ResolutionHeight;
-    int padding0;
-    int padding1;
+    int GbufferWidth;
+    int GbufferHeight;
 };
 
 
@@ -38,9 +38,10 @@ cbuffer ubo : register(b0)
 [[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
 [[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
 [[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
-[[vk::binding(5, 0)]]Texture2D shadowMaps[2] : register(t4);
+[[vk::binding(5, 0)]]Texture2D<uint4> gMatId : register(t4);
+[[vk::binding(6, 0)]]Texture2D shadowMaps[2] : register(t5);
 
-[[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(7, 0)]]SamplerState linearSampler : register(s0);
 
 struct PSInput
 {
@@ -181,7 +182,7 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 // Fresnel function ----------------------------------------------------
 float3 F_Schlick(float cosTheta, float metallic)
 {
-    float3 F0 = lerp(float3(0.04,0.04,0.04), float3(1.f,1.f,1.f), metallic); // * material.specular
+    float3 F0 = lerp(float3(0.04, 0.04, 0.04), float3(1.f, 1.f, 1.f), metallic); // * material.specular
     float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
     return F;
 }
@@ -200,7 +201,7 @@ float3 BRDF(float3 diffuseColor, float3 lightColor, float3 L, float3 V, float3 N
 	// Light color fixed
 	//float3 lightColor = float3(1.0);
 
-    float3 color = float3(0.0);
+    float3 color = float3(0.0, 0.0, 0.0);
 
     if (dotNL > 0.0)
     {
@@ -238,6 +239,8 @@ PSOutput main(PSInput input)
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord);
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
+    //int4 gBufferValue4 = gMatId.Sample(nearestSampler, input.texCoord);
+    uint4 gBufferValue4 = gMatId.Load(int3(input.texCoord.xy * float2(ubo0.GbufferWidth, ubo0.GbufferHeight), 0));
 
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;
@@ -245,6 +248,7 @@ PSOutput main(PSInput input)
     float4 fragAlbedo = gBufferValue2.rgba;
     float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
+    int matId = gBufferValue4.r;
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 
@@ -261,6 +265,10 @@ PSOutput main(PSInput input)
     }
 
     output.color = float4(fragcolor, 1.f);
+
+    //if(matId == 1){
+    //    output.color = float4(1.f, 1.f, 1.f, 1.f);
+    //}
     
     return output;
 }

@@ -45,8 +45,8 @@ void SceneLoader::Load(std::string path, Scene* scene)
 
 void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
 {
-    spdlog::info("node.name: " + std::string(node->mName.C_Str()));
-    spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
+    //spdlog::info("node.name: " + std::string(node->mName.C_Str()));
+    //spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
 
     // 处理当前节点的所有网格
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {

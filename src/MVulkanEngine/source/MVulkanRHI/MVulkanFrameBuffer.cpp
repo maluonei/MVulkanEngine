@@ -6,6 +6,11 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 {
 }
 
+VkImageView MVulkanFrameBuffer::GetDepthImageView() const {
+    if (m_info.depthView) return m_info.depthView;
+    else return m_depthBuffer.GetImageView();
+}
+
 void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo creatInfo)
 {
     m_device = device.GetDevice();

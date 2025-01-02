@@ -141,7 +141,6 @@ void Shader::compile(std::string shaderPath)
 					spdlog::error(line);
 				}
 			}
-
 		}
 
 		m_compiledShaderCode = readFile(outputShader.string());

@@ -462,3 +462,65 @@ void* TestCompShader::GetData(uint32_t binding, uint32_t index)
 TestSquadShader::TestSquadShader() :ShaderModule("hlsl/test_squad.vert.hlsl", "hlsl/test_squad.frag.hlsl")
 {
 }
+
+
+LightingPbrSSRShader::LightingPbrSSRShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbrssr.frag.hlsl")
+{
+
+}
+
+size_t LightingPbrSSRShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(LightingPbrSSRShader::UniformBuffer0);
+	}
+	//return sizeof(DirectionalLightBuffer);
+}
+
+void LightingPbrSSRShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<LightingPbrSSRShader::UniformBuffer0*>(data);
+		return;
+	}
+}
+
+void* LightingPbrSSRShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	}
+}
+
+SSRShader::SSRShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr.frag.hlsl")
+{
+
+}
+
+size_t SSRShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(SSRShader::UniformBuffer0);
+	}
+}
+
+void SSRShader::SetUBO(uint8_t index, void* data)
+{
+	switch (index) {
+	case 0:
+		ubo0 = *reinterpret_cast<SSRShader::UniformBuffer0*>(data);
+		return;
+	}
+}
+
+void* SSRShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	}
+}
