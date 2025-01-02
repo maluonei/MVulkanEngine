@@ -44,7 +44,8 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_MAINTENANCE3_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     VK_KHR_UNIFORM_BUFFER_STANDARD_LAYOUT_EXTENSION_NAME,
-    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
+    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+    "VK_NV_compute_shader_derivatives"
 };
 
 const std::vector<const char*> raytracingExtensions = {

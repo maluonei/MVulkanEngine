@@ -74,6 +74,7 @@ void Shader::compile(std::string shaderPath)
 	}
 	else if (shaderPath.ends_with("hlsl")) {
 		fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "dxc.exe";
+		//fs::path compilerPath = projectRootPath / "build" / "ShaderCompilers" / "glslangValidator.exe";
 
 		size_t size = shaderPath.size();
 
@@ -99,22 +100,35 @@ void Shader::compile(std::string shaderPath)
 		if (needToCompile) {
 			std::string phase = "";
 			if (shaderPath.substr(size - 9, 4) == "vert") {
-				phase = "vs_6_0";
+				phase = "vs_6_4";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "frag") {
-				phase = "ps_6_0";
+				phase = "ps_6_4";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "geom") {
-				phase = "gs_6_0";
+				phase = "gs_6_4";
 			}
 			else if (shaderPath.substr(size - 9, 4) == "comp") {
-				phase = "cs_6_0";
+				phase = "cs_6_4";
 			}
 
+			//if (shaderPath.substr(size - 9, 4) == "vert") {
+			//	phase = "vert";
+			//}
+			//else if (shaderPath.substr(size - 9, 4) == "frag") {
+			//	phase = "frag";
+			//}
+			//else if (shaderPath.substr(size - 9, 4) == "geom") {
+			//	phase = "geom";
+			//}
+			//else if (shaderPath.substr(size - 9, 4) == "comp") {
+			//	phase = "comp";
+			//}
+
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
-			
-			
+			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -fspv-preserve-bindings -fspv-preserve-interface -fspv-target-env=vulkan1.3 -Od -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
+			//std::string command = compilerPath.string() + " -V --target-env vulkan1.3 -D -e main -Od -S " + phase + " " + hlslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
+
 			//spdlog::info("comnmand: {0}", command);
 			int status = system(command.c_str());
 

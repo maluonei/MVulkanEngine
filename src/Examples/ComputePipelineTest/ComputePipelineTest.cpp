@@ -30,8 +30,8 @@ void ComputePipelineTest::ComputeAndDraw(uint32_t imageIndex)
 
 	{
 		TestCompShader::Constants constant;
-		constant.Width = 256;
-		constant.Height = 256;
+		constant.Width = 64;
+		constant.Height = 64;
 
 		auto shader = m_testComputePass->GetShader();
 		shader->SetUBO(0, &constant);
