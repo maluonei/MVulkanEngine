@@ -12,6 +12,9 @@ cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 
+!3rdParty/dxc/*.exe
+!3rdParty/dxc/*.dll
+
 # Ignore executables and libraries
 *.exe
 *.dll
@@ -20,6 +23,7 @@ Makefile
 
 !resources/models
 !resources/textures
+
 # Ignore generated files
 *.o
 *.obj
