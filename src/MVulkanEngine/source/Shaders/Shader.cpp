@@ -112,7 +112,7 @@ void Shader::compile(std::string shaderPath)
 			}
 
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -F0 " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
+			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
 			
 			
 			//spdlog::info("comnmand: {0}", command);
