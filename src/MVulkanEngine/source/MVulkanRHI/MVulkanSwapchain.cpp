@@ -55,7 +55,8 @@ VkResult MVulkanSwapchain::AcquireNextImage(VkSemaphore semephore, VkFence fence
 void MVulkanSwapchain::create()
 {
     m_swapChainSupport = querySwapChainSupport(m_device.GetPhysicalDevice(), m_surface);
-    m_surfaceFormat = chooseSwapSurfaceFormat(m_swapChainSupport.formats);
+    m_surfaceFormatSRGB = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
+    m_surfaceFormatUNORM = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_UNORM);
     m_presentMode = chooseSwapPresentMode(m_swapChainSupport.presentModes);
     m_swapChainExtent = chooseSwapExtent(m_swapChainSupport.capabilities);
 
@@ -69,8 +70,8 @@ void MVulkanSwapchain::create()
     createInfo.surface = m_surface;
 
     createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = m_surfaceFormat.format;
-    createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
+    createInfo.imageFormat = m_surfaceFormatSRGB.format;
+    createInfo.imageColorSpace = m_surfaceFormatSRGB.colorSpace;
     createInfo.imageExtent = m_swapChainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -114,7 +115,7 @@ void MVulkanSwapchain::createSwapchainImageViews()
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = m_swapChainImages[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = m_surfaceFormat.format;
+        createInfo.format = m_surfaceFormatSRGB.format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -129,11 +130,18 @@ void MVulkanSwapchain::createSwapchainImageViews()
     }
 }
 
-VkSurfaceFormatKHR MVulkanSwapchain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+VkSurfaceFormatKHR MVulkanSwapchain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat targetFormat) {
     for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (availableFormat.format == targetFormat && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }
+
+        //if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        //    return availableFormat;
+        //}
+        //if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        //    return availableFormat;
+        //}
     }
 
     return availableFormats[0];

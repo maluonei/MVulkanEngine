@@ -32,6 +32,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
     graphicsList.Reset();
     graphicsList.Begin();
 
+
     //prepare gbufferPass ubo
     {
         GbufferShader::UniformBufferObject0 ubo0{};
@@ -98,73 +99,29 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         ubo0.ResolusionWidth = m_shadowPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.ResolusionHeight = m_shadowPass->GetFrameBuffer(0).GetExtent2D().height;
-        ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
-        ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
 
         m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
+    //prepare SSR ubo
     {
         SSRShader::UniformBuffer0 ubo0{};
-        
-        ubo0.cameraPos = m_camera->GetPosition();
         ubo0.viewProj = m_camera->GetProjMatrix() * m_camera->GetViewMatrix();
+        ubo0.cameraPos = m_camera->GetPosition();
 
         ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
 
-        m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+        m_ssrPass->GetShader()->SetUBO(0, &ubo0);
     }
 
-    {
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
-        graphicsList.End();
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-        auto& graphicQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        graphicQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        graphicQueue.WaitForQueueComplete();
-        spdlog::info("after shadow pass");
-    }
-
-    {
-        graphicsList.Reset();
-        graphicsList.Begin();
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
-        graphicsList.End();
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-        auto& graphicQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        graphicQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        graphicQueue.WaitForQueueComplete();
-        spdlog::info("after gbuffer pass");
-    }
-    
-    {
-        graphicsList.Reset();
-        graphicsList.Begin();
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-        graphicsList.End();
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-        auto& graphicQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        graphicQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        graphicQueue.WaitForQueueComplete();
-        spdlog::info("after lightning pass");
-    }
-
-    graphicsList.Reset();
-    graphicsList.Begin();
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_ssrPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
-    spdlog::info("after ssr pass");
 }
 
 void SSR::RecreateSwapchainAndRenderPasses()
@@ -173,23 +130,40 @@ void SSR::RecreateSwapchainAndRenderPasses()
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_shadowPass);
 
-        m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
+        {
+            m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
 
-        std::vector<std::vector<VkImageView>> gbufferViews(6);
-        for (auto i = 0; i < 5; i++) {
-            gbufferViews[i].resize(1);
-            gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
+            std::vector<std::vector<VkImageView>> gbufferViews(6);
+            for (auto i = 0; i < 5; i++) {
+                gbufferViews[i].resize(1);
+                gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
+            }
+            gbufferViews[5] = std::vector<VkImageView>(2);
+            gbufferViews[5][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
+            gbufferViews[5][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
+
+            std::vector<VkSampler> samplers(1);
+            samplers[0] = m_linearSampler.GetSampler();
+
+            m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
         }
-        gbufferViews[5] = std::vector<VkImageView>(2);
-        gbufferViews[5][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[5][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
 
-        std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
-        //samplers[1] = m_nearestSampler.GetSampler();
+        {
+            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_ssrPass);
 
-        m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
+            std::vector<std::vector<VkImageView>> ssrViews(5);
+            ssrViews[0] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(0));
+            ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
+            ssrViews[2] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(4));
+            ssrViews[3] = std::vector<VkImageView>(1, m_lightingPass->GetFrameBuffer(0).GetImageView(0));
+            ssrViews[4] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
+
+            std::vector<VkSampler> samplers(1);
+            samplers[0] = m_linearSampler.GetSampler();
+
+            m_ssrPass->UpdateDescriptorSetWrite(ssrViews, samplers);
+        }
     }
 }
 
@@ -260,7 +234,6 @@ void SSR::CreateRenderPass()
         info.colorAttachmentResolvedViews = nullptr;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        
         info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -287,13 +260,10 @@ void SSR::CreateRenderPass()
         info.frambufferCount = 1;
         info.useSwapchainImages = false;
         info.imageAttachmentFormats = lightingPassFormats;
-        
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        
         info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
@@ -319,36 +289,33 @@ void SSR::CreateRenderPass()
     }
 
     {
-        std::vector<VkFormat> ssrPassFormats;
-        ssrPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        std::vector<VkFormat> SSRPassFormats;
+        SSRPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
         RenderPassCreateInfo info{};
         info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
         info.depthFormat = device.FindDepthFormat();
         info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
         info.useSwapchainImages = true;
-        info.imageAttachmentFormats = ssrPassFormats;
-        
+        info.imageAttachmentFormats = SSRPassFormats;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        
-        info.initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        
-        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-        info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-        info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
         m_ssrPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> ssrShader = std::make_shared<SSRShader>();
         std::vector<std::vector<VkImageView>> ssrViews(5);
-        ssrViews[0] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
-        ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(0));
+        ssrViews[0] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(0));
+        ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
         ssrViews[2] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(4));
         ssrViews[3] = std::vector<VkImageView>(1, m_lightingPass->GetFrameBuffer(0).GetImageView(0));
-        ssrViews[4] = std::vector<VkImageView>(1, m_lightingPass->GetFrameBuffer(0).GetDepthImageView());
+        ssrViews[4] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
 
         std::vector<VkSampler> samplers(1);
         samplers[0] = m_linearSampler.GetSampler();
@@ -370,6 +337,7 @@ void SSR::Clean()
     m_gbufferPass->Clean();
     m_lightingPass->Clean();
     m_shadowPass->Clean();
+    m_ssrPass->Clean();
 
     m_linearSampler.Clean();
 
@@ -386,7 +354,6 @@ void SSR::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
-    //fs::path modelPath = resourcePath / "SSRTest" / "ssr.ply";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -444,7 +411,7 @@ void SSR::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 10.f;
+    float intensity = 2.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
@@ -472,14 +439,6 @@ void SSR::createSamplers()
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
-
-    //{
-    //    MVulkanSamplerCreateInfo info{};
-    //    info.minFilter = VK_FILTER_NEAREST;
-    //    info.magFilter = VK_FILTER_NEAREST;
-    //    info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    //    m_nearestSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
-    //}
 }
 
 void SSR::createLightCamera()

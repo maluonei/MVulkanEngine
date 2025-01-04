@@ -1,10 +1,10 @@
 # MVulkanEngine
 
-##TODO List  
-1.compute pipeline  
-2.raytracing pipeline  
-3.culling  
-4.gui  
+## TODO List  
+1.culling  
+2.gui
+3.ssao
+4.GI
 
 Current Function:  
 pbr:  
@@ -13,3 +13,7 @@ use PCF as soft shadow
 
 ibl:
 ![IBL](images/ibl.png)
+
+ssr:
+version1.0, based on pbr, use 3-step ray-marching to find reflection ray's intersection point.
+![SSR](images/ssr_v1.0.png)

@@ -1,5 +1,5 @@
-#ifndef RAYQUERYTEST_HPP
-#define RAYQUERYTEST_HPP
+#ifndef RAYQUERYSHADOWS_HPP
+#define RAYQUERYSHADOWS_HPP
 
 #include <MRenderApplication.hpp>
 #include <memory>

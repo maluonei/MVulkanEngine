@@ -459,7 +459,7 @@ public:
 public:
 	struct UniformBuffer0 {
 		glm::mat4 viewProj;
-		
+
 		glm::vec3 cameraPos;
 		float padding0;
 

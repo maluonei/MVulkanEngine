@@ -27,7 +27,6 @@ struct UnifomBuffer0
     int GbufferHeight;
 };
 
-
 [[vk::binding(0, 0)]]
 cbuffer ubo : register(b0)
 {
@@ -38,7 +37,7 @@ cbuffer ubo : register(b0)
 [[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
 [[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
 [[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
-[[vk::binding(5, 0)]]Texture2D<uint4> gMatId : register(t4);
+[[vk::binding(5, 0)]]Texture2D<uint4>  gMatId : register(t4);
 [[vk::binding(6, 0)]]Texture2D shadowMaps[2] : register(t5);
 
 [[vk::binding(7, 0)]]SamplerState linearSampler : register(s0);
@@ -222,15 +221,6 @@ float3 BRDF(float3 diffuseColor, float3 lightColor, float3 L, float3 V, float3 N
     return color;
 }
 
-float3 rgb2srgb(float3 color)
-{
-    color.x = color.x < 0.0031308 ? color.x * 12.92f : pow(color.x, 1.0 / 2.4) * 1.055f - 0.055f;
-    color.y = color.y < 0.0031308 ? color.y * 12.92f : pow(color.y, 1.0 / 2.4) * 1.055f - 0.055f;
-    color.z = color.z < 0.0031308 ? color.z * 12.92f : pow(color.z, 1.0 / 2.4) * 1.055f - 0.055f;
-
-    return color;
-}
-
 PSOutput main(PSInput input)
 {
     PSOutput output;
@@ -249,6 +239,9 @@ PSOutput main(PSInput input)
     float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
     int matId = gBufferValue4.r;
+    if(matId == 1){
+        roughness = 0.05f;
+    }
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 

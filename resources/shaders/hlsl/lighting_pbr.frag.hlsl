@@ -200,7 +200,7 @@ float3 BRDF(float3 diffuseColor, float3 lightColor, float3 L, float3 V, float3 N
 	// Light color fixed
 	//float3 lightColor = float3(1.0);
 
-    float3 color = float3(0.0);
+    float3 color = float3(0.0, 0.0, 0.0);
 
     if (dotNL > 0.0)
     {

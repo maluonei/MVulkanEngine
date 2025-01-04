@@ -1,4 +1,4 @@
-#include "RayQueryTest.hpp"
+#include "RayQueryShadows.hpp"
 
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Scene/SceneLoader.hpp"

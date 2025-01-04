@@ -18,7 +18,7 @@ public:
 	void Clean();
 	VkResult AcquireNextImage(VkSemaphore semephore, VkFence fence, uint32_t* imageIndex);
 
-	inline VkFormat GetSwapChainImageFormat() const { return m_surfaceFormat.format; }
+	inline VkFormat GetSwapChainImageFormat() const { return m_surfaceFormatSRGB.format; }
 	inline std::vector<VkImage> GetSwapChainImages() const {
 		return m_swapChainImages;
 	};
@@ -51,7 +51,8 @@ private:
 	VkSwapchainKHR			m_swapChain;
 
 	SwapChainSupportDetails m_swapChainSupport;
-	VkSurfaceFormatKHR		m_surfaceFormat;
+	VkSurfaceFormatKHR		m_surfaceFormatSRGB;
+	VkSurfaceFormatKHR      m_surfaceFormatUNORM;
 	VkPresentModeKHR		m_presentMode;
 
 	std::vector<VkImage>	m_swapChainImages;
@@ -61,7 +62,7 @@ private:
 	void create();
 	void createSwapchainImageViews();
 
-	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat targetFormat);
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 

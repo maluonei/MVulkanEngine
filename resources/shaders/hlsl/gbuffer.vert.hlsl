@@ -38,7 +38,7 @@ float3x3 inverse(float3x3 m)
         
     if (abs(det) < 1e-6)
     {
-        // Èç¹ûĞĞÁĞÊ½½Ó½üÁã£¬¾ØÕó²»¿ÉÄæ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½Ó½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ó²»¿ï¿½ï¿½ï¿½
         return (float3x3) 0;
     }
         
@@ -70,6 +70,9 @@ VSOutput main(VSInput input)
     // Compute world space position
     float4 worldSpacePosition = mul(mvp.Model, float4(input.Position, 1.0));
 
+    // Calculate world position (divide by w to handle perspective divide)
+    output.worldPos = worldSpacePosition.xyz / worldSpacePosition.w;
+
     // Compute screen space position
     float4 screenSpacePosition = mul(mvp.View, worldSpacePosition);
     screenSpacePosition = mul(mvp.Projection, screenSpacePosition);
@@ -78,9 +81,6 @@ VSOutput main(VSInput input)
     // Compute normal in world space
     float3x3 normalMatrix = transpose(inverse((float3x3)mvp.Model));
     output.normal = normalize(mul(normalMatrix, input.Normal));
-
-    // Calculate world position (divide by w to handle perspective divide)
-    output.worldPos = worldSpacePosition.xyz / worldSpacePosition.w;
 
     // Pass instance ID
     output.instanceID = input.InstanceID;
