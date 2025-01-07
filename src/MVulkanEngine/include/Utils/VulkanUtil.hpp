@@ -237,4 +237,9 @@ static uint32_t CalculateAlignedSize(uint32_t size, uint32_t alignment) {
     return (size + alignment - 1) & ~(alignment - 1);
 }
 
+static uint32_t CalculateMipLevels(VkExtent2D extent) {
+    int minDim = std::min(extent.width, extent.height);
+    return static_cast<uint32_t>(std::floor(std::log2(static_cast<float>(minDim)))) + 1;
+}
+
 #endif

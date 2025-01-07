@@ -15,6 +15,14 @@ struct BufferCreateInfo {
 };
 
 struct StorageImageCreateInfo {
+	//VkImage image = nullptr;
+	//VkImageViewType type;
+	//VkImageAspectFlags aspectMask;
+	//uint32_t baseMipLevel = 0;
+	//uint32_t mipLevel = 1;
+	//uint32_t baseArrayLayer = 0;
+	//uint32_t layerCount = 1;
+
 	uint32_t width = 0;
 	uint32_t height = 0;
 	uint32_t depth = 1;

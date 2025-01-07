@@ -15,11 +15,12 @@ public:
 
 	inline VkImage GetImage()const { return m_image.GetImage(); }
 	inline VkImageView GetImageView()const { return m_image.GetImageView(); }
-
+	inline VkFormat GetFormat() const { return m_format; }
 private:
 
 	AttachmentType		m_attachmentType;
 	MVulkanImage		m_image;
+	VkFormat			m_format;
 
 	bool				isActive = false;
 };

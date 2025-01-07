@@ -56,6 +56,8 @@ public:
 
 	inline VkImage GetDepthImage() const { return m_depthBuffer.GetImage(); }
 
+	inline VkFormat GetDepthFormat() const { return m_depthBuffer.GetFormat(); }
+
 	VkImageView GetDepthImageView() const;
 
 	inline VkFramebuffer Get() const { return m_frameBuffer; }

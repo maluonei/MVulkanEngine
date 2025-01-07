@@ -3,6 +3,7 @@
 void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format)
 {
 	m_attachmentType = type;
+	m_format = format;
 
 	ImageCreateInfo imageInfo{};
 	imageInfo.width = extent.width;

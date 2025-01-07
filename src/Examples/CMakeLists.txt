@@ -1,6 +1,7 @@
 add_subdirectory(pbr)
 add_subdirectory(ibl)
 add_subdirectory(ssr)
+add_subdirectory(ssr_v2)
 add_subdirectory(ComputePipelineTest)
 add_subdirectory(RayQueryShadows)
 add_subdirectory(RayTracingPipelineTest)

@@ -23,6 +23,7 @@ struct RenderPassCreateInfo {
 	std::vector<VkFormat> imageAttachmentFormats;
 	VkImageView* colorAttachmentResolvedViews = nullptr;
 
+	//bool generateDepthMipmap = false;
 	bool reuseDepthView = false;
 	VkImageView depthView = nullptr;
 
