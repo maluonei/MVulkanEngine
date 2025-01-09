@@ -105,12 +105,23 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare SSR ubo
     {
-        SSRShader::UniformBuffer0 ubo0{};
+        SSR2Shader::UniformBuffer0 ubo0{};
         ubo0.viewProj = m_camera->GetProjMatrix() * m_camera->GetViewMatrix();
         ubo0.cameraPos = m_camera->GetPosition();
 
         ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
+        ubo0.maxMipLevel = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+        ubo0.g_max_traversal_intersections = 20;
+
+        uint32_t width = ubo0.GbufferWidth;
+        uint32_t height = ubo0.GbufferHeight;
+
+        for (auto i = 0; i < ubo0.maxMipLevel; i++) {
+            ubo0.mipResolutions[i] = glm::ivec2(int(width), int(height));
+            width = width / 2;
+            height = height / 2;
+        }
 
         m_ssrPass->GetShader()->SetUBO(0, &ubo0);
     }
@@ -143,7 +154,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             auto extent = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
             auto width = extent.width;
             auto height = extent.height;
-            for (auto i = 0; i < std::min(4, int(maxMipLevels)); i++) {
+            for (auto i = 0; i < maxMipLevels; i++) {
                 DownSampleDepthShader::Constants constant{};
                 constant.u_previousLevel = i - 1;
 
@@ -170,8 +181,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
                 computeQueue.SubmitCommands(1, &submitInfo, nullptr);
                 computeQueue.WaitForQueueComplete();
 
-                width /= 2;
-                height /= 2;
+                width = int(width / 2);
+                height = int(height / 2);
             }
         }
 
@@ -369,7 +380,7 @@ void SSR::CreateRenderPass()
 
         m_ssrPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> ssrShader = std::make_shared<SSRShader>();
+        std::shared_ptr<ShaderModule> ssrShader = std::make_shared<SSR2Shader>();
         std::vector<std::vector<VkImageView>> ssrViews(5);
         ssrViews[0] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(0));
         ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
@@ -574,3 +585,33 @@ void* DownSampleDepthShader::GetData(uint32_t binding, uint32_t index)
 }
 
 
+
+SSR2Shader::SSR2Shader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr2.frag.hlsl")
+{
+
+}
+
+size_t SSR2Shader::GetBufferSizeBinding(uint32_t binding) const
+{
+    switch (binding) {
+    case 0:
+        return sizeof(SSR2Shader::UniformBuffer0);
+    }
+}
+
+void SSR2Shader::SetUBO(uint8_t index, void* data)
+{
+    switch (index) {
+    case 0:
+        ubo0 = *reinterpret_cast<SSR2Shader::UniformBuffer0*>(data);
+        return;
+    }
+}
+
+void* SSR2Shader::GetData(uint32_t binding, uint32_t index)
+{
+    switch (binding) {
+    case 0:
+        return (void*)&ubo0;
+    }
+}

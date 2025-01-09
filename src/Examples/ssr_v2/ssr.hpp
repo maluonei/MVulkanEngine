@@ -42,6 +42,36 @@ private:
 	Constants constant;
 };
 
+
+class SSR2Shader :public ShaderModule {
+public:
+	SSR2Shader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t index, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct UniformBuffer0 {
+		glm::mat4 viewProj;
+
+		glm::ivec2 mipResolutions[13];
+
+		glm::vec3 cameraPos;
+		float padding0;
+
+		int GbufferWidth;
+		int GbufferHeight;
+		int maxMipLevel;
+		uint32_t g_max_traversal_intersections;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+};
+
 class SSR : public MRenderApplication {
 public:
 	virtual void SetUp();
