@@ -11,14 +11,15 @@
 [numthreads(16, 16, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
-    if(threadID.x>=u_previousLevelDimensions.x || threadID.y>=u_previousLevelDimensions.y)
-        return;
-
     uint2 texCoord = threadID.xy;
     if(u_previousLevel==-1){
         DepthBuffer[0][texCoord] = BaseDepthBuffer.Load(int3(texCoord.xy, 0)).r;
         return;
     }
+
+    if(threadID.x>=u_previousLevelDimensions.x/2 || threadID.y>=u_previousLevelDimensions.y/2)
+        return;
+
     uint2 previousLayerTexCoord = texCoord * 2;
 
     float depth0 = DepthBuffer[u_previousLevel].Load(int3(int2(previousLayerTexCoord), 0)).r;

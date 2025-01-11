@@ -2,7 +2,7 @@ struct UnifomBuffer0
 {
     float4x4 viewProj;
 
-    uint2 mipResolutions[13];
+    uint4 mipResolutions[13];
     
     float3 cameraPos;
     float padding0;
@@ -12,7 +12,6 @@ struct UnifomBuffer0
     int maxMipLevel;
     uint g_max_traversal_intersections;
 };
-
 
 [[vk::binding(0, 0)]]
 cbuffer ubo : register(b0)
@@ -24,9 +23,10 @@ cbuffer ubo : register(b0)
 [[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t2);
 [[vk::binding(3, 0)]]Texture2D<uint4>  gMatId : register(t3);
 [[vk::binding(4, 0)]]Texture2D<float4> Render : register(t4);
-[[vk::binding(5, 0)]]Texture2D<float4> Depth[13] : register(t5);
+[[vk::binding(5, 0)]]Texture2D<float>  Depth[13] : register(t5);
 
 [[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(7, 0)]]SamplerState nearestSampler : register(s0);
 
 #define FLOAT_MAX                          3.402823466e+38
 
@@ -49,8 +49,6 @@ void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 {
     float2 current_mip_resolution = ubo0.mipResolutions[currentMipLevel];
     float2 current_mip_resolution_inv = 1.0 / current_mip_resolution;
-
-    float2 inv_current_mip_resolution = 1.0 / current_mip_resolution;
 
     float2 current_mip_position = current_mip_resolution * origin.xy;
 
@@ -100,14 +98,19 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 }
 
 float LoadDepth(float2 uv, int mipLevel){
-    return Depth[mipLevel].Load(int3(int2(uv), 0));
+    //return Depth[mipLevel].Load(int3(int2(uv), 0));
+
+    uint2 mipResolution = ubo0.mipResolutions[mipLevel];
+    uv = uv / mipResolution;
+    uv.y = 1.f - uv.y;
+    return Depth[mipLevel].Sample(nearestSampler, uv);
 }
 
 float3 SSR_Trace(float3 origin, float3 direction,
     uint max_traversal_intersections, out bool valid_hit)
 {
     float3 color = float3(0.f, 0.f, 0.f);
-    const float3 inv_direction = select(direction != 0, 1.0 / direction, FLOAT_MAX);
+    const float3 inv_direction = select(direction != 0, 0.999f / direction, FLOAT_MAX);
 
     float2 uv_offset = 0.005 * exp2(ubo0.maxMipLevel) / float2(ubo0.GbufferWidth, ubo0.GbufferHeight);
     uv_offset = select(direction.xy < 0, -uv_offset, uv_offset);
@@ -115,28 +118,31 @@ float3 SSR_Trace(float3 origin, float3 direction,
     // Offset applied depending on current mip resolution to move the boundary to the left/right upper/lower border depending on ray direction.
     float2 floor_offset = select(direction.xy < 0, float2(0.f, 0.f), float2(1.f, 1.f));
 
-    int currentMipLevel = 0;
-    //float2 current_mip_resolution = ubo0.mipResolutions[currentMipLevel];
-    //float2 inv_current_mip_resolution = 1.0 / current_mip_resolution;
+    int currentMipLevel = ubo0.maxMipLevel;
 
     float current_t = 0.f;
     float3 position;
     InitialAdvanceRay(origin, direction, inv_direction, 
         currentMipLevel,
         floor_offset, uv_offset, position, current_t);
+    //return float3(position.xyz);
 
     int i = 0;
-    while(i < max_traversal_intersections && currentMipLevel >= ubo0.maxMipLevel){
+    while(i < max_traversal_intersections && currentMipLevel >=0 && currentMipLevel <= ubo0.maxMipLevel){
         float2 current_mip_resolution = ubo0.mipResolutions[currentMipLevel];
 
         float2 current_mip_position = current_mip_resolution * position.xy;
+    
         float surface_z = LoadDepth(current_mip_position, currentMipLevel);
+        //return float3(surface_z, 0.f, 0.f);
+
         bool skipped_tile = AdvanceRay(origin, direction, inv_direction, 
             currentMipLevel, floor_offset, uv_offset, 
             surface_z, position, current_t);
+
+        //return float3(position.xyz);
         
         currentMipLevel += skipped_tile ? 1 : -1;
-        //if(currentMipLevel == )
         //current_mip_resolution *= skipped_tile ? 0.5 : 2;
         //current_mip_resolution_inv *= skipped_tile ? 2 : 0.5;
         ++i;
@@ -144,7 +150,11 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
     valid_hit = (i <= max_traversal_intersections);
 
-    return Render.Sample(linearSampler, position.xy).rgb;
+    //return float3(position.z, position.z, position.z);
+    return float3(i / 20.f, i/20.f, i/20.f);
+    //return float3(position.xy, 0.);
+    float2 uv = float2(position.x, 1.f-position.y);
+    return Render.Sample(linearSampler, uv).rgb;
 }
 
 PSOutput main(PSInput input)
@@ -173,6 +183,12 @@ PSOutput main(PSInput input)
         startFrag.xyz   /= startFrag.w;
         startFrag.xy     = startFrag.xy * 0.5 + 0.5;
         //startFrag.xy     = startFrag.xy * texSize;
+        //float d = Depth[9].Sample(nearestSampler, startFrag.xy).r;
+        //float d = Depth[9].Load(int3(int2(startFrag.xy*int2(2, 1)), 0)).r;
+        //output.color = float4(d, 0.f, 0.f, 1.f);
+        //return output;
+        //return float3(Depth[9].Load(int3(int2(startFrag.xy*int2(2, 1)), 0)), 0.f, 0.f);
+        //return float3(Depth[9].Sample(nearestSampler, startFrag.xy).r, 0.f, 0.f);
 
         float4 endFrag   = float4(targetPosition, 1.f);
         endFrag          = mul(ubo0.viewProj, endFrag);
@@ -183,10 +199,13 @@ PSOutput main(PSInput input)
         float3 screenDirection = normalize(endFrag.xyz - startFrag.xyz);
 
         bool valid_hit;
-        uint max_traversal_intersections;
+        uint max_traversal_intersections = ubo0.g_max_traversal_intersections;
         float3 color = SSR_Trace(startFrag.xyz, screenDirection, max_traversal_intersections, valid_hit);
 
-        output.color = float4(color, 1.f);
+        if (valid_hit)
+            output.color = float4(color, 1.f);
+        else
+            output.color = float4(0.f, 0.f, 0.f, 1.f);
     }
     else{
         output.color = float4(rendered.rgb, 1.f);

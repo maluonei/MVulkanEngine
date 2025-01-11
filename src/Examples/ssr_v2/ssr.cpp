@@ -105,20 +105,22 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare SSR ubo
     {
+        uint32_t maxMipLevel = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+
         SSR2Shader::UniformBuffer0 ubo0{};
         ubo0.viewProj = m_camera->GetProjMatrix() * m_camera->GetViewMatrix();
         ubo0.cameraPos = m_camera->GetPosition();
 
         ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
-        ubo0.maxMipLevel = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
-        ubo0.g_max_traversal_intersections = 20;
+        ubo0.maxMipLevel = maxMipLevel - 1;
+        ubo0.g_max_traversal_intersections = 50;
 
         uint32_t width = ubo0.GbufferWidth;
         uint32_t height = ubo0.GbufferHeight;
 
-        for (auto i = 0; i < ubo0.maxMipLevel; i++) {
-            ubo0.mipResolutions[i] = glm::ivec2(int(width), int(height));
+        for (auto i = 0; i < maxMipLevel; i++) {
+            ubo0.mipResolutions[i] = glm::ivec4(int(width), int(height), 0, 0);
             width = width / 2;
             height = height / 2;
         }
@@ -152,8 +154,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
             auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
             auto extent = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
-            auto width = extent.width;
-            auto height = extent.height;
+            auto width = extent.width * 2;
+            auto height = extent.height * 2;
             for (auto i = 0; i < maxMipLevels; i++) {
                 DownSampleDepthShader::Constants constant{};
                 constant.u_previousLevel = i - 1;
@@ -362,6 +364,45 @@ void SSR::CreateRenderPass()
             m_lightingPass, lightingShader, gbufferViews, samplers);
     }
 
+
+    {
+        std::shared_ptr<ComputeShaderModule> downSampleDepthShader = std::make_shared<DownSampleDepthShader>();
+        m_downsampleDepthPass = std::make_shared<ComputePass>(device);
+
+        std::vector<uint32_t> storageBufferSizes(0);
+
+        auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+
+        uint32_t width = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
+        uint32_t height = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
+
+        std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos(1);
+        storageImageCreateInfos[0].resize(maxMipLevels);
+
+        for (int i = 0; i < maxMipLevels; i++) {
+            std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].width = width;
+            std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].height = height;
+
+            storageImageCreateInfos[0][i].width = width;
+            storageImageCreateInfos[0][i].height = height;
+            storageImageCreateInfos[0][i].depth = 1;
+            storageImageCreateInfos[0][i].format = VK_FORMAT_R32_SFLOAT;
+
+            width = int(width / 2);
+            height = int(height / 2);
+        }
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<std::vector<VkImageView>> seperateImageViews(1);
+        seperateImageViews[0].resize(1);
+        seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(m_downsampleDepthPass, downSampleDepthShader,
+            storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
+        spdlog::info("m_downsampleDepthPass success!");
+    }
+
     {
         std::vector<VkFormat> SSRPassFormats;
         SSRPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
@@ -386,54 +427,22 @@ void SSR::CreateRenderPass()
         ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
         ssrViews[2] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(4));
         ssrViews[3] = std::vector<VkImageView>(1, m_lightingPass->GetFrameBuffer(0).GetImageView(0));
-        ssrViews[4] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
+        
+        auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+        ssrViews[4] = std::vector<VkImageView>(maxMipLevels);
+        for (auto i = 0; i < maxMipLevels; i++) {
+            ssrViews[4][i] = m_downsampleDepthPass->GetStorageImageViewByBinding(0, i);
+        }
 
-        std::vector<VkSampler> samplers(1);
+        std::vector<VkSampler> samplers(2);
         samplers[0] = m_linearSampler.GetSampler();
+        samplers[1] = m_nearestSampler.GetSampler();
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_ssrPass, ssrShader, ssrViews, samplers);
     }
 
     createLightCamera();
-
-    {
-        std::shared_ptr<ComputeShaderModule> downSampleDepthShader = std::make_shared<DownSampleDepthShader>();
-        m_downsampleDepthPass = std::make_shared<ComputePass>(device);
-
-        std::vector<uint32_t> storageBufferSizes(0);
-
-        auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
-
-        uint32_t width = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
-        uint32_t height = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
-        
-        std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos(1);
-        storageImageCreateInfos[0].resize(maxMipLevels);
-
-        for (int i = 0; i < maxMipLevels; i++) {
-            std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].width = width;
-            std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].height = height;
-
-            storageImageCreateInfos[0][i].width = width;
-            storageImageCreateInfos[0][i].height = height;
-            storageImageCreateInfos[0][i].depth = 1;
-            storageImageCreateInfos[0][i].format = VK_FORMAT_R32_SFLOAT;
-
-            width = int(width / 2);
-            height = int(height / 2);
-        }
-        
-        std::vector<VkSampler> samplers(0);
-
-        std::vector<std::vector<VkImageView>> seperateImageViews(1);
-        seperateImageViews[0].resize(1);
-        seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-
-        Singleton<MVulkanEngine>::instance().CreateComputePass(m_downsampleDepthPass, downSampleDepthShader,
-            storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
-        spdlog::info("m_downsampleDepthPass success!");
-    }
 }
 
 void SSR::PreComputes()
@@ -547,6 +556,14 @@ void SSR::createSamplers()
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+    }
+
+    {
+        MVulkanSamplerCreateInfo info{};
+        info.minFilter = VK_FILTER_NEAREST;
+        info.magFilter = VK_FILTER_NEAREST;
+        info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        m_nearestSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
 }
 

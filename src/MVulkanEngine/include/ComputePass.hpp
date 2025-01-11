@@ -43,6 +43,7 @@ public:
 	inline MVulkanDescriptorSetLayouts GetDescriptorSetLayout() const { return m_descriptorLayout; }
 
 	StorageBuffer GetStorageBufferByBinding(uint32_t binding);
+	VkImageView GetStorageImageViewByBinding(uint32_t binding, uint32_t arrayIndex);
 
 	//void LoadConstantAndStorageBuffer(uint32_t alignment);
 	void LoadConstantBuffer(uint32_t alignment);

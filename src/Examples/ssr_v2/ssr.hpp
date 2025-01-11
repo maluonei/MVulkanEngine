@@ -57,7 +57,7 @@ public:
 	struct UniformBuffer0 {
 		glm::mat4 viewProj;
 
-		glm::ivec2 mipResolutions[13];
+		glm::ivec4 mipResolutions[13];
 
 		glm::vec3 cameraPos;
 		float padding0;
@@ -99,7 +99,7 @@ private:
 	std::shared_ptr<ComputePass> m_downsampleDepthPass;
 
 	MVulkanSampler				m_linearSampler;
-	//MVulkanSampler				m_nearestSampler;
+	MVulkanSampler				m_nearestSampler;
 
 	std::shared_ptr<Scene>		m_scene;
 	std::shared_ptr<Scene>		m_squad;

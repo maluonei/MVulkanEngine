@@ -443,6 +443,10 @@ StorageBuffer ComputePass::GetStorageBufferByBinding(uint32_t binding)
     return m_storageBuffer[binding - m_cbvCount];
 }
 
+VkImageView ComputePass::GetStorageImageViewByBinding(uint32_t binding, uint32_t arrayIndex) {
+    return m_storageImages[binding][arrayIndex]->GetImageView();
+}
+
 void ComputePass::LoadConstantBuffer(uint32_t alignment)
 {
     for (auto binding = 0; binding < m_cbvCount; binding++) {
