@@ -125,7 +125,6 @@ float3 SSR_Trace(float3 origin, float3 direction,
     InitialAdvanceRay(origin, direction, inv_direction, 
         currentMipLevel,
         floor_offset, uv_offset, position, current_t);
-    //return float3(position.xyz);
 
     int i = 0;
     while(i < max_traversal_intersections && currentMipLevel >=0){
@@ -134,28 +133,16 @@ float3 SSR_Trace(float3 origin, float3 direction,
         float2 current_mip_position = current_mip_resolution * position.xy;
     
         float surface_z = LoadDepth(current_mip_position, currentMipLevel);
-        //return float3(surface_z, 0.f, 0.f);
 
         bool skipped_tile = AdvanceRay(origin, direction, inv_direction, 
             currentMipLevel, floor_offset, uv_offset, 
             surface_z, position, current_t);
 
-        //return float3(position.xyz);
-        
         currentMipLevel += skipped_tile ? 1 : -1;
-        //current_mip_resolution *= skipped_tile ? 0.5 : 2;
-        //current_mip_resolution_inv *= skipped_tile ? 2 : 0.5;
         ++i;
     }
 
     valid_hit = (i <= max_traversal_intersections) && (currentMipLevel <=0);
-
-    //return float3(currentMipLevel / 9.f, currentMipLevel / 9.f, currentMipLevel / 9.f);
-    //return float3(i / 40.f, i/40.f, i/40.f);
-    //return float3(position.xy, 0.);
-    //return 
-    //return float3(position.xyz);
-
     if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
         return float3(0.f, 0.f, 0.f);
     
