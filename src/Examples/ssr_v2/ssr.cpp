@@ -114,7 +114,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
         ubo0.maxMipLevel = maxMipLevel - 1;
-        ubo0.g_max_traversal_intersections = 50;
+        ubo0.g_max_traversal_intersections = 80;
 
         uint32_t width = ubo0.GbufferWidth;
         uint32_t height = ubo0.GbufferHeight;
@@ -132,11 +132,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     
     if (true) {
-
         graphicsList.End();
-
-        //auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        //auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -456,8 +452,10 @@ void SSR::Clean()
     m_lightingPass->Clean();
     m_shadowPass->Clean();
     m_ssrPass->Clean();
+    m_downsampleDepthPass->Clean();
 
     m_linearSampler.Clean();
+    m_nearestSampler.Clean();
 
     m_squad->Clean();
     m_scene->Clean();
@@ -529,7 +527,7 @@ void SSR::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 2.f;
+    float intensity = 20.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 

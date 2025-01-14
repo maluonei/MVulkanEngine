@@ -110,15 +110,15 @@ float3 SSR_Trace(float3 origin, float3 direction,
     uint max_traversal_intersections, out bool valid_hit)
 {
     float3 color = float3(0.f, 0.f, 0.f);
-    const float3 inv_direction = select(direction != 0, 0.999f / direction, FLOAT_MAX);
+    const float3 inv_direction = select(direction != 0, 0.99999f / direction, FLOAT_MAX);
 
-    float2 uv_offset = 0.005 * exp2(ubo0.maxMipLevel) / float2(ubo0.GbufferWidth, ubo0.GbufferHeight);
+    float2 uv_offset = 0.005 * exp2(0) / float2(ubo0.GbufferWidth, ubo0.GbufferHeight);
     uv_offset = select(direction.xy < 0, -uv_offset, uv_offset);
 
     // Offset applied depending on current mip resolution to move the boundary to the left/right upper/lower border depending on ray direction.
     float2 floor_offset = select(direction.xy < 0, float2(0.f, 0.f), float2(1.f, 1.f));
 
-    int currentMipLevel = ubo0.maxMipLevel;
+    int currentMipLevel = 0;
 
     float current_t = 0.f;
     float3 position;
@@ -128,7 +128,7 @@ float3 SSR_Trace(float3 origin, float3 direction,
     //return float3(position.xyz);
 
     int i = 0;
-    while(i < max_traversal_intersections && currentMipLevel >=0 && currentMipLevel <= ubo0.maxMipLevel){
+    while(i < max_traversal_intersections && currentMipLevel >=0){
         float2 current_mip_resolution = ubo0.mipResolutions[currentMipLevel];
 
         float2 current_mip_position = current_mip_resolution * position.xy;
@@ -148,11 +148,17 @@ float3 SSR_Trace(float3 origin, float3 direction,
         ++i;
     }
 
-    valid_hit = (i <= max_traversal_intersections);
+    valid_hit = (i <= max_traversal_intersections) && (currentMipLevel <=0);
 
-    //return float3(position.z, position.z, position.z);
-    return float3(i / 20.f, i/20.f, i/20.f);
+    //return float3(currentMipLevel / 9.f, currentMipLevel / 9.f, currentMipLevel / 9.f);
+    //return float3(i / 40.f, i/40.f, i/40.f);
     //return float3(position.xy, 0.);
+    //return 
+    //return float3(position.xyz);
+
+    if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
+        return float3(0.f, 0.f, 0.f);
+    
     float2 uv = float2(position.x, 1.f-position.y);
     return Render.Sample(linearSampler, uv).rgb;
 }
@@ -171,8 +177,8 @@ PSOutput main(PSInput input)
     float3 fragPos = gBufferValue1.rgb;
     int matId = gBufferValue4.r;
 
-    //output.color = float4(rendered.rgb, 1.f);
-    output.color = float4(0.f, 0.f, 0.f, 1.f);
+    output.color = float4(rendered.rgb, 1.f);
+    //output.color = float4(0.f, 0.f, 0.f, 1.f);
     if(matId == 1){
         float3 viewDir = normalize(ubo0.cameraPos - fragPos);
         float3 reflectDir = normalize(reflect(-viewDir, fragNormal));
@@ -183,13 +189,7 @@ PSOutput main(PSInput input)
         startFrag.xyz   /= startFrag.w;
         startFrag.xy     = startFrag.xy * 0.5 + 0.5;
         //startFrag.xy     = startFrag.xy * texSize;
-        //float d = Depth[9].Sample(nearestSampler, startFrag.xy).r;
-        //float d = Depth[9].Load(int3(int2(startFrag.xy*int2(2, 1)), 0)).r;
-        //output.color = float4(d, 0.f, 0.f, 1.f);
-        //return output;
-        //return float3(Depth[9].Load(int3(int2(startFrag.xy*int2(2, 1)), 0)), 0.f, 0.f);
-        //return float3(Depth[9].Sample(nearestSampler, startFrag.xy).r, 0.f, 0.f);
-
+        
         float4 endFrag   = float4(targetPosition, 1.f);
         endFrag          = mul(ubo0.viewProj, endFrag);
         endFrag.xyz     /= endFrag.w;
@@ -200,16 +200,17 @@ PSOutput main(PSInput input)
 
         bool valid_hit;
         uint max_traversal_intersections = ubo0.g_max_traversal_intersections;
-        float3 color = SSR_Trace(startFrag.xyz, screenDirection, max_traversal_intersections, valid_hit);
+        float3 color = SSR_Trace(startFrag.xyz, screenDirection, 
+            max_traversal_intersections, valid_hit);
 
         if (valid_hit)
-            output.color = float4(color, 1.f);
-        else
-            output.color = float4(0.f, 0.f, 0.f, 1.f);
+            output.color += 0.8f * float4(color, 1.f);
+        //else
+        //    output.color += float4(0.f, 0.f, 0.f, 1.f);
     }
-    else{
-        output.color = float4(rendered.rgb, 1.f);
-    }
+    //else{
+    //    output.color = float4(rendered.rgb, 1.f);
+    //}
 
     return output;
 }

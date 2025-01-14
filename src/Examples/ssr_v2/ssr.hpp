@@ -28,7 +28,6 @@ public:
 	};
 
 	std::vector<VkExtent2D>					depthExtents;
-	//std::shared_ptr<MVulkanImage>			mipmapDepthBuffer;
 public:
 	DownSampleDepthShader():ComputeShaderModule("hlsl/ssr_v2/DownSampleDepth.comp.hlsl"){
 		depthExtents.resize(13);

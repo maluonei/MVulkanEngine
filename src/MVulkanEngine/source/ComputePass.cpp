@@ -9,7 +9,29 @@ ComputePass::ComputePass(MVulkanDevice device)
 
 void ComputePass::Clean()
 {
+    for (auto i = 0; i < m_constantBuffer.size(); i++) {
+        m_constantBuffer[i].Clean();
+    }
+    m_constantBuffer.clear();
 
+    for (auto i = 0; i < m_storageBuffer.size(); i++) {
+        m_storageBuffer[i].Clean();
+    }
+    m_storageBuffer.clear();
+
+    for (auto i = 0; i < m_storageImages.size(); i++) {
+        for (auto j = 0; j < m_storageImages[i].size(); j++) {
+            m_storageImages[i][j]->Clean();
+        }
+        m_storageImages[i].clear();
+    }
+    m_storageImages.clear();
+
+    m_descriptorLayout.Clean();
+
+    m_descriptorSet.Clean();
+
+    m_pipeline.Clean();
 }
 
 void ComputePass::Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDescriptorSetAllocator& allocator, 
