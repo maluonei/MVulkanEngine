@@ -127,10 +127,10 @@ public:
         std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
         std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
-    void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
-        std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
-        std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-
+    //void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
+    //    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
+    //    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+    
     inline VkExtent2D GetSwapchainImageExtent()const { return m_swapChain.GetSwapChainExtent(); }
     inline VkFormat GetSwapchainImageFormat()const { return m_swapChain.GetSwapChainImageFormat(); }
     inline uint32_t GetSwapchainImageCount()const { return m_swapChain.GetImageCount(); }

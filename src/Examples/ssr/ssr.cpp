@@ -129,6 +129,7 @@ void SSR::RecreateSwapchainAndRenderPasses()
     if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_shadowPass);
+        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_ssrPass);
 
         {
             m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();

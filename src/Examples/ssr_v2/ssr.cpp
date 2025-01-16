@@ -111,10 +111,11 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.viewProj = m_camera->GetProjMatrix() * m_camera->GetViewMatrix();
         ubo0.cameraPos = m_camera->GetPosition();
 
+        ubo0.min_traversal_occupancy = 50;
         ubo0.GbufferWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.GbufferHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
         ubo0.maxMipLevel = maxMipLevel - 1;
-        ubo0.g_max_traversal_intersections = 80;
+        ubo0.g_max_traversal_intersections = 60;
 
         uint32_t width = ubo0.GbufferWidth;
         uint32_t height = ubo0.GbufferHeight;
@@ -130,7 +131,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
-    
+
     if (true) {
         graphicsList.End();
 
@@ -200,6 +201,7 @@ void SSR::RecreateSwapchainAndRenderPasses()
     if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
         Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_shadowPass);
+        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_ssrPass);
 
         {
             m_lightingPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
@@ -221,6 +223,42 @@ void SSR::RecreateSwapchainAndRenderPasses()
         }
 
         {
+            std::vector<uint32_t> storageBufferSizes(0);
+
+            auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+
+            uint32_t width = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
+            uint32_t height = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
+
+            std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos(1);
+            storageImageCreateInfos[0].resize(maxMipLevels);
+
+            auto downSampleDepthShader = m_downsampleDepthPass->GetShader();
+
+            for (int i = 0; i < maxMipLevels; i++) {
+                std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].width = width;
+                std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].height = height;
+
+                storageImageCreateInfos[0][i].width = width;
+                storageImageCreateInfos[0][i].height = height;
+                storageImageCreateInfos[0][i].depth = 1;
+                storageImageCreateInfos[0][i].format = VK_FORMAT_R32_SFLOAT;
+
+                width = int(width / 2);
+                height = int(height / 2);
+            }
+
+            std::vector<VkSampler> samplers(0);
+
+            std::vector<std::vector<VkImageView>> seperateImageViews(1);
+            seperateImageViews[0].resize(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
+            //seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+            m_downsampleDepthPass->RecreateStorageImages(storageImageCreateInfos);
+            m_downsampleDepthPass->UpdateDescriptorSetWrite(seperateImageViews, samplers);
+        }
+
+        {
             Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_ssrPass);
 
             std::vector<std::vector<VkImageView>> ssrViews(5);
@@ -228,10 +266,16 @@ void SSR::RecreateSwapchainAndRenderPasses()
             ssrViews[1] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(1));
             ssrViews[2] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetImageView(4));
             ssrViews[3] = std::vector<VkImageView>(1, m_lightingPass->GetFrameBuffer(0).GetImageView(0));
-            ssrViews[4] = std::vector<VkImageView>(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
 
-            std::vector<VkSampler> samplers(1);
+            auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+            ssrViews[4] = std::vector<VkImageView>(maxMipLevels);
+            for (auto i = 0; i < maxMipLevels; i++) {
+                ssrViews[4][i] = m_downsampleDepthPass->GetStorageImageViewByBinding(0, i);
+            }
+
+            std::vector<VkSampler> samplers(2);
             samplers[0] = m_linearSampler.GetSampler();
+            samplers[1] = m_nearestSampler.GetSampler();
 
             m_ssrPass->UpdateDescriptorSetWrite(ssrViews, samplers);
         }
@@ -328,7 +372,6 @@ void SSR::CreateRenderPass()
         RenderPassCreateInfo info{};
         info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
         info.depthFormat = device.FindDepthFormat();
-        //info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
         info.frambufferCount = 1;
         info.useSwapchainImages = false;
         info.imageAttachmentFormats = lightingPassFormats;
@@ -391,12 +434,11 @@ void SSR::CreateRenderPass()
         std::vector<VkSampler> samplers(0);
 
         std::vector<std::vector<VkImageView>> seperateImageViews(1);
-        seperateImageViews[0].resize(1);
-        seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        seperateImageViews[0].resize(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
+        //seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
         Singleton<MVulkanEngine>::instance().CreateComputePass(m_downsampleDepthPass, downSampleDepthShader,
             storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
-        spdlog::info("m_downsampleDepthPass success!");
     }
 
     {

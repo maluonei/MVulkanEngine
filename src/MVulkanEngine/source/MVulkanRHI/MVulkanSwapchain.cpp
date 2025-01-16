@@ -15,6 +15,7 @@ void MVulkanSwapchain::Create(MVulkanDevice device, GLFWwindow* window, VkSurfac
 {
     m_device = device;
     m_surface = surface;
+    m_window = window;
 
     create();
 }
@@ -32,6 +33,9 @@ bool MVulkanSwapchain::Recreate()
     
     Clean();
     create();
+
+    spdlog::info("recreate swapchain");
+
     return true;
 }
 

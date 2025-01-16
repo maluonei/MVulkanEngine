@@ -205,12 +205,12 @@ void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, 
     computePass->Create(shader, m_allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers, accelerationStructures);
 }
 
-void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
-    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
-    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures) 
-{
-    computePass->Create(shader, m_allocator, storageBufferSizes, storageImageViews, seperateImageViews, samplers, accelerationStructures);
-}
+//void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
+//    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
+//    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures) 
+//{
+//    computePass->Create(shader, m_allocator, storageBufferSizes, storageImageViews, seperateImageViews, samplers, accelerationStructures);
+//}
 
 bool MVulkanEngine::WindowShouldClose() const
 {

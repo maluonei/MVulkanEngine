@@ -5,7 +5,7 @@ struct UnifomBuffer0
     uint4 mipResolutions[13];
     
     float3 cameraPos;
-    float padding0;
+    uint min_traversal_occupancy;
 
     int GbufferWidth;
     int GbufferHeight;
@@ -98,8 +98,6 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 }
 
 float LoadDepth(float2 uv, int mipLevel){
-    //return Depth[mipLevel].Load(int3(int2(uv), 0));
-
     uint2 mipResolution = ubo0.mipResolutions[mipLevel];
     uv = uv / mipResolution;
     uv.y = 1.f - uv.y;
@@ -127,6 +125,8 @@ float3 SSR_Trace(float3 origin, float3 direction,
         floor_offset, uv_offset, position, current_t);
 
     int i = 0;
+    bool exit_due_to_low_occupancy = false;
+
     while(i < max_traversal_intersections && currentMipLevel >=0){
         float2 current_mip_resolution = ubo0.mipResolutions[currentMipLevel];
 

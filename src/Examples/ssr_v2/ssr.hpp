@@ -59,7 +59,7 @@ public:
 		glm::ivec4 mipResolutions[13];
 
 		glm::vec3 cameraPos;
-		float padding0;
+		uint32_t min_traversal_occupancy;
 
 		int GbufferWidth;
 		int GbufferHeight;
@@ -110,7 +110,5 @@ private:
 
 	//std::shared_ptr<MVulkanTexture>	m_mipmapDepthBuffer;
 };
-
-
 
 #endif // SSR_HPP
