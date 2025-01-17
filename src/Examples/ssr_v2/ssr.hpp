@@ -18,6 +18,8 @@ class ComputePass;
 class Camera;
 class Light;
 
+#define USE_SPD
+
 class DownSampleDepthShader :public ComputeShaderModule{
 public:
 	struct Constants {
@@ -31,6 +33,26 @@ public:
 public:
 	DownSampleDepthShader():ComputeShaderModule("hlsl/ssr_v2/DownSampleDepth.comp.hlsl"){
 		depthExtents.resize(13);
+	}
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t index, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+private:
+	Constants constant;
+};
+
+class DownSampleDepthShader2 :public ComputeShaderModule {
+public:
+	struct Constants {
+		glm::uvec4 u_previousLevelDimensions[13];
+	};
+
+	//std::vector<VkExtent2D>	depthExtents;
+public:
+	DownSampleDepthShader2() :ComputeShaderModule("hlsl/ssr_v2/DownSampleDepth2.comp.hlsl") {
+		//depthExtents.resize(13);
 	}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
@@ -96,6 +118,7 @@ private:
 	std::shared_ptr<RenderPass> m_ssrPass;
 
 	std::shared_ptr<ComputePass> m_downsampleDepthPass;
+	std::shared_ptr<ComputePass> m_downsampleDepthPass2;
 
 	MVulkanSampler				m_linearSampler;
 	MVulkanSampler				m_nearestSampler;

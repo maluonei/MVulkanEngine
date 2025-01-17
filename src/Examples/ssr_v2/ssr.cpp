@@ -132,62 +132,106 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
 
-    if (true) {
-        graphicsList.End();
+    
+    graphicsList.End();
 
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
+
+    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+    graphicsQueue.WaitForQueueComplete();
+
+#ifdef USE_SPD
+    {
+        auto computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
+        auto computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
+
+        auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+        auto extent = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
+        auto width = extent.width;
+        auto height = extent.height;
+
+        DownSampleDepthShader2::Constants constant{};
+
+        constant.u_previousLevelDimensions[0].w = maxMipLevels;
+        for (auto j = 0; j < maxMipLevels; j++) {
+            constant.u_previousLevelDimensions[j].x = width;
+            constant.u_previousLevelDimensions[j].y = height;
+            constant.u_previousLevelDimensions[j].z = width * height;
+
+            width /= 2;
+            height /= 2;
+        }
+
+        m_downsampleDepthPass2->GetShader()->SetUBO(0, &constant);
+
+        computeList.Reset();
+        computeList.Begin();
+
+        int dispatchX = (extent.width + 15) / 16;
+        int dispatchY = (extent.height + 15) / 16;
+        int dispatchZ = 1;
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_downsampleDepthPass2, dispatchX, dispatchY, dispatchZ);
+
+        computeList.End();
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
+        submitInfo.pCommandBuffers = &computeList.GetBuffer();
 
-        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-        graphicsQueue.WaitForQueueComplete();
-
-        //do downsample depth
-        {
-            auto computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
-            auto computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
-
-            auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
-            auto extent = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
-            auto width = extent.width * 2;
-            auto height = extent.height * 2;
-            for (auto i = 0; i < maxMipLevels; i++) {
-                DownSampleDepthShader::Constants constant{};
-                constant.u_previousLevel = i - 1;
-
-                constant.u_previousLevelDimensionsWidth = width;
-                constant.u_previousLevelDimensionsHeight = height;
-
-                m_downsampleDepthPass->GetShader()->SetUBO(0, &constant);
-
-                computeList.Reset();
-                computeList.Begin();
-
-                int dispatchX = (width + 15) / 16;
-                int dispatchY = (height + 15) / 16;
-                int dispatchZ = 1;
-                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_downsampleDepthPass, dispatchX, dispatchY, dispatchZ);
-
-                computeList.End();
-                VkSubmitInfo submitInfo{};
-                submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-                submitInfo.commandBufferCount = 1;
-                submitInfo.pCommandBuffers = &computeList.GetBuffer();
-
-                computeQueue.SubmitCommands(1, &submitInfo, nullptr);
-                computeQueue.WaitForQueueComplete();
-
-                width = int(width / 2);
-                height = int(height / 2);
-            }
-        }
-
-        graphicsList.Reset();
-        graphicsList.Begin();
+        computeQueue.SubmitCommands(1, &submitInfo, nullptr);
+        computeQueue.WaitForQueueComplete();
     }
+#else
+   //do downsample depth
+   {
+       auto computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
+       auto computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
+
+       auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+       auto extent = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
+       auto width = extent.width * 2;
+       auto height = extent.height * 2;
+       for (auto i = 0; i < maxMipLevels; i++) {
+           DownSampleDepthShader::Constants constant{};
+           constant.u_previousLevel = i - 1;
+
+           constant.u_previousLevelDimensionsWidth = width;
+           constant.u_previousLevelDimensionsHeight = height;
+
+           m_downsampleDepthPass->GetShader()->SetUBO(0, &constant);
+
+           computeList.Reset();
+           computeList.Begin();
+
+           int dispatchX = (width + 15) / 16;
+           int dispatchY = (height + 15) / 16;
+           int dispatchZ = 1;
+           Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_downsampleDepthPass, dispatchX, dispatchY, dispatchZ);
+
+           computeList.End();
+           VkSubmitInfo submitInfo{};
+           submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+           submitInfo.commandBufferCount = 1;
+           submitInfo.pCommandBuffers = &computeList.GetBuffer();
+
+           computeQueue.SubmitCommands(1, &submitInfo, nullptr);
+           computeQueue.WaitForQueueComplete();
+
+           width = int(width / 2);
+           height = int(height / 2);
+       }
+   }
+#endif
+
+    graphicsList.Reset();
+    graphicsList.Begin();
+   
 
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_ssrPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
@@ -222,6 +266,7 @@ void SSR::RecreateSwapchainAndRenderPasses()
             m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
         }
 
+
         {
             std::vector<uint32_t> storageBufferSizes(0);
 
@@ -233,7 +278,11 @@ void SSR::RecreateSwapchainAndRenderPasses()
             std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos(1);
             storageImageCreateInfos[0].resize(maxMipLevels);
 
+#ifdef USE_SPD
+            auto downSampleDepthShader = m_downsampleDepthPass2->GetShader();
+#else
             auto downSampleDepthShader = m_downsampleDepthPass->GetShader();
+#endif
 
             for (int i = 0; i < maxMipLevels; i++) {
                 std::static_pointer_cast<DownSampleDepthShader>(downSampleDepthShader)->depthExtents[i].width = width;
@@ -254,8 +303,13 @@ void SSR::RecreateSwapchainAndRenderPasses()
             seperateImageViews[0].resize(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
             //seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
+#ifdef USE_SPD
+            m_downsampleDepthPass2->RecreateStorageImages(storageImageCreateInfos);
+            m_downsampleDepthPass2->UpdateDescriptorSetWrite(seperateImageViews, samplers);
+#else
             m_downsampleDepthPass->RecreateStorageImages(storageImageCreateInfos);
             m_downsampleDepthPass->UpdateDescriptorSetWrite(seperateImageViews, samplers);
+#endif
         }
 
         {
@@ -270,7 +324,11 @@ void SSR::RecreateSwapchainAndRenderPasses()
             auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
             ssrViews[4] = std::vector<VkImageView>(maxMipLevels);
             for (auto i = 0; i < maxMipLevels; i++) {
+#ifdef USE_SPD
+                ssrViews[4][i] = m_downsampleDepthPass2->GetStorageImageViewByBinding(0, i);
+#else
                 ssrViews[4][i] = m_downsampleDepthPass->GetStorageImageViewByBinding(0, i);
+#endif
             }
 
             std::vector<VkSampler> samplers(2);
@@ -403,7 +461,7 @@ void SSR::CreateRenderPass()
             m_lightingPass, lightingShader, gbufferViews, samplers);
     }
 
-
+#ifndef USE_SPD
     {
         std::shared_ptr<ComputeShaderModule> downSampleDepthShader = std::make_shared<DownSampleDepthShader>();
         m_downsampleDepthPass = std::make_shared<ComputePass>(device);
@@ -435,11 +493,45 @@ void SSR::CreateRenderPass()
 
         std::vector<std::vector<VkImageView>> seperateImageViews(1);
         seperateImageViews[0].resize(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
-        //seperateImageViews[0][0] = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
         Singleton<MVulkanEngine>::instance().CreateComputePass(m_downsampleDepthPass, downSampleDepthShader,
             storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
     }
+#else
+    {
+        std::shared_ptr<ComputeShaderModule> downSampleDepthShader = std::make_shared<DownSampleDepthShader2>();
+        m_downsampleDepthPass2 = std::make_shared<ComputePass>(device);
+
+        std::vector<uint32_t> storageBufferSizes(0);
+
+        auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
+
+        uint32_t width = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
+        uint32_t height = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
+
+        std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos(1);
+        storageImageCreateInfos[0].resize(maxMipLevels);
+
+        for (int i = 0; i < maxMipLevels; i++) {
+            storageImageCreateInfos[0][i].width = width;
+            storageImageCreateInfos[0][i].height = height;
+            storageImageCreateInfos[0][i].depth = 1;
+            storageImageCreateInfos[0][i].format = VK_FORMAT_R32_SFLOAT;
+
+            width = int(width / 2);
+            height = int(height / 2);
+        }
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<std::vector<VkImageView>> seperateImageViews(1);
+        seperateImageViews[0].resize(1, m_gbufferPass->GetFrameBuffer(0).GetDepthImageView());
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(m_downsampleDepthPass2, downSampleDepthShader,
+            storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers);
+    }
+#endif
+
 
     {
         std::vector<VkFormat> SSRPassFormats;
@@ -469,7 +561,11 @@ void SSR::CreateRenderPass()
         auto maxMipLevels = CalculateMipLevels(m_gbufferPass->GetFrameBuffer(0).GetExtent2D());
         ssrViews[4] = std::vector<VkImageView>(maxMipLevels);
         for (auto i = 0; i < maxMipLevels; i++) {
+#ifdef USE_SPD
+            ssrViews[4][i] = m_downsampleDepthPass2->GetStorageImageViewByBinding(0, i);
+#else
             ssrViews[4][i] = m_downsampleDepthPass->GetStorageImageViewByBinding(0, i);
+#endif
         }
 
         std::vector<VkSampler> samplers(2);
@@ -494,7 +590,12 @@ void SSR::Clean()
     m_lightingPass->Clean();
     m_shadowPass->Clean();
     m_ssrPass->Clean();
+
+#ifdef USE_SPD
+    m_downsampleDepthPass2->Clean();
+#else
     m_downsampleDepthPass->Clean();
+#endif
 
     m_linearSampler.Clean();
     m_nearestSampler.Clean();
@@ -671,4 +772,24 @@ void* SSR2Shader::GetData(uint32_t binding, uint32_t index)
     case 0:
         return (void*)&ubo0;
     }
+}
+
+
+size_t DownSampleDepthShader2::GetBufferSizeBinding(uint32_t binding) const
+{
+    return sizeof(constant);
+}
+
+void DownSampleDepthShader2::SetUBO(uint8_t index, void* data)
+{
+    switch (index) {
+    case 0:
+        constant = *reinterpret_cast<DownSampleDepthShader2::Constants*>(data);
+        return;
+    }
+}
+
+void* DownSampleDepthShader2::GetData(uint32_t binding, uint32_t index)
+{
+    return (void*)&constant;
 }

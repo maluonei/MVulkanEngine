@@ -78,6 +78,10 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             spdlog::info("Max descriptor set sampled images:{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
             spdlog::info("deviceProperties.limits.maxPushConstantsSize:{0}", static_cast<int>(deviceProperties.limits.maxPushConstantsSize));
             spdlog::info("deviceProperties.limits.minUniformBufferOffsetAlignment:{0}", static_cast<int>(deviceProperties.limits.minUniformBufferOffsetAlignment));
+            spdlog::info("deviceProperties.limits.maxComputeWorkGroupSize:{0},{1},{2}", 
+                static_cast<int>(deviceProperties.limits.maxComputeWorkGroupSize[0]),
+                static_cast<int>(deviceProperties.limits.maxComputeWorkGroupSize[1]), 
+                static_cast<int>(deviceProperties.limits.maxComputeWorkGroupSize[2]));
             spdlog::info("device.alignment: {0}", alignment);
             
             if (m_supportRayTracing) {
