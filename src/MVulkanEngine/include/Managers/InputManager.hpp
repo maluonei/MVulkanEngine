@@ -4,6 +4,10 @@
 
 #include "Singleton.hpp"
 #include "glm/glm.hpp"
+#include <memory>
+//#include "MRenderApplication.hpp"
+
+class MRenderApplication;
 
 class InputManager : public Singleton<InputManager> {
 public:
@@ -16,6 +20,10 @@ public:
 	inline void SetCursorEnter(bool entered) { cursorEnter = entered; }
 	inline void SetCursorLeave(bool leaved) { cursorLeave = leaved; }
 	inline void SetMousePressed(int button, bool pressed){ mouseButtons[button] = pressed; }
+
+	void RegisterApplication(MRenderApplication* _application);
+
+	//void RegisterSetCameraMoveFunc(MRenderApplication::SetCameraMove);
 
 private:
 	void DealMouseMoveInput();
@@ -35,6 +43,10 @@ private:
 	//glm::vec2 dMousePos{};
 	glm::vec2 mousePos{};
 	glm::vec2 previousPos{};
+
+	//MRenderApplication::SetCameraMove m_setCameraMoved;
+	MRenderApplication* m_application = nullptr;
+	//MRenderApplication::SetCameraMoved moved;
 };
 
 

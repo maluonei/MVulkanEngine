@@ -59,7 +59,7 @@ void DownSampleDepth(uint2 _threadId, uint currentMipLevel){
     DepthTexture[currentMipLevel][texCoord] = 1.f;
 }
 
-[numthreads(16, 16, 1)]
+[numthreads(1024, 1024, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
     uint2 texCoord = threadID.xy;

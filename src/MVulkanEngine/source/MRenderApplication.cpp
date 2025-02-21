@@ -6,6 +6,7 @@
 void MRenderApplication::Init()
 {
     init();
+    //Singleton<InputManager>::instance().RegisterApplication(std::make_shared<MRenderApplication>(this));
 
     SetUp();
 
@@ -18,7 +19,28 @@ void MRenderApplication::Run()
 {
     while (!Singleton<MVulkanEngine>::instance().WindowShouldClose()) {
         renderLoop();
+        SetCameraMoved(false);
     }
+}
+
+void MRenderApplication::SetUp()
+{
+}
+
+void MRenderApplication::ComputeAndDraw(uint32_t imageInde)
+{
+}
+
+void MRenderApplication::RecreateSwapchainAndRenderPasses()
+{
+}
+
+void MRenderApplication::CreateRenderPass()
+{
+}
+
+void MRenderApplication::PreComputes()
+{
 }
 
 void MRenderApplication::Clean()
@@ -30,6 +52,11 @@ void MRenderApplication::init()
 {
     Singleton<MVulkanEngine>::instance().SetWindowRes(WIDTH, HEIGHT);
     Singleton<MVulkanEngine>::instance().Init();
+
+    //MRenderApplication::SetCameraMove setCameraMovePtr = &MRenderApplication::SetCameraMoved;
+    //Singleton<InputManager>::instance().RegisterSetCameraMoveFunc(setCameraMovePtr);
+    //Singleton<InputManager>::instance().RegisterApplication(this);
+    Singleton<InputManager>::instance().RegisterApplication(this);
 }
 
 void MRenderApplication::renderLoop()

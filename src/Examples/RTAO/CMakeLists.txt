@@ -1,26 +1,26 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(MVulkanEngine_SSAO)
+project(MVulkanEngine_RTAO)
 
 # ָ�� C++ ��׼
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(MVulkanEngine_SSAO "main.cpp" "ssao.hpp" "ssao.cpp")
+add_executable(MVulkanEngine_RTAO "main.cpp" "rtao.hpp" "rtao.cpp")
 
 #message(STATUS "MVulkanEngine_include: ${MVulkanEngine_include}")
 # ���Ӱ���Ŀ¼
-target_include_directories(MVulkanEngine_SSAO PRIVATE ${MVulkanEngine_include})
+target_include_directories(MVulkanEngine_RTAO PRIVATE ${MVulkanEngine_include})
 
 # ���ÿ��·�������� Project1 �����Ŀ¼�� ../project1/build��
-target_link_libraries(MVulkanEngine_SSAO PRIVATE MVulkanEngine)
+target_link_libraries(MVulkanEngine_RTAO PRIVATE MVulkanEngine)
 
 set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")
 set(ASSIMP_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/assimp/bin/$<CONFIG>/$<IF:$<CONFIG:Debug>,assimp-vc143-mtd.dll,assimp-vc143-mt.dll>")
 
-add_custom_command(TARGET MVulkanEngine_SSAO POST_BUILD
+add_custom_command(TARGET MVulkanEngine_RTAO POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${GLFW_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_SSAO>)
+    ${GLFW_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_RTAO>)
 
-add_custom_command(TARGET MVulkanEngine_SSAO POST_BUILD
+add_custom_command(TARGET MVulkanEngine_RTAO POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${ASSIMP_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_SSAO>)
+    ${ASSIMP_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_RTAO>)
