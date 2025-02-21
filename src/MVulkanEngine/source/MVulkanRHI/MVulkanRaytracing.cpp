@@ -4,9 +4,40 @@
 #include "spdlog/spdlog.h"
 #include "MVulkanRHI/MVulkanCommand.hpp"
 
+void TLASBuildInfo::Clean(VkDevice device) {
+    instancetBuffer.Clean();
+    asBuffer.Clean();
+    scrathBuffer.Clean();
+
+    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR = nullptr;
+    vkDestroyAccelerationStructureKHR =
+        (PFN_vkDestroyAccelerationStructureKHR)vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR");
+
+
+    vkDestroyAccelerationStructureKHR(device, tlas, nullptr);
+}
+
 void MVulkanRaytracing::Create(MVulkanDevice device)
 {
     m_device = device;
+}
+
+void MVulkanRaytracing::Clean() {
+    for (auto buffer : m_asBuffers) {
+        buffer.Clean();
+    }
+    for (auto buffer : m_scrathBuffers) {
+        buffer.Clean();
+    }
+
+    m_tlasBuildInfo.Clean(m_device.GetDevice());
+
+    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR = nullptr;
+    vkDestroyAccelerationStructureKHR =
+        (PFN_vkDestroyAccelerationStructureKHR)vkGetDeviceProcAddr(m_device.GetDevice(), "vkDestroyAccelerationStructureKHR");
+    for (auto blas : m_blas) {
+        vkDestroyAccelerationStructureKHR(m_device.GetDevice(), blas, nullptr);
+    }
 }
 
 

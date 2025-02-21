@@ -144,6 +144,8 @@ struct BLASBuildInfo {
     VkAccelerationStructureKHR blas;
     Buffer asBuffer;
     Buffer scrathBuffer;
+
+    //void Clean();
 };
 
 struct TLASBuildInfo {
@@ -155,6 +157,8 @@ struct TLASBuildInfo {
     Buffer instancetBuffer;
     Buffer asBuffer;
     Buffer scrathBuffer;
+
+    void Clean(VkDevice device);
 };
 
 class MVulkanRaytracing
@@ -170,6 +174,8 @@ public:
     VkAccelerationStructureKHR GetTLAS() {
         return m_tlasBuildInfo.tlas;
     }
+
+    void Clean();
 
 private:
     void CreateBLAS(const std::shared_ptr<Mesh>& mesh, BLASBuildInfo& blasBuildInfo);

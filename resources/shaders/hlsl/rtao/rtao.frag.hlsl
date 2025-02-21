@@ -217,7 +217,7 @@ PSOutput main(PSInput input)
         fragcolor += fragAlbedo.rgb * 0.04f; //ambient
     }
 
-    float radius = 1.;
+    float radius = 0.1;
     int rayCount = 4;
 
     float ao = rtao(fragPos, fragNormal, input.texCoord, int(rayCount * accumulatedFrameCount), radius, rayCount);

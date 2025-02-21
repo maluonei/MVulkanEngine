@@ -232,6 +232,8 @@ void RTAO::Clean()
 
     m_linearSampler.Clean();
 
+    m_rayTracing.Clean();
+
     m_squad->Clean();
     m_scene->Clean();
 
