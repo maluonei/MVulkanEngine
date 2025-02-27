@@ -24,14 +24,14 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
     MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-    MVulkanDescriptorSetAllocator& allocator,
+    MVulkanDescriptorSetAllocator& allocator, std::vector<uint32_t> storageBufferSizes,
     std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers,
     std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     SetShader(shader);
     CreateRenderPass();
     CreateFrameBuffers(swapChain, commandQueue, commandList);
-    CreatePipeline(allocator, imageViews, storageImageViews, samplers, accelerationStructure);
+    CreatePipeline(allocator, storageBufferSizes, imageViews, storageImageViews, samplers, accelerationStructure);
 }
 
 void RenderPass::Clean()
@@ -170,7 +170,7 @@ void RenderPass::UpdateDescriptorSetWrite(
         }
 
         std::vector<std::vector<VkDescriptorBufferInfo>> constantBufferInfos(m_cbvCount);
-        std::vector<std::vector<VkDescriptorBufferInfo>> storageBufferInfos(0);
+        std::vector<std::vector<VkDescriptorBufferInfo>> storageBufferInfos(m_storageBufferCount);
 
         for (auto binding = 0; binding < m_cbvCount; binding++) {
             constantBufferInfos[binding].resize(m_uniformBuffers[i][binding].GetArrayLength());
@@ -178,6 +178,15 @@ void RenderPass::UpdateDescriptorSetWrite(
                 constantBufferInfos[binding][j].buffer = m_uniformBuffers[i][binding].GetBuffer();
                 constantBufferInfos[binding][j].offset = j * CalculateAlignedSize(m_uniformBuffers[i][binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
                 constantBufferInfos[binding][j].range = m_uniformBuffers[i][binding].GetBufferSize();
+            }
+        }
+
+        for (auto binding = 0; binding < m_storageBufferCount; binding++) {
+            storageBufferInfos[binding].resize(m_storageBuffer[binding].GetArrayLength());
+            for (auto j = 0; j < m_storageBuffer[binding].GetArrayLength(); j++) {
+                storageBufferInfos[binding][j].buffer = m_storageBuffer[binding].GetBuffer();
+                storageBufferInfos[binding][j].offset = j * CalculateAlignedSize(m_storageBuffer[binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+                storageBufferInfos[binding][j].range = m_storageBuffer[binding].GetBufferSize();
             }
         }
 
@@ -287,7 +296,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
     m_shader->Clean();
 }
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure)
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -320,6 +329,11 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
             m_cbvCount++;
             break;
         }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        {
+            m_storageBufferCount++;
+            break;
+        }
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
         {
             m_combinedImageCount++;
@@ -349,6 +363,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
     }
 
     m_uniformBuffers.resize(m_info.frambufferCount);
+    m_storageBuffer.resize(m_storageBufferCount);
 
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         m_uniformBuffers[i].resize(m_cbvCount);
@@ -364,6 +379,18 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
 
                 //m_uniformBuffers[i].push_back(buffer);
                 m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
+                break;
+            }
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            {
+                StorageBuffer buffer;
+                BufferCreateInfo info;
+                info.arrayLength = bindings[binding].binding.descriptorCount;
+                //info.size = bindings[binding].size;
+                info.size = storageBufferSizes[binding - m_cbvCount];
+                buffer.Create(m_device, info);
+
+                m_storageBuffer[bindings[binding].binding.binding - m_cbvCount] = buffer;
                 break;
             }
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -448,8 +475,8 @@ void RenderPass::SetShader(std::shared_ptr<ShaderModule> shader)
     m_shader->Create(m_device.GetDevice());
 }
 
-void RenderPass::SetUBO(uint8_t index, void* data) {
-    m_shader->SetUBO(index, data);
+void RenderPass::SetUBO(uint8_t binding, void* data) {
+    m_shader->SetUBO(binding, data);
 }
 
 void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -491,6 +518,17 @@ void RenderPass::LoadCBV(uint32_t alignment) {
                 uint32_t offset = j * alignment;
                 m_uniformBuffers[i][binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
             }
+        }
+    }
+}
+
+void RenderPass::LoadStorageBuffer(uint32_t alignment)
+{
+    for (auto binding = 0; binding < m_storageBufferCount; binding++) {
+        auto _binding = binding + m_cbvCount;
+        for (auto j = 0; j < m_storageBuffer[binding].GetArrayLength(); j++) {
+            uint32_t offset = j * alignment;
+            m_storageBuffer[binding].UpdateData(offset, (void*)(m_shader->GetData(_binding, j)));
         }
     }
 }

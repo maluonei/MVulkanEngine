@@ -18,7 +18,7 @@ public:
 	inline MVulkanShader GetFragmentShader() const{return m_fragShader;}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 protected:
@@ -52,7 +52,7 @@ private:
 
 public:
 	TestShader();
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
@@ -75,7 +75,7 @@ private:
 public:
 	PhongShader();
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual inline size_t GetBufferSizeBinding(uint32_t binding) const { return sizes[binding]; }
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
@@ -87,7 +87,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 public:
@@ -117,7 +117,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -149,7 +149,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -190,7 +190,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -219,7 +219,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -260,7 +260,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -278,7 +278,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -298,7 +298,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -318,7 +318,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -346,7 +346,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 };
@@ -360,7 +360,7 @@ public:
 	inline MVulkanShader GetComputeShader() const { return m_compShader; }
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 protected:
@@ -395,7 +395,7 @@ public:
 	TestCompShader();
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 
@@ -411,7 +411,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
@@ -452,7 +452,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 

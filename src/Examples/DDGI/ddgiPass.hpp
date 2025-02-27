@@ -1,5 +1,5 @@
-#ifndef RTAO_HPP
-#define RTAO_HPP
+#ifndef DDGI_PASS_HPP
+#define DDGI_PASS_HPP
 
 #include <MRenderApplication.hpp>
 #include <memory>
@@ -8,6 +8,9 @@
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanRayTracing.hpp"
 #include "Shaders/ShaderModule.hpp"
+#include "ddgiShader.hpp"
+
+class DDGIVolume;
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -18,7 +21,7 @@ class ComputePass;
 class Camera;
 class Light;
 
-class RTAO : public MRenderApplication {
+class DDGIApplication : public MRenderApplication {
 public:
 	virtual void SetUp();
 	virtual void ComputeAndDraw(uint32_t imageIndex);
@@ -37,10 +40,19 @@ private:
 	void createSamplers();
 
 	void createTextures();
+	void initDDGIVolumn();
+
+	void createGbufferPass();
+	void createProbeTracingPass();
+	void createLightingPass();
+	void createProbeBlendingRadiancePass();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
-	std::shared_ptr<RenderPass> m_rtao_lightingPass;
+	std::shared_ptr<RenderPass> m_probeTracingPass;
+	std::shared_ptr<RenderPass> m_lightingPass;
+
+	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
 
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	MVulkanSampler				m_linearSampler;
@@ -52,43 +64,9 @@ private:
 
 	std::shared_ptr<Camera>		m_camera;
 	MVulkanRaytracing			m_rayTracing;
-};
+	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
-class RTAOShader :public ShaderModule {
-public:
-	RTAOShader();
-
-	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-
-	virtual void SetUBO(uint8_t binding, void* data);
-
-	virtual void* GetData(uint32_t binding, uint32_t index = 0);
-
-public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
-	struct UniformBuffer0 {
-		Light lights[2];
-
-		glm::vec3 cameraPos;
-		int lightNum;
-
-		int resetAccumulatedBuffer;
-		int gbufferWidth;
-		int gbufferHeight;
-		float padding2;
-	};
-
-private:
-	UniformBuffer0 ubo0;
 };
 
 
-
-#endif // RTAO_HPP
+#endif // 

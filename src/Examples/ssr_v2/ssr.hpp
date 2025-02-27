@@ -36,7 +36,7 @@ public:
 	}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 private:
@@ -56,7 +56,7 @@ public:
 	}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 private:
@@ -70,7 +70,7 @@ public:
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 
-	virtual void SetUBO(uint8_t index, void* data);
+	virtual void SetUBO(uint8_t binding, void* data);
 
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 

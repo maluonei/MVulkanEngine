@@ -98,12 +98,14 @@ public:
 
     inline auto GetNumTriangles() const{return m_totalIndeices.size()/3;}
     inline auto GetNumVertices() const{return m_totalVertexs.size();}
+    inline auto GetNumMeshes() const { return m_meshMap.size(); }
 private:
     BoundingBox m_bbx;
 
     //uint32_t                m_numTriangles = 0;
     std::vector<Vertex>     m_totalVertexs;
     std::vector<uint32_t>   m_totalIndeices;
+    //std::vector<uint32_t>   m_totalInstances;
     std::shared_ptr<Buffer> m_indirectBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectVertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectIndexBuffer = nullptr;

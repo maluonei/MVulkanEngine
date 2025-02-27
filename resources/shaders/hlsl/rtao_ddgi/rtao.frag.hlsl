@@ -178,16 +178,15 @@ float rtao(float3 position, float3 normal, float2 uv, int w, float radius, int r
 
     for(int i=0;i<rayCount;i++){
         float3 randomDir = RandomDirection(uv, 2*i + w, 2*i+1 + w);
-        //if(dot(randomDir, normal)<0) randomDir = -randomDir;
+        if(dot(randomDir, normal)<0) randomDir = -randomDir;
         float3 rayDirection = normalize(normal + randomDir); 
 
-        ray.Origin = position + 0.001f * normal;
+        ray.Origin = position + 0.00001f * normal;
         ray.Direction = rayDirection;
 
         if(RayTracingAnyHit(ray, t))
             //ao-=1.f;
-            //ao += pow(saturate(t/radius), 2.);
-            ao += 1.f;
+            ao += pow(saturate(t/radius), 2.);
     }
 
     return 1 - (ao / rayCount);
@@ -261,7 +260,7 @@ PSOutput main(PSInput input)
         fragcolor += fragAlbedo.rgb * 0.04f; //ambient
     }
 
-    float radius = 0.5f;
+    float radius = 0.1;
     int rayCount = 4;
 
     float ao = rtao(fragPos, fragNormal, input.texCoord, int(rayCount * accumulatedFrameCount), radius, rayCount);

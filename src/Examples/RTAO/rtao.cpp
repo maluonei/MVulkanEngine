@@ -94,6 +94,9 @@ void RTAO::ComputeAndDraw(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_rtao_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
 
+    //auto camPos = m_camera->GetPosition();
+    //spdlog::info("camera_position:({0}, {1}, {2})", camPos.x, camPos.y, camPos.z);
+
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
 }
@@ -204,6 +207,8 @@ void RTAO::CreateRenderPass()
             gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
 
+        std::vector<uint32_t> storageBufferSizes(0);
+
         std::vector<std::vector<VkImageView>> storageTextureViews(1);
         storageTextureViews[0].resize(1, m_acculatedAOTexture->GetImageView());
 
@@ -214,7 +219,7 @@ void RTAO::CreateRenderPass()
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_rtao_lightingPass, lightingShader, gbufferViews, storageTextureViews, samplers, accelerationStructures);
+            m_rtao_lightingPass, lightingShader, storageBufferSizes, gbufferViews, storageTextureViews, samplers, accelerationStructures);
     }
 }
 
@@ -386,9 +391,9 @@ size_t RTAOShader::GetBufferSizeBinding(uint32_t binding) const
     }
 }
 
-void RTAOShader::SetUBO(uint8_t index, void* data)
+void RTAOShader::SetUBO(uint8_t binding, void* data)
 {
-    switch (index) {
+    switch (binding) {
     case 0:
         ubo0 = *reinterpret_cast<RTAOShader::UniformBuffer0*>(data);
         return;

@@ -757,9 +757,9 @@ size_t SSR2Shader::GetBufferSizeBinding(uint32_t binding) const
     }
 }
 
-void SSR2Shader::SetUBO(uint8_t index, void* data)
+void SSR2Shader::SetUBO(uint8_t binding, void* data)
 {
-    switch (index) {
+    switch (binding) {
     case 0:
         ubo0 = *reinterpret_cast<SSR2Shader::UniformBuffer0*>(data);
         return;
@@ -780,9 +780,9 @@ size_t DownSampleDepthShader2::GetBufferSizeBinding(uint32_t binding) const
     return sizeof(constant);
 }
 
-void DownSampleDepthShader2::SetUBO(uint8_t index, void* data)
+void DownSampleDepthShader2::SetUBO(uint8_t binding, void* data)
 {
-    switch (index) {
+    switch (binding) {
     case 0:
         constant = *reinterpret_cast<DownSampleDepthShader2::Constants*>(data);
         return;

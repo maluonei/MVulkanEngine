@@ -23,7 +23,7 @@ size_t ShaderModule::GetBufferSizeBinding(uint32_t binding) const
 	return size_t(0);
 }
 
-void ShaderModule::SetUBO(uint8_t index, void* data)
+void ShaderModule::SetUBO(uint8_t binding, void* data)
 {
 
 }
@@ -48,9 +48,9 @@ TestShader::TestShader():ShaderModule("glsl/test.vet.glsl", "glsl/test.frag.glsl
 	sizes[2] = 0;
 }
 
-void TestShader::SetUBO(uint8_t index, void* data)
+void TestShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<UniformBufferObjectVert*>(data);
 		return;
@@ -81,9 +81,9 @@ PhongShader::PhongShader()
 	sizes[2] = 0;
 }
 
-void PhongShader::SetUBO(uint8_t index, void* data)
+void PhongShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<UniformBufferObjectVert*>(data);
 		return;
@@ -124,9 +124,9 @@ size_t GbufferShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void GbufferShader::SetUBO(uint8_t index, void* data)
+void GbufferShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<UniformBufferObject0*>(data);
 		return;
@@ -157,9 +157,9 @@ size_t SquadPhongShader::GetBufferSizeBinding(uint32_t binding) const
 	return sizeof(DirectionalLightBuffer);
 }
 
-void SquadPhongShader::SetUBO(uint8_t index, void* data)
+void SquadPhongShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<DirectionalLightBuffer*>(data);
 		return;
@@ -180,7 +180,7 @@ size_t ShadowShader::GetBufferSizeBinding(uint32_t binding) const
 	return sizeof(ShadowUniformBuffer);
 }
 
-void ShadowShader::SetUBO(uint8_t index, void* data)
+void ShadowShader::SetUBO(uint8_t binding, void* data)
 {
 	ubo0 = *reinterpret_cast<ShadowUniformBuffer*>(data);
 }
@@ -204,9 +204,9 @@ size_t LightingPbrShader::GetBufferSizeBinding(uint32_t binding) const
 	//return sizeof(DirectionalLightBuffer);
 }
 
-void LightingPbrShader::SetUBO(uint8_t index, void* data)
+void LightingPbrShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<LightingPbrShader::UniformBuffer0*>(data);
 		return;
@@ -234,9 +234,9 @@ size_t LightingPbrRayQueryShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void LightingPbrRayQueryShader::SetUBO(uint8_t index, void* data)
+void LightingPbrRayQueryShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<LightingPbrRayQueryShader::UniformBuffer0*>(data);
 		return;
@@ -265,9 +265,9 @@ size_t LightingIBLShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void LightingIBLShader::SetUBO(uint8_t index, void* data)
+void LightingIBLShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<LightingIBLShader::UniformBuffer0*>(data);
 		return;
@@ -292,7 +292,7 @@ size_t SkyboxShader::GetBufferSizeBinding(uint32_t binding) const
 	return sizeof(SkyboxShader::UniformBuffer0);
 }
 
-void SkyboxShader::SetUBO(uint8_t index, void* data)
+void SkyboxShader::SetUBO(uint8_t binding, void* data)
 {
 	ubo0 = *reinterpret_cast<SkyboxShader::UniformBuffer0*>(data);
 }
@@ -312,7 +312,7 @@ size_t IrradianceConvolutionShader::GetBufferSizeBinding(uint32_t binding) const
 	return sizeof(IrradianceConvolutionShader::UniformBuffer0);
 }
 
-void IrradianceConvolutionShader::SetUBO(uint8_t index, void* data)
+void IrradianceConvolutionShader::SetUBO(uint8_t binding, void* data)
 {
 	ubo0 = *reinterpret_cast<IrradianceConvolutionShader::UniformBuffer0*>(data);
 }
@@ -337,9 +337,9 @@ size_t PreFilterEnvmapShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void PreFilterEnvmapShader::SetUBO(uint8_t index, void* data)
+void PreFilterEnvmapShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<PreFilterEnvmapShader::UniformBuffer0*>(data);
 		break;
@@ -369,7 +369,7 @@ size_t IBLBrdfShader::GetBufferSizeBinding(uint32_t binding) const
 	return 0;
 }
 
-void IBLBrdfShader::SetUBO(uint8_t index, void* data)
+void IBLBrdfShader::SetUBO(uint8_t binding, void* data)
 {
 	
 }
@@ -399,7 +399,7 @@ size_t ComputeShaderModule::GetBufferSizeBinding(uint32_t binding) const
 	return size_t();
 }
 
-void ComputeShaderModule::SetUBO(uint8_t index, void* data)
+void ComputeShaderModule::SetUBO(uint8_t binding, void* data)
 {
 }
 
@@ -429,9 +429,9 @@ size_t TestCompShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void TestCompShader::SetUBO(uint8_t index, void* data)
+void TestCompShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 	{
 		constant0 = *reinterpret_cast<TestCompShader::Constants*>(data);
@@ -478,9 +478,9 @@ size_t LightingPbrSSRShader::GetBufferSizeBinding(uint32_t binding) const
 	//return sizeof(DirectionalLightBuffer);
 }
 
-void LightingPbrSSRShader::SetUBO(uint8_t index, void* data)
+void LightingPbrSSRShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<LightingPbrSSRShader::UniformBuffer0*>(data);
 		return;
@@ -508,9 +508,9 @@ size_t SSRShader::GetBufferSizeBinding(uint32_t binding) const
 	}
 }
 
-void SSRShader::SetUBO(uint8_t index, void* data)
+void SSRShader::SetUBO(uint8_t binding, void* data)
 {
-	switch (index) {
+	switch (binding) {
 	case 0:
 		ubo0 = *reinterpret_cast<SSRShader::UniformBuffer0*>(data);
 		return;

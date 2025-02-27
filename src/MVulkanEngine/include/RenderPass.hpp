@@ -53,7 +53,7 @@ public:
 
 	void Create(std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator,
+		MVulkanDescriptorSetAllocator& allocator, std::vector<uint32_t> storageBufferSizes,
 		std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
@@ -66,8 +66,9 @@ public:
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews,
 		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
-	void SetUBO(uint8_t index, void* data);
+	void SetUBO(uint8_t binding, void* data);
 	void LoadCBV(uint32_t alignment);
+	void LoadStorageBuffer(uint32_t alignment);
 	void UpdateCBVData();
 
 	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }
@@ -92,6 +93,7 @@ private:
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
 	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+		std::vector<uint32_t> storageBufferSizes,
 		std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 	void CreateRenderPass();
@@ -104,6 +106,8 @@ private:
 
 	std::shared_ptr<ShaderModule>	m_shader;
 	std::vector<std::vector<MCBV>>	m_uniformBuffers;
+	std::vector<StorageBuffer>		m_storageBuffer;
+
 	std::vector<VkDescriptorType>	m_samplerTypes;
 
 	MVulkanRenderPass				m_renderPass;

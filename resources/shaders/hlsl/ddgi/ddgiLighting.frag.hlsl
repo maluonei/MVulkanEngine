@@ -13,12 +13,8 @@ struct UniformBuffer0
 
     float3 cameraPos;
     int lightNum;
-
-    int resetAccumulatedBuffer;
-    int gbufferWidth;
-    int gbufferHeight;
-    float padding2;
 };
+
 
 [[vk::binding(0, 0)]]
 cbuffer ubo : register(b0)
@@ -26,15 +22,34 @@ cbuffer ubo : register(b0)
     UniformBuffer0 ubo0;
 }
 
-[[vk::binding(1, 0)]]Texture2D<float4> gBufferNormal : register(t0);
-[[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
-[[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
-[[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
-[[vk::binding(5, 0)]]RWTexture2D<float2> accumulatedBuffer : register(u0);
+struct Probe{
+    float3 position;
+    int padding0;
+};
 
-[[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
+struct UniformBuffer1
+{
+    Probe probes[512];
+    float3 probePos0;
+    float3 probePos1;
+};
 
-[[vk::binding(7, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
+[[vk::binding(1, 0)]]
+cbuffer ub1 : register(b1)
+{
+    UniformBuffer1 ubo1;
+};
+
+
+[[vk::binding(2, 0)]]Texture2D<float4> gBufferNormal : register(t0);
+[[vk::binding(3, 0)]]Texture2D<float4> gBufferPosition : register(t1);
+[[vk::binding(4, 0)]]Texture2D<float4> gAlbedo : register(t2);
+[[vk::binding(5, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
+[[vk::binding(6, 0)]]RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
+[[vk::binding(7, 0)]]RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
+[[vk::binding(8, 0)]]SamplerState linearSampler : register(s0);
+
+[[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
 
 
 struct PSInput
@@ -51,7 +66,7 @@ struct PSOutput
 
 static const float PI = 3.14159265359f;
 
-bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
+bool RayTracingAnyHit(in RayDesc rayDesc) {
   uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
   RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
@@ -60,7 +75,6 @@ bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
   q.Proceed();
 
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
-    t = q.CommittedRayT();
     return true;
   }
 
@@ -136,86 +150,46 @@ float3 rgb2srgb(float3 color)
     return color;
 }
 
-float RandomWithOffset(float2 uv, int offset)
-{
-    float n = dot(uv + float2(offset, offset), float2(12.9898, 78.233));
-    n = frac(sin(n) * 43758.5453123);
-    return n;
+int GetProbeIndex(uint3 pIndex){
+    return pIndex.x * 64 + pIndex.y * 8 + pIndex.z;
 }
 
-float3 RandomDirection(float2 uv, int u1, int u2){
-    float theta = RandomWithOffset(uv, u1) * 2 * PI;
-    float phi = RandomWithOffset(uv, u2) * 2 * PI;
+float TrilinearInterpolationWeight(float3 value){
 
-    float3 randomDir = float3(
-        cos(phi) * cos(theta),
-        sin(phi),
-        cos(phi) * sin(theta)
-    );
-
-    return randomDir;
 }
 
-float3 SphericalFibonacci(float index, float numSamples)
-{
-    const float b = (sqrt(5.f) * 0.5f + 0.5f) - 1.f;
-    float phi = 2 * PI * frac(index * b);
-    float cosTheta = 1.f - (2.f * index + 1.f) * (1.f / numSamples);
-    float sinTheta = sqrt(saturate(1.f - (cosTheta * cosTheta)));
+float DirectionWeight(){
 
-    return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
 }
 
-float rtao(float3 position, float3 normal, float2 uv, int w, float radius, int rayCount){
-    //float ao = rayCount;
-    float ao = 0.f;
-    float t = 0.f;
+float ChebyshevTest(){
+    
+}
 
-    RayDesc ray;
-    //ray.Origin = position + 0.00001f * normal;
-    ray.TMin = 0.f;
-    ray.TMax = radius;
 
-    for(int i=0;i<rayCount;i++){
-        float3 randomDir = RandomDirection(uv, 2*i + w, 2*i+1 + w);
-        //if(dot(randomDir, normal)<0) randomDir = -randomDir;
-        float3 rayDirection = normalize(normal + randomDir); 
+float3 CalculateIndirectLighting(float3 fragPos, float3 fragNormal){
+    float3 probeOffset = (fragPos - ubo1.probePos0) / (ubo1.probePos1 - ubo1.probePos0);
+    uint3 probeOffsetInt = uint3(probeOffset);
 
-        ray.Origin = position + 0.001f * normal;
-        ray.Direction = rayDirection;
+    int probeIndex = GetProbeIndex(probeOffsetInt);
 
-        if(RayTracingAnyHit(ray, t))
-            //ao-=1.f;
-            //ao += pow(saturate(t/radius), 2.);
-            ao += 1.f;
+    float totalWeights = 0.f;
+
+    for(int x=0;x<2;x++){
+        for(int y=0;y<2;y++){
+            for(int z=0;z<2;z++){
+                int pIndex = GetProbeIndex(probeOffsetInt + int3(x, y, z));
+
+                float3 radiance = VolumeProbeDatasRadiance[pIndex].rgb;
+                float depth = VolumeProbeDatasDepth[pIndex].r;
+                float depthSquared = VolumeProbeDatasDepth[pIndex].g;
+                
+                
+
+            }
+        }   
     }
 
-    return 1 - (ao / rayCount);
-}
-
-float rtao2(float3 position, float3 normal, float2 uv, int w, float radius, int rayCount){
-    //float ao = rayCount;
-    float ao = 0.f;
-    float t = 0.f;
-
-    RayDesc ray;
-    //ray.Origin = position + 0.00001f * normal;
-    ray.TMin = 0.f;
-    ray.TMax = radius;
-
-    for(int i=0;i<rayCount;i++){
-        float3 blueNoiseUnitVector = SphericalFibonacci(i, rayCount);
-        float3 rayDirection = normalize(normal + blueNoiseUnitVector);
-        
-        ray.Origin = position + (normal * 0.0001);
-        ray.Direction = normalize(normal + blueNoiseUnitVector);
-
-        if(RayTracingAnyHit(ray, t))
-            //ao-=1.f;
-            ao += pow(saturate(t/radius), 2.);
-    }
-
-    return 1 - (ao / rayCount);
 }
 
 PSOutput main(PSInput input)
@@ -226,8 +200,6 @@ PSOutput main(PSInput input)
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord);
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
-    //float2 accumulatedBufferValue = accumulatedBuffer.Sample(linearSampler, input.texCoord);
-    float2 accumulatedBufferValue = accumulatedBuffer.Load(int3(input.texCoord * int2(ubo0.gbufferWidth, ubo0.gbufferHeight), 0));
 
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;
@@ -235,14 +207,8 @@ PSOutput main(PSInput input)
     float4 fragAlbedo = gBufferValue2.rgba;
     float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
-
-    float accumulatedAO = ubo0.resetAccumulatedBuffer==0? accumulatedBufferValue.x:0.f;
-    float accumulatedFrameCount = ubo0.resetAccumulatedBuffer==0? accumulatedBufferValue.y:0.f;
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
-
-    float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
-    float3 R = reflect(-V, fragNormal);
 
     for (int i = 0; i < ubo0.lightNum; i++)
     {
@@ -250,30 +216,19 @@ PSOutput main(PSInput input)
         ray.Origin = fragPos;
         ray.Direction = normalize(-ubo0.lights[i].direction);
         ray.TMin = 0.001f;
-        ray.TMax = 1000.f;
+        ray.TMax = 10000.f;
 
-        float t = 0.f;
-        bool hasHit = RayTracingAnyHit(ray, t);
+        bool hasHit = RayTracingAnyHit(ray);
     
         float3 L = normalize(-ubo0.lights[i].direction);
+        float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
+        float3 R = reflect(-V, fragNormal);
 
         fragcolor += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
-        fragcolor += fragAlbedo.rgb * 0.04f; //ambient
+        //fragcolor += fragAlbedo.rgb * 0.04f; //ambient
     }
 
-    float radius = 0.5f;
-    int rayCount = 4;
-
-    float ao = rtao(fragPos, fragNormal, input.texCoord, int(rayCount * accumulatedFrameCount), radius, rayCount);
-    float finalAO = (accumulatedAO * accumulatedFrameCount + ao) / (accumulatedFrameCount+1);
-    
-    accumulatedBuffer[input.texCoord * int2(ubo0.gbufferWidth, ubo0.gbufferHeight)] = float2(finalAO, accumulatedFrameCount+1);
-    
-    //output.color = float4(ao, ao, ao, 1.f);
-    float3 aoColor = float3(finalAO, finalAO, finalAO);
-
-    //output.color = float4(finalAO * fragcolor, 1.f);
-    output.color = float4(aoColor + fragcolor * 0.00000000000001, 1.f);
+    output.color = float4(fragcolor, 1.f);
     
     return output;
 }
