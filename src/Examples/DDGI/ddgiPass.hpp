@@ -44,17 +44,23 @@ private:
 
 	void createGbufferPass();
 	void createProbeTracingPass();
+	void createRTAOPass();
 	void createLightingPass();
 	void createProbeBlendingRadiancePass();
+	void createCompositePass();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_probeTracingPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
+	std::shared_ptr<RenderPass> m_rtaoPass;
+	std::shared_ptr<RenderPass> m_compositePass;
 
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
 
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
+	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
+	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
 	MVulkanSampler				m_linearSampler;
 
 	std::shared_ptr<Scene>		m_scene;

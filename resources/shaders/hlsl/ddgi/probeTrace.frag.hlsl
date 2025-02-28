@@ -1,12 +1,5 @@
-struct Probe{
-    float3 position;
-    int padding0;
-};
+#include "indirectLight.hlsl"
 
-struct UniformBuffer0
-{
-    Probe probes[512];
-};
 
 struct TexBuffer
 {
@@ -16,7 +9,7 @@ struct TexBuffer
     int padding2;
 };
     
-struct UniformBuffer1
+struct UniformBuffer0
 {
     TexBuffer texBuffer[512];
 };
@@ -41,10 +34,11 @@ struct Light
 struct UniformBuffer2
 {
     Light lights[4];
-    int lightNum;
-    int frameCount;
-    int padding1;
-    int padding2;
+
+    float3 probePos0;
+    int    lightNum;
+    float3 probePos1;
+    int    frameCount;
 };
 
 [[vk::binding(0, 0)]]
@@ -69,12 +63,14 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(4, 0)]] StructuredBuffer<int> IndexBuffer : register(t1);
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
-[[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset;
+[[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
+[[vk::binding(8, 0)]] Texture2D textures[1024] : register(t5);
+[[vk::binding(9, 0)]] RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
+[[vk::binding(10, 0)]] RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
 
-[[vk::binding(8, 0)]] Texture2D textures[1024] : register(t4);
-[[vk::binding(9, 0)]] SamplerState linearSampler : register(s0);
+[[vk::binding(11, 0)]] SamplerState linearSampler : register(s0);
 
-[[vk::binding(10, 0)]] RaytracingAccelerationStructure Tlas : register(t1029);
+[[vk::binding(12, 0)]] RaytracingAccelerationStructure Tlas : register(t1030);
 
 
 struct PSInput
@@ -217,7 +213,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     pathState.normal = normal;
     pathState.position = position;
     
-    int diffuseTextureIdx = ubo1.texBuffer[instanceIndex].diffuseTextureIdx;
+    int diffuseTextureIdx = ubo0.texBuffer[instanceIndex].diffuseTextureIdx;
     pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
     
     pathState.materialIdx = instanceOffset[instanceIndex].materialIdx;
@@ -264,7 +260,7 @@ PSOutput main(PSInput input)
     int2 idx = int2(FullResolution * input.texCoord);
     int rayIndex = idx.x;
     int probeIndex = idx.y;
-    Probe probe = ubo0.probes[probeIndex];
+    Probe probe = ubo1.probes[probeIndex];
 
     PSOutput output;
     output.albedo.w = 0.f;
@@ -291,7 +287,21 @@ PSOutput main(PSInput input)
     float3 diffuse = float3(0.f, 0.f, 0.f);
     for(int i=0;i<ubo2.lightNum;i++){
         if(output.position.w > 0.f){
-            diffuse += DirectDiffuseLighting(ubo2.lights[i], pathState.position, pathState.normal, pathState.albedo);
+            
+            diffuse += DirectDiffuseLighting(
+                ubo2.lights[i], 
+                pathState.position, 
+                pathState.normal, 
+                pathState.albedo);
+
+            diffuse += CalculateIndirectLighting(
+                ubo1,
+                VolumeProbeDatasRadiance, 
+                VolumeProbeDatasDepth, 
+                ubo2.probePos0,
+                ubo2.probePos1,
+                pathState.position, 
+                pathState.normal);
         }
     }
 

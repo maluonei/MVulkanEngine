@@ -132,6 +132,12 @@ public:
         std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
         std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
+    void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
+        std::vector<uint32_t> storageBufferSizes, 
+        std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
+
     //void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
     //    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
     //    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});

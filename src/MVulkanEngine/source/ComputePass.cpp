@@ -42,6 +42,15 @@ void ComputePass::Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDes
     CreatePipeline(allocator, storageBufferSizes, storageImageCreateInfos, seperateImageViews, samplers, accelerationStructures);
 }
 
+void ComputePass::Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDescriptorSetAllocator& allocator,
+    std::vector<uint32_t> storageBufferSizes,
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews,
+    std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures) 
+{
+    setShader(shader);
+    CreatePipeline(allocator, storageBufferSizes, seperateImageViews, storageImageViews, samplers, accelerationStructures);
+}
+
 void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
     std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
@@ -186,6 +195,105 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
      m_shader->Clean();
 }
 
+void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+    std::vector<uint32_t> storageBufferSizes,
+    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures) {
+    MVulkanShaderReflector compReflector(m_shader->GetComputeShader().GetShader());
+
+    ShaderReflectorOut resourceOutComp = compReflector.GenerateShaderReflactorOut();
+
+    //std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutComp.GetBindings();
+    m_bindings = resourceOutComp.GetBindings();
+
+    m_descriptorLayout.Create(m_device.GetDevice(), m_bindings);
+
+    m_descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayout.Get());
+
+    for (auto binding = 0; binding < m_bindings.size(); binding++) {
+        switch (m_bindings[binding].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            m_cbvCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        {
+            m_storageBufferCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            m_combinedImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+        {
+            m_separateSamplerCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        {
+            m_storageImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        {
+            m_separateImageCount++;
+            break;
+        }
+        }
+    }
+
+    m_constantBuffer.resize(m_cbvCount);
+    m_storageBuffer.resize(m_storageBufferCount);
+    m_storageImages.resize(m_storageImageCount);
+
+    for (auto binding = 0; binding < m_bindings.size(); binding++) {
+        switch (m_bindings[binding].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            MCBV buffer;
+            BufferCreateInfo info;
+            info.arrayLength = m_bindings[binding].binding.descriptorCount;
+            info.size = m_bindings[binding].size;
+            buffer.Create(m_device, info);
+
+            m_constantBuffer[m_bindings[binding].binding.binding] = buffer;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        {
+            StorageBuffer buffer;
+            BufferCreateInfo info;
+            info.arrayLength = m_bindings[binding].binding.descriptorCount;
+            //info.size = bindings[binding].size;
+            info.size = storageBufferSizes[binding - m_cbvCount];
+            buffer.Create(m_device, info);
+
+            m_storageBuffer[m_bindings[binding].binding.binding - m_cbvCount] = buffer;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            //m_samplerTypes
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        {
+          
+            break;
+        }
+        }
+    }
+
+    UpdateDescriptorSetWrite(seperateImageViews, storageImageViews, samplers, accelerationStructures);
+
+    m_pipeline.Create(m_device.GetDevice(), m_shader->GetComputeShader().GetShaderModule(), m_descriptorLayout.Get());
+
+    m_shader->Clean();
+}
+
+
 
 void ComputePass::RecreateStorageImages(std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos) {
     for (auto i = 0; i < m_storageImages.size(); i++) {
@@ -277,6 +385,66 @@ void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>>
 
     write.Update(m_device.GetDevice(), m_descriptorSet.Get(), 
         constantBufferInfos, storageBufferInfos, 
+        combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos, accelerationStructures);
+}
+
+void ComputePass::UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
+{
+    MVulkanDescriptorSetWrite write;
+
+    std::vector<std::vector<VkDescriptorImageInfo>>     combinedImageInfos(0);
+    std::vector<std::vector<VkDescriptorImageInfo>>     separateImageInfos(m_separateImageCount);
+    std::vector<std::vector<VkDescriptorImageInfo>>     storageImageInfos(m_storageImageCount);
+    std::vector<VkDescriptorImageInfo>                  separateSamplerInfos(m_separateSamplerCount);
+    std::vector<std::vector<VkDescriptorBufferInfo>>    constantBufferInfos(m_cbvCount);
+    std::vector<std::vector<VkDescriptorBufferInfo>>    storageBufferInfos(m_storageBufferCount);
+
+
+    for (auto binding = 0; binding < m_separateImageCount; binding++) {
+        separateImageInfos[binding].resize(seperateImageViews[binding].size());
+        for (auto j = 0; j < seperateImageViews[binding].size(); j++) {
+            separateImageInfos[binding][j].sampler = nullptr;
+            separateImageInfos[binding][j].imageView = seperateImageViews[binding][j];
+            separateImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+    }
+
+    for (auto binding = 0; binding < m_storageImageCount; binding++) {
+        storageImageInfos[binding].resize(storageImageViews[binding].size());
+        for (auto j = 0; j < storageImageViews[binding].size(); j++) {
+            storageImageInfos[binding][j].sampler = nullptr;
+            storageImageInfos[binding][j].imageView = storageImageViews[binding][j];
+            storageImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        }
+    }
+
+    for (auto binding = 0; binding < m_separateSamplerCount; binding++) {
+        separateSamplerInfos[binding].sampler = samplers[binding];
+        separateSamplerInfos[binding].imageView = nullptr;
+        separateSamplerInfos[binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+
+    for (auto binding = 0; binding < m_cbvCount; binding++) {
+        constantBufferInfos[binding].resize(m_constantBuffer[binding].GetArrayLength());
+        for (auto j = 0; j < m_constantBuffer[binding].GetArrayLength(); j++) {
+            constantBufferInfos[binding][j].buffer = m_constantBuffer[binding].GetBuffer();
+            constantBufferInfos[binding][j].offset = j * CalculateAlignedSize(m_constantBuffer[binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+            constantBufferInfos[binding][j].range = m_constantBuffer[binding].GetBufferSize();
+        }
+    }
+
+    for (auto binding = 0; binding < m_storageBufferCount; binding++) {
+        storageBufferInfos[binding].resize(m_storageBuffer[binding].GetArrayLength());
+        for (auto j = 0; j < m_storageBuffer[binding].GetArrayLength(); j++) {
+            storageBufferInfos[binding][j].buffer = m_storageBuffer[binding].GetBuffer();
+            storageBufferInfos[binding][j].offset = j * CalculateAlignedSize(m_storageBuffer[binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+            storageBufferInfos[binding][j].range = m_storageBuffer[binding].GetBufferSize();
+        }
+    }
+
+    write.Update(m_device.GetDevice(), m_descriptorSet.Get(),
+        constantBufferInfos, storageBufferInfos,
         combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos, accelerationStructures);
 }
 

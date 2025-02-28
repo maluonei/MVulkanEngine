@@ -1,18 +1,25 @@
+#include "indirectLight.hlsl"
+
 struct Light
 {
     float3 direction;
-    float intensity;
+    float  intensity;
 
     float3 color;
-    int shadowMapIndex;
+    int    shadowMapIndex;
 };
 
 struct UniformBuffer0
 {
-    Light lights[2];
+    Light  lights[2];
 
     float3 cameraPos;
-    int lightNum;
+    int    lightNum;
+
+    float3 probePos0;
+    int    padding0;
+    float3 probePos1;
+    int    padding1;
 };
 
 
@@ -20,18 +27,6 @@ struct UniformBuffer0
 cbuffer ubo : register(b0)
 {
     UniformBuffer0 ubo0;
-}
-
-struct Probe{
-    float3 position;
-    int padding0;
-};
-
-struct UniformBuffer1
-{
-    Probe probes[512];
-    float3 probePos0;
-    float3 probePos1;
 };
 
 [[vk::binding(1, 0)]]
@@ -40,14 +35,13 @@ cbuffer ub1 : register(b1)
     UniformBuffer1 ubo1;
 };
 
-
-[[vk::binding(2, 0)]]Texture2D<float4> gBufferNormal : register(t0);
-[[vk::binding(3, 0)]]Texture2D<float4> gBufferPosition : register(t1);
-[[vk::binding(4, 0)]]Texture2D<float4> gAlbedo : register(t2);
-[[vk::binding(5, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
+[[vk::binding(2, 0)]]Texture2D<float4>   gBufferNormal : register(t0);
+[[vk::binding(3, 0)]]Texture2D<float4>   gBufferPosition : register(t1);
+[[vk::binding(4, 0)]]Texture2D<float4>   gAlbedo : register(t2);
+[[vk::binding(5, 0)]]Texture2D<float4>   gMetallicAndRoughness : register(t3);
 [[vk::binding(6, 0)]]RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
 [[vk::binding(7, 0)]]RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
-[[vk::binding(8, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(8, 0)]]SamplerState        linearSampler : register(s0);
 
 [[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
 
@@ -61,7 +55,8 @@ struct PSInput
 
 struct PSOutput
 {
-    float4 color : SV_Target0;
+    float4 directLight : SV_Target0;
+    float4 indirectLight : SV_Target1;
 };
 
 static const float PI = 3.14159265359f;
@@ -150,47 +145,6 @@ float3 rgb2srgb(float3 color)
     return color;
 }
 
-int GetProbeIndex(uint3 pIndex){
-    return pIndex.x * 64 + pIndex.y * 8 + pIndex.z;
-}
-
-float TrilinearInterpolationWeight(float3 value){
-
-}
-
-float DirectionWeight(){
-
-}
-
-float ChebyshevTest(){
-    
-}
-
-
-float3 CalculateIndirectLighting(float3 fragPos, float3 fragNormal){
-    float3 probeOffset = (fragPos - ubo1.probePos0) / (ubo1.probePos1 - ubo1.probePos0);
-    uint3 probeOffsetInt = uint3(probeOffset);
-
-    int probeIndex = GetProbeIndex(probeOffsetInt);
-
-    float totalWeights = 0.f;
-
-    for(int x=0;x<2;x++){
-        for(int y=0;y<2;y++){
-            for(int z=0;z<2;z++){
-                int pIndex = GetProbeIndex(probeOffsetInt + int3(x, y, z));
-
-                float3 radiance = VolumeProbeDatasRadiance[pIndex].rgb;
-                float depth = VolumeProbeDatasDepth[pIndex].r;
-                float depthSquared = VolumeProbeDatasDepth[pIndex].g;
-                
-                
-
-            }
-        }   
-    }
-
-}
 
 PSOutput main(PSInput input)
 {
@@ -208,7 +162,7 @@ PSOutput main(PSInput input)
     float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
     
-    float3 fragcolor = float3(0.f, 0.f, 0.f);
+    float3 directLight = float3(0.f, 0.f, 0.f);
 
     for (int i = 0; i < ubo0.lightNum; i++)
     {
@@ -224,11 +178,19 @@ PSOutput main(PSInput input)
         float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
         float3 R = reflect(-V, fragNormal);
 
-        fragcolor += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
-        //fragcolor += fragAlbedo.rgb * 0.04f; //ambient
+        directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
     }
+    float3 indirectLight = CalculateIndirectLighting(
+        ubo1,
+        VolumeProbeDatasRadiance, 
+        VolumeProbeDatasDepth, 
+        ubo0.probePos0,
+        ubo0.probePos1,
+        fragPos, 
+        fragNormal);
 
-    output.color = float4(fragcolor, 1.f);
+    output.directLight = float4(directLight, 1.f);
+    output.indirectLight = float4(indirectLight, 1.f);
     
     return output;
 }

@@ -123,7 +123,7 @@ public:
 		int padding0;
 	};
 
-	struct UniformBuffer0 {
+	struct UniformBuffer1 {
 		Probe probes[512];
 	};
 
@@ -134,7 +134,7 @@ public:
 		int padding0;
 	};
 
-	struct UniformBuffer1 {
+	struct UniformBuffer0 {
 		TexBuffer texBuffer[256];
 	};
 
@@ -148,10 +148,10 @@ public:
 
 	struct UniformBuffer2 {
 		Light lights[4];
-		int lightNum;
-		int padding0;
-		int padding1;
-		int padding2;
+		glm::vec3 probePos0;
+		int    lightNum;
+		glm::vec3 probePos1;
+		int    frameCount;
 	};
 
 	struct VertexBuffer {
@@ -246,4 +246,86 @@ public:
 private:
 	UniformBuffer0 ubo0;
 };
+
+class DDGILightingShader :public ShaderModule {
+public:
+	DDGILightingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl")
+	{
+	}
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+		switch (binding) {
+		case 0:
+			return sizeof(DDGILightingShader::UniformBuffer0);
+		case 1:
+			return sizeof(DDGILightingShader::UniformBuffer1);
+		}
+	}
+
+	virtual void SetUBO(uint8_t binding, void* data) {
+		switch (binding) {
+		case 0:
+			ubo0 = *reinterpret_cast<DDGILightingShader::UniformBuffer0*>(data);
+			return;
+		case 1:
+			ubo1 = *reinterpret_cast<DDGILightingShader::UniformBuffer1*>(data);
+			return;
+		}
+	}
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+		switch (binding) {
+		case 0:
+			return (void*)&ubo0;
+		case 1:
+			return (void*)&ubo1;
+		}
+	}
+
+public:
+	struct Light {
+		glm::vec3 direction;
+		float intensity;
+
+		glm::vec3 color;
+		int shadowMapIndex;
+	};
+
+	struct UniformBuffer0 {
+		Light lights[2];
+
+		glm::vec3 cameraPos;
+		int lightNum;
+
+		glm::vec3 probePos0;
+		int    padding0;
+		glm::vec3 probePos1;
+		int    padding1;
+	};
+
+	struct Probe {
+		glm::vec3 position;
+		int    padding0;
+	};
+
+	struct UniformBuffer1
+	{
+		Probe	probes[512];
+	};
+
+private:
+	UniformBuffer0 ubo0;
+	UniformBuffer1 ubo1;
+};
+
+class CompositeShader :public ShaderModule {
+public:
+	CompositeShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/composite.frag.hlsl")
+	{
+	}
+
+public:
+};
+
+
 #endif
