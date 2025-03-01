@@ -28,8 +28,12 @@ PSOutput main(PSInput input)
     float rtao = gBufferValue2.r;
 
     float3 finalColor = rtao * (directLight + indirectLight);
+    //float3 finalColor = directLight + 0.f * indirectLight + 0.0000000000001f * rtao;
+    //finalColor = saturate(finalColor);
 
     output.color = float4(finalColor, 1.f);
+
+    //output.color = float4(1.f, 0.f, 0.f, 1.f);
     
     return output;
 }

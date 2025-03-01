@@ -47,13 +47,18 @@ private:
 	void createRTAOPass();
 	void createLightingPass();
 	void createProbeBlendingRadiancePass();
+	void createProbeVisualizePass();
 	void createCompositePass();
+
+	void changeTextureLayoutToRWTexture();
+	void changeRWTextureLayoutToTexture();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_probeTracingPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<RenderPass> m_rtaoPass;
+	std::shared_ptr<RenderPass> m_probeVisulizePass;
 	std::shared_ptr<RenderPass> m_compositePass;
 
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
@@ -65,6 +70,7 @@ private:
 
 	std::shared_ptr<Scene>		m_scene;
 	std::shared_ptr<Scene>		m_squad;
+	std::shared_ptr<Scene>		m_sphere;
 
 	std::shared_ptr<Light>		m_directionalLight;
 

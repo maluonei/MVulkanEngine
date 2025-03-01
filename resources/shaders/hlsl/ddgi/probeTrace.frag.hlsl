@@ -1,6 +1,5 @@
 #include "indirectLight.hlsl"
 
-
 struct TexBuffer
 {
     int diffuseTextureIdx;
@@ -64,13 +63,13 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
 [[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] Texture2D textures[1024] : register(t5);
-[[vk::binding(9, 0)]] RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
-[[vk::binding(10, 0)]] RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
+[[vk::binding(8, 0)]] Texture2D<float4> textures[1024] : register(t5);
+[[vk::binding(9, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1030);   //[512, 64]
+[[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1031);   //[2048, 256]
 
 [[vk::binding(11, 0)]] SamplerState linearSampler : register(s0);
 
-[[vk::binding(12, 0)]] RaytracingAccelerationStructure Tlas : register(t1030);
+[[vk::binding(12, 0)]] RaytracingAccelerationStructure Tlas : register(t1032);
 
 
 struct PSInput
@@ -88,7 +87,7 @@ struct PSOutput
     float4 radiance : SV_Target3;
 };
 
-static const float PI = 3.14159265359f;
+//static const float PI = 3.14159265359f;
 
 struct PathState {
   float3 position;
@@ -281,28 +280,33 @@ PSOutput main(PSInput input)
         }
         else{
             output.position = float4(0.f, 0.f, 0.f, 0.f);
+            output.normal = float4(0.f, 0.f, 0.f, 0.f);
+            output.albedo = float4(0.f, 0.f, 0.f, 0.f);
         }
     }
 
     float3 diffuse = float3(0.f, 0.f, 0.f);
     for(int i=0;i<ubo2.lightNum;i++){
         if(output.position.w > 0.f){
-            
             diffuse += DirectDiffuseLighting(
                 ubo2.lights[i], 
                 pathState.position, 
                 pathState.normal, 
                 pathState.albedo);
-
-            diffuse += CalculateIndirectLighting(
-                ubo1,
-                VolumeProbeDatasRadiance, 
-                VolumeProbeDatasDepth, 
-                ubo2.probePos0,
-                ubo2.probePos1,
-                pathState.position, 
-                pathState.normal);
         }
+    }
+
+    if(output.position.w > 0.f){
+        diffuse += CalculateIndirectLighting(
+                    ubo1,
+                    VolumeProbeDatasRadiance, 
+                    VolumeProbeDatasDepth, 
+                    linearSampler,
+                    ubo2.probePos0,
+                    ubo2.probePos1,
+                    pathState.position, 
+                    pathState.normal,
+                    pathState.albedo);
     }
 
     output.radiance = float4(diffuse, pathState.t);

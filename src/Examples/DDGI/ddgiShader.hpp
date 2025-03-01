@@ -292,7 +292,7 @@ public:
 	};
 
 	struct UniformBuffer0 {
-		Light lights[2];
+		Light lights[4];
 
 		glm::vec3 cameraPos;
 		int lightNum;
@@ -327,5 +327,13 @@ public:
 public:
 };
 
+class DDGIProbeVisulizeShader :public ShaderModule {
+public:
+	DDGIProbeVisulizeShader() :ShaderModule("hlsl/ddgi/probeVisulize.vert.hlsl", "hlsl/ddgi/probeVisulize.frag.hlsl")
+	{
+	}
+
+public:
+};
 
 #endif

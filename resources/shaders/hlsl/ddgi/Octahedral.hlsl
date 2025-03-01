@@ -1,3 +1,5 @@
+define PI 3.14159265359
+
 /**
  * Returns either -1 or 1 based on the sign of the input value.
  * If the input is zero, 1 is returned.

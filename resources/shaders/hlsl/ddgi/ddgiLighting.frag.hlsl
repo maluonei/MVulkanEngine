@@ -11,7 +11,7 @@ struct Light
 
 struct UniformBuffer0
 {
-    Light  lights[2];
+    Light  lights[4];
 
     float3 cameraPos;
     int    lightNum;
@@ -39,11 +39,11 @@ cbuffer ub1 : register(b1)
 [[vk::binding(3, 0)]]Texture2D<float4>   gBufferPosition : register(t1);
 [[vk::binding(4, 0)]]Texture2D<float4>   gAlbedo : register(t2);
 [[vk::binding(5, 0)]]Texture2D<float4>   gMetallicAndRoughness : register(t3);
-[[vk::binding(6, 0)]]RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
-[[vk::binding(7, 0)]]RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
+[[vk::binding(6, 0)]]Texture2D<float4>   VolumeProbeDatasRadiance  : register(t4);   //[512, 64]
+[[vk::binding(7, 0)]]Texture2D<float4>   VolumeProbeDatasDepth  : register(t5);   //[2048, 256]
 [[vk::binding(8, 0)]]SamplerState        linearSampler : register(s0);
 
-[[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
+[[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t6);
 
 
 struct PSInput
@@ -58,8 +58,6 @@ struct PSOutput
     float4 directLight : SV_Target0;
     float4 indirectLight : SV_Target1;
 };
-
-static const float PI = 3.14159265359f;
 
 bool RayTracingAnyHit(in RayDesc rayDesc) {
   uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
@@ -180,14 +178,20 @@ PSOutput main(PSInput input)
 
         directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
     }
+
     float3 indirectLight = CalculateIndirectLighting(
         ubo1,
         VolumeProbeDatasRadiance, 
         VolumeProbeDatasDepth, 
+        linearSampler,
         ubo0.probePos0,
         ubo0.probePos1,
         fragPos, 
-        fragNormal);
+        fragNormal,
+        fragAlbedo);
+    //indirectLight = indirectLight * fragAlbedo.rgb / PI;
+
+    //float radiance = VolumeProbeDatasRadiance.Sample(linearSampler, float2(0.f, 0.f)).r;
 
     output.directLight = float4(directLight, 1.f);
     output.indirectLight = float4(indirectLight, 1.f);

@@ -99,6 +99,10 @@ void RTAO::ComputeAndDraw(uint32_t imageIndex)
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+
+    //auto cameraPos = m_camera->GetPosition();
+    //spdlog::info("camera_position:({0}, {1}, {2})", cameraPos[0], cameraPos[1], cameraPos[2]);
+
 }
 
 void RTAO::RecreateSwapchainAndRenderPasses()
@@ -322,8 +326,8 @@ void RTAO::createLight()
 
 void RTAO::createCamera()
 {
-    glm::vec3 position(-1.f, 0.f, 4.f);
-    glm::vec3 center(0.f);
+    glm::vec3 position(1.2925221, 3.7383504, -0.29563048);
+    glm::vec3 center = position + glm::vec3(0.8f, -0.3f, -0.1f);
     glm::vec3 direction = glm::normalize(center - position);
 
     float fov = 60.f;
@@ -375,6 +379,7 @@ void RTAO::createTextures()
 
         Singleton<MVulkanEngine>::instance().CreateImage(m_acculatedAOTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
     }
+
 }
 
 
