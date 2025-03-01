@@ -8,7 +8,6 @@
 #include "ComputePass.hpp"
 #include "Camera.hpp"
 #include "Scene/Light/DirectionalLight.hpp"
-#include "Shaders/ShaderModule.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -35,13 +34,7 @@ void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare gbufferPass ubo
     {
-        GbufferShader::UniformBufferObject0 ubo0{};
-        ubo0.Model = glm::mat4(1.f);
-        ubo0.View = m_camera->GetViewMatrix();
-        ubo0.Projection = m_camera->GetProjMatrix();
-        m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
-
-        GbufferShader::UniformBufferObject1 ubo1[256];
+        RayQueryGBufferShader::UniformBuffer0 ubo0;
 
         auto meshNames = m_scene->GetMeshNames();
         auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
@@ -53,20 +46,31 @@ void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
             auto indirectCommand = drawIndexedIndirectCommands[i];
             if (mat->diffuseTexture != "") {
                 auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+                ubo0.texBuffer[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
             }
             else {
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+                ubo0.texBuffer[indirectCommand.firstInstance].diffuseTextureIdx = -1;
             }
 
             if (mat->metallicAndRoughnessTexture != "") {
                 auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+                ubo0.texBuffer[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = metallicAndRoughnessTexId;
             }
             else {
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+                ubo0.texBuffer[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = -1;
             }
         }
+        m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
+
+
+        auto extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        RayQueryGBufferShader::UniformBuffer1 ubo1;
+
+        ubo1.cameraPosition = m_camera->GetPosition();
+        ubo1.cameraDirection = m_camera->GetDirection();
+        ubo1.screenResolution = glm::ivec2(extent.width, extent.height);
+        ubo1.fovY = glm::radians(m_camera->GetFov());
+        ubo1.zNear = m_camera->GetZnear();
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
@@ -82,7 +86,7 @@ void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
 
         m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
     //spdlog::info("gbuffer generation donw");
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
 
@@ -116,23 +120,49 @@ void RayQueryPbr::RecreateSwapchainAndRenderPasses()
 
 void RayQueryPbr::CreateRenderPass()
 {
+    createGbufferPass();
+    createLightingPass();
+}
+
+void RayQueryPbr::PreComputes()
+{
+
+}
+
+void RayQueryPbr::Clean()
+{
+    m_gbufferPass->Clean();
+    m_lightingPass->Clean();
+    //m_shadowPass->Clean();
+
+    m_linearSampler.Clean();
+
+    m_squad->Clean();
+    m_scene->Clean();
+
+    MRenderApplication::Clean();
+}
+
+void RayQueryPbr::createGbufferPass()
+{
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-    
+
     {
-        std::vector<VkFormat> gbufferFormats;
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        std::vector<VkFormat> probeTracingPassFormats;
+        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+
+        VkExtent2D extent2D = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
 
         RenderPassCreateInfo info{};
         info.depthFormat = device.FindDepthFormat();
         info.frambufferCount = 1;
-        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.extent = extent2D;
         info.useAttachmentResolve = false;
         info.useSwapchainImages = false;
-        info.imageAttachmentFormats = gbufferFormats;
+        info.imageAttachmentFormats = probeTracingPassFormats;
         info.colorAttachmentResolvedViews = nullptr;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -140,31 +170,96 @@ void RayQueryPbr::CreateRenderPass()
         info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
         info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
+        std::shared_ptr<ShaderModule> rayQueryGBufferShader = std::make_shared<RayQueryGBufferShader>();
         std::vector<std::vector<VkImageView>> bufferTextureViews(1);
         auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
         auto wholeTextureSize = wholeTextures.size();
-        for (auto i = 0; i < bufferTextureViews.size(); i++) {
-            if (wholeTextureSize == 0) {
-                bufferTextureViews[i].resize(1);
-                bufferTextureViews[i][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
-            }
-            else {
-                bufferTextureViews[i].resize(wholeTextureSize);
-                for (auto j = 0; j < wholeTextureSize; j++) {
-                    bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
-                }
+
+        if (wholeTextureSize == 0) {
+            bufferTextureViews[0].resize(1);
+            bufferTextureViews[0][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+        }
+        else {
+            bufferTextureViews[0].resize(wholeTextureSize);
+            for (auto j = 0; j < wholeTextureSize; j++) {
+                bufferTextureViews[0][j] = wholeTextures[j]->GetImageView();
             }
         }
-        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(1);
+        samplers[0] = m_linearSampler.GetSampler();
+
+        auto tlas = m_rayTracing.GetTLAS();
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
+
+        std::vector<uint32_t> storageBufferSizes(5);
+        {
+            auto numVertices = m_scene->GetNumVertices();
+            auto numIndices = m_scene->GetNumTriangles() * 3;
+            auto numMeshes = m_scene->GetNumMeshes();
+
+            storageBufferSizes[0] = numVertices * sizeof(glm::vec3);
+            storageBufferSizes[1] = numIndices * sizeof(int);
+            storageBufferSizes[2] = storageBufferSizes[0];
+            storageBufferSizes[3] = numVertices * sizeof(glm::vec2);
+            storageBufferSizes[4] = numMeshes * sizeof(RayQueryGBufferShader::GeometryInfo);
+
+            auto shader = std::static_pointer_cast<RayQueryGBufferShader>(rayQueryGBufferShader);
+            auto meshNames = m_scene->GetMeshNames();
+
+            shader->vertexBuffer.position.resize(numVertices);
+            shader->indexBuffer.index.resize(numIndices);
+            shader->normalBuffer.normal.resize(numVertices);
+            shader->uvBuffer.uv.resize(numVertices);
+            shader->instanceOffsetBuffer.geometryInfos.resize(numMeshes);
+
+            int vertexBufferIndex = 0;
+            int indexBufferIndex = 0;
+            int instanceBufferIndex = 0;
+
+            for (auto meshName : meshNames) {
+                auto mesh = m_scene->GetMesh(meshName);
+
+                auto meshVertexNum = mesh->vertices.size();
+                for (auto i = 0; i < meshVertexNum; i++) {
+                    shader->vertexBuffer.position[vertexBufferIndex + i] = mesh->vertices[i].position;
+                    shader->normalBuffer.normal[vertexBufferIndex + i] = mesh->vertices[i].normal;
+                    shader->uvBuffer.uv[vertexBufferIndex + i] = mesh->vertices[i].texcoord;
+                }
+                auto meshIndexNum = mesh->indices.size();
+                for (auto i = 0; i < meshIndexNum; i++) {
+                    shader->indexBuffer.index[indexBufferIndex + i] = mesh->indices[i];
+                }
+
+                shader->instanceOffsetBuffer.geometryInfos[instanceBufferIndex] =
+                    RayQueryGBufferShader::GeometryInfo{
+                        .vertexOffset = vertexBufferIndex * 3,
+                        .indexOffset = indexBufferIndex,
+                        .uvOffset = vertexBufferIndex * 2,
+                        .normalOffset = vertexBufferIndex * 3,
+                        .materialIdx = int(mesh->matId)
+                };
+
+                vertexBufferIndex += meshVertexNum;
+                indexBufferIndex += meshIndexNum;
+                instanceBufferIndex += 1;
+            }
+        }
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
+            m_gbufferPass, rayQueryGBufferShader,
+            storageBufferSizes, bufferTextureViews, storageTextureViews, samplers, accelerationStructures);
     }
+}
+
+void RayQueryPbr::createLightingPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
         std::vector<VkFormat> lightingPassFormats;
@@ -203,25 +298,6 @@ void RayQueryPbr::CreateRenderPass()
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_lightingPass, lightingShader, gbufferViews, samplers, accelerationStructures);
     }
-}
-
-void RayQueryPbr::PreComputes()
-{
-
-}
-
-void RayQueryPbr::Clean()
-{
-    m_gbufferPass->Clean();
-    m_lightingPass->Clean();
-    //m_shadowPass->Clean();
-
-    m_linearSampler.Clean();
-
-    m_squad->Clean();
-    m_scene->Clean();
-
-    MRenderApplication::Clean();
 }
 
 void RayQueryPbr::loadScene()
@@ -322,5 +398,91 @@ void RayQueryPbr::createSamplers()
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+    }
+}
+
+RayQueryGBufferShader::RayQueryGBufferShader() :ShaderModule("hlsl/rayquery/rayqueryGbuffer.vert.hlsl", "hlsl/rayquery/rayqueryGbuffer.frag.hlsl")
+{
+}
+
+size_t RayQueryGBufferShader::GetBufferSizeBinding(uint32_t binding) const
+{
+    switch (binding) {
+    case 0:
+        return sizeof(RayQueryGBufferShader::UniformBuffer0);
+    case 1:
+        return sizeof(RayQueryGBufferShader::UniformBuffer1);
+    case 2:
+        return vertexBuffer.GetSize();;
+    case 3:
+        return indexBuffer.GetSize();
+    case 4:
+        return normalBuffer.GetSize();
+    case 5:
+        return uvBuffer.GetSize();
+    case 6:
+        return instanceOffsetBuffer.GetSize();
+    }
+}
+
+void RayQueryGBufferShader::SetUBO(uint8_t binding, void* data)
+{
+    switch (binding) {
+    case 0:
+        ubo0 = *reinterpret_cast<RayQueryGBufferShader::UniformBuffer0*>(data);
+        return;
+    case 1:
+        ubo1 = *reinterpret_cast<RayQueryGBufferShader::UniformBuffer1*>(data);
+        return;
+    }
+}
+
+void* RayQueryGBufferShader::GetData(uint32_t binding, uint32_t index)
+{
+    switch (binding) {
+    case 0:
+        return (void*)&ubo0;
+    case 1:
+        return (void*)&ubo1;
+    case 2:
+        return (void*)vertexBuffer.position.data();
+    case 3:
+        return (void*)indexBuffer.index.data();
+    case 4:
+        return (void*)normalBuffer.normal.data();
+    case 5:
+        return (void*)uvBuffer.uv.data();
+    case 6:
+        return (void*)instanceOffsetBuffer.geometryInfos.data();
+    }
+}
+
+LightingPbrRayQueryShader::LightingPbrRayQueryShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/rayquery/lighting_pbr_rayquery.frag.hlsl")
+{
+
+}
+
+size_t LightingPbrRayQueryShader::GetBufferSizeBinding(uint32_t binding) const
+{
+    switch (binding) {
+    case 0:
+        return sizeof(LightingPbrRayQueryShader::UniformBuffer0);
+    }
+}
+
+void LightingPbrRayQueryShader::SetUBO(uint8_t binding, void* data)
+{
+    switch (binding) {
+    case 0:
+        ubo0 = *reinterpret_cast<LightingPbrRayQueryShader::UniformBuffer0*>(data);
+        return;
+    }
+}
+
+void* LightingPbrRayQueryShader::GetData(uint32_t binding, uint32_t index)
+{
+    switch (binding) {
+    case 0:
+        return (void*)&ubo0;
     }
 }

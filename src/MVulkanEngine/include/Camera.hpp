@@ -51,6 +51,10 @@ public:
 	inline float GetZnear()const { return m_zNear; }
 	inline float GetZfar()const { return m_zFar; }
 
+	inline float GetFov() const {
+		return m_fov;
+	}
+
 	inline void SetOrth(bool _flag) {
 		useOrtho = true;
 	}

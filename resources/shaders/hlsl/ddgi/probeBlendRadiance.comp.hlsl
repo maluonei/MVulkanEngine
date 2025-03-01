@@ -21,7 +21,7 @@ cbuffer ubo : register(b0)
 [[vk::binding(1, 0)]]Texture2D<float4> VolumeProbePosition : register(t0);  //[144, 512]
 [[vk::binding(2, 0)]]Texture2D<float4> VolumeProbeRadiance : register(t1);  //[144, 512]
 [[vk::binding(3, 0)]]RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[512, 64]
-[[vk::binding(4, 0)]]RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);   //[2048, 256]
+[[vk::binding(4, 0)]]RWTexture2D<float4> VolumeProbeDatasDepth  : register(u1);      //[512, 64]
 [[vk::binding(5, 0)]]SamplerState linearSampler : register(s0);
 
 
@@ -34,8 +34,8 @@ uint CalculateProbeIndex(uint2 DispatchThreadID, uint2 probeResolution){
     return baseIndex.x * 8 + baseIndex.y;
 }
 
-uint2 CalculateProbeOffset(uint2 DispatchThreadID, uint probeResolution){
-    return DispatchThreadID.xy % uint2(probeResolution, probeResolution);
+uint2 CalculateProbeOffset(uint2 DispatchThreadID, uint2 probeResolution){
+    return DispatchThreadID.xy % probeResolution;
 }
 
 #define sharpness 50
@@ -54,8 +54,10 @@ bool CalculateRadianceAndDepth(
     //float weights = 0.f;
 
     if(probeOffset.x!=0 && probeOffset.x!=(probeResolution-1) && probeOffset.y!=0 && probeOffset.y!=(probeResolution-1)){
-        float2 octahedralUV = (probeOffset.xy - uint2(1, 1)) / float2(probeResolution-2, probeResolution-2);
-        
+        //probeOffset:[1,6]
+        float2 octahedralUV = float2((probeOffset.xy - float2(3.5f, 3.5f))) / float2(2.5f, 2.5f);
+        //octahedralUV = octahedralUV * 2.f - 1.f;
+
         float3 sphereDirection = DDGIGetOctahedralDirection(octahedralUV);
 
         float3 irradiance = float3(0.f, 0.f, 0.f);
@@ -66,13 +68,15 @@ bool CalculateRadianceAndDepth(
         float totalDepthWeights = 0.f;
 
         for(int i=0;i<64;i++){
-            float2 volumeProbePositionUV = float2(i, probeIndex) / float2(64., 512.);
-            float4 targetPositions = VolumeProbePosition.Sample(linearSampler, volumeProbePositionUV).rgba;
-            float4 targetRadiances = VolumeProbeRadiance.Sample(linearSampler, volumeProbePositionUV).rgba;
+            //float2 volumeProbePositionUV = float2(i, probeIndex) / float2(64.f - 1.f, 512.f - 1.f);
+            int3 volumeProbePositionUV_Int = int3(i, probeIndex, 0);
+        
+            float4 targetPositions = VolumeProbePosition.Load(volumeProbePositionUV_Int).rgba;
+            float4 targetRadiances = VolumeProbeRadiance.Load(volumeProbePositionUV_Int).rgba;
 
             bool hit = targetPositions.a;
 
-            if(hit){
+            if(hit > 0){
                 float3 targetPosition = targetPositions.rgb;
                 float targetDepth = targetRadiances.a;
                 float targetDepthSquared = targetDepth * targetDepth;

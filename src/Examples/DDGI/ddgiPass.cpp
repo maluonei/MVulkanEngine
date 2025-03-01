@@ -149,6 +149,15 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
+    //prepare visulizePass ubo
+    {
+        DDGIProbeVisulizeShader::UniformBuffer1 ubo1{};
+        ubo1.vp.View = m_camera->GetViewMatrix();
+        ubo1.vp.Projection = m_camera->GetProjMatrix();
+
+        m_probeVisulizePass->GetShader()->SetUBO(1, &ubo1);
+    }
+
     //spdlog::info("1");
 
     {
@@ -199,6 +208,7 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.Begin();
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_rtaoPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
         //auto camPos = m_camera->GetPosition();
         //spdlog::info("camera_position:({0}, {1}, {2})", camPos.x, camPos.y, camPos.z);
@@ -246,6 +256,7 @@ void DDGIApplication::CreateRenderPass()
     createProbeBlendingRadiancePass();
     createLightingPass();
     createRTAOPass();
+    createProbeVisulizePass();
     createCompositePass();
     
     return;
@@ -330,8 +341,14 @@ void DDGIApplication::loadScene()
     fs::path squadPath = resourcePath / "squad.obj";
     Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
 
+    m_sphere = std::make_shared<Scene>();
+    fs::path spherePath = resourcePath / "sphere.obj";
+    Singleton<SceneLoader>::instance().Load(spherePath.string(), m_sphere.get());
+
     m_squad->GenerateIndirectDataAndBuffers();
+    m_sphere->GenerateIndirectDataAndBuffers(512);
     m_scene->GenerateIndirectDataAndBuffers();
+
     m_scene->GenerateMeshBuffers();
 }
 
@@ -811,9 +828,63 @@ void DDGIApplication::createProbeBlendingRadiancePass()
     }
 }
 
-void DDGIApplication::createProbeVisualizePass()
+void DDGIApplication::createProbeVisulizePass()
 {
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
+    {
+        std::vector<VkFormat> ddgiProbeVisulizePassFormats;
+        ddgiProbeVisulizePassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = 1;
+        info.useSwapchainImages = false;
+        info.imageAttachmentFormats = ddgiProbeVisulizePassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+        info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_probeVisulizePass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> visulizeShader = std::make_shared<DDGIProbeVisulizeShader>();
+        std::vector<std::vector<VkImageView>> views(1);
+        views[0] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(1);
+        samplers[0] = m_linearSampler.GetSampler();
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<uint32_t> storageBufferSizes(0);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_probeVisulizePass, visulizeShader,
+            storageBufferSizes, views, storageTextureViews, samplers, accelerationStructures);
+
+
+        DDGIProbeVisulizeShader::UniformBuffer0 ubo0{};
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                for (int z = 0; z < 8; z++) {
+                    int index = x * 64 + y * 8 + z;
+
+                    glm::mat4 translation = glm::translate(glm::mat4(1.f), m_volume->GetProbePosition(x, y, z));
+                    glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(0.2f));
+                    ubo0.models[index].Model = translation * scale;
+                }
+            }
+        }
+
+        visulizeShader->SetUBO(0, &ubo0);
+    }
 }
 
 void DDGIApplication::createCompositePass()
@@ -842,13 +913,15 @@ void DDGIApplication::createCompositePass()
         m_compositePass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> compositeShader = std::make_shared<CompositeShader>();
-        std::vector<std::vector<VkImageView>> gbufferViews(3);
+        std::vector<std::vector<VkImageView>> gbufferViews(4);
         gbufferViews[0].resize(1);
         gbufferViews[0][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(0);
         gbufferViews[1].resize(1);
         gbufferViews[1][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(1);
         gbufferViews[2].resize(1);
         gbufferViews[2][0] = m_rtaoPass->GetFrameBuffer(0).GetImageView(0);
+        gbufferViews[3].resize(1);
+        gbufferViews[3][0] = m_probeVisulizePass->GetFrameBuffer(0).GetImageView(0);
 
         std::vector<std::vector<VkImageView>> storageTextureViews(0);
 

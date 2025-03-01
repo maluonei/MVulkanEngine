@@ -86,6 +86,28 @@ void Scene::GenerateIndirectDrawCommand()
     }
 }
 
+void Scene::GenerateIndirectDrawCommand(int repeatNum)
+{
+    m_indirectCommands.clear();
+
+    std::vector<std::string> names = GetMeshNames();
+
+    //for (auto i = 0; i < repeatNum; i++) {
+    auto name = names[0];
+
+    VkDrawIndexedIndirectCommand cmd{};
+    cmd.indexCount = m_meshMap[name]->indices.size();
+    cmd.instanceCount = repeatNum;
+    cmd.firstIndex = 0;
+    cmd.vertexOffset = 0;
+    cmd.firstInstance = 0;
+
+    m_indirectCommands.push_back(cmd);
+
+        //currentIndex += cmd.indexCount;
+    //}
+}
+
 void Scene::CalculateBB()
 {
     //BoundingBox bbx;
@@ -136,6 +158,27 @@ void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
         mesh.second->matId += baseMatId;
         this->m_meshMap.insert(std::make_pair(mesh.first, mesh.second));
     }
+}
+
+void Scene::GenerateIndirectDataAndBuffers(int repeatNums)
+{
+    auto totalVertexs = GetTotalVertexs();
+    auto totalIndeices = GetTotalIndeices();
+
+    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+
+    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
+
+    SetIndirectVertexBuffer(vertexBuffer);
+    SetIndirectIndexBuffer(indexBuffer);
+
+    GenerateIndirectDrawCommand(repeatNums);
+    std::vector<VkDrawIndexedIndirectCommand> commands = GetIndirectDrawCommands();
+    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    SetIndirectBuffer(indirectCommandBuffer);
 }
 
 void Scene::GenerateIndirectDataAndBuffers()

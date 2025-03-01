@@ -52,36 +52,39 @@ float3 CalculateIndirectLighting(
     float3 fragPos, 
     float3 fragNormal,
     float3 fragAlbedo){
+    
     float3 probeOffset = (fragPos - probePos0) / (probePos1 - probePos0);
-    uint3 probeOffsetInt = uint3(probeOffset);
+    uint3 probeOffsetInt = uint3(probeOffset * 7);
 
-    int probeIndex = GetProbeIndex(probeOffsetInt);
+    //int probeIndex = GetProbeIndex(probeOffsetInt);
 
     float totalWeights = 0.f;
     float3 totalRadiance = float3(0.f, 0.f, 0.f);
 
     float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(fragNormal);
+    //octahedralUVOfNormal = (octahedralUVOfNormal + 1.f) / 2.f;
 
     for(int x=0;x<2;x++){
         for(int y=0;y<2;y++){
             for(int z=0;z<2;z++){
                 int3 probeBaseIndex = probeOffsetInt + int3(x, y, z);
-                //if(probeBaseIndex.x<0 || probeBaseIndex.x>=8 || probeBaseIndex.y<0 || probeBaseIndex.y>=8 || probeBaseIndex.z<0 || probeBaseIndex.z>=8){
-                //    continue;
-                //}
+                if(probeBaseIndex.x<0 || probeBaseIndex.x>=8 || probeBaseIndex.y<0 || probeBaseIndex.y>=8 || probeBaseIndex.z<0 || probeBaseIndex.z>=8){
+                    continue;
+                }
 
-                int pIndex = GetProbeIndex(probeOffsetInt + int3(x, y, z));
+                int pIndex = GetProbeIndex(probeBaseIndex);
 
                 float3 probePosition = ubo1.probes[pIndex].position;
                 float3 direction = normalize(fragPos - probePosition);
                 
-                uint2  probeBaseUV = uint2(8, 8) * uint2(probeBaseIndex.x * 8 + probeBaseIndex.y, probeBaseIndex.z);
+                uint2  probeBaseUV = uint2(8, 8) * uint2(probeBaseIndex.x * 8 + probeBaseIndex.y, probeBaseIndex.z) + uint2(4, 4);
 
                 float2 octahedralUVOfDirection = DDGIGetOctahedralCoordinates(direction);
-                uint2  octahedralUVOfDirectioninTexture_Int = probeBaseUV + octahedralUVOfDirection * uint2(6, 6) + uint2(1, 1);
+                //octahedralUVOfDirection = (octahedralUVOfDirection + 1.f) / 2.f;
+                uint2  octahedralUVOfDirectioninTexture_Int = probeBaseUV + octahedralUVOfDirection * uint2(3, 3);
                 float2 octahedralUVOfDirectioninTexture_Float = octahedralUVOfDirectioninTexture_Int / float2(512., 64.);
                 
-                uint2  octahedralUVOfNormalTexture_Int = probeBaseUV + octahedralUVOfNormal * uint2(6, 6) + uint2(1, 1);
+                uint2  octahedralUVOfNormalTexture_Int = probeBaseUV + octahedralUVOfNormal * uint2(3, 3);
                 float2 octahedralUVOfNormalTexture_Float = octahedralUVOfDirectioninTexture_Float / float2(512., 64.);
                 
                 //float3 radiance = VolumeProbeDatasRadiance[octahedralUVOfNormalTexture_Float].rgb;

@@ -79,6 +79,7 @@ public:
     void GenerateIndirectDrawData();
     std::vector<std::string> GetMeshNames();
     void GenerateIndirectDrawCommand();
+    void GenerateIndirectDrawCommand(int repeatNum);
     inline std::vector<VkDrawIndexedIndirectCommand> GetIndirectDrawCommands(){return m_indirectCommands;}
 
     inline void AddLight(std::string name, std::shared_ptr<Light> light){m_lightMap[name] = light;}
@@ -93,6 +94,7 @@ public:
 
     void AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform);
 
+    void GenerateIndirectDataAndBuffers(int repeatNums);
     void GenerateIndirectDataAndBuffers();
     void GenerateMeshBuffers();
 

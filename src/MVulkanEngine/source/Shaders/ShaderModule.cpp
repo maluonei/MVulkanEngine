@@ -221,36 +221,6 @@ void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
 	}
 }
 
-LightingPbrRayQueryShader::LightingPbrRayQueryShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_rayquery.frag.hlsl")
-{
-
-}
-
-size_t LightingPbrRayQueryShader::GetBufferSizeBinding(uint32_t binding) const
-{
-	switch (binding) {
-	case 0:
-		return sizeof(LightingPbrRayQueryShader::UniformBuffer0);
-	}
-}
-
-void LightingPbrRayQueryShader::SetUBO(uint8_t binding, void* data)
-{
-	switch (binding) {
-	case 0:
-		ubo0 = *reinterpret_cast<LightingPbrRayQueryShader::UniformBuffer0*>(data);
-		return;
-	}
-}
-
-void* LightingPbrRayQueryShader::GetData(uint32_t binding, uint32_t index)
-{
-	switch (binding) {
-	case 0:
-		return (void*)&ubo0;
-	}
-}
-
 
 LightingIBLShader::LightingIBLShader() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_ibl.frag.hlsl")
 {

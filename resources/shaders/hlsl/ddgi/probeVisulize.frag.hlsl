@@ -1,16 +1,4 @@
-// HLSL Shader
-struct Probe
-{
-    float3 position;
-    int padding0;
-};
-    
-[[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
-{
-    TexBuffer ubo1[256];
-};
-
+#include "Octahedral.hlsl"
 
 [[vk::binding(2, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t0); 
 [[vk::binding(3, 0)]] SamplerState linearSampler : register(s0);
@@ -26,47 +14,23 @@ struct PSInput
 
 struct PSOutput
 {
-    [[vk::location(0)]] float4 Normal : SV_TARGET0;
-    [[vk::location(1)]] float4 Position : SV_TARGET1;
-    [[vk::location(2)]] float4 Albedo : SV_TARGET2;
-    [[vk::location(3)]] float4 MetallicAndRoughness : SV_TARGET3;
-    [[vk::location(4)]] uint4 MatId : SV_TARGET4;
+    [[vk::location(0)]] float4 color : SV_TARGET0;
 };
 
 PSOutput main(PSInput input)
 {
     PSOutput output;
 
-    int diffuseTextureIdx = ubo1[input.instanceID].diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx = ubo1[input.instanceID].metallicAndRoughnessTextureIdx;
+    int probeIndex = input.instanceID;
+    int2 probeBaseIndex = int2(probeIndex / 8, probeIndex % 8);
 
-    // Output normal and position
-    output.Normal = float4(input.normal, input.texCoord.x);
-    output.Position = float4(input.worldPos, input.texCoord.y);
+    float2 octahedralUV = DDGIGetOctahedralCoordinates(input.normal);
+    //octahedralUV = (octahedralUV + 1.f) / 2.f;
+    float2 octahedralUVInTextureFloat = (probeBaseIndex * float2(8, 8) + float2(4, 4) + float2(3, 3) * octahedralUV) / float2(512, 64);
+    
+    float3 probeRadiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVInTextureFloat).rgb;
 
-    // Sample diffuse texture if valid, otherwise default to white
-    if (diffuseTextureIdx != -1)
-    {
-        output.Albedo = textures[diffuseTextureIdx].Sample(linearSampler, input.texCoord);
-    }
-    else
-    {
-        output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-    }
-
-    // Sample metallic and roughness texture if valid, otherwise default values
-    if (metallicAndRoughnessTextureIdx != -1)
-    {
-        output.MetallicAndRoughness.rgb = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, input.texCoord).rgb;
-    }
-    else
-    {
-        output.MetallicAndRoughness.rgb = float3(0.0, 0.5, 0.5);
-    }
-    output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
-
-    // Output material ID
-    output.MatId = uint4(ubo1[input.instanceID].matId, 0, 0, 0);
-
+    output.color = float4(probeRadiance, 0.5);
+    //output.color = float4(input.normal + 0.000000001f*probeRadiance, 0.5);
     return output;
 }

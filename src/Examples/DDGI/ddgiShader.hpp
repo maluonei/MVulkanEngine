@@ -333,7 +333,56 @@ public:
 	{
 	}
 
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+		switch (binding) {
+		case 0:
+			return sizeof(DDGIProbeVisulizeShader::UniformBuffer0);
+		case 1:
+			return sizeof(DDGIProbeVisulizeShader::UniformBuffer1);
+		}
+	}
+
+	virtual void SetUBO(uint8_t binding, void* data) {
+		switch (binding) {
+		case 0:
+			ubo0 = *reinterpret_cast<DDGIProbeVisulizeShader::UniformBuffer0*>(data);
+			return;
+		case 1:
+			ubo1 = *reinterpret_cast<DDGIProbeVisulizeShader::UniformBuffer1*>(data);
+			return;
+		}
+	}
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+		switch (binding) {
+		case 0:
+			return (void*)&ubo0;
+		case 1:
+			return (void*)&ubo1;
+		}
+	}
+
 public:
+	struct ModelBuffer {
+		glm::mat4 Model;
+	};
+
+	struct VPBuffer {
+		glm::mat4 View;
+		glm::mat4 Projection;
+	};
+
+	struct UniformBuffer0 {
+		ModelBuffer models[512];
+	};
+
+	struct UniformBuffer1 {
+		VPBuffer vp;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+	UniformBuffer1 ubo1;
 };
 
 #endif

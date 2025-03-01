@@ -47,7 +47,7 @@ private:
 	void createRTAOPass();
 	void createLightingPass();
 	void createProbeBlendingRadiancePass();
-	void createProbeVisualizePass();
+	void createProbeVisulizePass();
 	void createCompositePass();
 
 	void changeTextureLayoutToRWTexture();

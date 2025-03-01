@@ -184,34 +184,7 @@ private:
 	UniformBuffer0 ubo0;
 };
 
-class LightingPbrRayQueryShader :public ShaderModule {
-public:
-	LightingPbrRayQueryShader();
 
-	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-
-	virtual void SetUBO(uint8_t binding, void* data);
-
-	virtual void* GetData(uint32_t binding, uint32_t index = 0);
-
-public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
-	struct UniformBuffer0 {
-		Light lights[2];
-		glm::vec3 cameraPos;
-		int lightNum;
-	};
-
-private:
-	UniformBuffer0 ubo0;
-};
 
 class LightingIBLShader :public ShaderModule {
 public:

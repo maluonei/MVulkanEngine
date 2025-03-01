@@ -269,7 +269,7 @@ PSOutput main(PSInput input)
         RayDesc ray;
         ray.TMin = 0.f;
         ray.TMax = 1000.f;
-        ray.Origin = probe.position + input.normal * 0.0001f;
+        ray.Origin = probe.position;
         //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
         ray.Direction = SphericalFibonacci(rayIndex, 64);
 

@@ -15,6 +15,6 @@ glm::vec3 DDGIVolume::GetProbePosition(int index)
 {
 	int x = index / 64;
 	int y = index % 64 / 8;
-	int z = index % 64 % 8;
+	int z = index % 8;
 	return GetProbePosition(x, y, z);
 }
