@@ -181,7 +181,7 @@ PSOutput main(PSInput input)
 
     float3 indirectLight = CalculateIndirectLighting(
         ubo1,
-        VolumeProbeDatasRadiance, 
+        VolumeProbeDatasRadiance,  
         VolumeProbeDatasDepth, 
         linearSampler,
         ubo0.probePos0,
@@ -194,7 +194,7 @@ PSOutput main(PSInput input)
     //float radiance = VolumeProbeDatasRadiance.Sample(linearSampler, float2(0.f, 0.f)).r;
 
     output.directLight = float4(directLight, 1.f);
-    output.indirectLight = float4(indirectLight, 1.f);
-    
-    return output;
+    output.indirectLight = float4(indirectLight, 1.f); 
+                  
+    return output;   
 }

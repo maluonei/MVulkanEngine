@@ -483,10 +483,10 @@ void DDGIApplication::createTextures()
 
 void DDGIApplication::initDDGIVolumn()
 {
-    glm::vec3 startPosition = glm::vec3(-11.f, 0.5f, -4.5f);
-    glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
-    //glm::vec3 startPosition = glm::vec3(-12.5f, 0.5f, -6.f);
-    //glm::vec3 offset = glm::vec3(2.9f, 1.3f, 1.45f);
+    //glm::vec3 startPosition = glm::vec3(-11.f, 0.5f, -4.5f);
+    //glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
+    glm::vec3 startPosition = glm::vec3(-12.5f, -0.2f, -6.f);
+    glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
     m_volume = std::make_shared<DDGIVolume>(startPosition, offset);
 }
 
@@ -643,10 +643,10 @@ void DDGIApplication::createProbeTracingPass()
 
                 shader->instanceOffsetBuffer.geometryInfos[instanceBufferIndex] =
                     ProbeTracingShader::GeometryInfo{
-                        .vertexOffset = vertexBufferIndex,
+                        .vertexOffset = vertexBufferIndex * 3,
                         .indexOffset = indexBufferIndex,
-                        .uvOffset = vertexBufferIndex,
-                        .normalOffset = vertexBufferIndex,
+                        .uvOffset = vertexBufferIndex * 2,
+                        .normalOffset = vertexBufferIndex * 3,
                         .materialIdx = int(mesh->matId)
                 };
 

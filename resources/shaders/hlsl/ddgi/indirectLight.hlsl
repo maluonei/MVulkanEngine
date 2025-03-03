@@ -15,11 +15,11 @@ int GetProbeIndex(uint3 pIndex){
 }
 
 float TrilinearInterpolationWeight(uint3 base, float3 offset){
-    float3 coefficients =  saturate(abs((float3(1.f, 1.f, 1.f) - base) - offset));
+    float3 coefficients = saturate(abs((float3(1.f, 1.f, 1.f) - base) - offset));
     return coefficients.x * coefficients.y * coefficients.z;
 }
 
-float DirectionWeight(float3 normal, float3 probePosition, float3 position){
+float DirectionWeight(float3 normal, float3 position, float3 probePosition){
     float3 direction = normalize(probePosition - position);
     float cosTheta = max(dot(direction, normal), 0.f);
 
@@ -54,7 +54,8 @@ float3 CalculateIndirectLighting(
     float3 fragAlbedo){
     
     float3 probeOffset = (fragPos - probePos0) / (probePos1 - probePos0);
-    uint3 probeOffsetInt = uint3(probeOffset * 7);
+    float3 probeOffsetinVolumn = float3(probeOffset * 7);
+    uint3 probeOffsetBase = uint3(floor(probeOffsetinVolumn));
 
     //int probeIndex = GetProbeIndex(probeOffsetInt);
 
@@ -67,7 +68,7 @@ float3 CalculateIndirectLighting(
     for(int x=0;x<2;x++){
         for(int y=0;y<2;y++){
             for(int z=0;z<2;z++){
-                int3 probeBaseIndex = probeOffsetInt + int3(x, y, z);
+                int3 probeBaseIndex = probeOffsetBase + int3(x, y, z);
                 if(probeBaseIndex.x<0 || probeBaseIndex.x>=8 || probeBaseIndex.y<0 || probeBaseIndex.y>=8 || probeBaseIndex.z<0 || probeBaseIndex.z>=8){
                     continue;
                 }
@@ -85,7 +86,7 @@ float3 CalculateIndirectLighting(
                 float2 octahedralUVOfDirectioninTexture_Float = octahedralUVOfDirectioninTexture_Int / float2(512., 64.);
                 
                 uint2  octahedralUVOfNormalTexture_Int = probeBaseUV + octahedralUVOfNormal * uint2(3, 3);
-                float2 octahedralUVOfNormalTexture_Float = octahedralUVOfDirectioninTexture_Float / float2(512., 64.);
+                float2 octahedralUVOfNormalTexture_Float = octahedralUVOfNormalTexture_Int / float2(512., 64.);
                 
                 //float3 radiance = VolumeProbeDatasRadiance[octahedralUVOfNormalTexture_Float].rgb;
                 //float2 depths = VolumeProbeDatasDepth[octahedralUVOfDirectioninTexture_Float].rg;
@@ -98,24 +99,30 @@ float3 CalculateIndirectLighting(
 
                 float distance = length(probePosition - fragPos);
                 
-                float trilinearWeight = TrilinearInterpolationWeight(probeOffset - probeOffsetInt, float3(x, y, z));
-                float directionWeight = DirectionWeight(fragNormal, probePosition, fragPos);
+                float trilinearWeight = TrilinearInterpolationWeight(float3(x, y, z), probeOffsetinVolumn - probeOffsetBase);
+                float directionWeight = DirectionWeight(fragNormal, fragPos, probePosition);
                 float chebyshevWeight = ChebyshevTest(depth, depthSquared, distance);
 
                 //trilinearWeight = 1.f;
                 //return float3(trilinearWeight, directionWeight, chebyshevWeight);
 
                 float combinedWeight = trilinearWeight * directionWeight * chebyshevWeight;
+                //combinedWeight = (1e-10) * trilinearWeight + (1e-10) * directionWeight + chebyshevWeight;
 
                 totalRadiance += radiance * combinedWeight;
                 totalWeights += combinedWeight;
+                //break;
             }
         }   
     }
 
-    totalRadiance /= max(totalWeights, 1e-8);
+    //return totalRadiance;
+
+    totalRadiance /= max(totalWeights, 1e-10);
 
     totalRadiance = totalRadiance * fragAlbedo.rgb / PI;
+
+    //totalRadiance = (1e-10) * totalRadiance + (1) * totalWeights;
 
     //totalRadiance = float3(totalWeights, totalWeights, totalWeights);
 

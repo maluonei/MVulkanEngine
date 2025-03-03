@@ -93,9 +93,9 @@ struct PathState {
   float3 position;
   float3 normal;
   float3 albedo;
+  float3 metallicAndRoughness;
 
   float t;
-  int materialIdx;
   float2 uv;
 
   uint instanceID;
@@ -187,35 +187,49 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     float2 texCoords = float2(0.f, 0.f);
 
     if (uvOffset != -1) {
-      float2 uv0 = float2(UVBuffer[uvOffset + v0Idx * 3],
-                          UVBuffer[uvOffset + v0Idx * 3 + 1]);
-      float2 uv1 = float2(UVBuffer[uvOffset + v1Idx * 3],
-                          UVBuffer[uvOffset + v1Idx * 3 + 1]);
-      float2 uv2 = float2(UVBuffer[uvOffset + v2Idx * 3],
-                          UVBuffer[uvOffset + v2Idx * 3 + 1]);
+      float2 uv0 = float2(UVBuffer[uvOffset + v0Idx * 2],
+                          UVBuffer[uvOffset + v0Idx * 2 + 1]);
+      float2 uv1 = float2(UVBuffer[uvOffset + v1Idx * 2],
+                          UVBuffer[uvOffset + v1Idx * 2 + 1]);
+      float2 uv2 = float2(UVBuffer[uvOffset + v2Idx * 2],
+                          UVBuffer[uvOffset + v2Idx * 2 + 1]);
       texCoords = w0 * uv0 + w1 * uv1 + w2 * uv2;
     }
 
-    float3x4 objToWorld = q.CommittedObjectToWorld3x4();
+    //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
 
-    float3x3 toWorld;
-    toWorld[0] = objToWorld[0].xyz;
-    toWorld[1] = objToWorld[1].xyz;
-    toWorld[2] = objToWorld[2].xyz;
+    //float3x3 toWorld;
+    //toWorld[0] = objToWorld[0].xyz;
+    //toWorld[1] = objToWorld[1].xyz;
+    //toWorld[2] = objToWorld[2].xyz;
 
-    normal = mul(toWorld, normal);
+    //normal = mul(toWorld, normal);
 
     // compute position
-    position = mul(toWorld, position);
-    position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
-
+    //position = mul(toWorld, position);
+    //position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
+    
     pathState.normal = normal;
     pathState.position = position;
     
+    //int matId = instanceOffset[instanceIndex].materialIdx;
+
     int diffuseTextureIdx = ubo0.texBuffer[instanceIndex].diffuseTextureIdx;
-    pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
-    
-    pathState.materialIdx = instanceOffset[instanceIndex].materialIdx;
+    if(diffuseTextureIdx != -1){
+        pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
+    }
+    else{
+        pathState.albedo = float3(0.f, 0.f, 0.f);
+    }
+
+    int metallicAndRoughnessTextureIdx = ubo0.texBuffer[instanceIndex].metallicAndRoughnessTextureIdx;
+    if(metallicAndRoughnessTextureIdx != -1){
+        pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
+    }
+    else{
+        pathState.metallicAndRoughness = float3(0.f, 0.f, 0.f);
+    }
+
     pathState.uv = texCoords;
 
     return true;
@@ -235,7 +249,7 @@ float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3
     rayDesc.TMax = 1000.f;
     float t;
 
-    bool visibility = RayTracingAnyHit(rayDesc, t);
+    bool visibility = (1-RayTracingAnyHit(rayDesc, t));
 
     float3 lighting = light.color * light.intensity * (float)visibility * ndotv;
 
