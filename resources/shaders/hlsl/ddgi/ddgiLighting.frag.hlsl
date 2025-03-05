@@ -187,7 +187,7 @@ PSOutput main(PSInput input)
         VolumeProbeDatasRadiance,     
         VolumeProbeDatasDepth,       
         linearSampler,       
-        ubo0.probePos0,  
+        ubo0.probePos0,   
         ubo0.probePos1,  
         fragPos,   
         fragNormal);// * fragAlbedo.rgb / PI ; 
@@ -203,5 +203,5 @@ PSOutput main(PSInput input)
     output.probeRadiance = float4(indirectLight.probeRadiance, 1.f);
                    
     return output;   
-} 
+}  
    
