@@ -16,6 +16,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ddgi.hpp"
 
+//#define raysPerProbe
+
 
 void DDGIApplication::SetUp()
 {
@@ -113,18 +115,21 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         ubo2.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
         ubo2.probePos0 = m_volume->GetProbePosition(0, 0, 0);
         ubo2.probePos1 = m_volume->GetProbePosition(7, 7, 7);
+        ubo2.raysPerProbe = m_raysPerProbe;
         m_probeTracingPass->GetShader()->SetUBO(2, &ubo2);
+    }
+
+    //prepare probeBlendRadiancePass ubo
+    {
+        ProbeBlendRadianceShader::UniformBuffer0 ubo0{};
+        ubo0.raysPerProbe = m_raysPerProbe;
+        ubo0.sharpness = 50;
+        m_probeBlendingRadiancePass->GetShader()->SetUBO(0, &ubo0);
     }
 
     //prepare rtaoPass ubo
     {
         RTAOShader::UniformBuffer0 ubo0{};
-        ubo0.lightNum = 1;
-        ubo0.lights[0].direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
-        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
-        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
-        ubo0.cameraPos = m_camera->GetPosition();
-        
         auto extent2D = m_gbufferPass->GetFrameBuffer(0).GetExtent2D();
         ubo0.gbufferWidth = extent2D.width;
         ubo0.gbufferHeight = extent2D.height;
@@ -185,7 +190,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         computeList.Reset();
         computeList.Begin();
 
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
+        //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 1024, 128, 1);
 
         computeList.End();
 
@@ -362,7 +368,7 @@ void DDGIApplication::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 20.f;
+    float intensity = 1000.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
@@ -463,8 +469,8 @@ void DDGIApplication::createTextures()
         ImageViewCreateInfo viewInfo;
         imageInfo.arrayLength = 1;
         imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        imageInfo.width = 512;
-        imageInfo.height = 64;
+        imageInfo.width = 1024;
+        imageInfo.height = 128;
         imageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -554,7 +560,7 @@ void DDGIApplication::createProbeTracingPass()
         probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-        VkExtent2D extent2D = { 64, 512 };
+        VkExtent2D extent2D = { m_raysPerProbe, 512 };
 
         RenderPassCreateInfo info{};
         info.depthFormat = device.FindDepthFormat();
@@ -770,7 +776,7 @@ void DDGIApplication::createRTAOPass()
 
         std::shared_ptr<ShaderModule> rtaoShader = std::make_shared<RTAOShader>();
         std::vector<std::vector<VkImageView>> gbufferViews(4);
-        for (auto i = 0; i < 4; i++) {
+        for (auto i = 0; i < 2; i++) {
             gbufferViews[i].resize(1);
             gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
         }
@@ -818,13 +824,13 @@ void DDGIApplication::createProbeBlendingRadiancePass()
         storageBufferSizes, seperateImageViews, storageImageViews, samplers);
 
     {
-        ProbeBlendRadianceShader::UniformBuffer0 ubo0;
+        ProbeBlendRadianceShader::UniformBuffer1 ubo1;
         for (int i = 0; i < 512; i++) {
-            ubo0.probes[i].position = m_volume->GetProbePosition(i);
+            ubo1.probes[i].position = m_volume->GetProbePosition(i);
         }
 
         //auto shader = m_probeBlendingRadiancePass->GetShader();
-        probeBlendingRadianceShader->SetUBO(0, &ubo0);
+        probeBlendingRadianceShader->SetUBO(1, &ubo1);
     }
 }
 

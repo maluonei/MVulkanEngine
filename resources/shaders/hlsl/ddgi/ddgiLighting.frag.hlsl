@@ -45,10 +45,10 @@ cbuffer ub1 : register(b1)
 
 [[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t6);
 
-
+ 
 struct PSInput
 {
-    float2 texCoord : TEXCOORD0;
+    float2 texCoord : TEXCOORD0; 
     float3 normal : NORMAL;
     float4 position : SV_POSITION;
 };
@@ -58,7 +58,7 @@ struct PSOutput
     float4 directLight : SV_Target0;
     float4 indirectLight : SV_Target1;
 };
-
+ 
 bool RayTracingAnyHit(in RayDesc rayDesc) {
   uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
@@ -128,7 +128,7 @@ float3 BRDF(float3 diffuseColor, float3 lightColor, float3 L, float3 V, float3 N
         float3 spec = D * F * G / ((4.0 * dotNL * dotNV) + 0.0001);
         float3 diff = (1.f - F) * (1.f - metallic) * diffuseColor / PI;
 
-        color += (spec + diff) * dotNL * lightColor;
+        color += (spec + diff) * dotNL * lightColor; 
     }
 
     return color;
@@ -140,7 +140,7 @@ float3 rgb2srgb(float3 color)
     color.y = color.y < 0.0031308 ? color.y * 12.92f : pow(color.y, 1.0 / 2.4) * 1.055f - 0.055f;
     color.z = color.z < 0.0031308 ? color.z * 12.92f : pow(color.z, 1.0 / 2.4) * 1.055f - 0.055f;
 
-    return color;
+    return color; 
 }
 
 
@@ -150,51 +150,52 @@ PSOutput main(PSInput input)
     
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
-    float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord);
+    float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord); 
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
-
+ 
     float3 fragNormal = normalize(gBufferValue0.rgb);
-    float3 fragPos = gBufferValue1.rgb;
+    float3 fragPos = gBufferValue1.rgb;  
     float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);
     float4 fragAlbedo = gBufferValue2.rgba;
     float metallic = gBufferValue3.b;
     float roughness = gBufferValue3.g;
     
     float3 directLight = float3(0.f, 0.f, 0.f);
-
-    for (int i = 0; i < ubo0.lightNum; i++)
-    {
-        RayDesc ray;
+  
+    for (int i = 0; i < ubo0.lightNum; i++)  
+    {  
+        RayDesc ray; 
         ray.Origin = fragPos;
-        ray.Direction = normalize(-ubo0.lights[i].direction);
+        ray.Direction = normalize(-ubo0.lights[i].direction); 
         ray.TMin = 0.001f;
-        ray.TMax = 10000.f;
-
-        bool hasHit = RayTracingAnyHit(ray);
-    
-        float3 L = normalize(-ubo0.lights[i].direction);
+        ray.TMax = 10000.f; 
+  
+        bool hasHit = RayTracingAnyHit(ray);  
+     
+        float3 L = normalize(-ubo0.lights[i].direction); 
         float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
         float3 R = reflect(-V, fragNormal);
-
+ 
         directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
-    }
-
-    float3 indirectLight = CalculateIndirectLighting(
-        ubo1,
+    }   
+                
+    float3 indirectLight = CalculateIndirectLighting(             
+        ubo1, 
         VolumeProbeDatasRadiance,  
-        VolumeProbeDatasDepth, 
-        linearSampler,
-        ubo0.probePos0,
-        ubo0.probePos1,
-        fragPos, 
-        fragNormal,
-        fragAlbedo);
+        VolumeProbeDatasDepth,  
+        linearSampler, 
+        ubo0.probePos0,  
+        ubo0.probePos1,  
+        fragPos,   
+        fragNormal);// * fragAlbedo.rgb / PI ; 
+    //indirectLight *= (1e-16);
     //indirectLight = indirectLight * fragAlbedo.rgb / PI;
-
+ 
     //float radiance = VolumeProbeDatasRadiance.Sample(linearSampler, float2(0.f, 0.f)).r;
-
+ 
     output.directLight = float4(directLight, 1.f);
     output.indirectLight = float4(indirectLight, 1.f); 
-                  
+                   
     return output;   
-}
+} 
+   

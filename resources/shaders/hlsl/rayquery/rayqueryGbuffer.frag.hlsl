@@ -112,6 +112,8 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
   q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
   q.Proceed();
 
+  //pathState.rayDirection = rayDesc.Direction;
+
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     pathState.t = q.CommittedRayT();
 
@@ -144,6 +146,9 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     float3 e1 = v2 - v0;
 
     float3 normal = normalize(cross(e0, e1));
+    if(dot(rayDesc.Direction, normal) > 0.f){
+        normal = -normal;
+    }
 
     int noffset = instanceOffset[instanceIndex].normalOffset;
 
@@ -166,6 +171,9 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
                          NormalBuffer[noffset + v2Idx * 3 + 2]);
 
       normal = normalize(w0 * n0 + w1 * n1 + w2 * n2);
+      if(dot(rayDesc.Direction, normal) > 0.f){
+        normal = -normal;
+      }
     }
 
     // TODO
@@ -184,17 +192,6 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
     //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
 
-    //float3x3 toWorld;
-    //toWorld[0] = objToWorld[0].xyz;
-    //toWorld[1] = objToWorld[1].xyz;
-    //toWorld[2] = objToWorld[2].xyz;
-
-    //normal = mul(toWorld, normal);
-
-    // compute position
-    //position = mul(toWorld, position);
-    //position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
-    
     pathState.normal = normal;
     pathState.position = position;
     
@@ -223,6 +220,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
   return false;
 }
+
 
 PSOutput main(PSInput input)
 {

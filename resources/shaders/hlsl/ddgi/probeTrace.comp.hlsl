@@ -39,10 +39,8 @@ struct UniformBuffer2
     float3 probePos1;
     int    frameCount;
 
-    int    raysPerProbe;
-    int    padding0;
-    int    padding1;
-    int    padding2;
+    int    rayCount;
+    int    probeCount;
 };
 
 [[vk::binding(0, 0)]]
@@ -71,26 +69,14 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(8, 0)]] Texture2D<float4> textures[1024] : register(t5);
 [[vk::binding(9, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1030);   //[512, 64]
 [[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1031);   //[2048, 256]
+[[vk::binding(11, 0)]] Texture2D<float4> PositionMap  : register(t1030);   //[512, 64]
+[[vk::binding(12, 0)]] Texture2D<float4> NormalMap  : register(t1031);  
+[[vk::binding(13, 0)]] Texture2D<float4> AlbedoMap  : register(t1030);   //[512, 64]
+[[vk::binding(14, 0)]] Texture2D<float4> RadianceMap  : register(t1031);  
 
-[[vk::binding(11, 0)]] SamplerState linearSampler : register(s0);
+[[vk::binding(15, 0)]] SamplerState linearSampler : register(s0);
 
-[[vk::binding(12, 0)]] RaytracingAccelerationStructure Tlas : register(t1032);
-
-  
-struct PSInput
-{
-    float2 texCoord : TEXCOORD0;
-    float3 normal : NORMAL;
-    float4 position : SV_POSITION;
-};
-
-struct PSOutput
-{
-    float4 position : SV_Target0;
-    float4 normal : SV_Target1;
-    float4 albedo : SV_Target2;
-    float4 radiance : SV_Target3;
-};
+[[vk::binding(16, 0)]] RaytracingAccelerationStructure Tlas : register(t1032);
 
 //static const float PI = 3.14159265359f;
 
@@ -101,7 +87,6 @@ struct PathState {
   float3 metallicAndRoughness;
   //float3 rayDirection;
 
-  bool outside;
   float t;
   float2 uv;
 
@@ -135,7 +120,6 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
   //pathState.rayDirection = rayDesc.Direction;
 
-  pathState.t = 10000.f;
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     pathState.t = q.CommittedRayT();
 
@@ -167,18 +151,16 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     float3 e0 = v1 - v0;
     float3 e1 = v2 - v0;
 
-    bool outside = true;
     float3 normal = normalize(cross(e0, e1));
     if(dot(rayDesc.Direction, normal) > 0.f){
         normal = -normal;
-        outside = false;
-    } 
+    }
 
     int noffset = instanceOffset[instanceIndex].normalOffset;
 
     float2 barycentrics = q.CommittedTriangleBarycentrics();
     float w0 = 1.f - barycentrics.x - barycentrics.y;
-    float w1 = barycentrics.x;  
+    float w1 = barycentrics.x;
     float w2 = barycentrics.y;
 
     float3 position = w0 * v0 + w1 * v1 + w2 * v2;
@@ -197,7 +179,6 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
       normal = normalize(w0 * n0 + w1 * n1 + w2 * n2);
       if(dot(rayDesc.Direction, normal) > 0.f){
         normal = -normal;
-        outside = false;
       }
     }
 
@@ -217,21 +198,9 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
     //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
 
-    //float3x3 toWorld;
-    //toWorld[0] = objToWorld[0].xyz;
-    //toWorld[1] = objToWorld[1].xyz;
-    //toWorld[2] = objToWorld[2].xyz;
-
-    //normal = mul(toWorld, normal);
-
-    // compute position
-    //position = mul(toWorld, position);
-    //position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
-    
     pathState.normal = normal;
     pathState.position = position;
-    pathState.outside = outside;
-     
+    
     //int matId = instanceOffset[instanceIndex].materialIdx;
 
     int diffuseTextureIdx = ubo0.texBuffer[instanceIndex].diffuseTextureIdx;
@@ -246,7 +215,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     if(metallicAndRoughnessTextureIdx != -1){
         pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
     }
-    else{  
+    else{
         pathState.metallicAndRoughness = float3(0.f, 0.f, 0.f);
     }
 
@@ -256,7 +225,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
   }
 
   return false;
-} 
+}
 
 float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3 albedo){
     float3 brdf = (albedo / (float)PI);
@@ -266,7 +235,7 @@ float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3
     rayDesc.Origin = position + normal * (1e-4);
     rayDesc.Direction = -light.direction;
     rayDesc.TMin = 0.f;
-    rayDesc.TMax = 10000.f;
+    rayDesc.TMax = 1000.f;
     float t;
 
     bool visibility = (1-RayTracingAnyHit(rayDesc, t));
@@ -286,13 +255,14 @@ float3 SphericalFibonacci(float index, float numSamples)
     return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
 }
 
-PSOutput main(PSInput input)
+[numthreads(16, 16, 1)] 
+void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    const int2 FullResolution = int2(ubo2.raysPerProbe, 512);
+    //const int2 FullResolution = int2(144, 512);
 
-    int2 idx = int2(FullResolution * input.texCoord);
-    int rayIndex = idx.x;
-    int probeIndex = idx.y;
+    //int2 idx = int2(FullResolution * input.texCoord);
+    int rayIndex = DispatchThreadID.x;
+    int probeIndex = DispatchThreadID.y;
     Probe probe = ubo1.probes[probeIndex];
 
     PSOutput output;
@@ -302,45 +272,45 @@ PSOutput main(PSInput input)
     {
         RayDesc ray;
         ray.TMin = 0.f;
-        ray.TMax = 10000.f;
+        ray.TMax = 1000.f;
         ray.Origin = probe.position;
         //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-        ray.Direction = SphericalFibonacci(rayIndex, ubo2.raysPerProbe);
+        ray.Direction = SphericalFibonacci(rayIndex, 144);
 
         if(RayTracingClosestHit(ray, pathState)){
             output.position = float4(pathState.position, 1.f);
             output.normal = float4(pathState.normal, 1.f);
             output.albedo = float4(pathState.albedo, 1.f);
-        } 
-        else{ 
-            output.position = float4(ray.Origin + ray.Direction * 10000.f, 1.f);
+        }
+        else{
+            output.position = float4(0.f, 0.f, 0.f, 0.f);
             output.normal = float4(0.f, 0.f, 0.f, 0.f);
             output.albedo = float4(0.f, 0.f, 0.f, 0.f);
         }
     }
-   
+
     float3 diffuse = float3(0.f, 0.f, 0.f);
     for(int i=0;i<ubo2.lightNum;i++){
-        if(output.normal.w > 0.f){
+        if(output.position.w > 0.f){
             diffuse += DirectDiffuseLighting(
                 ubo2.lights[i], 
-                output.position, 
-                output.normal, 
-                output.albedo); 
-        }  
-    }        
-     
-    if(output.normal.w > 0.f && pathState.outside){ 
-    //if(output.normal.w > 0.f){
-        diffuse += CalculateIndirectLighting( 
+                pathState.position, 
+                pathState.normal, 
+                pathState.albedo);
+        }
+    }
+
+    if(output.position.w > 0.f){
+        diffuse += CalculateIndirectLighting(
                     ubo1,
-                    VolumeProbeDatasRadiance,  
+                    VolumeProbeDatasRadiance, 
                     VolumeProbeDatasDepth, 
-                    linearSampler, 
+                    linearSampler,
                     ubo2.probePos0,
                     ubo2.probePos1,
-                    output.position, 
-                    output.normal) * output.albedo / PI;
+                    pathState.position, 
+                    pathState.normal,
+                    pathState.albedo);
     }
 
     output.radiance = float4(diffuse, pathState.t);

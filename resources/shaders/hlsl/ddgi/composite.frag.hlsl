@@ -33,6 +33,7 @@ PSOutput main(PSInput input)
 
     bool hasProbe = (gBufferValue3.a - 0.5f) < 1e-8;
     float3 finalColor = rtao * (directLight + indirectLight) * (1-hasProbe) + hasProbe * probeVisulize;
+    //finalColor = (1e-10) * finalColor + indirectLight;
     //float3 finalColor = directLight + 0.f * indirectLight + 0.0000000000001f * rtao;
     //finalColor = saturate(finalColor);
 

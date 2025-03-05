@@ -6,7 +6,7 @@
 
 class RTAOShader :public ShaderModule {
 public:
-	RTAOShader() :ShaderModule("hlsl/rtao/rtao.vert.hlsl", "hlsl/rtao/rtao.frag.hlsl")
+	RTAOShader() :ShaderModule("hlsl/ddgi/fullscreen.vert.hlsl", "hlsl/ddgi/rtao.frag.hlsl")
 	{ }
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
@@ -32,24 +32,11 @@ public:
 	}
 
 public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
 	struct UniformBuffer0 {
-		Light lights[2];
-
-		glm::vec3 cameraPos;
-		int lightNum;
-
 		int resetAccumulatedBuffer;
 		int gbufferWidth;
 		int gbufferHeight;
-		float padding2;
+		int padding0;
 	};
 
 private:
@@ -152,6 +139,11 @@ public:
 		int    lightNum;
 		glm::vec3 probePos1;
 		int    frameCount;
+
+		int    raysPerProbe;
+		int    padding0;
+		int    padding1;
+		int    padding2;
 	};
 
 	struct VertexBuffer {
@@ -215,6 +207,8 @@ public:
 		switch (binding) {
 		case 0:
 			return sizeof(UniformBuffer0);
+		case 1:
+			return sizeof(UniformBuffer1);
 		}
 	}
 
@@ -223,6 +217,9 @@ public:
 		case 0:
 			ubo0 = *reinterpret_cast<ProbeBlendRadianceShader::UniformBuffer0*>(data);
 			return;
+		case 1:
+			ubo1 = *reinterpret_cast<ProbeBlendRadianceShader::UniformBuffer1*>(data);
+			return;
 		}
 	}
 
@@ -230,6 +227,8 @@ public:
 		switch (binding) {
 		case 0:
 			return (void*)&ubo0;
+		case 1:
+			return (void*)&ubo1;
 		}
 	}
 
@@ -239,12 +238,20 @@ public:
 		int padding0;
 	};
 
-	struct UniformBuffer0 {
+	struct UniformBuffer1 {
 		Probe probes[512];
+	};
+
+	struct UniformBuffer0 {
+		int raysPerProbe;
+		float sharpness;
+		int padding1;
+		int padding2;
 	};
 
 private:
 	UniformBuffer0 ubo0;
+	UniformBuffer1 ubo1;
 };
 
 class DDGILightingShader :public ShaderModule {

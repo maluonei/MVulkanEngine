@@ -78,6 +78,8 @@ private:
 	MVulkanRaytracing			m_rayTracing;
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
+	int							m_raysPerProbe = 144;
+
 };
 
 
