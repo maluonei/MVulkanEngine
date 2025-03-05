@@ -57,6 +57,9 @@ struct PSOutput
 {
     float4 directLight : SV_Target0;
     float4 indirectLight : SV_Target1;
+    float4 depthProbeUV : SV_Target2;
+    float4 radianceProbeUV : SV_Target3;
+    float4 probeRadiance : SV_Target4;
 };
  
 bool RayTracingAnyHit(in RayDesc rayDesc) {
@@ -142,11 +145,11 @@ float3 rgb2srgb(float3 color)
 
     return color; 
 }
-
+ 
 
 PSOutput main(PSInput input)
-{
-    PSOutput output;
+{ 
+    PSOutput output; 
     
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
@@ -155,11 +158,11 @@ PSOutput main(PSInput input)
  
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;  
-    float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);
+    float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);   
     float4 fragAlbedo = gBufferValue2.rgba;
     float metallic = gBufferValue3.b;
-    float roughness = gBufferValue3.g;
-    
+    float roughness = gBufferValue3.g;    
+     
     float3 directLight = float3(0.f, 0.f, 0.f);
   
     for (int i = 0; i < ubo0.lightNum; i++)  
@@ -167,8 +170,8 @@ PSOutput main(PSInput input)
         RayDesc ray; 
         ray.Origin = fragPos;
         ray.Direction = normalize(-ubo0.lights[i].direction); 
-        ray.TMin = 0.001f;
-        ray.TMax = 10000.f; 
+        ray.TMin = 0.001f;   
+        ray.TMax = 10000.f;     
   
         bool hasHit = RayTracingAnyHit(ray);  
      
@@ -177,13 +180,13 @@ PSOutput main(PSInput input)
         float3 R = reflect(-V, fragNormal);
  
         directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
-    }   
-                
-    float3 indirectLight = CalculateIndirectLighting(             
-        ubo1, 
-        VolumeProbeDatasRadiance,  
-        VolumeProbeDatasDepth,  
-        linearSampler, 
+    }      
+                   
+    IndirectLightingOutput indirectLight = CalculateIndirectLighting(             
+        ubo1,   
+        VolumeProbeDatasRadiance,     
+        VolumeProbeDatasDepth,       
+        linearSampler,       
         ubo0.probePos0,  
         ubo0.probePos1,  
         fragPos,   
@@ -194,7 +197,10 @@ PSOutput main(PSInput input)
     //float radiance = VolumeProbeDatasRadiance.Sample(linearSampler, float2(0.f, 0.f)).r;
  
     output.directLight = float4(directLight, 1.f);
-    output.indirectLight = float4(indirectLight, 1.f); 
+    output.indirectLight = float4(indirectLight.radiance * fragAlbedo.rgb / PI, 1.f); 
+    output.radianceProbeUV = float4(indirectLight.radianceProbeUV, 1.f);
+    output.depthProbeUV = float4(indirectLight.depthProbeUV, 1.f);
+    output.probeRadiance = float4(indirectLight.probeRadiance, 1.f);
                    
     return output;   
 } 

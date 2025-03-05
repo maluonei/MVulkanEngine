@@ -368,7 +368,7 @@ void DDGIApplication::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 1000.f;
+    float intensity = 100.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
@@ -687,6 +687,9 @@ void DDGIApplication::createLightingPass()
 
     {
         std::vector<VkFormat> lightingPassFormats;
+        lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 

@@ -272,7 +272,7 @@ float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3
     bool visibility = (1-RayTracingAnyHit(rayDesc, t));
 
     float3 lighting = light.color * light.intensity * (float)visibility * ndotv;
-
+ 
     return (brdf * lighting);
 }
 
@@ -328,11 +328,11 @@ PSOutput main(PSInput input)
                 output.normal, 
                 output.albedo); 
         }  
-    }        
+    }         
      
     if(output.normal.w > 0.f && pathState.outside){ 
     //if(output.normal.w > 0.f){
-        diffuse += CalculateIndirectLighting( 
+        IndirectLightingOutput indirectLight = CalculateIndirectLighting(
                     ubo1,
                     VolumeProbeDatasRadiance,  
                     VolumeProbeDatasDepth, 
@@ -340,7 +340,8 @@ PSOutput main(PSInput input)
                     ubo2.probePos0,
                     ubo2.probePos1,
                     output.position, 
-                    output.normal) * output.albedo / PI;
+                    output.normal); 
+        diffuse += indirectLight.radiance * output.albedo / PI;
     }
 
     output.radiance = float4(diffuse, pathState.t);
