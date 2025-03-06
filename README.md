@@ -20,4 +20,8 @@ version1.0, based on pbr, use 3-step ray-marching to find reflection ray's inter
 
 rtao:
 ray tracing ambient occlusion
-![SSR](images/rtao.png)
+![RTAO](images/rtao.png)
+
+ddgi:
+ddgi with rtao(without tone mapping)
+![DDGI](images/ddgi_no_tonemapping.png)
