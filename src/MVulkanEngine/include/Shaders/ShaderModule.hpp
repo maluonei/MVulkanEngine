@@ -10,7 +10,7 @@
 
 class ShaderModule{
 public:
-	ShaderModule(const std::string& vertPath, const std::string& fragPath);
+	ShaderModule(const std::string& vertPath, const std::string& fragPath, bool compileEveryTime = false);
 	void Create(VkDevice device);
 	void Clean();
 
@@ -22,6 +22,7 @@ public:
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 
 protected:
+	bool m_compileEveryTime = false;
 
 private:
 	void load();
@@ -326,7 +327,7 @@ public:
 
 class ComputeShaderModule {
 public:
-	ComputeShaderModule(const std::string& compPath);
+	ComputeShaderModule(const std::string& compPath, bool compileEveryTime = false);
 	void Create(VkDevice device);
 	void Clean();
 
@@ -340,6 +341,7 @@ protected:
 	void load();
 
 	MVulkanShader	m_compShader;
+	bool			m_compileEveryTime = false;
 
 	std::string		m_compPath;
 };

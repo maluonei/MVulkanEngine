@@ -1,4 +1,5 @@
 #include "indirectLight.hlsl"
+#include "shading.hlsl"
 
 struct TexBuffer
 {
@@ -299,34 +300,40 @@ PSOutput main(PSInput input)
     output.albedo.w = 0.f;
     
     PathState pathState;
-    {
-        RayDesc ray;
-        ray.TMin = 0.f;
-        ray.TMax = 10000.f;
-        ray.Origin = probe.position;
-        //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-        ray.Direction = SphericalFibonacci(rayIndex, ubo2.raysPerProbe);
+    
+    RayDesc ray;
+    ray.TMin = 0.f;
+    ray.TMax = 10000.f;
+    ray.Origin = probe.position;
+    //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
+    ray.Direction = SphericalFibonacci(rayIndex, ubo2.raysPerProbe);
 
-        if(RayTracingClosestHit(ray, pathState)){
-            output.position = float4(pathState.position, 1.f);
-            output.normal = float4(pathState.normal, 1.f);
-            output.albedo = float4(pathState.albedo, 1.f);
-        } 
-        else{ 
-            output.position = float4(ray.Origin + ray.Direction * 10000.f, 1.f);
-            output.normal = float4(0.f, 0.f, 0.f, 0.f);
-            output.albedo = float4(0.f, 0.f, 0.f, 0.f);
-        }
+    if(RayTracingClosestHit(ray, pathState)){
+        output.position = float4(pathState.position, 1.f);
+        output.normal = float4(pathState.normal, 1.f);
+        output.albedo = float4(pathState.albedo, 1.f);
+    } 
+    else{ 
+        output.position = float4(ray.Origin + ray.Direction * 10000.f, 1.f);
+        output.normal = float4(0.f, 0.f, 0.f, 0.f);
+        output.albedo = float4(0.f, 0.f, 0.f, 0.f);
     }
+    
    
     float3 diffuse = float3(0.f, 0.f, 0.f);
     for(int i=0;i<ubo2.lightNum;i++){
         if(output.normal.w > 0.f){
-            diffuse += DirectDiffuseLighting(
-                ubo2.lights[i], 
-                output.position, 
-                output.normal, 
-                output.albedo); 
+            //diffuse += DirectDiffuseLighting(
+            //    ubo2.lights[i], 
+            //    output.position, 
+            //    output.normal, 
+            //    output.albedo); 
+            float3 lightColor = ubo2.lights[i].color * ubo2.lights[i].intensity;
+            float3 L = -ubo2.lights[i].direction;
+            float3 V = -ray.Direction;
+            float3 N = output.normal;
+
+            diffuse += BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
         }  
     }         
      

@@ -45,7 +45,7 @@ private:
 
 class ProbeTracingShader :public ShaderModule {
 public:
-	ProbeTracingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/probeTrace.frag.hlsl")
+	ProbeTracingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/probeTrace.frag.hlsl", m_compileEveryTime = true)
 	{}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
@@ -256,7 +256,7 @@ private:
 
 class DDGILightingShader :public ShaderModule {
 public:
-	DDGILightingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl")
+	DDGILightingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl", m_compileEveryTime = true)
 	{
 	}
 

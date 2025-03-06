@@ -14,7 +14,7 @@ class Shader {
 public:
 	//Shader(std::string vertPath, std::string fragPath);
 	Shader();
-	Shader(std::string path, ShaderStageFlagBits _stage);
+	Shader(std::string path, ShaderStageFlagBits _stage, bool compileEverytime = false);
 
 	void Compile();
 	inline ShaderStageFlagBits GetShaderStage()const { return m_shaderStage; }
@@ -23,6 +23,7 @@ public:
 private:
 	void compile(std::string shaderPath);
 	ShaderStageFlagBits m_shaderStage;
+	bool				m_compileEverytime = false;	
 	std::string			m_shaderPath;
 	std::string			m_compiledShaderPath;
 	std::vector<char>	m_compiledShaderCode;

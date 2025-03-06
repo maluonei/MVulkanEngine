@@ -9,10 +9,11 @@ Shader::Shader()
 }
 
 
-Shader::Shader(std::string _path, ShaderStageFlagBits _stage)
+Shader::Shader(std::string _path, ShaderStageFlagBits _stage, bool compileEveryTime)
 {
 	m_shaderPath = _path;
 	m_shaderStage = _stage;
+	m_compileEverytime = compileEveryTime;
 }
 
 void Shader::Compile() {
@@ -54,7 +55,7 @@ void Shader::compile(std::string shaderPath)
 			}
 		}
 
-		if (needToCompile) {
+		if (m_compileEverytime || needToCompile) {
 			fs::path logFile = shaderRootPath / "log.txt";
 			std::string command = compilerPath.string() + " -V --target-env vulkan1.3 " + glslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
 			int status = system(command.c_str());
@@ -97,7 +98,7 @@ void Shader::compile(std::string shaderPath)
 			}
 		}
 
-		if (needToCompile) {
+		if (m_compileEverytime || needToCompile) {
 			std::string phase = "";
 			if (shaderPath.substr(size - 9, 4) == "vert") {
 				phase = "vs_6_4";

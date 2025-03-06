@@ -51,81 +51,6 @@ float ChebyshevTest(float depth, float depthSquared, float distance){
     return max(p * p * p, 0.05f);
 }
 
-//float3 CalculateIndirectLighting(
-//    UniformBuffer1 ubo1,
-//    Texture2D<float4> VolumeProbeDatasRadiance,
-//    Texture2D<float4> VolumeProbeDatasDepth,
-//    SamplerState linearSampler,
-//    float3 probePos0,
-//    float3 probePos1,
-//    float3 fragPos, 
-//    float3 fragNormal,
-//    float3 fragAlbedo){
-//    
-//    float3 probeOffset = (fragPos - probePos0) / (probePos1 - probePos0);
-//    float3 probeOffsetinVolumn = float3(probeOffset * 7);
-//    int3 probeOffsetBase = int3(floor(probeOffsetinVolumn));
-//
-//    //int probeIndex = GetProbeIndex(probeOffsetInt);
-//
-//    float totalWeights = 0.f;
-//    float3 totalRadiance = float3(0.f, 0.f, 0.f);
-//
-//    float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(fragNormal);
-//    //octahedralUVOfNormal = (octahedralUVOfNormal + 1.f) / 2.f;
-//
-//    for(int x=0;x<2;x++){
-//        for(int y=0;y<2;y++){
-//            for(int z=0;z<2;z++){
-//                int3 probeBaseIndex = probeOffsetBase + int3(x, y, z);
-//                if(probeBaseIndex.x<0 || probeBaseIndex.x>=8 || probeBaseIndex.y<0 || probeBaseIndex.y>=8 || probeBaseIndex.z<0 || probeBaseIndex.z>=8){
-//                    continue;
-//                }
-//
-//                int pIndex = GetProbeIndex(probeBaseIndex);
-//
-//                float3 probePosition = ubo1.probes[pIndex].position;
-//                float3 direction = normalize(fragPos - probePosition);
-//                
-//                uint2  probeBaseUV = uint2(8, 8) * uint2(probeBaseIndex.x * 8 + probeBaseIndex.y, probeBaseIndex.z) + uint2(4, 4);
-//
-//                float2 octahedralUVOfDirection = DDGIGetOctahedralCoordinates(direction);
-//                //octahedralUVOfDirection = (octahedralUVOfDirection + 1.f) / 2.f;
-//                uint2  octahedralUVOfDirectioninTexture_Int = probeBaseUV + octahedralUVOfDirection * uint2(3, 3);
-//                float2 octahedralUVOfDirectioninTexture_Float = octahedralUVOfDirectioninTexture_Int / float2(512., 64.);
-//                
-//                uint2  octahedralUVOfNormalTexture_Int = probeBaseUV + octahedralUVOfNormal * uint2(3, 3);
-//                float2 octahedralUVOfNormalTexture_Float = octahedralUVOfNormalTexture_Int / float2(512., 64.);
-//                
-//                //float3 radiance = VolumeProbeDatasRadiance[octahedralUVOfNormalTexture_Float].rgb;
-//                //float2 depths = VolumeProbeDatasDepth[octahedralUVOfDirectioninTexture_Float].rg;
-//                
-//                float3 radiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
-//                float2 depths = VolumeProbeDatasDepth.Sample(linearSampler, octahedralUVOfDirectioninTexture_Float).rg;
-//                
-//                float  depth = depths.x;
-//                float  depthSquared = depths.y;
-//
-//                float distance = length(probePosition - fragPos);
-//                
-//                float trilinearWeight = TrilinearInterpolationWeight(float3(x, y, z), probeOffsetinVolumn - probeOffsetBase);
-//                float directionWeight = DirectionWeight(fragNormal, fragPos, probePosition);
-//                float chebyshevWeight = ChebyshevTest(depth, depthSquared, distance);
-//
-//                float combinedWeight = trilinearWeight * directionWeight * chebyshevWeight;
-//
-//                totalRadiance += radiance * combinedWeight;
-//                totalWeights += combinedWeight;
-//            }
-//        }   
-//    }
-//
-//    totalRadiance /= max(totalWeights, 1e-10);
-//
-//    totalRadiance = totalRadiance * fragAlbedo.rgb / PI;
-//
-//    return totalRadiance;
-//}
 
 #define radianceProbeResolution 8
 #define depthProbeResolution 16
@@ -175,9 +100,9 @@ IndirectLightingOutput CalculateIndirectLighting(
     for(int x=0;x<2;x++){
         for(int y=0;y<2;y++){
             for(int z=0;z<2;z++){
-    //for(int x=1;x>=0;x--){
-    //    for(int y=1;y>=0;y--){
-    //        for(int z=1;z>=0;z--){
+    //for(int x=0;x<1;x++){
+    //    for(int y=0;y<1;y++){
+    //        for(int z=0;z<1;z++){
                 //int3 probeBaseIndex = probeOffsetBase + int3(x, y, z);
                 int3 probeBaseIndex = clamp(baseProbeCoords + int3(x, y, z), int3(0, 0, 0), int3(8, 8, 8) - int3(1, 1, 1));
 
@@ -199,7 +124,7 @@ IndirectLightingOutput CalculateIndirectLighting(
                 
                 //float3 radiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
                 float3 radiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
-                float2 depths = 2.f * VolumeProbeDatasDepth.Sample(linearSampler, octahedralUVOfDirectioninTexture_Float).rg;
+                float2 depths = VolumeProbeDatasDepth.Sample(linearSampler, octahedralUVOfDirectioninTexture_Float).rg;
                 
                 output.radianceProbeUV = float3(octahedralUVOfNormalTexture_Float, 0.f);
                 output.depthProbeUV = float3(float2(octahedralUVOfNormal * 0.5f * float2((radianceProbeResolution-2.f), (radianceProbeResolution-2.f))), 0.f);
@@ -217,14 +142,20 @@ IndirectLightingOutput CalculateIndirectLighting(
 
                 float combinedWeight = directionWeight * chebyshevWeight;
                 combinedWeight = max(1e-10, combinedWeight);
+                //combinedWeight = (1e-20) * combinedWeight + 1.f;
 
                 combinedWeight = trilinearWeight * combinedWeight;
 
-                const float crushThreshold = 0.2f;
-                if (combinedWeight < crushThreshold)
-                {
-                    combinedWeight *= (combinedWeight * combinedWeight) * (1.f / (crushThreshold * crushThreshold));
-                }
+                //combinedWeight = (1e-20) * combinedWeight + 1.f;
+                //combinedWeight += chebyshevWeight;
+
+                //const float crushThreshold = 0.2f;
+                //if (combinedWeight < crushThreshold)
+                //{
+                //    combinedWeight *= (combinedWeight * combinedWeight) * (1.f / (crushThreshold * crushThreshold));
+                //}
+                output.depthProbeUV = float3(directionWeight, chebyshevWeight, combinedWeight);
+
                 totalRadiance += radiance * combinedWeight;
                 totalWeights += combinedWeight;
                 //break;
@@ -233,8 +164,6 @@ IndirectLightingOutput CalculateIndirectLighting(
         }   
         //break;
     }
-    //totalRadiance = (1e-10) * totalRadiance + totalWeights;
-    //return totalRadiance;
 
     if(totalWeights == 0.f) return output;
 

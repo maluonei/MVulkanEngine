@@ -246,7 +246,7 @@ void DDGIApplication::RecreateSwapchainAndRenderPasses()
         }
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
 
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
@@ -281,7 +281,7 @@ void DDGIApplication::Clean()
 
     m_acculatedAOTexture->Clean();
 
-    m_linearSampler.Clean();
+    m_linearSamplerWithAnisotropy.Clean();
 
     m_rayTracing.Clean();
 
@@ -368,7 +368,7 @@ void DDGIApplication::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 100.f;
+    float intensity = 5.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
@@ -394,7 +394,25 @@ void DDGIApplication::createSamplers()
         info.minFilter = VK_FILTER_LINEAR;
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+        //info.minFilter = VK_FILTER_NEAREST;
+        //info.magFilter = VK_FILTER_NEAREST;
+        //info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        info.maxLod = 0.f;
+        info.anisotropyEnable = false;
+        m_linearSamplerWithoutAnisotropy.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+    }
+
+    {
+        MVulkanSamplerCreateInfo info{};
+        info.minFilter = VK_FILTER_LINEAR;
+        info.magFilter = VK_FILTER_LINEAR;
+        info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        //info.minFilter = VK_FILTER_NEAREST;
+        //info.magFilter = VK_FILTER_NEAREST;
+        //info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        info.maxLod = 4.f;
+        info.anisotropyEnable = true;
+        m_linearSamplerWithAnisotropy.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
 }
 
@@ -491,7 +509,7 @@ void DDGIApplication::initDDGIVolumn()
 {
     //glm::vec3 startPosition = glm::vec3(-11.f, 0.5f, -4.5f);
     //glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
-    glm::vec3 startPosition = glm::vec3(-12.5f, -0.2f, -6.f);
+    glm::vec3 startPosition = glm::vec3(-12.5f, 0.2f, -6.f);
     glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
     m_volume = std::make_shared<DDGIVolume>(startPosition, offset);
 }
@@ -542,7 +560,7 @@ void DDGIApplication::createGbufferPass()
                 }
             }
         }
-        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
+        std::vector<VkSampler> samplers(1, m_linearSamplerWithAnisotropy.GetSampler());
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
@@ -604,7 +622,7 @@ void DDGIApplication::createProbeTracingPass()
         //storageTextureViews[1].resize(1, m_volumeProbeDatasDepth->GetImageView());
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
 
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
@@ -724,7 +742,7 @@ void DDGIApplication::createLightingPass()
         //storageTextureViews[1].resize(1, m_volumeProbeDatasDepth->GetImageView());
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
 
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
@@ -788,7 +806,7 @@ void DDGIApplication::createRTAOPass()
         storageTextureViews[0].resize(1, m_acculatedAOTexture->GetImageView());
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
 
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
@@ -809,7 +827,7 @@ void DDGIApplication::createProbeBlendingRadiancePass()
 
     std::vector<uint32_t> storageBufferSizes(0);
 
-    std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
+    std::vector<VkSampler> samplers(1, m_linearSamplerWithAnisotropy.GetSampler());
 
     std::vector<std::vector<VkImageView>> seperateImageViews(2);
     seperateImageViews[0].resize(1);
@@ -869,7 +887,7 @@ void DDGIApplication::createProbeVisulizePass()
         std::vector<std::vector<VkImageView>> storageTextureViews(0);
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
 
         std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
 
@@ -935,7 +953,7 @@ void DDGIApplication::createCompositePass()
         std::vector<std::vector<VkImageView>> storageTextureViews(0);
 
         std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
 
         std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
 

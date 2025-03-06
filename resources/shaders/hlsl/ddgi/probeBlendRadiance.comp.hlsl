@@ -133,8 +133,16 @@ bool CalculateRadiance(
 
     float3 probePosition = ubo1.probes[probeIndex].position;
     if(probeOffset.x!=0 && probeOffset.x!=(probeResolution-1) && probeOffset.y!=0 && probeOffset.y!=(probeResolution-1)){
-        float2 octahedralUV = float2(probeOffset.xy - float2((probeResolution-1.f)/2.f, (probeResolution-1.f)/2.f)) 
-                                    / float2((probeResolution-2.f)/2.f, (probeResolution-2.f)/2.f);
+        //float2 octahedralUV = float2(probeOffset.xy - float2((probeResolution-1.f)/2.f, (probeResolution-1.f)/2.f)) 
+        //                            / float2((probeResolution-2.f)/2.f, (probeResolution-2.f)/2.f);
+        //float2 octahedralUV = float2(probeOffset.xy - float2((probeResolution-1.f)/2.f, (probeResolution-1.f)/2.f)) 
+        //                            / float2((probeResolution-2.f)/2.f, (probeResolution-2.f)/2.f);
+        int2 threadCoords = probeOffset.xy - int2(1, 1);
+        float2 octahedralTexelCoord = threadCoords + 0.5f;
+        octahedralTexelCoord /= float(probeResolution-2);
+        octahedralTexelCoord *= 2.f;
+        float2 octahedralUV = octahedralTexelCoord - float2(1.f, 1.f);
+
         //octahedralUV = octahedralUV * 2.f - 1.f;
 
         float3 sphereDirection = DDGIGetOctahedralDirection(octahedralUV);
@@ -160,17 +168,31 @@ bool CalculateRadiance(
 
                 float cosTheta = max(0.f, dot(sphereDirection, normalize(targetPosition - probePosition)));
 
-                //if(cosTheta > 0.f){
+                if(cosTheta > 0.f){
                     float irradianceWeight = cosTheta;
 
                     irradiance += targetRadiance * irradianceWeight;
 
                     totalIradianceWeights += irradianceWeight;
-                //}
+                }
             //}
         }
         
-        irradiance = irradiance / max(2.f * totalIradianceWeights, 1e-10);
+        irradiance = irradiance / max(2.f * totalIradianceWeights, 1e-8);
+
+        //float2 color = float2(probeOffset) / float2(6.f, 6.f);
+        //color = float2(1.f, 0.f);
+//
+        //uint2 probeBaseIndex2 = CalculateProbeBaseIndex(dispatchThreadID, probeResolution);
+        //if((probeBaseIndex2.x + probeBaseIndex2.y) % 2 == 0){
+        //    color = float2(1.f, 0.f);
+        //}
+        //else
+        //{
+        //    color = float2(0.f, 1.f);
+        //}
+
+        //VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4((1e-30) * irradiance + float3(color.xy, 0.f), 1.f);
         VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance, 1.f);
 
         return true;
@@ -193,9 +215,15 @@ bool CalculateDepth(
     if(probeOffset.x!=0 && probeOffset.x!=(probeResolution-1) && probeOffset.y!=0 && probeOffset.y!=(probeResolution-1)){
         //probeOffset:[1,6]
         //float2 octahedralUV = float2((probeOffset.xy - float2(3.5f, 3.5f))) / float2(3.f, 3.f);
-        float2 octahedralUV = float2(probeOffset.xy - float2((probeResolution-1.f)/2.f, (probeResolution-1.f)/2.f)) 
-                                    / float2((probeResolution-2.f)/2.f, (probeResolution-2.f)/2.f);
+        //float2 octahedralUV = float2(probeOffset.xy - float2((probeResolution-1.f)/2.f, (probeResolution-1.f)/2.f)) 
+        //                            / float2((probeResolution-2.f)/2.f, (probeResolution-2.f)/2.f);
         //octahedralUV = octahedralUV * 2.f - 1.f;
+
+        int2 threadCoords = probeOffset.xy - int2(1, 1);
+        float2 octahedralTexelCoord = threadCoords + 0.5f;
+        octahedralTexelCoord /= float(probeResolution-2);
+        octahedralTexelCoord *= 2.f;
+        float2 octahedralUV = octahedralTexelCoord - float2(1.f, 1.f);
 
         float3 sphereDirection = DDGIGetOctahedralDirection(octahedralUV);
 
@@ -211,12 +239,7 @@ bool CalculateDepth(
             int3 volumeProbePositionUV_Int = int3(i, probeIndex, 0);
         
             float4 targetPositions = VolumeProbePosition.Load(volumeProbePositionUV_Int).rgba;
-            float4 targetRadiances = VolumeProbeRadiance.Load(volumeProbePositionUV_Int).rgba;
-
-            //bool hit = targetRadiances.a;
-
-            //float3 targetRadiance = targetPositions.rgb;
-            //float3 targetPosition = targetRadiances.rgb;
+            float4 targetRadiances = VolumeProbeRadiance.Load(volumeProbePositionUV_Int).rgba;;
 
             //if(hit > 0){
                 float3 targetPosition = targetPositions.rgb;
@@ -226,24 +249,20 @@ bool CalculateDepth(
 
                 float cosTheta = max(0.f, dot(sphereDirection, normalize(targetPosition - probePosition)));
 
-                //if(cosTheta > 0.f){
+                if(cosTheta > 0.f){
                     float depthWeight = pow(cosTheta, ubo0.sharpness);
 
-                    //irradiance += targetRadiance * irradianceWeight;
                     depth += targetDepth * depthWeight;
                     depthSquared += targetDepthSquared * depthWeight;
 
-                    //totalIradianceWeights += irradianceWeight;
                     totalDepthWeights += depthWeight;
-                //}
+                }
             //}
         }
         
-        depth = depth / max(2.f * totalDepthWeights, 1e-10);
-        depthSquared = depthSquared / max(2.f * totalDepthWeights, 1e-10);
-        //irradiance = irradiance / max(totalIradianceWeights, 1e-10);
-        
-        //VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance, 1.f);
+        depth = depth / max(totalDepthWeights, 1e-10);
+        depthSquared = depthSquared / max(totalDepthWeights, 1e-10);
+
         VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depth, depthSquared, 0.f, 0.f);
 
         return true;

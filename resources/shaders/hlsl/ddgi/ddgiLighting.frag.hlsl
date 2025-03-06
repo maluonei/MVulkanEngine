@@ -1,4 +1,5 @@
 #include "indirectLight.hlsl"
+#include "shading.hlsl"
 
 struct Light
 {
@@ -77,76 +78,6 @@ bool RayTracingAnyHit(in RayDesc rayDesc) {
   return false;
 }
 
-float D_GGX(float dotNH, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return alpha2 / (PI * denom * denom);
-}
-
-float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
-{
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    float GL = dotNL / (dotNL * (1.0 - k) + k);
-    float GV = dotNV / (dotNV * (1.0 - k) + k);
-    return GL * GV;
-}
-
-// Fresnel function ----------------------------------------------------
-float3 F_Schlick(float cosTheta, float metallic)
-{
-    float3 F0 = lerp(float3(0.04, 0.04, 0.04), float3(1.f, 1.f, 1.f), metallic); // * material.specular
-    float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-    return F;
-}
-
-// Specular BRDF composition --------------------------------------------
-
-float3 BRDF(float3 diffuseColor, float3 lightColor, float3 L, float3 V, float3 N, float metallic, float roughness)
-{
-	// Precalculate vectors and dot products	
-    float3 H = normalize(V + L);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
-    float dotNL = clamp(dot(N, L), 0.0, 1.0);
-    float dotLH = clamp(dot(L, H), 0.0, 1.0);
-    float dotNH = clamp(dot(N, H), 0.0, 1.0);
-
-	// Light color fixed
-	//float3 lightColor = float3(1.0);
-
-    float3 color = float3(0.0, 0.0, 0.0);
-
-    if (dotNL > 0.0)
-    {
-        float rroughness = max(0.05, roughness);
-		// D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, rroughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-        float3 F = F_Schlick(dotNV, metallic);
-
-        float3 spec = D * F * G / ((4.0 * dotNL * dotNV) + 0.0001);
-        float3 diff = (1.f - F) * (1.f - metallic) * diffuseColor / PI;
-
-        color += (spec + diff) * dotNL * lightColor; 
-    }
-
-    return color;
-}
-
-float3 rgb2srgb(float3 color)
-{
-    color.x = color.x < 0.0031308 ? color.x * 12.92f : pow(color.x, 1.0 / 2.4) * 1.055f - 0.055f;
-    color.y = color.y < 0.0031308 ? color.y * 12.92f : pow(color.y, 1.0 / 2.4) * 1.055f - 0.055f;
-    color.z = color.z < 0.0031308 ? color.z * 12.92f : pow(color.z, 1.0 / 2.4) * 1.055f - 0.055f;
-
-    return color; 
-}
- 
-
 PSOutput main(PSInput input)
 { 
     PSOutput output; 
@@ -178,8 +109,13 @@ PSOutput main(PSInput input)
         float3 L = normalize(-ubo0.lights[i].direction); 
         float3 V = normalize(ubo0.cameraPos.xyz - fragPos);
         float3 R = reflect(-V, fragNormal);
- 
-        directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
+
+        float3 lightColor = ubo0.lights[i].color * ubo0.lights[i].intensity;
+        //float3 L = -ubo2.lights[i].direction;
+        //float3 V = -ray.Direction;
+        //float3 N = output.normal;
+        directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, lightColor, L, V, fragNormal, metallic, roughness);
+        //directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
     }      
                    
     IndirectLightingOutput indirectLight = CalculateIndirectLighting(             
@@ -190,12 +126,8 @@ PSOutput main(PSInput input)
         ubo0.probePos0,   
         ubo0.probePos1,  
         fragPos,   
-        fragNormal);// * fragAlbedo.rgb / PI ; 
-    //indirectLight *= (1e-16);
-    //indirectLight = indirectLight * fragAlbedo.rgb / PI;
- 
-    //float radiance = VolumeProbeDatasRadiance.Sample(linearSampler, float2(0.f, 0.f)).r;
- 
+        fragNormal);
+
     output.directLight = float4(directLight, 1.f);
     output.indirectLight = float4(indirectLight.radiance * fragAlbedo.rgb / PI, 1.f); 
     output.radianceProbeUV = float4(indirectLight.radianceProbeUV, 1.f);

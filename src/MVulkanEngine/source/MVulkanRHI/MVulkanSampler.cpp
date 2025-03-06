@@ -17,12 +17,12 @@ void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
     samplerInfo.minFilter = info.minFilter;
     samplerInfo.mipmapMode = info.mipMode;
     samplerInfo.minLod = 0.f;
-    samplerInfo.maxLod = 4.f;
+    samplerInfo.maxLod = info.maxLod;
 
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.anisotropyEnable = info.anisotropyEnable;
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;

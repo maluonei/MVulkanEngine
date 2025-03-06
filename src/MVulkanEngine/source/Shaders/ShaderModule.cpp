@@ -1,7 +1,7 @@
 #include "Shaders/ShaderModule.hpp"
 
-ShaderModule::ShaderModule(const std::string& vertPath, const std::string& fragPath)
-	: m_vertPath(vertPath), m_fragPath(fragPath)
+ShaderModule::ShaderModule(const std::string& vertPath, const std::string& fragPath, bool compileEveryTime)
+	: m_vertPath(vertPath), m_fragPath(fragPath), m_compileEveryTime(compileEveryTime)
 {
 	load();
 }
@@ -35,8 +35,8 @@ void* ShaderModule::GetData(uint32_t binding, uint32_t index)
 
 void ShaderModule::load()
 {
-	m_vertShader = MVulkanShader(m_vertPath, ShaderStageFlagBits::VERTEX);
-	m_fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT);
+	m_vertShader = MVulkanShader(m_vertPath, ShaderStageFlagBits::VERTEX, m_compileEveryTime);
+	m_fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT, m_compileEveryTime);
 }
 
 
@@ -349,7 +349,7 @@ void* IBLBrdfShader::GetData(uint32_t binding, uint32_t index)
 	return nullptr;
 }
 
-ComputeShaderModule::ComputeShaderModule(const std::string& compPath):m_compPath(compPath)
+ComputeShaderModule::ComputeShaderModule(const std::string& compPath, bool compileEveryTime):m_compPath(compPath),m_compileEveryTime(compileEveryTime)
 {
 	load();
 }
@@ -380,7 +380,7 @@ void* ComputeShaderModule::GetData(uint32_t binding, uint32_t index)
 
 void ComputeShaderModule::load()
 {
-	m_compShader = MVulkanShader(m_compPath, ShaderStageFlagBits::COMPUTE);
+	m_compShader = MVulkanShader(m_compPath, ShaderStageFlagBits::COMPUTE, m_compileEveryTime);
 }
 
 TestCompShader::TestCompShader() :ComputeShaderModule("hlsl/test.comp.hlsl")

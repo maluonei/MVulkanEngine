@@ -5,6 +5,8 @@ struct MVulkanSamplerCreateInfo {
 	VkFilter minFilter = VkFilter::VK_FILTER_LINEAR;
 	VkFilter magFilter = VkFilter::VK_FILTER_LINEAR;
 	VkSamplerMipmapMode mipMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	float maxLod = 4.f;
+	bool anisotropyEnable = true;
 };
 
 class MVulkanSampler {

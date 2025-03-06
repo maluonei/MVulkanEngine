@@ -66,7 +66,8 @@ private:
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
-	MVulkanSampler				m_linearSampler;
+	MVulkanSampler				m_linearSamplerWithoutAnisotropy;
+	MVulkanSampler				m_linearSamplerWithAnisotropy;
 
 	std::shared_ptr<Scene>		m_scene;
 	std::shared_ptr<Scene>		m_squad;
@@ -78,7 +79,7 @@ private:
 	MVulkanRaytracing			m_rayTracing;
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
-	int							m_raysPerProbe = 144;
+	int							m_raysPerProbe = 64;
 
 };
 
