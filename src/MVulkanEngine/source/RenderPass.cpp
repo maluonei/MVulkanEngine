@@ -44,6 +44,11 @@ void RenderPass::Clean()
     }
     m_uniformBuffers.clear();
 
+    for (auto i = 0; i < m_storageBuffer.size(); i++) {
+        m_storageBuffer[i].Clean();
+    }
+    m_uniformBuffers.clear();
+
     m_descriptorLayouts.Clean();
 
     for (auto descriptorSet : m_descriptorSets) {
@@ -448,7 +453,7 @@ void RenderPass::CreateFrameBuffers(
         info.imageAttachmentFormats = m_info.imageAttachmentFormats.data();
         info.numAttachments = static_cast<uint32_t>(m_info.imageAttachmentFormats.size());
         info.colorAttachmentResolvedViews = m_info.colorAttachmentResolvedViews;
-        info.useAttachmentResolve = m_info.useAttachmentResolve;
+        //info.useAttachmentResolve = m_info.useAttachmentResolve;
         info.swapChainImageIndex = i;
         info.swapChain = swapChain;
 

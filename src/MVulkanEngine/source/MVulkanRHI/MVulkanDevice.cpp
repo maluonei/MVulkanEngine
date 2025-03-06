@@ -73,11 +73,13 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
             spdlog::info("Vulkan API Version:{0}.{1}.{2}", VK_VERSION_MAJOR(deviceProperties.apiVersion), VK_VERSION_MINOR(deviceProperties.apiVersion), VK_VERSION_PATCH(deviceProperties.apiVersion));
             spdlog::info("maxSmaaFlag:{0}", int(m_maxSmaaFlag));
-            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndirectCount:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndirectCount));
-            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndexedIndexValue:{0}", static_cast<int>(deviceProperties.limits.maxDrawIndexedIndexValue));
+            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndirectCount:{0}", deviceProperties.limits.maxDrawIndirectCount);
+            spdlog::info("VkPhysicalDeviceLimits.maxDrawIndexedIndexValue:{0}", deviceProperties.limits.maxDrawIndexedIndexValue);
             spdlog::info("Max descriptor set sampled images:{0}", static_cast<int>(deviceProperties.limits.maxDescriptorSetSampledImages));
             spdlog::info("deviceProperties.limits.maxPushConstantsSize:{0}", static_cast<int>(deviceProperties.limits.maxPushConstantsSize));
             spdlog::info("deviceProperties.limits.minUniformBufferOffsetAlignment:{0}", static_cast<int>(deviceProperties.limits.minUniformBufferOffsetAlignment));
+            spdlog::info("deviceProperties.limits.maxUniformBufferRange:{0}", static_cast<int>(deviceProperties.limits.maxUniformBufferRange));
+            spdlog::info("deviceProperties.limits.maxStorageBufferRange:{0}", deviceProperties.limits.maxStorageBufferRange);
             spdlog::info("deviceProperties.limits.maxComputeWorkGroupSize:{0},{1},{2}", 
                 static_cast<int>(deviceProperties.limits.maxComputeWorkGroupSize[0]),
                 static_cast<int>(deviceProperties.limits.maxComputeWorkGroupSize[1]), 

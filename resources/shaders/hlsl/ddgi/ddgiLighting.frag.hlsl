@@ -1,14 +1,5 @@
-#include "indirectLight.hlsl"
-#include "shading.hlsl"
-
-struct Light
-{
-    float3 direction;
-    float  intensity;
-
-    float3 color;
-    int    shadowMapIndex;
-};
+#include "indirectLight.hlsli"
+#include "shading.hlsli"
 
 struct UniformBuffer0
 {
@@ -58,9 +49,9 @@ struct PSOutput
 {
     float4 directLight : SV_Target0;
     float4 indirectLight : SV_Target1;
-    float4 depthProbeUV : SV_Target2;
-    float4 radianceProbeUV : SV_Target3;
-    float4 probeRadiance : SV_Target4;
+    //float4 depthProbeUV : SV_Target2;
+    //float4 radianceProbeUV : SV_Target3;
+    //float4 probeRadiance : SV_Target4;
 };
  
 bool RayTracingAnyHit(in RayDesc rayDesc) {
@@ -123,16 +114,16 @@ PSOutput main(PSInput input)
         VolumeProbeDatasRadiance,     
         VolumeProbeDatasDepth,       
         linearSampler,       
-        ubo0.probePos0,   
-        ubo0.probePos1,  
+        ubo1.probePos0,   
+        ubo1.probePos1,  
         fragPos,   
         fragNormal);
 
     output.directLight = float4(directLight, 1.f);
     output.indirectLight = float4(indirectLight.radiance * fragAlbedo.rgb / PI, 1.f); 
-    output.radianceProbeUV = float4(indirectLight.radianceProbeUV, 1.f);
-    output.depthProbeUV = float4(indirectLight.depthProbeUV, 1.f);
-    output.probeRadiance = float4(indirectLight.probeRadiance, 1.f);
+    //output.radianceProbeUV = float4(indirectLight.radianceProbeUV, 1.f);
+    //output.depthProbeUV = float4(indirectLight.depthProbeUV, 1.f);
+    //output.probeRadiance = float4(indirectLight.probeRadiance, 1.f);
                    
     return output;   
 }  

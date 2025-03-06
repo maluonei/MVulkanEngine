@@ -13,13 +13,23 @@
 class DDGIVolume {
 public:
 	DDGIVolume(glm::vec3 startPosition, glm::vec3 offset);
+	DDGIVolume(glm::vec3 startPosition, glm::vec3 endPosition, glm::ivec3 probeNum);
 
 	glm::vec3 GetProbePosition(int x, int y, int z);
 	glm::vec3 GetProbePosition(int index);
 
+	inline int GetNumProbes() const {
+		return m_probeNum.x * m_probeNum.y * m_probeNum.z;
+	}
+
+	inline glm::ivec3 GetProbeDim() const {
+		return m_probeNum;
+	}
+
 private:
-	glm::vec3 m_startPosition;
-	glm::vec3 m_offset;
+	glm::vec3	m_startPosition;
+	glm::vec3	m_offset;
+	glm::ivec3	m_probeNum;
 };
 
 #endif

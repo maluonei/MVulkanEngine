@@ -1,5 +1,5 @@
-#include "indirectLight.hlsl"
-#include "shading.hlsl"
+#include "indirectLight.hlsli"
+#include "shading.hlsli"
 
 struct TexBuffer
 {
@@ -22,28 +22,14 @@ struct GeometryInfo {
   int materialIdx;
 };
 
-struct Light
-{
-    float3 direction;
-    float intensity;
-
-    float3 color;
-    int padding0;
-};
-
 struct UniformBuffer2
 {
     Light lights[4];
 
-    float3 probePos0;
     int    lightNum;
-    float3 probePos1;
     int    frameCount;
-
-    int    raysPerProbe;
-    int    padding0;
     int    padding1;
-    int    padding2;
+    float  padding2;
 };
 
 [[vk::binding(0, 0)]]
@@ -259,24 +245,6 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
   return false;
 } 
 
-float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3 albedo){
-    float3 brdf = (albedo / (float)PI);
-    float ndotv = max(dot(normal, -light.direction), 0.f);
-    
-    RayDesc rayDesc;
-    rayDesc.Origin = position + normal * (1e-4);
-    rayDesc.Direction = -light.direction;
-    rayDesc.TMin = 0.f;
-    rayDesc.TMax = 10000.f;
-    float t;
-
-    bool visibility = (1-RayTracingAnyHit(rayDesc, t));
-
-    float3 lighting = light.color * light.intensity * (float)visibility * ndotv;
- 
-    return (brdf * lighting);
-}
-
 float3 SphericalFibonacci(float index, float numSamples)
 {
     const float b = (sqrt(5.f) * 0.5f + 0.5f) - 1.f;
@@ -289,7 +257,7 @@ float3 SphericalFibonacci(float index, float numSamples)
 
 PSOutput main(PSInput input)
 {
-    const int2 FullResolution = int2(ubo2.raysPerProbe, 512);
+    const int2 FullResolution = int2(ubo1.raysPerProbe, ubo1.probeDim.x * ubo1.probeDim.y * ubo1.probeDim.z);
 
     int2 idx = int2(FullResolution * input.texCoord);
     int rayIndex = idx.x;
@@ -306,7 +274,7 @@ PSOutput main(PSInput input)
     ray.TMax = 10000.f;
     ray.Origin = probe.position;
     //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-    ray.Direction = SphericalFibonacci(rayIndex, ubo2.raysPerProbe);
+    ray.Direction = SphericalFibonacci(rayIndex, ubo1.raysPerProbe);
 
     if(RayTracingClosestHit(ray, pathState)){
         output.position = float4(pathState.position, 1.f);
@@ -323,11 +291,6 @@ PSOutput main(PSInput input)
     float3 diffuse = float3(0.f, 0.f, 0.f);
     for(int i=0;i<ubo2.lightNum;i++){
         if(output.normal.w > 0.f){
-            //diffuse += DirectDiffuseLighting(
-            //    ubo2.lights[i], 
-            //    output.position, 
-            //    output.normal, 
-            //    output.albedo); 
             float3 lightColor = ubo2.lights[i].color * ubo2.lights[i].intensity;
             float3 L = -ubo2.lights[i].direction;
             float3 V = -ray.Direction;
@@ -344,8 +307,8 @@ PSOutput main(PSInput input)
                     VolumeProbeDatasRadiance,  
                     VolumeProbeDatasDepth, 
                     linearSampler, 
-                    ubo2.probePos0,
-                    ubo2.probePos1,
+                    ubo1.probePos0,
+                    ubo1.probePos1,
                     output.position, 
                     output.normal); 
         diffuse += indirectLight.radiance * output.albedo / PI;

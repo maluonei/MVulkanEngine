@@ -1,4 +1,4 @@
-#include "Octahedral.hlsl"
+#include "Octahedral.hlsli"
 
 struct Probe{
     float3 position;
@@ -7,19 +7,21 @@ struct Probe{
 
 struct UniformBuffer1
 {
-    Probe probes[512];
+    Probe probes[2040];
+    int3  probeDim;
+    int   raysPerProbe;
+
+    float3 probePos0;
+	int	   padding0;
+	float3 probePos1;
+	int	   padding1;
 };
 
 int GetProbeIndex(int3 pIndex, int3 probeScale){
     return pIndex.x * probeScale.y * probeScale.z + pIndex.y * probeScale.z + pIndex.z;
 }
 
-int GetProbeIndex(int3 pIndex){
-    return pIndex.x * 64 + pIndex.y * 8 + pIndex.z;
-}
-
 float TrilinearInterpolationWeight(float3 gridSpaceDistance, int3 probeIndex, float3 probeSpacing){
-    //float3 gridSpaceDistance = position - probePosition;
     float3 alpha = clamp((gridSpaceDistance / probeSpacing), float3(0.f, 0.f, 0.f), float3(1.f, 1.f, 1.f));
 
     float3 trilinear = max(0.001f, lerp(1.f - alpha, alpha, probeIndex));
@@ -52,8 +54,8 @@ float ChebyshevTest(float depth, float depthSquared, float distance){
 }
 
 
-#define radianceProbeResolution 8
-#define depthProbeResolution 16
+#define RadianceProbeResolution 8
+#define DepthProbeResolution 16
 #define surfaceBias 0.02f
 
 struct IndirectLightingOutput{
@@ -74,7 +76,7 @@ IndirectLightingOutput CalculateIndirectLighting(
     float3 fragNormal){
     
     float3 biasedPos = fragPos + fragNormal * surfaceBias;
-    float3 probeSpacing = (probePos1 - probePos0) / 7.f;
+    float3 probeSpacing = (probePos1 - probePos0) / (float3(ubo1.probeDim.x, ubo1.probeDim.y, ubo1.probeDim.z) - float3(1.f, 1.f, 1.f));
     //int3   baseProbeCoords = DDGIGetBaseProbeGridCoords(biasedWorldPosition, volume);
 
     float3 probeOffset = saturate((biasedPos - probePos0) / (probePos1 - probePos0));
@@ -82,8 +84,8 @@ IndirectLightingOutput CalculateIndirectLighting(
     int3   probeOffsetBase = int3(probeOffsetinVolumn);
     int3   baseProbeCoords = int3(probeOffsetBase);
 
-    float2 radianceProbeResolutionInv = 1.f / float2(radianceProbeResolution * 64.f, radianceProbeResolution * 8.f);
-    float2 depthProbeResolutionInv = 1.f / float2(depthProbeResolution * 64.f, depthProbeResolution * 8.f);
+    float2 radianceProbeResolutionInv = 1.f / float2(RadianceProbeResolution * ubo1.probeDim.x * ubo1.probeDim.y, RadianceProbeResolution * ubo1.probeDim.z);
+    float2 depthProbeResolutionInv = 1.f / float2(DepthProbeResolution * ubo1.probeDim.x * ubo1.probeDim.y, DepthProbeResolution * ubo1.probeDim.z);
     //int probeIndex = GetProbeIndex(probeOffsetInt);
 
     float totalWeights = 0.f;
@@ -92,7 +94,7 @@ IndirectLightingOutput CalculateIndirectLighting(
 
     float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(fragNormal);
 
-    int pBaseIndex = GetProbeIndex(probeOffsetBase);
+    int pBaseIndex = GetProbeIndex(probeOffsetBase, ubo1.probeDim);
     float3 probeBasePosition = ubo1.probes[pBaseIndex].position;
     
     IndirectLightingOutput output;
@@ -104,22 +106,22 @@ IndirectLightingOutput CalculateIndirectLighting(
     //    for(int y=0;y<1;y++){
     //        for(int z=0;z<1;z++){
                 //int3 probeBaseIndex = probeOffsetBase + int3(x, y, z);
-                int3 probeBaseIndex = clamp(baseProbeCoords + int3(x, y, z), int3(0, 0, 0), int3(8, 8, 8) - int3(1, 1, 1));
+                int3 probeBaseIndex = clamp(baseProbeCoords + int3(x, y, z), int3(0, 0, 0), int3(ubo1.probeDim.x, ubo1.probeDim.y, ubo1.probeDim.z) - int3(1, 1, 1));
 
-                int pIndex = GetProbeIndex(probeBaseIndex);
+                int pIndex = GetProbeIndex(probeBaseIndex, ubo1.probeDim);
 
                 float3 probePosition = ubo1.probes[pIndex].position;
                 float3 direction = normalize(biasedPos - probePosition);
                 
-                uint2  radianceProbeBaseUV = uint2(radianceProbeResolution, radianceProbeResolution) * uint2(probeBaseIndex.x * 8 + probeBaseIndex.y, probeBaseIndex.z) + 0.5f * uint2(radianceProbeResolution, radianceProbeResolution);
-                uint2  depthProbeBaseUV = uint2(depthProbeResolution, depthProbeResolution) * uint2(probeBaseIndex.x * 8 + probeBaseIndex.y, probeBaseIndex.z) + 0.5f * uint2(depthProbeResolution, depthProbeResolution);
+                uint2  radianceProbeBaseUV = uint2(RadianceProbeResolution, RadianceProbeResolution) * uint2(probeBaseIndex.x * ubo1.probeDim.z + probeBaseIndex.y, probeBaseIndex.z) + 0.5f * uint2(RadianceProbeResolution, RadianceProbeResolution);
+                uint2  depthProbeBaseUV = uint2(DepthProbeResolution, DepthProbeResolution) * uint2(probeBaseIndex.x * ubo1.probeDim.z + probeBaseIndex.y, probeBaseIndex.z) + 0.5f * uint2(DepthProbeResolution, DepthProbeResolution);
 
                 float2 octahedralUVOfDirection = DDGIGetOctahedralCoordinates(direction);
                 //octahedralUVOfDirection = (octahedralUVOfDirection + 1.f) / 2.f;
-                float2 octahedralUVOfDirectioninTexture_Int = float2(depthProbeBaseUV) + octahedralUVOfDirection * 0.5f * float2((depthProbeResolution-2.f), (depthProbeResolution-2.f));
+                float2 octahedralUVOfDirectioninTexture_Int = float2(depthProbeBaseUV) + octahedralUVOfDirection * 0.5f * float2((DepthProbeResolution-2.f), (DepthProbeResolution-2.f));
                 float2 octahedralUVOfDirectioninTexture_Float = float2(octahedralUVOfDirectioninTexture_Int) * depthProbeResolutionInv;
                 
-                float2 octahedralUVOfNormalTexture_Int = float2(radianceProbeBaseUV) + octahedralUVOfNormal * 0.5f * float2((radianceProbeResolution-2.f), (radianceProbeResolution-2.f));
+                float2 octahedralUVOfNormalTexture_Int = float2(radianceProbeBaseUV) + octahedralUVOfNormal * 0.5f * float2((RadianceProbeResolution-2.f), (RadianceProbeResolution-2.f));
                 float2 octahedralUVOfNormalTexture_Float = float2(octahedralUVOfNormalTexture_Int) * radianceProbeResolutionInv;
                 
                 //float3 radiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
@@ -127,7 +129,7 @@ IndirectLightingOutput CalculateIndirectLighting(
                 float2 depths = VolumeProbeDatasDepth.Sample(linearSampler, octahedralUVOfDirectioninTexture_Float).rg;
                 
                 output.radianceProbeUV = float3(octahedralUVOfNormalTexture_Float, 0.f);
-                output.depthProbeUV = float3(float2(octahedralUVOfNormal * 0.5f * float2((radianceProbeResolution-2.f), (radianceProbeResolution-2.f))), 0.f);
+                output.depthProbeUV = float3(float2(octahedralUVOfNormal * 0.5f * float2((RadianceProbeResolution-2.f), (RadianceProbeResolution-2.f))), 0.f);
                 output.probeRadiance = radiance;
 
                 float  depth = depths.x;
@@ -142,12 +144,8 @@ IndirectLightingOutput CalculateIndirectLighting(
 
                 float combinedWeight = directionWeight * chebyshevWeight;
                 combinedWeight = max(1e-10, combinedWeight);
-                //combinedWeight = (1e-20) * combinedWeight + 1.f;
 
                 combinedWeight = trilinearWeight * combinedWeight;
-
-                //combinedWeight = (1e-20) * combinedWeight + 1.f;
-                //combinedWeight += chebyshevWeight;
 
                 //const float crushThreshold = 0.2f;
                 //if (combinedWeight < crushThreshold)

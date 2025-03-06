@@ -81,6 +81,9 @@ private:
 
 	int							m_raysPerProbe = 64;
 
+	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
+	UniformBuffer1				m_uniformBuffer1;
+
 };
 
 

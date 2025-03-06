@@ -1,9 +1,14 @@
 #include "ddgi.hpp"
 
 DDGIVolume::DDGIVolume(glm::vec3 startPosition, glm::vec3 offset):
-	m_startPosition(startPosition), m_offset(offset)
+	m_startPosition(startPosition), m_offset(offset), m_probeNum(glm::ivec3(8, 8, 8))
 {
 
+}
+
+DDGIVolume::DDGIVolume(glm::vec3 startPosition, glm::vec3 endPosition, glm::ivec3 probeNum):
+	m_startPosition(startPosition), m_offset((endPosition - startPosition) / glm::vec3(probeNum - glm::ivec3(1.f))), m_probeNum(probeNum)
+{
 }
 
 glm::vec3 DDGIVolume::GetProbePosition(int x, int y, int z)
@@ -13,8 +18,10 @@ glm::vec3 DDGIVolume::GetProbePosition(int x, int y, int z)
 
 glm::vec3 DDGIVolume::GetProbePosition(int index)
 {
-	int x = index / 64;
-	int y = (index % 64) / 8;
-	int z = index % 8;
+	auto probeNumYZ = m_probeNum.y * m_probeNum.z;
+
+	int x = index / probeNumYZ;
+	int y = (index % probeNumYZ) / m_probeNum.z;
+	int z = index % m_probeNum.z;
 	return GetProbePosition(x, y, z);
 }

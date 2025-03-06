@@ -1,3 +1,12 @@
+struct Light
+{
+    float3 direction;
+    float  intensity;
+
+    float3 color;
+    int    padding0;
+};
+
 float D_GGX(float dotNH, float roughness)
 {
     float alpha = roughness * roughness;

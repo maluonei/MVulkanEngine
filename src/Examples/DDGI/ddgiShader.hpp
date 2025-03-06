@@ -3,6 +3,31 @@
 
 #include "Shaders/ShaderModule.hpp"
 
+struct Probe {
+	glm::vec3 position;
+	int    padding0;
+};
+
+struct UniformBuffer1
+{
+	Probe		probes[2040];
+	glm::ivec3	probeDim;
+	int			raysPerProbe;
+
+	glm::vec3 probePos0;
+	int		  padding0;
+	glm::vec3 probePos1;
+	int		  padding1;
+};
+
+struct LightStruct {
+	glm::vec3 direction;
+	float intensity;
+
+	glm::vec3 color;
+	int padding0;
+};
+
 
 class RTAOShader :public ShaderModule {
 public:
@@ -75,7 +100,7 @@ public:
 			ubo0 = *reinterpret_cast<ProbeTracingShader::UniformBuffer0*>(data);
 			return;
 		case 1:
-			ubo1 = *reinterpret_cast<ProbeTracingShader::UniformBuffer1*>(data);
+			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
 			return;
 		case 2:
 			ubo2 = *reinterpret_cast<ProbeTracingShader::UniformBuffer2*>(data);
@@ -105,15 +130,6 @@ public:
 	}
 
 public:
-	struct Probe {
-		glm::vec3 position;
-		int padding0;
-	};
-
-	struct UniformBuffer1 {
-		Probe probes[512];
-	};
-
 	struct TexBuffer {
 		int diffuseTextureIdx;
 		int metallicAndRoughnessTextureIdx;
@@ -125,25 +141,13 @@ public:
 		TexBuffer texBuffer[256];
 	};
 
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int padding0;
-	};
-
 	struct UniformBuffer2 {
-		Light lights[4];
-		glm::vec3 probePos0;
-		int    lightNum;
-		glm::vec3 probePos1;
-		int    frameCount;
+		LightStruct lights[4];
 
-		int    raysPerProbe;
-		int    padding0;
-		int    padding1;
-		int    padding2;
+		int    lightNum;
+		int    frameCount;
+		int padding1;
+		int padding2;
 	};
 
 	struct VertexBuffer {
@@ -199,7 +203,7 @@ private:
 
 class ProbeBlendRadianceShader :public ComputeShaderModule {
 public:
-	ProbeBlendRadianceShader() :ComputeShaderModule("hlsl/ddgi/probeBlendRadiance.comp.hlsl")
+	ProbeBlendRadianceShader() :ComputeShaderModule("hlsl/ddgi/probeBlendRadiance.comp.hlsl", true)
 	{
 	}
 
@@ -218,7 +222,7 @@ public:
 			ubo0 = *reinterpret_cast<ProbeBlendRadianceShader::UniformBuffer0*>(data);
 			return;
 		case 1:
-			ubo1 = *reinterpret_cast<ProbeBlendRadianceShader::UniformBuffer1*>(data);
+			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
 			return;
 		}
 	}
@@ -233,18 +237,9 @@ public:
 	}
 
 public:
-	struct Probe {
-		glm::vec3 position;
-		int padding0;
-	};
-
-	struct UniformBuffer1 {
-		Probe probes[512];
-	};
-
 	struct UniformBuffer0 {
-		int raysPerProbe;
 		float sharpness;
+		int padding0;
 		int padding1;
 		int padding2;
 	};
@@ -265,7 +260,7 @@ public:
 		case 0:
 			return sizeof(DDGILightingShader::UniformBuffer0);
 		case 1:
-			return sizeof(DDGILightingShader::UniformBuffer1);
+			return sizeof(UniformBuffer1);
 		}
 	}
 
@@ -275,7 +270,7 @@ public:
 			ubo0 = *reinterpret_cast<DDGILightingShader::UniformBuffer0*>(data);
 			return;
 		case 1:
-			ubo1 = *reinterpret_cast<DDGILightingShader::UniformBuffer1*>(data);
+			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
 			return;
 		}
 	}
@@ -290,34 +285,11 @@ public:
 	}
 
 public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
 	struct UniformBuffer0 {
-		Light lights[4];
+		LightStruct lights[4];
 
 		glm::vec3 cameraPos;
 		int lightNum;
-
-		glm::vec3 probePos0;
-		int    padding0;
-		glm::vec3 probePos1;
-		int    padding1;
-	};
-
-	struct Probe {
-		glm::vec3 position;
-		int    padding0;
-	};
-
-	struct UniformBuffer1
-	{
-		Probe	probes[512];
 	};
 
 private:
@@ -380,7 +352,7 @@ public:
 	};
 
 	struct UniformBuffer0 {
-		ModelBuffer models[512];
+		ModelBuffer models[4096];
 	};
 
 	struct UniformBuffer1 {
