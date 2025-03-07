@@ -5,9 +5,10 @@ struct Probe{
     int padding0;
 };
 
+
 struct UniformBuffer1
 {
-    Probe probes[2040];
+    //Probe probes[2040];
     int3  probeDim;
     int   raysPerProbe;
 
@@ -67,6 +68,7 @@ struct IndirectLightingOutput{
 
 IndirectLightingOutput CalculateIndirectLighting(
     UniformBuffer1 ubo1,
+    StructuredBuffer<Probe> probes,
     Texture2D<float4> VolumeProbeDatasRadiance,
     Texture2D<float4> VolumeProbeDatasDepth,
     SamplerState linearSampler,
@@ -95,7 +97,7 @@ IndirectLightingOutput CalculateIndirectLighting(
     float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(fragNormal);
 
     int pBaseIndex = GetProbeIndex(probeOffsetBase, ubo1.probeDim);
-    float3 probeBasePosition = ubo1.probes[pBaseIndex].position;
+    float3 probeBasePosition = probes[pBaseIndex].position;
     
     IndirectLightingOutput output;
 
@@ -110,7 +112,7 @@ IndirectLightingOutput CalculateIndirectLighting(
 
                 int pIndex = GetProbeIndex(probeBaseIndex, ubo1.probeDim);
 
-                float3 probePosition = ubo1.probes[pIndex].position;
+                float3 probePosition = probes[pIndex].position;
                 float3 direction = normalize(biasedPos - probePosition);
                 
                 uint2  radianceProbeBaseUV = uint2(RadianceProbeResolution, RadianceProbeResolution) * uint2(probeBaseIndex.x * ubo1.probeDim.z + probeBaseIndex.y, probeBaseIndex.z) + 0.5f * uint2(RadianceProbeResolution, RadianceProbeResolution);
@@ -144,6 +146,7 @@ IndirectLightingOutput CalculateIndirectLighting(
 
                 float combinedWeight = directionWeight * chebyshevWeight;
                 combinedWeight = max(1e-10, combinedWeight);
+                //combinedWeight = 1.f + (1e-20) * combinedWeight;
 
                 combinedWeight = trilinearWeight * combinedWeight;
 

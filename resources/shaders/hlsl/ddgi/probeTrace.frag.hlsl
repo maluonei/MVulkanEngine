@@ -55,13 +55,14 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
 [[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] Texture2D<float4> textures[1024] : register(t5);
-[[vk::binding(9, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1030);   //[512, 64]
-[[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1031);   //[2048, 256]
+[[vk::binding(8, 0)]] StructuredBuffer<Probe> probes : register(t5);
+[[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t6);
+[[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1031);   //[512, 64]
+[[vk::binding(11, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1032);   //[2048, 256]
 
-[[vk::binding(11, 0)]] SamplerState linearSampler : register(s0);
+[[vk::binding(12, 0)]] SamplerState linearSampler : register(s0);
 
-[[vk::binding(12, 0)]] RaytracingAccelerationStructure Tlas : register(t1032);
+[[vk::binding(13, 0)]] RaytracingAccelerationStructure Tlas : register(t1033);
 
   
 struct PSInput
@@ -77,6 +78,9 @@ struct PSOutput
     float4 normal : SV_Target1;
     float4 albedo : SV_Target2;
     float4 radiance : SV_Target3;
+    //float4 L : SV_Target4;
+    //float4 V : SV_Target5;
+    //float4 N : SV_Target6;
 };
 
 //static const float PI = 3.14159265359f;
@@ -106,6 +110,21 @@ bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
 
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     t = q.CommittedRayT();
+    return true;
+  }
+
+  return false;
+}
+
+bool RayTracingAnyHit(in RayDesc rayDesc) {
+  uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+  RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
+
+  q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
+  q.Proceed();
+
+  if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     return true;
   }
 
@@ -262,7 +281,7 @@ PSOutput main(PSInput input)
     int2 idx = int2(FullResolution * input.texCoord);
     int rayIndex = idx.x;
     int probeIndex = idx.y;
-    Probe probe = ubo1.probes[probeIndex];
+    Probe probe = probes[probeIndex];
 
     PSOutput output;
     output.albedo.w = 0.f;
@@ -289,21 +308,35 @@ PSOutput main(PSInput input)
     
    
     float3 diffuse = float3(0.f, 0.f, 0.f);
-    for(int i=0;i<ubo2.lightNum;i++){
-        if(output.normal.w > 0.f){
+    if(output.normal.w > 0.f){
+        for(int i=0;i<ubo2.lightNum;i++){
+            //if(output.normal.w > 0.f && pathState.outside){
+            //if(output.normal.w > 0.f){
+            RayDesc _ray; 
+            _ray.Origin = output.position + output.normal * (1e-5);
+            _ray.Direction = normalize(-ubo2.lights[i].direction); 
+            _ray.TMin = 0.0f;   
+            _ray.TMax = 10000.f;     
+            bool hasHit = RayTracingAnyHit(_ray);  
             float3 lightColor = ubo2.lights[i].color * ubo2.lights[i].intensity;
             float3 L = -ubo2.lights[i].direction;
             float3 V = -ray.Direction;
             float3 N = output.normal;
+            //output.L = float4(L, 1.f);
+            //output.V = float4(V, 1.f);
+            //output.N = float4(N, 1.f);
+            diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
+                //diffuse = diffuse * (1e-20) + (1-hasHit);
+                //diffuse = diffuse * (1e-20) + BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
 
-            diffuse += BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
-        }  
-    }         
-     
-    if(output.normal.w > 0.f && pathState.outside){ 
-    //if(output.normal.w > 0.f){
+            //}  
+        }         
+
+        //if(output.normal.w > 0.f && pathState.outside){ 
+        //if(output.normal.w > 0.f){
         IndirectLightingOutput indirectLight = CalculateIndirectLighting(
                     ubo1,
+                    probes,
                     VolumeProbeDatasRadiance,  
                     VolumeProbeDatasDepth, 
                     linearSampler, 
@@ -312,8 +345,9 @@ PSOutput main(PSInput input)
                     output.position, 
                     output.normal); 
         diffuse += indirectLight.radiance * output.albedo / PI;
+        //}
     }
-
+    
     output.radiance = float4(diffuse, pathState.t);
 
     return output;

@@ -124,7 +124,7 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
              BufferCreateInfo info;
              info.arrayLength = m_bindings[binding].binding.descriptorCount;
              //info.size = bindings[binding].size;
-             info.size = storageBufferSizes[binding - m_cbvCount];
+             info.size = storageBufferSizes[m_bindings[binding].binding.binding - m_cbvCount];
              buffer.Create(m_device, info);
 
              m_storageBuffer[m_bindings[binding].binding.binding - m_cbvCount] = buffer;

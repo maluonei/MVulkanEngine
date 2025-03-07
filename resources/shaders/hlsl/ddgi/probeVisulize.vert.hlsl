@@ -9,13 +9,19 @@ struct VPBuffer{
     float4x4 Projection;
 };
 
-struct UniformBuffer0{
-    ModelBuffer models[512];
-};
+//struct UniformBuffer0{
+//    ModelBuffer models[512];
+//};
 
-struct UniformBuffer1{
+struct UniformBuffer0{
     VPBuffer vps;
 };
+
+//[[vk::binding(0, 0)]]
+//cbuffer ubo0 : register(b0)
+//{
+//    UniformBuffer0 ubo0;
+//};
 
 [[vk::binding(0, 0)]]
 cbuffer ubo0 : register(b0)
@@ -23,11 +29,7 @@ cbuffer ubo0 : register(b0)
     UniformBuffer0 ubo0;
 };
 
-[[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
-{
-    UniformBuffer1 ubo1;
-};
+[[vk::binding(2, 0)]]StructuredBuffer<ModelBuffer> Models : register(t1);
 
 struct VSInput
 {
@@ -85,18 +87,18 @@ VSOutput main(VSInput input)
     output.texCoord = input.Coord;
 
     // Compute world space position
-    float4 worldSpacePosition = mul(ubo0.models[input.InstanceID].Model, float4(input.Position, 1.0));
+    float4 worldSpacePosition = mul(Models[input.InstanceID].Model, float4(input.Position, 1.0));
 
     // Calculate world position (divide by w to handle perspective divide)
     output.worldPos = worldSpacePosition.xyz / worldSpacePosition.w;
 
     // Compute screen space position
-    float4 screenSpacePosition = mul(ubo1.vps.View, worldSpacePosition);
-    screenSpacePosition = mul(ubo1.vps.Projection, screenSpacePosition);
+    float4 screenSpacePosition = mul(ubo0.vps.View, worldSpacePosition);
+    screenSpacePosition = mul(ubo0.vps.Projection, screenSpacePosition);
     output.position = screenSpacePosition;
 
     // Compute normal in world space
-    float3x3 normalMatrix = transpose(inverse((float3x3)ubo0.models[input.InstanceID].Model));
+    float3x3 normalMatrix = transpose(inverse((float3x3)Models[input.InstanceID].Model));
     output.normal = normalize(mul(normalMatrix, input.Normal));
 
     // Pass instance ID

@@ -11,9 +11,6 @@
 #include "Scene/Light/DirectionalLight.hpp"
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include "ddgi.hpp"
 
 //#define raysPerProbe
@@ -154,11 +151,11 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare visulizePass ubo
     {
-        DDGIProbeVisulizeShader::UniformBuffer1 ubo1{};
-        ubo1.vp.View = m_camera->GetViewMatrix();
-        ubo1.vp.Projection = m_camera->GetProjMatrix();
+        DDGIProbeVisulizeShader::UniformBuffer0 ubo0{};
+        ubo0.vp.View = m_camera->GetViewMatrix();
+        ubo0.vp.Projection = m_camera->GetProjMatrix();
 
-        m_probeVisulizePass->GetShader()->SetUBO(1, &ubo1);
+        m_probeVisulizePass->GetShader()->SetUBO(0, &ubo0);
     }
 
     //spdlog::info("1");
@@ -189,7 +186,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         computeList.Begin();
 
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 1024, 128, 1);
+        auto probeDim = m_volume->GetProbeDim();
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 16 * probeDim.x * probeDim.y, 16 * probeDim.z, 1);
 
         computeList.End();
 
@@ -253,21 +251,9 @@ void DDGIApplication::RecreateSwapchainAndRenderPasses()
         {
             m_probeVisulizePass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
             Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_probeVisulizePass);
-            //
-            //std::vector<std::vector<VkImageView>> views(1);
-            //views[0] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
-            //
-            //std::vector<VkSampler> samplers(1);
-            //samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
-            //
-            //auto tlas = m_rayTracing.GetTLAS();
-            //std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
-            //
-            //m_rtaoPass->UpdateDescriptorSetWrite(gbufferViews, samplers, accelerationStructures);
         }
 
         {
-            //m_lightingPass->GetRenderPassCreateInfo().depthView = m_lightingPass->GetFrameBuffer(0).GetDepthImageView();
             Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
 
             std::vector<std::vector<VkImageView>> views(6);
@@ -304,7 +290,6 @@ void DDGIApplication::RecreateSwapchainAndRenderPasses()
             std::vector<VkSampler> samplers(1);
             samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
 
-            //auto tlas = m_rayTracing.GetTLAS();
             std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
 
             m_compositePass->UpdateDescriptorSetWrite(views, samplers, accelerationStructures);
@@ -417,7 +402,7 @@ void DDGIApplication::loadScene()
     Singleton<SceneLoader>::instance().Load(spherePath.string(), m_sphere.get());
 
     m_squad->GenerateIndirectDataAndBuffers();
-    m_sphere->GenerateIndirectDataAndBuffers(512);
+    m_sphere->GenerateIndirectDataAndBuffers(m_volume->GetNumProbes());
     m_scene->GenerateIndirectDataAndBuffers();
 
     m_scene->GenerateMeshBuffers();
@@ -433,7 +418,7 @@ void DDGIApplication::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 5.f;
+    float intensity = 20.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
@@ -586,7 +571,7 @@ void DDGIApplication::initDDGIVolumn()
     //glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
     glm::vec3 startPosition = glm::vec3(-11.7112f, 0.178682f, -5.10776f);
     glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
-    glm::ivec3 probeDim = glm::ivec3(10, 10, 10);
+    glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
     //glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
     m_volume = std::make_shared<DDGIVolume>(startPosition, endPosition, probeDim);
 
@@ -594,15 +579,15 @@ void DDGIApplication::initDDGIVolumn()
     {
         //UniformBuffer1 ubo1{};
         glm::ivec3 probeDim = m_volume->GetProbeDim();
-        int probeDimYZ = probeDim.y * probeDim.z;
-        for (int x = 0; x < probeDim.x; x++) {
-            for (int y = 0; y < probeDim.y; y++) {
-                for (int z = 0; z < probeDim.z; z++) {
-                    int index = x * probeDimYZ + y * probeDim.z + z;
-                    m_uniformBuffer1.probes[index].position = m_volume->GetProbePosition(x, y, z);
-                }
-            }
-        }
+        //int probeDimYZ = probeDim.y * probeDim.z;
+        //for (int x = 0; x < probeDim.x; x++) {
+        //    for (int y = 0; y < probeDim.y; y++) {
+        //        for (int z = 0; z < probeDim.z; z++) {
+        //            int index = x * probeDimYZ + y * probeDim.z + z;
+        //            m_uniformBuffer1.probes[index].position = m_volume->GetProbePosition(x, y, z);
+        //        }
+        //    }
+        //}
 
         m_uniformBuffer1.probeDim = m_volume->GetProbeDim();
         m_uniformBuffer1.raysPerProbe = m_raysPerProbe;
@@ -613,19 +598,19 @@ void DDGIApplication::initDDGIVolumn()
 
         //glm::ivec3 probeDim = m_volume->GetProbeDim();
         //int probeDimYZ = probeDim.y * probeDim.z;
-        for (int x = 0; x < probeDim.x; x++) {
-            for (int y = 0; y < probeDim.y; y++) {
-                for (int z = 0; z < probeDim.z; z++) {
-                    int index = x * probeDimYZ + 
-                        
-                        y * probeDim.z + z;
-
-                    glm::mat4 translation = glm::translate(glm::mat4(1.f), m_volume->GetProbePosition(x, y, z));
-                    glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(0.12f));
-                    m_ProbeVisulizeShaderUniformBuffer0.models[index].Model = translation * scale;
-                }
-            }
-        }
+        //for (int x = 0; x < probeDim.x; x++) {
+        //    for (int y = 0; y < probeDim.y; y++) {
+        //        for (int z = 0; z < probeDim.z; z++) {
+        //            int index = x * probeDimYZ + 
+        //                
+        //                y * probeDim.z + z;
+        //
+        //            glm::mat4 translation = glm::translate(glm::mat4(1.f), m_volume->GetProbePosition(x, y, z));
+        //            glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(0.12f));
+        //            m_ProbeVisulizeShaderUniformBuffer0.models[index].Model = translation * scale;
+        //        }
+        //    }
+        //}
 
     }
 }
@@ -693,6 +678,9 @@ void DDGIApplication::createProbeTracingPass()
         probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
         VkExtent2D extent2D = { m_raysPerProbe, m_volume->GetNumProbes()};
 
@@ -743,8 +731,10 @@ void DDGIApplication::createProbeTracingPass()
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
 
-        std::vector<uint32_t> storageBufferSizes(5);
+        std::vector<uint32_t> storageBufferSizes(6);
         {
+            auto probeBuffer = m_volume->GetProbeBuffer();
+
             auto numVertices = m_scene->GetNumVertices();
             auto numIndices = m_scene->GetNumTriangles() * 3;
             auto numMeshes = m_scene->GetNumMeshes();
@@ -754,6 +744,7 @@ void DDGIApplication::createProbeTracingPass()
             storageBufferSizes[2] = storageBufferSizes[0];
             storageBufferSizes[3] = numVertices * sizeof(glm::vec2);
             storageBufferSizes[4] = numMeshes * sizeof(ProbeTracingShader::GeometryInfo);
+            storageBufferSizes[5] = probeBuffer.GetSize();
 
             auto shader = std::static_pointer_cast<ProbeTracingShader>(probeTracingShader);
             auto meshNames = m_scene->GetMeshNames();
@@ -763,6 +754,7 @@ void DDGIApplication::createProbeTracingPass()
             shader->normalBuffer.normal.resize(numVertices);
             shader->uvBuffer.uv.resize(numVertices);
             shader->instanceOffsetBuffer.geometryInfos.resize(numMeshes);
+            shader->probeBuffer = probeBuffer;
 
             int vertexBufferIndex = 0;
             int indexBufferIndex = 0;
@@ -832,7 +824,13 @@ void DDGIApplication::createLightingPass()
 
         m_lightingPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<DDGILightingShader>();
+        std::shared_ptr<DDGILightingShader> lightingShader = std::make_shared<DDGILightingShader>();
+
+        auto probeBuffer = m_volume->GetProbeBuffer();
+        std::vector<uint32_t> storageBufferSizes(1);
+        storageBufferSizes[0] = probeBuffer.GetSize();
+        lightingShader->probeBuffer = probeBuffer;
+
         std::vector<std::vector<VkImageView>> gbufferViews(6);
         for (auto i = 0; i < 4; i++) {
             gbufferViews[i].resize(1);
@@ -849,7 +847,7 @@ void DDGIApplication::createLightingPass()
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
 
-        std::vector<uint32_t> storageBufferSizes(0);
+        //std::vector<uint32_t> storageBufferSizes(0);
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_lightingPass, lightingShader,
             storageBufferSizes, gbufferViews, storageTextureViews, samplers, accelerationStructures);
@@ -913,10 +911,15 @@ void DDGIApplication::createProbeBlendingRadiancePass()
 {
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
-    std::shared_ptr<ComputeShaderModule> probeBlendingRadianceShader = std::make_shared<ProbeBlendRadianceShader>();
+    std::shared_ptr<ProbeBlendRadianceShader> probeBlendingRadianceShader = std::make_shared<ProbeBlendRadianceShader>();
     m_probeBlendingRadiancePass = std::make_shared<ComputePass>(device);
 
-    std::vector<uint32_t> storageBufferSizes(0);
+    auto probeBuffer = m_volume->GetProbeBuffer();
+    std::vector<uint32_t> storageBufferSizes(1);
+    storageBufferSizes[0] = probeBuffer.GetSize();
+    probeBlendingRadianceShader->probeBuffer = probeBuffer;
+
+    //std::vector<uint32_t> storageBufferSizes(0);
 
     std::vector<VkSampler> samplers(1, m_linearSamplerWithAnisotropy.GetSampler());
 
@@ -973,7 +976,13 @@ void DDGIApplication::createProbeVisulizePass()
 
         m_probeVisulizePass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> visulizeShader = std::make_shared<DDGIProbeVisulizeShader>();
+        std::shared_ptr<DDGIProbeVisulizeShader> visulizeShader = std::make_shared<DDGIProbeVisulizeShader>();
+        
+        auto modelBuffer = m_volume->GetModelBuffer();
+        std::vector<uint32_t> storageBufferSizes(1);
+        storageBufferSizes[0] = modelBuffer.GetSize();
+        visulizeShader->modelBuffer = modelBuffer;
+        
         std::vector<std::vector<VkImageView>> views(1);
         views[0] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
 
@@ -984,13 +993,14 @@ void DDGIApplication::createProbeVisulizePass()
 
         std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
 
-        std::vector<uint32_t> storageBufferSizes(0);
+        //std::vector<uint32_t> storageBufferSizes(0);
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_probeVisulizePass, visulizeShader,
             storageBufferSizes, views, storageTextureViews, samplers, accelerationStructures);
 
 
-        visulizeShader->SetUBO(0, &m_ProbeVisulizeShaderUniformBuffer0);
+        //visulizeShader->SetUBO(0, &m_ProbeVisulizeShaderUniformBuffer0);
+        visulizeShader->SetUBO(1, &m_uniformBuffer1);
     }
 }
 

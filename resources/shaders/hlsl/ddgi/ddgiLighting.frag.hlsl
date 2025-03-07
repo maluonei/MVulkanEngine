@@ -7,11 +7,6 @@ struct UniformBuffer0
 
     float3 cameraPos;
     int    lightNum;
-
-    float3 probePos0;
-    int    padding0;
-    float3 probePos1;
-    int    padding1;
 };
 
 
@@ -27,15 +22,16 @@ cbuffer ub1 : register(b1)
     UniformBuffer1 ubo1;
 };
 
-[[vk::binding(2, 0)]]Texture2D<float4>   gBufferNormal : register(t0);
-[[vk::binding(3, 0)]]Texture2D<float4>   gBufferPosition : register(t1);
-[[vk::binding(4, 0)]]Texture2D<float4>   gAlbedo : register(t2);
-[[vk::binding(5, 0)]]Texture2D<float4>   gMetallicAndRoughness : register(t3);
-[[vk::binding(6, 0)]]Texture2D<float4>   VolumeProbeDatasRadiance  : register(t4);   //[512, 64]
-[[vk::binding(7, 0)]]Texture2D<float4>   VolumeProbeDatasDepth  : register(t5);   //[2048, 256]
-[[vk::binding(8, 0)]]SamplerState        linearSampler : register(s0);
+[[vk::binding(2, 0)]]StructuredBuffer<Probe> probes : register(t7);
+[[vk::binding(3, 0)]]Texture2D<float4>   gBufferNormal : register(t0);
+[[vk::binding(4, 0)]]Texture2D<float4>   gBufferPosition : register(t1);
+[[vk::binding(5, 0)]]Texture2D<float4>   gAlbedo : register(t2);
+[[vk::binding(6, 0)]]Texture2D<float4>   gMetallicAndRoughness : register(t3);
+[[vk::binding(7, 0)]]Texture2D<float4>   VolumeProbeDatasRadiance  : register(t4);   //[512, 64]
+[[vk::binding(8, 0)]]Texture2D<float4>   VolumeProbeDatasDepth  : register(t5);   //[2048, 256]
+[[vk::binding(9, 0)]]SamplerState        linearSampler : register(s0);
 
-[[vk::binding(9, 0)]]RaytracingAccelerationStructure Tlas : register(t6);
+[[vk::binding(10, 0)]]RaytracingAccelerationStructure Tlas : register(t6);
 
  
 struct PSInput
@@ -111,6 +107,7 @@ PSOutput main(PSInput input)
                    
     IndirectLightingOutput indirectLight = CalculateIndirectLighting(             
         ubo1,   
+        probes,
         VolumeProbeDatasRadiance,     
         VolumeProbeDatasDepth,       
         linearSampler,       

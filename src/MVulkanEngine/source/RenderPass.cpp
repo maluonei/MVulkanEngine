@@ -392,7 +392,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
                 BufferCreateInfo info;
                 info.arrayLength = bindings[binding].binding.descriptorCount;
                 //info.size = bindings[binding].size;
-                info.size = storageBufferSizes[binding - m_cbvCount];
+                info.size = storageBufferSizes[bindings[binding].binding.binding - m_cbvCount];
                 buffer.Create(m_device, info);
 
                 m_storageBuffer[bindings[binding].binding.binding - m_cbvCount] = buffer;

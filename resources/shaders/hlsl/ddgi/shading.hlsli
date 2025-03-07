@@ -58,7 +58,7 @@ float3 BRDF(float3 albedo, float3 lightColor, float3 L, float3 V, float3 N, floa
 		// F = Fresnel factor (Reflectance depending on angle of incidence)
         float3 F = F_Schlick(dotNV, metallic);
 
-        float3 spec = D * F * G / ((4.0 * dotNL * dotNV) + 0.0001);
+        float3 spec = albedo * D * F * G / ((4.0 * dotNL * dotNV) + 0.0001);
         float3 diff = (1.f - F) * (1.f - metallic) * albedo / PI;
 
         color += (spec + diff) * dotNL * lightColor;

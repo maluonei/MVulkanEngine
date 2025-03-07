@@ -10,6 +10,7 @@
 #include "Shaders/ShaderModule.hpp"
 #include "ddgiShader.hpp"
 
+
 class DDGIVolume;
 
 const uint16_t WIDTH = 1280;

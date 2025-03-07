@@ -3,14 +3,36 @@
 
 #include "Shaders/ShaderModule.hpp"
 
-struct Probe {
-	glm::vec3 position;
-	int    padding0;
+//struct Probe {
+//	glm::vec3 position;
+//	int    padding0;
+//};
+
+struct ProbeData {
+	glm::vec3   position;
+	int			padding0;
+};
+
+struct ProbeBuffer {
+	std::vector<ProbeData> probes;
+
+	inline int GetSize() const { return probes.size() * sizeof(ProbeData); }
+};
+
+struct Model {
+	glm::mat4 Model;
+};
+
+
+struct ModelBuffer {
+	std::vector<Model> models;
+
+	inline int GetSize() const { return models.size() * sizeof(Model); }
 };
 
 struct UniformBuffer1
 {
-	Probe		probes[2040];
+	//Probe		probes[2040];
 	glm::ivec3	probeDim;
 	int			raysPerProbe;
 
@@ -91,6 +113,8 @@ public:
 			return uvBuffer.GetSize();
 		case 7:
 			return instanceOffsetBuffer.GetSize();
+		case 8:
+			return probeBuffer.GetSize();
 		}
 	}
 
@@ -126,6 +150,8 @@ public:
 			return (void*)uvBuffer.uv.data();
 		case 7:
 			return (void*)instanceOffsetBuffer.geometryInfos.data();
+		case 8:
+			return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -193,6 +219,7 @@ public:
 	NormalBuffer   normalBuffer;
 	UVBuffer       uvBuffer;
 	InstanceOffset instanceOffsetBuffer;
+	ProbeBuffer	   probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -213,6 +240,8 @@ public:
 			return sizeof(UniformBuffer0);
 		case 1:
 			return sizeof(UniformBuffer1);
+		case 2:
+			return probeBuffer.GetSize();
 		}
 	}
 
@@ -233,6 +262,8 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
+		case 2:
+			return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -243,6 +274,8 @@ public:
 		int padding1;
 		int padding2;
 	};
+
+	ProbeBuffer probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -261,6 +294,8 @@ public:
 			return sizeof(DDGILightingShader::UniformBuffer0);
 		case 1:
 			return sizeof(UniformBuffer1);
+		case 2:
+			return sizeof(probeBuffer.GetSize());
 		}
 	}
 
@@ -281,6 +316,8 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
+		case 2:
+			return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -291,6 +328,8 @@ public:
 		glm::vec3 cameraPos;
 		int lightNum;
 	};
+
+	ProbeBuffer	   probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -317,7 +356,9 @@ public:
 		case 0:
 			return sizeof(DDGIProbeVisulizeShader::UniformBuffer0);
 		case 1:
-			return sizeof(DDGIProbeVisulizeShader::UniformBuffer1);
+			return sizeof(UniformBuffer1);
+		case 2:
+			return modelBuffer.GetSize();
 		}
 	}
 
@@ -327,7 +368,7 @@ public:
 			ubo0 = *reinterpret_cast<DDGIProbeVisulizeShader::UniformBuffer0*>(data);
 			return;
 		case 1:
-			ubo1 = *reinterpret_cast<DDGIProbeVisulizeShader::UniformBuffer1*>(data);
+			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
 			return;
 		}
 	}
@@ -338,26 +379,23 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
+		case 2:
+			return (void*)modelBuffer.models.data();
 		}
 	}
 
 public:
-	struct ModelBuffer {
-		glm::mat4 Model;
-	};
-
 	struct VPBuffer {
 		glm::mat4 View;
 		glm::mat4 Projection;
 	};
 
 	struct UniformBuffer0 {
-		ModelBuffer models[4096];
-	};
-
-	struct UniformBuffer1 {
 		VPBuffer vp;
 	};
+
+public:
+	ModelBuffer		modelBuffer;
 
 private:
 	UniformBuffer0 ubo0;
