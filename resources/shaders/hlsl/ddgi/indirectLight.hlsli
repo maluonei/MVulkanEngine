@@ -82,7 +82,7 @@ IndirectLightingOutput CalculateIndirectLighting(
     //int3   baseProbeCoords = DDGIGetBaseProbeGridCoords(biasedWorldPosition, volume);
 
     float3 probeOffset = saturate((biasedPos - probePos0) / (probePos1 - probePos0));
-    float3 probeOffsetinVolumn = float3(probeOffset * 7);
+    float3 probeOffsetinVolumn = float3(probeOffset * float3(ubo1.probeDim - 1.f));
     int3   probeOffsetBase = int3(probeOffsetinVolumn);
     int3   baseProbeCoords = int3(probeOffsetBase);
 

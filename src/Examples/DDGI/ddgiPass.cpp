@@ -569,7 +569,7 @@ void DDGIApplication::initDDGIVolumn()
 {
     //glm::vec3 startPosition = glm::vec3(-11.f, 0.5f, -4.5f);
     //glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
-    glm::vec3 startPosition = glm::vec3(-11.7112f, 0.178682f, -5.10776f);
+    glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
     glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
     glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
     //glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
