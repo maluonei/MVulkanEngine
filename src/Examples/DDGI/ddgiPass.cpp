@@ -157,14 +157,12 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         m_probeVisulizePass->GetShader()->SetUBO(0, &ubo0);
     }
-
-    //spdlog::info("1");
-
-    {
-        graphicsList.Reset();
-        graphicsList.Begin();
-
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    
+    graphicsList.Reset();
+    graphicsList.Begin();
+    
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    if (m_sceneChange) {
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeTracingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
         graphicsList.End();
 
@@ -175,11 +173,7 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
         graphicsQueue.WaitForQueueComplete();
-    }
 
-    //spdlog::info("2");
-
-    {
         changeTextureLayoutToRWTexture();
 
         computeList.Reset();
@@ -191,7 +185,7 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         computeList.End();
 
-        VkSubmitInfo submitInfo{};
+        //VkSubmitInfo submitInfo{};
         submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
@@ -199,23 +193,21 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         computeQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
         computeQueue.WaitForQueueComplete();
-    }
 
-    //spdlog::info("3");
-
-    {
         changeRWTextureLayoutToTexture();
 
         graphicsList.Reset();
         graphicsList.Begin();
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_rtaoPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-
-        graphicsList.End();
-        Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+        m_sceneChange = false;
     }
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_rtaoPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    
+    graphicsList.End();
+    Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+  
 
 }
 
@@ -579,39 +571,12 @@ void DDGIApplication::initDDGIVolumn()
     {
         //UniformBuffer1 ubo1{};
         glm::ivec3 probeDim = m_volume->GetProbeDim();
-        //int probeDimYZ = probeDim.y * probeDim.z;
-        //for (int x = 0; x < probeDim.x; x++) {
-        //    for (int y = 0; y < probeDim.y; y++) {
-        //        for (int z = 0; z < probeDim.z; z++) {
-        //            int index = x * probeDimYZ + y * probeDim.z + z;
-        //            m_uniformBuffer1.probes[index].position = m_volume->GetProbePosition(x, y, z);
-        //        }
-        //    }
-        //}
 
         m_uniformBuffer1.probeDim = m_volume->GetProbeDim();
         m_uniformBuffer1.raysPerProbe = m_raysPerProbe;
 
         m_uniformBuffer1.probePos0 = m_volume->GetProbePosition(0, 0, 0);
         m_uniformBuffer1.probePos1 = m_volume->GetProbePosition(probeDim.x-1, probeDim.y-1, probeDim.z-1);
-    
-
-        //glm::ivec3 probeDim = m_volume->GetProbeDim();
-        //int probeDimYZ = probeDim.y * probeDim.z;
-        //for (int x = 0; x < probeDim.x; x++) {
-        //    for (int y = 0; y < probeDim.y; y++) {
-        //        for (int z = 0; z < probeDim.z; z++) {
-        //            int index = x * probeDimYZ + 
-        //                
-        //                y * probeDim.z + z;
-        //
-        //            glm::mat4 translation = glm::translate(glm::mat4(1.f), m_volume->GetProbePosition(x, y, z));
-        //            glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(0.12f));
-        //            m_ProbeVisulizeShaderUniformBuffer0.models[index].Model = translation * scale;
-        //        }
-        //    }
-        //}
-
     }
 }
 

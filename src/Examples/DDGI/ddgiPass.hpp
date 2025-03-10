@@ -81,6 +81,7 @@ private:
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
 	int							m_raysPerProbe = 64;
+	bool						m_sceneChange = true;
 
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;

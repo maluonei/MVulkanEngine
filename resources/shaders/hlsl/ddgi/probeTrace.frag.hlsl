@@ -55,7 +55,7 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
 [[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] StructuredBuffer<Probe> probes : register(t5);
+[[vk::binding(8, 0)]] RWStructuredBuffer<Probe> probes : register(u0);
 [[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t6);
 [[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1031);   //[512, 64]
 [[vk::binding(11, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1032);   //[2048, 256]
@@ -291,7 +291,7 @@ PSOutput main(PSInput input)
     RayDesc ray;
     ray.TMin = 0.f;
     ray.TMax = 10000.f;
-    ray.Origin = probe.position;
+    ray.Origin = probe.position; 
     //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
     ray.Direction = SphericalFibonacci(rayIndex, ubo1.raysPerProbe);
 
@@ -301,19 +301,21 @@ PSOutput main(PSInput input)
         output.albedo = float4(pathState.albedo, 1.f);
     } 
     else{ 
-        output.position = float4(ray.Origin + ray.Direction * 10000.f, 1.f);
+        output.position = float4(ray.Origin + ray.Direction * 10000.f, 0.f);
         output.normal = float4(0.f, 0.f, 0.f, 0.f);
         output.albedo = float4(0.f, 0.f, 0.f, 0.f);
+    }
+
+    if(pathState.outside==false && rayIndex==0){
+        probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
     }
     
    
     float3 diffuse = float3(0.f, 0.f, 0.f);
     if(output.normal.w > 0.f){
         for(int i=0;i<ubo2.lightNum;i++){
-            //if(output.normal.w > 0.f && pathState.outside){
-            //if(output.normal.w > 0.f){
             RayDesc _ray; 
-            _ray.Origin = output.position + output.normal * (1e-5);
+            _ray.Origin = output.position.rgb + output.normal.rgb * (1e-5);
             _ray.Direction = normalize(-ubo2.lights[i].direction); 
             _ray.TMin = 0.0f;   
             _ray.TMax = 10000.f;     
@@ -322,14 +324,8 @@ PSOutput main(PSInput input)
             float3 L = -ubo2.lights[i].direction;
             float3 V = -ray.Direction;
             float3 N = output.normal;
-            //output.L = float4(L, 1.f);
-            //output.V = float4(V, 1.f);
-            //output.N = float4(N, 1.f);
-            diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
-                //diffuse = diffuse * (1e-20) + (1-hasHit);
-                //diffuse = diffuse * (1e-20) + BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
 
-            //}  
+            diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
         }         
 
         //if(output.normal.w > 0.f && pathState.outside){ 
@@ -347,7 +343,7 @@ PSOutput main(PSInput input)
         diffuse += indirectLight.radiance * output.albedo / PI;
         //}
     }
-    
+
     output.radiance = float4(diffuse, pathState.t);
 
     return output;

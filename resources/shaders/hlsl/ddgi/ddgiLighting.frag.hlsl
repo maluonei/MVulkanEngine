@@ -98,9 +98,6 @@ PSOutput main(PSInput input)
         float3 R = reflect(-V, fragNormal);
 
         float3 lightColor = ubo0.lights[i].color * ubo0.lights[i].intensity;
-        //float3 L = -ubo2.lights[i].direction;
-        //float3 V = -ray.Direction;
-        //float3 N = output.normal;
         directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, lightColor, L, V, fragNormal, metallic, roughness);
         //directLight += (1.f - hasHit) * BRDF(fragAlbedo.rgb, ubo0.lights[i].intensity * ubo0.lights[i].color, L, V, fragNormal, metallic, roughness);
     }      
@@ -118,10 +115,7 @@ PSOutput main(PSInput input)
 
     output.directLight = float4(directLight, 1.f);
     output.indirectLight = float4(indirectLight.radiance * fragAlbedo.rgb / PI, 1.f); 
-    //output.radianceProbeUV = float4(indirectLight.radianceProbeUV, 1.f);
-    //output.depthProbeUV = float4(indirectLight.depthProbeUV, 1.f);
-    //output.probeRadiance = float4(indirectLight.probeRadiance, 1.f);
-                   
+
     return output;   
 }  
    

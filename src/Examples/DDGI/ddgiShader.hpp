@@ -10,7 +10,7 @@
 
 struct ProbeData {
 	glm::vec3   position;
-	int			padding0;
+	int			probeState = 0;
 };
 
 struct ProbeBuffer {

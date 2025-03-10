@@ -34,7 +34,7 @@ PSOutput main(PSInput input)
     int2 probeBaseIndex = int2(probeIndex / ubo1.probeDim.z, probeIndex % ubo1.probeDim.z);
 
     float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(input.normal);
-    float2 baseUV = probeBaseIndex * float2(RadianceProbeResolution, RadianceProbeResolution) + float2(RadianceProbeResolution/2, RadianceProbeResolution/2);
+    float2 baseUV = probeBaseIndex * float2(RadianceProbeResolution, RadianceProbeResolution) + float2(RadianceProbeResolution*0.5f, RadianceProbeResolution*0.5f);
     float2 octahedralUVOfNormalTexture_Int = float2(baseUV) + octahedralUVOfNormal * 0.5f * float2((RadianceProbeResolution-2.f), (RadianceProbeResolution-2.f));
     float2 octahedralUVOfNormalTexture_Float = float2(octahedralUVOfNormalTexture_Int) * radianceProbeResolutionInv;
                 

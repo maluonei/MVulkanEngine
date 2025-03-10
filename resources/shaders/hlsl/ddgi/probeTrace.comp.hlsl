@@ -264,7 +264,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     int rayIndex = DispatchThreadID.x;
     int probeIndex = DispatchThreadID.y;
     Probe probe = ubo1.probes[probeIndex];
-
+ 
     PSOutput output;
     output.albedo.w = 0.f;
     
