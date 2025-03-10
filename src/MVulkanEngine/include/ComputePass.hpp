@@ -14,30 +14,70 @@ public:
 	ComputePass(MVulkanDevice device);
 	void Clean();
 
-	void Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+	void Create(std::shared_ptr<ComputeShaderModule> shader, 
+		MVulkanDescriptorSetAllocator& allocator, 
+		std::vector<uint32_t> storageBufferSizes, 
+		std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 	
-	void Create(std::shared_ptr<ComputeShaderModule> shader, MVulkanDescriptorSetAllocator& allocator,
+	void Create(std::shared_ptr<ComputeShaderModule> shader, 
+		MVulkanDescriptorSetAllocator& allocator,
 		std::vector<uint32_t> storageBufferSizes,
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews, 
-		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
+	void Create(std::shared_ptr<ComputeShaderModule> shader,
+		MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> seperateImageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
 
 
 	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+		std::vector<uint32_t> storageBufferSizes, 
+		std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
 	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
 		std::vector<uint32_t> storageBufferSizes, 
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
+	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> seperateImageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
 	void UpdateDescriptorSetWrite(
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
 	void UpdateDescriptorSetWrite(
-		std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+		std::vector<std::vector<VkImageView>> seperateImageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
+	//void UpdateDescriptorSetWrite(
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> seperateImageViews, 
+	//	std::vector<std::vector<VkImageView>> storageImageViews, 
+	//	std::vector<VkSampler> samplers, 
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
 	void RecreateStorageImages(std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos);
 	std::shared_ptr<ComputeShaderModule> GetShader() const { return m_shader; }

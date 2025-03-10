@@ -2,21 +2,21 @@
 #include "Scene/Scene.hpp"
 #include <spdlog/spdlog.h>
 
-MVulkanShader::MVulkanShader(bool compileEveryTime)
-    :m_compileEveryTime(compileEveryTime)
+MVulkanShader::MVulkanShader(std::string entryPoint, bool compileEveryTime)
+    :m_compileEveryTime(compileEveryTime), m_entryName(entryPoint)
 {
 
 }
 
-MVulkanShader::MVulkanShader(std::string path, ShaderStageFlagBits stage, bool compileEveryTime)
-    :m_compileEveryTime(compileEveryTime)
+MVulkanShader::MVulkanShader(std::string path, ShaderStageFlagBits stage, std::string entryPoint, bool compileEveryTime)
+    :m_compileEveryTime(compileEveryTime), m_entryName(entryPoint)
 {
 	Init(path, stage);
 }
 
 void MVulkanShader::Init(std::string path, ShaderStageFlagBits stage)
 {
-	m_shader = Shader(path, stage, m_compileEveryTime);
+	m_shader = Shader(path, stage, m_entryName, m_compileEveryTime);
 }
 
 void MVulkanShader::Create(VkDevice device)

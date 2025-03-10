@@ -6,8 +6,9 @@ cbuffer ubo1 : register(b1)
     UniformBuffer1 ubo1;
 };
 
-[[vk::binding(3, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t0); 
-[[vk::binding(4, 0)]] SamplerState linearSampler : register(s0);
+[[vk::binding(3, 0)]] StructuredBuffer<Probe> probes : register(t0);
+[[vk::binding(4, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t0); 
+[[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
 struct PSInput
 {
@@ -27,6 +28,11 @@ PSOutput main(PSInput input)
 {
     PSOutput output;
 
+    if(probes[input.instanceID].probeState == PROBE_STATE_INACTIVE){
+        output.color = float4(0.f, 0.f, 0.f, 0.5f);
+        return output;
+    }   
+
     float2 radianceProbeResolutionInv = 1.f / float2(RadianceProbeResolution * ubo1.probeDim.x * ubo1.probeDim.y, RadianceProbeResolution * ubo1.probeDim.z);
 
     int probeIndex = input.instanceID;
@@ -40,8 +46,8 @@ PSOutput main(PSInput input)
                 
     float3 probeRadiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
     //probeRadiance = (1e-20) * probeRadiance + float3((octahedralUV + float2(1.f, 1.f)) / 2.f, 0.f);
-
-    output.color = float4(probeRadiance, 0.5);
+    
+    output.color = float4(probeRadiance, 0.5f);
     //output.color = float4(input.normal + 0.000000001f*probeRadiance, 0.5);
     return output;
 }

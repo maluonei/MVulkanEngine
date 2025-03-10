@@ -48,14 +48,27 @@ public:
 	void Create(std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
 		MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+		std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void Create(std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator, std::vector<uint32_t> storageBufferSizes,
-		std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+		MVulkanDescriptorSetAllocator& allocator, 
+		std::vector<uint32_t> storageBufferSizes,
+		std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
+	void Create(std::shared_ptr<ShaderModule> shader,
+		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+		MVulkanDescriptorSetAllocator& allocator, 
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void Clean();
 
@@ -89,13 +102,24 @@ public:
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 private:
 	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+		std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<VkSampler> samplers, 
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
 	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
 		std::vector<uint32_t> storageBufferSizes,
-		std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers,
+		std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews, 
+		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+
+	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList);
 	void SetShader(std::shared_ptr<ShaderModule> shader);

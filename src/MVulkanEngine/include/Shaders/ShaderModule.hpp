@@ -10,7 +10,12 @@
 
 class ShaderModule{
 public:
-	ShaderModule(const std::string& vertPath, const std::string& fragPath, bool compileEveryTime = false);
+	ShaderModule(
+		const std::string& vertPath, 
+		const std::string& fragPath, 
+		std::string vertEntry = "main",
+		std::string fragEntry = "main",
+		bool compileEveryTime = false);
 	void Create(VkDevice device);
 	void Clean();
 
@@ -20,6 +25,8 @@ public:
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+	const inline std::string GetVertEntryPoint() { return m_vertEntry; }
+	const inline std::string GetFragEntryPoint() { return m_fragEntry; }
 
 protected:
 	bool m_compileEveryTime = false;
@@ -32,6 +39,9 @@ private:
 
 	std::string		m_vertPath;
 	std::string		m_fragPath;
+
+	std::string		m_vertEntry = "main";
+	std::string		m_fragEntry = "main";
 };
 
 class TestShader : public ShaderModule {
@@ -327,7 +337,10 @@ public:
 
 class ComputeShaderModule {
 public:
-	ComputeShaderModule(const std::string& compPath, bool compileEveryTime = false);
+	ComputeShaderModule(
+		const std::string& compPath, 
+		std::string compEntry = "main",
+		bool compileEveryTime = false);
 	void Create(VkDevice device);
 	void Clean();
 
@@ -336,12 +349,14 @@ public:
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+	const inline std::string GetEntryPoint() { return m_entryPoint; }
 
 protected:
 	void load();
 
 	MVulkanShader	m_compShader;
 	bool			m_compileEveryTime = false;
+	std::string		m_entryPoint = "main";
 
 	std::string		m_compPath;
 };

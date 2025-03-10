@@ -11,8 +11,8 @@
 
 class MVulkanShader {
 public:
-	MVulkanShader(bool compileEveryTime = false);
-	MVulkanShader(std::string path, ShaderStageFlagBits stage, bool compileEveryTime = false);
+	MVulkanShader(std::string entryPoint = "main", bool compileEveryTime = false);
+	MVulkanShader(std::string path, ShaderStageFlagBits stage, std::string entryPoint = "main", bool compileEveryTime = false);
 
 	void Init(std::string path, ShaderStageFlagBits stage);
 
@@ -24,6 +24,7 @@ public:
 private:
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
+	std::string			m_entryName = "main";
 	bool				m_compileEveryTime;
 	VkDevice			m_device;
 	Shader				m_shader;

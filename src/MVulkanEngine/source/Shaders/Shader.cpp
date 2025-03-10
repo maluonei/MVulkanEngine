@@ -4,16 +4,17 @@
 
 namespace fs = std::filesystem;
 
-Shader::Shader()
+Shader::Shader(std::string entryPoint):m_entryPoint(entryPoint)
 {
 }
 
 
-Shader::Shader(std::string _path, ShaderStageFlagBits _stage, bool compileEveryTime)
+Shader::Shader(std::string _path, ShaderStageFlagBits _stage, std::string entryPoint, bool compileEveryTime)
+	:m_entryPoint(entryPoint), m_shaderPath(_path), m_shaderStage(_stage), m_compileEverytime(compileEveryTime)
 {
-	m_shaderPath = _path;
-	m_shaderStage = _stage;
-	m_compileEverytime = compileEveryTime;
+	//m_shaderPath = _path;
+	//m_shaderStage = _stage;
+	//m_compileEverytime = compileEveryTime;
 }
 
 void Shader::Compile() {
@@ -127,7 +128,7 @@ void Shader::compile(std::string shaderPath)
 			//}
 
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -T" + phase + " -E main -spirv -fspv-preserve-bindings -fspv-target-env=vulkan1.3 -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
+			std::string command = compilerPath.string() + " -T" + phase + " -E " + m_entryPoint + " -spirv -fspv-preserve-bindings -fspv-target-env=vulkan1.3 -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
 			//std::string command = compilerPath.string() + " -V --target-env vulkan1.3 -D -e main -Od -S " + phase + " " + hlslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
 
 			spdlog::info("comnmand: {0}", command);

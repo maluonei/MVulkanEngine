@@ -88,7 +88,7 @@ bool CalculateRadiance(
 
             float cosTheta = max(0.f, dot(sphereDirection, direction));
             //if(cosTheta > 0.f){
-                float irradianceWeight = cosTheta;
+                float irradianceWeight = cosTheta * ubo0.sharpness;
                 //irradiance += targetRadiance * irradianceWeight;
                 irradiance += radiance * irradianceWeight;
                 totalIradianceWeights += irradianceWeight;
@@ -172,7 +172,6 @@ bool CalculateDepth(
     return false;
 }
 
-
 void UpdateBorderPixelDepth(
     uint2 dispatchThreadID, 
     uint probeResolution){
@@ -247,27 +246,65 @@ void LoadSharedMemory(int probeIndex, uint GroupIndex, int pixelsPerProbe){
 }
 
 //[64, 8]
-[numthreads(16, 16, 1)] 
-void main(  uint3 DispatchThreadID : SV_DispatchThreadID,
+[numthreads(8, 8, 1)] 
+void main_radiance(  uint3 DispatchThreadID : SV_DispatchThreadID,
             uint  GroupIndex       : SV_GroupIndex)
 {
     int probeIndex = CalculateProbeIndex(DispatchThreadID, DepthProbeResolution, ubo1.probeDim);
-    if(probes[probeIndex].probeState == PROBE_STATE_INACTIVE) return;
+    //if(probes[probeIndex].probeState == PROBE_STATE_INACTIVE) return;
+
+    LoadSharedMemory(probeIndex, GroupIndex, 8*8);
+    GroupMemoryBarrierWithGroupSync();
+    
+    //DispatchThreadID:[2048, 256, 1]
+    //DispatchThreadID:[512, 64, 1]
+    uint2 radianceProbeResolution = uint2(RadianceProbeResolution, RadianceProbeResolution);
+    //uint2 depthProbeResolution = uint2(DepthProbeResolution, DepthProbeResolution);
+
+    //bool calculateRadiance = false;
+    bool radianceIsCorner = false;
+    //if(DispatchThreadID.x%2==0 && DispatchThreadID.y%2==0){
+        //calculateRadiance = true;
+    radianceIsCorner = !(CalculateRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution, ubo1.probeDim));
+    //}
+
+    //bool depthIsCorner = !(CalculateDepth(DispatchThreadID.xy, depthProbeResolution, ubo1.probeDim));
+
+    //return;
+
+    GroupMemoryBarrierWithGroupSync();
+
+    //if(depthIsCorner){
+    //    UpdateBorderPixelDepth(DispatchThreadID.xy, depthProbeResolution);
+    //}
+    //if(calculateRadiance){
+    if(radianceIsCorner){
+        UpdateBorderPixelRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution);
+    }
+    //}
+}
+
+[numthreads(16, 16, 1)] 
+void main_depth(  uint3 DispatchThreadID : SV_DispatchThreadID,
+            uint  GroupIndex       : SV_GroupIndex)
+{
+    int probeIndex = CalculateProbeIndex(DispatchThreadID, DepthProbeResolution, ubo1.probeDim);
+    //if(probes[probeIndex].probeState == PROBE_STATE_INACTIVE) return;
 
     LoadSharedMemory(probeIndex, GroupIndex, 16*16);
     GroupMemoryBarrierWithGroupSync();
     
     //DispatchThreadID:[2048, 256, 1]
     //DispatchThreadID:[512, 64, 1]
-    uint2 radianceProbeResolution = uint2(RadianceProbeResolution, RadianceProbeResolution);
+    //uint2 radianceProbeResolution = uint2(RadianceProbeResolution, RadianceProbeResolution);
     uint2 depthProbeResolution = uint2(DepthProbeResolution, DepthProbeResolution);
 
-    bool calculateRadiance = false;
-    bool radianceIsCorner = false;
-    if(DispatchThreadID.x%2==0 && DispatchThreadID.y%2==0){
-        calculateRadiance = true;
-        radianceIsCorner = !(CalculateRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution, ubo1.probeDim));
-    }
+    //bool calculateRadiance = false;
+    //bool radianceIsCorner = false;
+    //if(DispatchThreadID.x%2==0 && DispatchThreadID.y%2==0){
+    //    calculateRadiance = true;
+    //    radianceIsCorner = !(CalculateRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution, ubo1.probeDim));
+    //}
 
     bool depthIsCorner = !(CalculateDepth(DispatchThreadID.xy, depthProbeResolution, ubo1.probeDim));
 
@@ -278,9 +315,9 @@ void main(  uint3 DispatchThreadID : SV_DispatchThreadID,
     if(depthIsCorner){
         UpdateBorderPixelDepth(DispatchThreadID.xy, depthProbeResolution);
     }
-    if(calculateRadiance){
-        if(radianceIsCorner){
-            UpdateBorderPixelRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution);
-        }
-    }
+    //if(calculateRadiance){
+    //    if(radianceIsCorner){
+    //        UpdateBorderPixelRadiance(DispatchThreadID.xy/int2(2,2), radianceProbeResolution);
+    //    }
+    //}
 }

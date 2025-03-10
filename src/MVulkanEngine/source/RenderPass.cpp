@@ -34,6 +34,22 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
     CreatePipeline(allocator, storageBufferSizes, imageViews, storageImageViews, samplers, accelerationStructure);
 }
 
+void RenderPass::Create(std::shared_ptr<ShaderModule> shader,
+    MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, 
+    MGraphicsCommandList& commandList,
+    MVulkanDescriptorSetAllocator& allocator, 
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> imageViews, 
+    std::vector<std::vector<VkImageView>> storageImageViews, 
+    std::vector<VkSampler> samplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
+{
+    SetShader(shader);
+    CreateRenderPass();
+    CreateFrameBuffers(swapChain, commandQueue, commandList);
+    CreatePipeline(allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructure);
+}
+
 void RenderPass::Clean()
 {
     for (auto i = 0; i < m_uniformBuffers.size(); i++) {
@@ -296,7 +312,8 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
 
     m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
-        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size());
+        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+        m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
 
     m_shader->Clean();
 }
@@ -411,7 +428,129 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
 
     m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
         m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
-        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size());
+        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+        m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
+
+    m_shader->Clean();
+}
+
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> imageViews,
+    std::vector<std::vector<VkImageView>> storageImageViews,
+    std::vector<VkSampler> samplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructure) 
+{
+    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
+    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
+    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+
+    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
+    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
+    bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+
+    m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
+    std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
+
+    m_descriptorSets.resize(layouts.size());
+    for (auto i = 0; i < layouts.size(); i++) {
+        m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
+    }
+
+    m_cbvCount = 0;
+    m_separateSamplerCount = 0;
+    m_separateImageCount = 0;
+    m_combinedImageCount = 0;
+    m_asCount = 0;
+
+    for (auto binding = 0; binding < bindings.size(); binding++) {
+        switch (bindings[binding].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            m_cbvCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        {
+            m_storageBufferCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            m_combinedImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+        {
+            m_separateSamplerCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        {
+            m_separateImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        {
+            m_storageImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+        {
+            m_asCount++;
+            break;
+        }
+        }
+    }
+
+    m_uniformBuffers.resize(m_info.frambufferCount);
+    m_storageBuffer.resize(m_storageBufferCount);
+
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
+        m_uniformBuffers[i].resize(m_cbvCount);
+        for (auto binding = 0; binding < bindings.size(); binding++) {
+            switch (bindings[binding].binding.descriptorType) {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            {
+                MCBV buffer;
+                BufferCreateInfo info;
+                info.arrayLength = bindings[binding].binding.descriptorCount;
+                info.size = bindings[binding].size;
+                buffer.Create(m_device, info);
+
+                //m_uniformBuffers[i].push_back(buffer);
+                m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
+                break;
+            }
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            {
+                //StorageBuffer buffer;
+                //BufferCreateInfo info;
+                //info.arrayLength = bindings[binding].binding.descriptorCount;
+                ////info.size = bindings[binding].size;
+                //info.size = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
+                //buffer.Create(m_device, info);
+
+                m_storageBuffer[bindings[binding].binding.binding - m_cbvCount] = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
+                break;
+            }
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            {
+                //m_samplerTypes
+                break;
+            }
+            }
+        }
+    }
+
+    UpdateDescriptorSetWrite(imageViews, storageImageViews, samplers, accelerationStructure);
+
+    m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
+        m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
+        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+        m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
 
     m_shader->Clean();
 }

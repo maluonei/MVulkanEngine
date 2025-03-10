@@ -55,7 +55,7 @@ cbuffer ubo2 : register(b2)
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
 [[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] RWStructuredBuffer<Probe> probes : register(u0);
+[[vk::binding(8, 0)]] StructuredBuffer<Probe> probes : register(t5);
 [[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t6);
 [[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1031);   //[512, 64]
 [[vk::binding(11, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1032);   //[2048, 256]
@@ -306,9 +306,9 @@ PSOutput main(PSInput input)
         output.albedo = float4(0.f, 0.f, 0.f, 0.f);
     }
 
-    if(pathState.outside==false && rayIndex==0){
-        probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
-    }
+    //if(pathState.outside==false && rayIndex==0){
+    //    probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
+    //}
     
    
     float3 diffuse = float3(0.f, 0.f, 0.f);

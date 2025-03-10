@@ -8,6 +8,45 @@
 //	int    padding0;
 //};
 
+
+struct VertexBuffer {
+	std::vector<glm::vec3> position;
+
+	inline int GetSize() const { return position.size() * sizeof(glm::vec3); }
+};
+
+struct IndexBuffer {
+	std::vector<int> index;
+
+	inline int GetSize() const { return index.size() * sizeof(int); }
+};
+
+struct NormalBuffer {
+	std::vector < glm::vec3> normal;
+
+	inline int GetSize() const { return normal.size() * sizeof(glm::vec3); }
+};
+
+struct UVBuffer {
+	std::vector < glm::vec2> uv;
+
+	inline int GetSize() const { return uv.size() * sizeof(glm::vec2); }
+};
+
+struct GeometryInfo {
+	int vertexOffset;
+	int indexOffset;
+	int uvOffset;
+	int normalOffset;
+	int materialIdx;
+};
+
+struct InstanceOffset {
+	std::vector<GeometryInfo> geometryInfos;
+
+	inline int GetSize() const { return geometryInfos.size() * sizeof(GeometryInfo); }
+};
+
 struct ProbeData {
 	glm::vec3   position;
 	int			probeState = 0;
@@ -92,7 +131,12 @@ private:
 
 class ProbeTracingShader :public ShaderModule {
 public:
-	ProbeTracingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/probeTrace.frag.hlsl", m_compileEveryTime = true)
+	ProbeTracingShader() :ShaderModule(
+		"hlsl/ddgi/fullScreen.vert.hlsl", 
+		"hlsl/ddgi/probeTrace.frag.hlsl", 
+		"main",
+		"main",
+		m_compileEveryTime = true)
 	{}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
@@ -103,18 +147,18 @@ public:
 			return sizeof(UniformBuffer1);
 		case 2:
 			return sizeof(UniformBuffer2);
-		case 3:
-			return vertexBuffer.GetSize();;
-		case 4:
-			return indexBuffer.GetSize();
-		case 5:
-			return normalBuffer.GetSize();
-		case 6:
-			return uvBuffer.GetSize();
-		case 7:
-			return instanceOffsetBuffer.GetSize();
-		case 8:
-			return probeBuffer.GetSize();
+		//case 3:
+		//	return vertexBuffer.GetSize();;
+		//case 4:
+		//	return indexBuffer.GetSize();
+		//case 5:
+		//	return normalBuffer.GetSize();
+		//case 6:
+		//	return uvBuffer.GetSize();
+		//case 7:
+		//	return instanceOffsetBuffer.GetSize();
+		//case 8:
+		//	return probeBuffer.GetSize();
 		}
 	}
 
@@ -140,18 +184,18 @@ public:
 			return (void*)&ubo1;
 		case 2:
 			return (void*)&ubo2;
-		case 3:
-			return (void*)vertexBuffer.position.data();
-		case 4:
-			return (void*)indexBuffer.index.data();
-		case 5:
-			return (void*)normalBuffer.normal.data();
-		case 6:
-			return (void*)uvBuffer.uv.data();
-		case 7:
-			return (void*)instanceOffsetBuffer.geometryInfos.data();
-		case 8:
-			return (void*)probeBuffer.probes.data();
+		//case 3:
+		//	return (void*)vertexBuffer.position.data();
+		//case 4:
+		//	return (void*)indexBuffer.index.data();
+		//case 5:
+		//	return (void*)normalBuffer.normal.data();
+		//case 6:
+		//	return (void*)uvBuffer.uv.data();
+		//case 7:
+		//	return (void*)instanceOffsetBuffer.geometryInfos.data();
+		//case 8:
+		//	return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -175,51 +219,7 @@ public:
 		int padding1;
 		int padding2;
 	};
-
-	struct VertexBuffer {
-		std::vector<glm::vec3> position;
-
-		inline int GetSize() const {return position.size() * sizeof(glm::vec3);}
-	};
-
-	struct IndexBuffer {
-		std::vector<int> index;
-
-		inline int GetSize() const { return index.size() * sizeof(int); }
-	};
-
-	struct NormalBuffer {
-		std::vector < glm::vec3> normal;
-
-		inline int GetSize() const { return normal.size() * sizeof(glm::vec3); }
-	};
-
-	struct UVBuffer {
-		std::vector < glm::vec2> uv;
-
-		inline int GetSize() const { return uv.size() * sizeof(glm::vec2); }
-	};
-
-	struct GeometryInfo {
-		int vertexOffset;
-		int indexOffset;
-		int uvOffset;
-		int normalOffset;
-		int materialIdx;
-	};
-
-	struct InstanceOffset {
-		std::vector<GeometryInfo> geometryInfos;
-
-		inline int GetSize() const { return geometryInfos.size() * sizeof(GeometryInfo); }
-	};
-
-	VertexBuffer   vertexBuffer;
-	IndexBuffer    indexBuffer;
-	NormalBuffer   normalBuffer;
-	UVBuffer       uvBuffer;
-	InstanceOffset instanceOffsetBuffer;
-	ProbeBuffer	   probeBuffer;
+	//ProbeBuffer	   probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -228,9 +228,12 @@ private:
 };
 
 
-class ProbeBlendRadianceShader :public ComputeShaderModule {
+class ProbeBlendShader :public ComputeShaderModule {
 public:
-	ProbeBlendRadianceShader() :ComputeShaderModule("hlsl/ddgi/probeBlendRadiance.comp.hlsl", true)
+	ProbeBlendShader(std::string entry) :ComputeShaderModule(
+		"hlsl/ddgi/probeBlendRadiance.comp.hlsl", 
+		entry,
+		true)
 	{
 	}
 
@@ -240,15 +243,15 @@ public:
 			return sizeof(UniformBuffer0);
 		case 1:
 			return sizeof(UniformBuffer1);
-		case 2:
-			return probeBuffer.GetSize();
+		//case 2:
+		//	return probeBuffer.GetSize();
 		}
 	}
 
 	virtual void SetUBO(uint8_t binding, void* data) {
 		switch (binding) {
 		case 0:
-			ubo0 = *reinterpret_cast<ProbeBlendRadianceShader::UniformBuffer0*>(data);
+			ubo0 = *reinterpret_cast<ProbeBlendShader::UniformBuffer0*>(data);
 			return;
 		case 1:
 			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
@@ -262,8 +265,8 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
-		case 2:
-			return (void*)probeBuffer.probes.data();
+		//case 2:
+		//	return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -275,7 +278,7 @@ public:
 		int padding2;
 	};
 
-	ProbeBuffer probeBuffer;
+	//ProbeBuffer probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -284,7 +287,12 @@ private:
 
 class DDGILightingShader :public ShaderModule {
 public:
-	DDGILightingShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl", m_compileEveryTime = true)
+	DDGILightingShader() :ShaderModule(
+		"hlsl/ddgi/fullScreen.vert.hlsl", 
+		"hlsl/ddgi/ddgiLighting.frag.hlsl",
+		"main",
+		"main", 
+		m_compileEveryTime = true)
 	{
 	}
 
@@ -294,8 +302,8 @@ public:
 			return sizeof(DDGILightingShader::UniformBuffer0);
 		case 1:
 			return sizeof(UniformBuffer1);
-		case 2:
-			return sizeof(probeBuffer.GetSize());
+		//case 2:
+		//	return sizeof(probeBuffer.GetSize());
 		}
 	}
 
@@ -316,8 +324,8 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
-		case 2:
-			return (void*)probeBuffer.probes.data();
+		//case 2:
+		//	return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -329,7 +337,7 @@ public:
 		int lightNum;
 	};
 
-	ProbeBuffer	   probeBuffer;
+	//ProbeBuffer	   probeBuffer;
 
 private:
 	UniformBuffer0 ubo0;
@@ -347,7 +355,9 @@ public:
 
 class DDGIProbeVisulizeShader :public ShaderModule {
 public:
-	DDGIProbeVisulizeShader() :ShaderModule("hlsl/ddgi/probeVisulize.vert.hlsl", "hlsl/ddgi/probeVisulize.frag.hlsl")
+	DDGIProbeVisulizeShader() :ShaderModule(
+		"hlsl/ddgi/probeVisulize.vert.hlsl", 
+		"hlsl/ddgi/probeVisulize.frag.hlsl")
 	{
 	}
 
@@ -357,8 +367,10 @@ public:
 			return sizeof(DDGIProbeVisulizeShader::UniformBuffer0);
 		case 1:
 			return sizeof(UniformBuffer1);
-		case 2:
-			return modelBuffer.GetSize();
+		//case 2:
+		//	return modelBuffer.GetSize();
+		//case 3:
+		//	return probeBuffer.GetSize();
 		}
 	}
 
@@ -379,8 +391,10 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
-		case 2:
-			return (void*)modelBuffer.models.data();
+		//case 2:
+		//	return (void*)modelBuffer.models.data();
+		//case 3:
+		//	return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -395,11 +409,70 @@ public:
 	};
 
 public:
-	ModelBuffer		modelBuffer;
+	//ProbeBuffer		probeBuffer;
+	//ModelBuffer		modelBuffer;
 
 private:
 	UniformBuffer0 ubo0;
 	UniformBuffer1 ubo1;
 };
+
+class ProbeClassficationShader :public ComputeShaderModule {
+public:
+	ProbeClassficationShader() :ComputeShaderModule(
+		"hlsl/ddgi/probeClassfication.comp.hlsl", 
+		"main",
+		true)
+	{
+	}
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+		switch (binding) {
+		case 0:
+			return sizeof(UniformBuffer0);
+		case 1:
+			return sizeof(UniformBuffer1);
+		//case 2:
+		//	return probeBuffer.GetSize();
+		}
+	}
+
+	virtual void SetUBO(uint8_t binding, void* data) {
+		switch (binding) {
+		case 0:
+			ubo0 = *reinterpret_cast<ProbeClassficationShader::UniformBuffer0*>(data);
+			return;
+		case 1:
+			ubo1 = *reinterpret_cast<UniformBuffer1*>(data);
+			return;
+		}
+	}
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+		switch (binding) {
+		case 0:
+			return (void*)&ubo0;
+		case 1:
+			return (void*)&ubo1;
+		//case 2:
+		//	return (void*)probeBuffer.probes.data();
+		}
+	}
+
+public:
+	struct UniformBuffer0 {
+		float maxRayDistance;
+		int padding0;
+		int padding1;
+		int padding2;
+	};
+
+	//ProbeBuffer probeBuffer;
+
+private:
+	UniformBuffer0 ubo0;
+	UniformBuffer1 ubo1;
+};
+
 
 #endif

@@ -16,9 +16,17 @@ void MVulkanPipeline::Clean()
     vkDestroyPipeline(m_device, m_pipeline, nullptr);
 }
 
-void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, 
-    VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
-    PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments)
+void MVulkanGraphicsPipeline::Create(
+    VkDevice device, 
+    MVulkanPilelineCreateInfo info, 
+    VkShaderModule vertShaderModule, 
+    VkShaderModule fragShaderModule, 
+    VkRenderPass renderPass,
+    PipelineVertexInputStateInfo vertexStateInfo, 
+    VkDescriptorSetLayout layout, 
+    uint32_t numAttachments,
+    std::string vertEntryPoint,
+    std::string fragEntryPoint)
 {
     m_device = device;
     m_info = info;
@@ -27,13 +35,13 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertShaderModule;
-    vertShaderStageInfo.pName = "main";
+    vertShaderStageInfo.pName = vertEntryPoint.c_str();
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragShaderStageInfo.module = fragShaderModule;
-    fragShaderStageInfo.pName = "main";
+    fragShaderStageInfo.pName = fragEntryPoint.c_str();
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
@@ -190,7 +198,11 @@ void MVulkanRaytracingPipeline::Create(VkDevice device)
     //}
 }
 
-void MVulkanComputePipeline::Create(VkDevice device, VkShaderModule compShaderModule, VkDescriptorSetLayout layout)
+void MVulkanComputePipeline::Create(
+    VkDevice device, 
+    VkShaderModule compShaderModule, 
+    VkDescriptorSetLayout layout,
+    std::string entryPoint)
 {
     m_device = device;
 
@@ -198,7 +210,7 @@ void MVulkanComputePipeline::Create(VkDevice device, VkShaderModule compShaderMo
     computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     computeShaderStageInfo.module = compShaderModule;
-    computeShaderStageInfo.pName = "main";
+    computeShaderStageInfo.pName = entryPoint.c_str();
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

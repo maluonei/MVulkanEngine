@@ -205,6 +205,17 @@ void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std
     renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBufferSizes, imageViews, storageImageViews, samplers, accelerationStructures);
 }
 
+void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+    std::shared_ptr<ShaderModule> shader,
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> imageViews,
+    std::vector<std::vector<VkImageView>> storageImageViews,
+    std::vector<VkSampler> samplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructures)
+{
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
+}
+
 void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
     std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
@@ -218,6 +229,17 @@ void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, 
     std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures) 
 {
     computePass->Create(shader, m_allocator, storageBufferSizes, seperateImageViews, storageImageViews, samplers, accelerationStructures);
+}
+
+void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass,
+    std::shared_ptr<ComputeShaderModule> shader,
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> seperateImageViews,
+    std::vector<std::vector<VkImageView>> storageImageViews,
+    std::vector<VkSampler> samplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructures) 
+{
+    computePass->Create(shader, m_allocator, storageBuffers, seperateImageViews, storageImageViews, samplers, accelerationStructures);
 }
 
 //void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
@@ -339,6 +361,30 @@ void MVulkanEngine::RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> re
 MVulkanTexture MVulkanEngine::GetPlaceHolderTexture()
 {
     return m_placeHolderTexture;
+}
+
+std::shared_ptr<StorageBuffer> MVulkanEngine::CreateStorageBuffer(BufferCreateInfo info, void* data)
+{
+    std::shared_ptr<StorageBuffer> buffer = std::make_shared<StorageBuffer>();
+    //info.arrayLength = info.arrayLength;
+    ////info.size = bindings[binding].size;
+    //info.size = info.size;
+
+    m_transferList.Reset();
+    m_transferList.Begin();
+    buffer->CreateAndLoadData(&m_transferList, m_device, info, data);
+
+    m_transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
+
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
+
+    return buffer;
 }
 
 void MVulkanEngine::TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
@@ -805,7 +851,7 @@ void MVulkanEngine::recordCommandBuffer(
     commandList.SetScissor(0, 1, &scissor);
 
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
-    renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
     auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
     commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
@@ -827,7 +873,7 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     m_computeList.BindPipeline(computePass->GetPipeline().Get());
 
     computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
-    computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
     auto descriptorSet = computePass->GetDescriptorSet().Get();
     m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);

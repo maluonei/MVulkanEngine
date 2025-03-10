@@ -35,8 +35,16 @@ protected:
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
 	
-	void Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
-		PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments);
+	void Create(VkDevice device, 
+		MVulkanPilelineCreateInfo info, 
+		VkShaderModule vertShaderModule, 
+		VkShaderModule fragShaderModule, 
+		VkRenderPass renderPass,
+		PipelineVertexInputStateInfo vertexStateInfo,
+		VkDescriptorSetLayout layout, 
+		uint32_t numAttachments,
+		std::string vertEntryPoint = "",
+		std::string fragEntryPoint = "");
 
 private:
 
@@ -47,11 +55,20 @@ private:
 class MVulkanRaytracingPipeline :public MVulkanPipeline {
 public:
 	void Create(VkDevice device);
+
+private:
+	//std::string m_vertEntryPoint;
+	//std::string m_fragEntryPoint;
 };
 
 class MVulkanComputePipeline :public MVulkanPipeline {
 public:
-	void Create(VkDevice device, VkShaderModule compShaderModule, VkDescriptorSetLayout layout);
+	void Create(VkDevice device, 
+		VkShaderModule compShaderModule, 
+		VkDescriptorSetLayout layout,
+		std::string entryPoint = "");
+private:
+	//std::string m_entryPoint;
 };
 
 #endif

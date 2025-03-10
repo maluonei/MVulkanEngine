@@ -125,17 +125,40 @@ public:
         std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
     
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<ShaderModule> shader, std::vector<uint32_t> storageBufferSizes, 
-        std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+        std::shared_ptr<ShaderModule> shader, 
+        std::vector<uint32_t> storageBufferSizes, 
+        std::vector<std::vector<VkImageView>> imageViews, 
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers, 
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
+    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+        std::shared_ptr<ShaderModule> shader,
+        std::vector<StorageBuffer> storageBuffers,
+        std::vector<std::vector<VkImageView>> imageViews,
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers,
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
     void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
         std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
         std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
-    void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
+    void CreateComputePass(std::shared_ptr<ComputePass> computePass, 
+        std::shared_ptr<ComputeShaderModule> shader,
         std::vector<uint32_t> storageBufferSizes, 
-        std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<std::vector<VkImageView>> storageImageViews,
-        std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+        std::vector<std::vector<VkImageView>> seperateImageViews, 
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers, 
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
+    void CreateComputePass(std::shared_ptr<ComputePass> computePass,
+        std::shared_ptr<ComputeShaderModule> shader,
+        std::vector<StorageBuffer> storageBuffers,
+        std::vector<std::vector<VkImageView>> seperateImageViews,
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers,
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
 
     //void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
@@ -179,6 +202,7 @@ public:
     void RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass);
 
     MVulkanTexture GetPlaceHolderTexture();
+    std::shared_ptr<StorageBuffer> CreateStorageBuffer(BufferCreateInfo info, void* data = nullptr);
 
     void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
     void TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);

@@ -41,6 +41,7 @@ private:
 	void createSamplers();
 
 	void createTextures();
+	void createStorageBuffers();
 	void initDDGIVolumn();
 
 	void createGbufferPass();
@@ -48,6 +49,8 @@ private:
 	void createRTAOPass();
 	void createLightingPass();
 	void createProbeBlendingRadiancePass();
+	void createProbeBlendingDepthPass();
+	void createProbeClassficationPass();
 	void createProbeVisulizePass();
 	void createCompositePass();
 
@@ -63,10 +66,22 @@ private:
 	std::shared_ptr<RenderPass> m_compositePass;
 
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
+	std::shared_ptr<ComputePass> m_probeBlendingDepthPass;
+	std::shared_ptr<ComputePass> m_probeClassficationPass;
 
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
+	std::shared_ptr<MVulkanTexture> m_testTexture = nullptr;
+
+	std::shared_ptr<StorageBuffer> m_probesDataBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_tlasVertexBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_tlasIndexBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_tlasNormalBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_tlasUVBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_geometryInfo = nullptr;
+
 	MVulkanSampler				m_linearSamplerWithoutAnisotropy;
 	MVulkanSampler				m_linearSamplerWithAnisotropy;
 
@@ -85,6 +100,7 @@ private:
 
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;
+
 
 };
 
