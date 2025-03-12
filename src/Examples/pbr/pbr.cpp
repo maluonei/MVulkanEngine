@@ -42,44 +42,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
-
-        ////auto meshNames = m_scene->GetMeshNames();
-        //auto numPrims = m_scene->GetNumPrimInfos();
-        //auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
-        //
-        //for (auto i = 0; i < numPrims; i++) {
-        //    //auto name = meshNames[i];
-        //    //auto mesh = m_scene->GetMesh(i);
-        //    auto primInfo = m_scene->m_primInfos[i];
-        //    auto mat = m_scene->GetMaterial(primInfo.material_id);
-        //
-        //    auto indirectCommand = drawIndexedIndirectCommands[i];
-        //    if (mat->diffuseTexture != "") {
-        //        auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
-        //        ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
-        //    }
-        //    else {
-        //        ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = -1;
-        //        ubo1.ubo[indirectCommand.firstInstance].diffuseColor = glm::vec3(mat->diffuseColor.r, mat->diffuseColor.g, mat->diffuseColor.b);
-        //    }
-        //
-        //    if (mat->metallicAndRoughnessTexture != "") {
-        //        auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-        //        ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
-        //    }
-        //    else {
-        //        ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
-        //    }
-        //
-        //
-        //    if (mat->normalMap != "") {
-        //        auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
-        //        ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = normalmapIdx;
-        //    }
-        //    else {
-        //        ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = -1;
-        //    }
-        //}
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
@@ -292,8 +254,9 @@ void PBR::loadScene()
 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
-    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    //fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
     //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
+    fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -349,8 +312,8 @@ void PBR::loadScene()
 
 void PBR::createLight()
 {
-    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
-    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, 1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
     float intensity = 10.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
@@ -358,12 +321,16 @@ void PBR::createLight()
 
 void PBR::createCamera()
 {
-    glm::vec3 position(-1.f, 0.f, 4.f);
-    glm::vec3 center(0.f);
-    glm::vec3 direction = glm::normalize(center - position);
+    //glm::vec3 position(-1.f, 0.f, 4.f);
+    //glm::vec3 center(0.f);
+    //glm::vec3 direction = glm::normalize(center - position);
 
-    //glm::vec3 position(-0.939732, 1.98241, 8.1362);
-    //glm::vec3 direction = glm::normalize(glm::vec3(1.f, -1.f, -5.f));
+    //-4.9944386, 2.9471996, -5.8589
+    glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
+    glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
+
+    //volumn pmin : -6.512552, 0.31353754, -6.434822
+    // volumn pmax : 2.139489, 3.020252, 6.2549577
     //
     float fov = 60.f;
     float aspectRatio = (float)WIDTH / (float)HEIGHT;

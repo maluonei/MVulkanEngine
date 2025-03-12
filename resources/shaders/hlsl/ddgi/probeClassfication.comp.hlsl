@@ -25,7 +25,7 @@ cbuffer ub1 : register(b1)
 [[vk::binding(5, 0)]]RWTexture2D<float4> TestTexture : register(u1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 
 #define ProbeFixedRayBackfaceThreshold 0.1
-#define MaxPaysPerProbe 144
+#define MaxPaysPerProbe 256
 
 [numthreads(32, 1, 1)]
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)

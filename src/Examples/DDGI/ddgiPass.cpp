@@ -174,7 +174,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
         auto probeDim = m_volume->GetProbeDim();
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
+        if(m_probeClassfication)
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, 8 * probeDim.x * probeDim.y, 8 * probeDim.z, 1);
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 16 * probeDim.x * probeDim.y, 16 * probeDim.z, 1);
 
@@ -341,8 +342,8 @@ void DDGIApplication::loadScene()
 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
-    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
-    //fs::path modelPath = resourcePath / "breakfast_room" / "breakfast_room.obj";
+    //fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -411,18 +412,23 @@ void DDGIApplication::createAS()
 
 void DDGIApplication::createLight()
 {
-    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
     //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    float intensity = 20.f;
+    //float intensity = 20.f;
+    float intensity = 100.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
 
 void DDGIApplication::createCamera()
 {
-    glm::vec3 position(1.2925221, 3.7383504, -0.29563048);
-    glm::vec3 center = position + glm::vec3(-0.8f, -0.3f, -0.1f);
-    glm::vec3 direction = glm::normalize(center - position);
+    //glm::vec3 position(1.2925221, 3.7383504, -0.29563048);
+    //glm::vec3 center = position + glm::vec3(-0.8f, -0.3f, -0.1f);
+    //glm::vec3 direction = glm::normalize(center - position);
+  
+    glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
+    glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
 
     //glm::vec3 position(-4.6, 4.9, -9.0);
     //glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, -2.f));
@@ -695,11 +701,15 @@ void DDGIApplication::createStorageBuffers()
 
 void DDGIApplication::initDDGIVolumn()
 {
+    glm::vec3 startPosition = glm::vec3(-5.802552, 0.31353754, -6.384822);
+    glm::vec3 endPosition = glm::vec3(2.009489, 3.320252, 6.7349577);
+
     //glm::vec3 startPosition = glm::vec3(-5.6f, -1.1f, -9.3f);
     //glm::vec3 endPosition = glm::vec3(4.8f, 7.4f, 4.5f);
 
-    glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
-    glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
+    //glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
+    //glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
+    //glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
     glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
     //glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
     m_volume = std::make_shared<DDGIVolume>(startPosition, endPosition, probeDim);

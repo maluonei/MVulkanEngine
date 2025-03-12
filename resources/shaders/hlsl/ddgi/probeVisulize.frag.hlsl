@@ -29,7 +29,7 @@ PSOutput main(PSInput input)
     PSOutput output;
 
     if(probes[input.instanceID].probeState == PROBE_STATE_INACTIVE){
-        output.color = float4(0.f, 0.f, 0.f, 0.5f);
+        output.color = float4(1.f, 0.f, 0.f, 0.5f);
         return output;
     }   
 

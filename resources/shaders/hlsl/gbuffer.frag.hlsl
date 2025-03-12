@@ -13,7 +13,7 @@ struct TexBuffer
 [[vk::binding(1, 0)]]
 cbuffer ubo1 : register(b1)
 {
-    TexBuffer ubo1[256];
+    TexBuffer ubo1[512];
 };
 
 [[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);

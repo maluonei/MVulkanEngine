@@ -122,7 +122,7 @@ public:
 
 	struct UniformBufferObject1
 	{
-		UniformBuffer1 ubo[256];
+		UniformBuffer1 ubo[512];
 	};
 
 	static UniformBufferObject1 GetFromScene(const std::shared_ptr<Scene> scene);
@@ -157,7 +157,6 @@ public:
 		glm::vec3 cameraPos;
 		int lightNum;
 	};
-
 
 private:
 	DirectionalLightBuffer ubo0;

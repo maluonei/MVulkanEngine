@@ -97,9 +97,10 @@ private:
 	MVulkanRaytracing			m_rayTracing;
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
-	int							m_raysPerProbe = 64;
+	int							m_raysPerProbe = 128;
 	bool						m_sceneChange = true;
-	bool						m_visualizeProbes = true;
+	bool						m_probeClassfication = true;
+	bool						m_visualizeProbes = false;
 
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;
