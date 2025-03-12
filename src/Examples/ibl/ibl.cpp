@@ -59,39 +59,48 @@ void IBL::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Projection = m_camera->GetProjMatrix();
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
-        GbufferShader::UniformBufferObject1 ubo1[256];
+        GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_sphere);
 
-        auto meshNames = m_sphere->GetMeshNames();
-        auto drawIndexedIndirectCommands = m_sphere->GetIndirectDrawCommands();
-
-        for (auto i = 0; i < meshNames.size(); i++) {
-            auto name = meshNames[i];
-            auto mesh = m_sphere->GetMesh(name);
-            auto mat = m_sphere->GetMaterial(mesh->matId);
-            auto indirectCommand = drawIndexedIndirectCommands[i];
-            if (mat->diffuseTexture != "") {
-                auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
-            }
-
-            if (mat->metallicAndRoughnessTexture != "") {
-                auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
-            }
-
-            if (i == 25) {
-                ubo1[indirectCommand.firstInstance].matId = 1;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].matId = 0;
-            }
-        }
+        //auto meshNames = m_sphere->GetMeshNames();
+        //auto drawIndexedIndirectCommands = m_sphere->GetIndirectDrawCommands();
+        //
+        //for (auto i = 0; i < meshNames.size(); i++) {
+        //    auto name = meshNames[i];
+        //    auto mesh = m_sphere->GetMesh(name);
+        //    auto mat = m_sphere->GetMaterial(mesh->matId);
+        //    auto indirectCommand = drawIndexedIndirectCommands[i];
+        //    if (mat->diffuseTexture != "") {
+        //        auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+        //        ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+        //    }
+        //    else {
+        //        ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+        //    }
+        //
+        //    if (mat->metallicAndRoughnessTexture != "") {
+        //        auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+        //        ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+        //    }
+        //    else {
+        //        ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+        //    }
+        //
+        //    if (i == 25) {
+        //        ubo1[indirectCommand.firstInstance].matId = 1;
+        //    }
+        //    else {
+        //        ubo1[indirectCommand.firstInstance].matId = 0;
+        //    }
+        //
+        //
+        //    if (mat->normalMap != "") {
+        //        auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+        //        ubo1[indirectCommand.firstInstance].normalMapIdx = normalmapIdx;
+        //    }
+        //    else {
+        //        ubo1[indirectCommand.firstInstance].normalMapIdx = -1;
+        //    }
+        //}
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 

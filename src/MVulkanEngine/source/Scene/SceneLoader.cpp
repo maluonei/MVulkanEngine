@@ -22,9 +22,13 @@ void SceneLoader::Load(std::string path, Scene* scene)
 
     Assimp::Importer importer;
 
+    spdlog::info("assimp start loading");
+
     // 通过指定路径加载模型
     const aiScene* aiscene = importer.ReadFile(path,
-        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals);
+        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals
+        //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    );
 
     // 检查加载是否成功
     if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
@@ -32,7 +36,9 @@ void SceneLoader::Load(std::string path, Scene* scene)
         spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
         return;
     }
-
+    
+    spdlog::info("start processing scene");
+    processMeshs(aiscene, scene);
     processTextures(aiscene);
     processMaterials(aiscene, scene);
 
@@ -43,15 +49,29 @@ void SceneLoader::Load(std::string path, Scene* scene)
     scene->CalculateBB();
 }
 
+//void SceneLoader::processMaterial(const aiMaterial* material, const aiScene* aiscene, std::string matName)
+//{
+//
+//}
+
 void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
 {
     //spdlog::info("node.name: " + std::string(node->mName.C_Str()));
     //spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
 
-    // 处理当前节点的所有网格
-    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh* mesh = aiscene->mMeshes[node->mMeshes[i]];
-        processMesh(mesh, aiscene, scene);
+    if (node->mMeshes) {
+        for (auto i = 0; i < node->mNumMeshes; i++) {
+            const auto meshIndex = node->mMeshes[i];
+            auto* const ai_mesh = aiscene->mMeshes[meshIndex];
+
+            uint32_t          material_id = ai_mesh->mMaterialIndex;
+
+            glm::mat4 transform = glm::mat4(1.0f);
+
+            scene->m_primInfos.push_back(
+                PrimInfo({ .mesh_id = meshIndex, .material_id = material_id, .transform = transform })
+            );
+        }
     }
 
     // 递归处理每个子节点
@@ -60,47 +80,48 @@ void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene*
     }
 }
 
-void SceneLoader::processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene* scene)
+void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
 {
-    std::shared_ptr<Mesh> _mesh = std::make_shared<Mesh>();
-    std::string meshName = mesh->mName.C_Str();
-    if (meshName == "") {
-        meshName = "mesh" + std::to_string(g_meshId);
-        g_meshId++;
-    }
+    auto numMeshes = aiscene->mNumMeshes;
+    //auto _mesh = std::make_shared<Mesh>();
+    scene->SetNumMeshes(numMeshes);
 
-    spdlog::info("mesh.name: " + meshName);
-    spdlog::info("mesh.mNumVertices: " + std::to_string(mesh->mNumVertices));
+    for (auto i = 0; i < numMeshes; i++) {
+        auto mesh = aiscene->mMeshes[i];
+        auto _mesh = std::make_shared<Mesh>();
 
-    // 遍历网格的索引
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        aiFace face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+            aiFace face = mesh->mFaces[j];
 
-        for (unsigned int j = 0; j < face.mNumIndices; j++) {
-            _mesh->indices.push_back(face.mIndices[j]);
+            for (unsigned int k = 0; k < face.mNumIndices; k++) {
+                _mesh->indices.push_back(face.mIndices[k]);
+            }
         }
-    }
 
-    // 遍历网格的所有顶点
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        Vertex vertex;
-        vertex.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-        vertex.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
-        if (mesh->mTextureCoords[0]) {
-            vertex.texcoord = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+        // 遍历网格的所有顶点
+        for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
+            Vertex vertex;
+            vertex.position = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
+            vertex.normal = glm::vec3(mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z);
+            vertex.tangent = glm::vec3(mesh->mTangents[j].x, mesh->mTangents[j].y, mesh->mTangents[j].z);
+            vertex.bitangent = glm::vec3(mesh->mBitangents[j].x, mesh->mBitangents[j].y, mesh->mBitangents[j].z);
+            if (mesh->mTextureCoords[0]) {
+                vertex.texcoord = glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y);
+            }
+            else {
+                vertex.texcoord = glm::vec2(0.0f, 0.0f);
+            }
+
+            _mesh->vertices.push_back(vertex);
         }
-        else {
-            vertex.texcoord = glm::vec2(0.0f, 0.0f);
-        }
-        _mesh->vertices.push_back(vertex);
+
+        //_mesh->matId = mesh->mMaterialIndex;
+
+        scene->SetMesh(i, _mesh);
     }
 
-    _mesh->matId = mesh->mMaterialIndex;
-
-    if (mesh->mNumVertices > 0) {
-        scene->SetMesh(meshName, _mesh);
-    }
 }
+
 
 void SceneLoader::loadTexture(std::string path)
 {
@@ -149,15 +170,43 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
         }
         else {
             mat->diffuseTexture = "";
-            mat->diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+            //if (aimaterial->Get(AI_MATKEY_COLOR_DIFFUSE, mat->diffuseColor) != AI_SUCCESS) {
+            //aiColor4D
+            if (aimaterial->Get(AI_MATKEY_BASE_COLOR, mat->diffuseColor) != AI_SUCCESS) {
+                mat->diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+            }
+            //mat->diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
         }
 
         if (aimaterial->GetTexture(aiTextureType_SPECULAR, 0, &texturePath) == AI_SUCCESS) {
             spdlog::info("Specular texture:{0}", texturePath.C_Str());
         }
+        else {
+            mat->specularTexture = "";
+            if (aimaterial->Get(AI_MATKEY_COLOR_SPECULAR, mat->specularColor) != AI_SUCCESS) {
+                mat->specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
+            }
+        }
 
         if (aimaterial->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS) {
             spdlog::info("Normal texture:{0}", texturePath.C_Str());
+
+            MImage<unsigned char> normalImage;
+            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+
+            std::string normalPath = (currentSceneRootPath / texturePath.C_Str()).string();
+
+            if (!Singleton<TextureManager>::instance().ExistTexture(normalPath)) {
+                if (normalImage.Load(normalPath)) {
+                    std::vector<MImage<unsigned char>*> images(1);
+                    images[0] = &normalImage;
+                    //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+                    Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
+
+                Singleton<TextureManager>::instance().Put(normalPath, texture);
+            }
+            mat->normalMap = normalPath;
         }
 
         if (aimaterial->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &texturePath) == AI_SUCCESS) {

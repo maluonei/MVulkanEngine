@@ -12,11 +12,15 @@ cbuffer ubo0 : register(b0)
     MVPBuffer mvp;
 };
 
+//[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
+
 struct VSInput
 {
     [[vk::location(0)]] float3 Position : POSITION;
     [[vk::location(1)]] float3 Normal : NORMAL;
     [[vk::location(2)]] float2 Coord : TEXCOORD0;
+    [[vk::location(3)]] float3 Tangent : TEXCOORD1;
+    [[vk::location(4)]] float3 Bitangent : TEXCOORD2;
     uint InstanceID : SV_InstanceID;
 };
 
@@ -27,6 +31,10 @@ struct VSOutput
     float2 texCoord : TEXCOORD0;
     uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
+    float3 tangent : TEXCOORD1;
+    float3 bitangent : TEXCOORD2;
+
+    //float3x3 TBN : TEXCOORD1;
 };
 
 float3x3 inverse(float3x3 m)
@@ -84,6 +92,28 @@ VSOutput main(VSInput input)
 
     // Pass instance ID
     output.instanceID = input.InstanceID;
+
+    //float3 calculatedNormal = cross(input.Tangent, input.Bitangent);
+    //if(dot(calculatedNormal, input.Normal) < 0.0)
+    //    input.Tangent *= -1.f;
+
+    float4 tangent = mul(mvp.Model, float4(input.Tangent, 1.0));
+    //float4 bitangent = mul(mvp.Model, float4(input.Bitangent, 1.0));
+    output.tangent = normalize(tangent.xyz / tangent.w);
+    output.bitangent = cross(output.normal, output.tangent);
+
+    //float4 tangent = mul(mvp.Model, float4(input.Tangent, 1.0));
+    ////output.tangent = tangent.xyz;
+    //output.tangent = normalize(tangent.xyz / tangent.w);
+    //output.tangent = input.Tangent;
+    ////output.bitangent = normalize(mul(mvp.Model, float4(input.Bitangent, 1.0)));
+    //output.bitangent = cross(output.normal, output.tangent);
+    //float3 T = normalize(input.Tangent);
+    //float3 B = normalize(input.Bitangent);
+    //float3 N = normalize(input.Normal);
+    //float3x3 TBN = float3x3(T, B, N);
+    //output.TBN = TBN;
+    //float3 tnorm = mul(normalize(textureNormalMap.Sample(samplerNormalMap, input.UV).xyz * 2.0 - float3(1.0, 1.0, 1.0)), TBN);
 
     return output;
 }

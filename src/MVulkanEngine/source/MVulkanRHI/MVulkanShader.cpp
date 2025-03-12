@@ -136,6 +136,8 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
     if (attribute_descriptions.size() >= 1) attribute_descriptions[0].offset = offsetof(Vertex, position);
     if (attribute_descriptions.size() >= 2) attribute_descriptions[1].offset = offsetof(Vertex, normal);
     if (attribute_descriptions.size() >= 3) attribute_descriptions[2].offset = offsetof(Vertex, texcoord);
+    if (attribute_descriptions.size() >= 4) attribute_descriptions[3].offset = offsetof(Vertex, tangent);
+    if (attribute_descriptions.size() >= 5) attribute_descriptions[4].offset = offsetof(Vertex, bitangent);
 
     // 使用的最终 attribute_descriptions
     for (const auto& attr : attribute_descriptions) {
@@ -152,10 +154,13 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = 0 * sizeof(float);
-    if (attribute_descriptions.size() >= 1) bindingDescription.stride += 3 * sizeof(float);
-    if (attribute_descriptions.size() >= 2) bindingDescription.stride += 3 * sizeof(float);
-    if (attribute_descriptions.size() >= 3) bindingDescription.stride += 2 * sizeof(float);
+    bindingDescription.stride = 14 * sizeof(float);
+
+    //if (attribute_descriptions.size() >= 1) bindingDescription.stride += 3 * sizeof(float);
+    //if (attribute_descriptions.size() >= 2) bindingDescription.stride += 3 * sizeof(float);
+    //if (attribute_descriptions.size() >= 3) bindingDescription.stride += 2 * sizeof(float);
+    //if (attribute_descriptions.size() >= 4) bindingDescription.stride += 3 * sizeof(float);
+    //if (attribute_descriptions.size() >= 5) bindingDescription.stride += 3 * sizeof(float);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     info.attribDesc = attribute_descriptions;

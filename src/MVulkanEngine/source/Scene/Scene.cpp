@@ -9,21 +9,21 @@ Scene::~Scene() {
 
 void Scene::Clean()
 {
-    for(auto mesh:m_meshMap)
+    for(auto mesh:m_meshs)
     {
-        if(mesh.second->m_vertexBuffer)
+        if(mesh->m_vertexBuffer)
         {
-            mesh.second->m_vertexBuffer->Clean();
-            mesh.second->m_indexBuffer->Clean();
+            mesh->m_vertexBuffer->Clean();
+            mesh->m_indexBuffer->Clean();
         }
     }
     
-    for (auto buffer : m_vertexBufferMap) {
-        buffer.second->Clean();
+    for (auto buffer : m_vertexBuffers) {
+        buffer->Clean();
     }
 
-    for (auto buffer : m_indexBufferMap) {
-        buffer.second->Clean();
+    for (auto buffer : m_indexBuffers) {
+        buffer->Clean();
     }
 
     m_indirectBuffer->Clean();
@@ -33,13 +33,13 @@ void Scene::Clean()
 
 void Scene::GenerateIndirectDrawData()
 {
-    std::vector<std::string> names = GetMeshNames();
+    //std::vector<std::string> names = GetMeshNames();
+    auto numMeshes = GetNumMeshes();
     auto vertexNum = 0;
 
-    for (auto i = 0; i < names.size(); i++) {
-        auto name = names[i];
+    for (auto i = 0; i < numMeshes; i++) {
 
-        auto mesh = m_meshMap[name];
+        auto mesh = m_meshs[i];
         for (auto vertex : mesh->vertices) {
             m_totalVertexs.push_back(vertex);
         }
@@ -52,29 +52,31 @@ void Scene::GenerateIndirectDrawData()
     }
 }
 
-std::vector<std::string> Scene::GetMeshNames()
-{
-	std::vector<std::string> keys;
-
-    keys.reserve(m_meshMap.size()); // Ԥ���ռ��������
-    for (const auto& pair : m_meshMap) {
-        keys.push_back(pair.first);
-    }
-    return keys;
-}
+//std::vector<std::string> Scene::GetMeshNames()
+//{
+//	std::vector<std::string> keys;
+//
+//    keys.reserve(m_meshMap.size()); // Ԥ���ռ��������
+//    for (const auto& pair : m_meshMap) {
+//        keys.push_back(pair.first);
+//    }
+//    return keys;
+//}
 
 void Scene::GenerateIndirectDrawCommand()
 {
     m_indirectCommands.clear();
 
-    std::vector<std::string> names = GetMeshNames();
+    auto numMeshes = GetNumMeshes();
+    //std::vector<std::string> names = GetMeshNames();
 
     auto currentIndex = 0;
-    for (auto i = 0; i < names.size();i++) {
-        auto name = names[i];
+    for (auto i = 0; i < numMeshes;i++) {
+        //auto name = names[i];
+        auto meshIndex = m_primInfos[i].mesh_id;
 
         VkDrawIndexedIndirectCommand cmd{};
-        cmd.indexCount = m_meshMap[name]->indices.size();
+        cmd.indexCount = m_meshs[meshIndex]->indices.size();
         cmd.instanceCount = 1;
         cmd.firstIndex = currentIndex;
         cmd.vertexOffset = 0;
@@ -90,13 +92,14 @@ void Scene::GenerateIndirectDrawCommand(int repeatNum)
 {
     m_indirectCommands.clear();
 
-    std::vector<std::string> names = GetMeshNames();
+    auto numMeshes = GetNumMeshes();
+    //std::vector<std::string> names = GetMeshNames();
 
     //for (auto i = 0; i < repeatNum; i++) {
-    auto name = names[0];
+    //auto name = names[0];
 
     VkDrawIndexedIndirectCommand cmd{};
-    cmd.indexCount = m_meshMap[name]->indices.size();
+    cmd.indexCount = m_meshs[0]->indices.size();
     cmd.instanceCount = repeatNum;
     cmd.firstIndex = 0;
     cmd.vertexOffset = 0;
@@ -126,13 +129,15 @@ void Scene::CalculateBB()
 
 void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
 {
-    std::vector<std::string> names = scene->GetMeshNames();
+    auto numMeshes = GetNumMeshes();
+    //std::vector<std::string> names = scene->GetMeshNames();
+
     auto vertexNum = this->m_totalVertexs.size();
 
-    for (auto i = 0; i < names.size(); i++) {
-        auto name = names[i];
+    for (auto i = 0; i < numMeshes; i++) {
+        //auto name = names[i];
 
-        auto mesh = scene->GetMesh(name);
+        auto mesh = scene->GetMesh(i);
         for (auto vertex : mesh->vertices) {
             glm::vec4 newPosition = transform * glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, 1.f);
             newPosition /= newPosition.w;
@@ -154,9 +159,9 @@ void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
         this->m_materials.push_back(scene->m_materials[i]);
     }
 
-    for (auto mesh : scene->m_meshMap) {
-        mesh.second->matId += baseMatId;
-        this->m_meshMap.insert(std::make_pair(mesh.first, mesh.second));
+    for (auto mesh : scene->m_meshs) {
+        mesh->matId += baseMatId;
+        this->m_meshs.push_back(mesh);
     }
 }
 
@@ -204,10 +209,10 @@ void Scene::GenerateIndirectDataAndBuffers()
 
 void Scene::GenerateMeshBuffers()
 {
-    for(auto pair:m_meshMap)
+    for(auto pair:m_meshs)
     {
-        auto name = pair.first;
-        auto mesh = pair.second;
+        //auto name = pair.first;
+        auto mesh = pair;
 
         mesh->m_vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
         mesh->m_indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);

@@ -56,6 +56,8 @@ private:
 
 	void changeTextureLayoutToRWTexture();
 	void changeRWTextureLayoutToTexture();
+	void transitionProbeVisulizeTextureLayoutToShaderRead();
+    void transitionProbeVisulizeTextureLayoutToUndifined();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
@@ -97,6 +99,7 @@ private:
 
 	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
+	bool						m_visualizeProbes = true;
 
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;

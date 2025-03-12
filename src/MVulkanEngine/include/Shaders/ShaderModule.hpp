@@ -8,6 +8,7 @@
 #include<MVulkanRHI/MVulkanBuffer.hpp>
 #include<MVulkanRHI/MVulkanSampler.hpp>
 
+class Scene;
 class ShaderModule{
 public:
 	ShaderModule(
@@ -109,17 +110,26 @@ public:
 		glm::mat4 Projection;
 	};
 
-	struct UniformBufferObject1
-	{
+	struct UniformBuffer1 {
 		int diffuseTextureIdx;
 		int metallicAndRoughnessTexIdx;
 		int matId;
-		int padding1;
+		int normalMapIdx;
+
+		glm::vec3 diffuseColor;
+		int padding0;
 	};
+
+	struct UniformBufferObject1
+	{
+		UniformBuffer1 ubo[256];
+	};
+
+	static UniformBufferObject1 GetFromScene(const std::shared_ptr<Scene> scene);
 
 private:
 	UniformBufferObject0 ubo0;
-	UniformBufferObject1 ubo1[256];
+	UniformBufferObject1 ubo1;
 };
 
 class SquadPhongShader:public ShaderModule {

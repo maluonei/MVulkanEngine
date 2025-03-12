@@ -36,12 +36,13 @@ void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
     {
         RayQueryGBufferShader::UniformBuffer0 ubo0;
 
-        auto meshNames = m_scene->GetMeshNames();
+        auto numPrims = m_scene->m_primInfos.size();
+        //auto meshNames = m_scene->GetMeshNames();
         auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
 
-        for (auto i = 0; i < meshNames.size(); i++) {
-            auto name = meshNames[i];
-            auto mesh = m_scene->GetMesh(name);
+        for (auto i = 0; i < numPrims; i++) {
+            //auto name = meshNames[i];
+            auto mesh = m_scene->GetMesh(m_scene->m_primInfos[i].mesh_id);
             auto mat = m_scene->GetMaterial(mesh->matId);
             auto indirectCommand = drawIndexedIndirectCommands[i];
             if (mat->diffuseTexture != "") {
@@ -58,6 +59,15 @@ void RayQueryPbr::ComputeAndDraw(uint32_t imageIndex)
             }
             else {
                 ubo0.texBuffer[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = -1;
+            }
+
+
+            if (mat->normalMap != "") {
+                auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+                ubo0.texBuffer[indirectCommand.firstInstance].normalmapIdx = normalmapIdx;
+            }
+            else {
+                ubo0.texBuffer[indirectCommand.firstInstance].normalmapIdx = -1;
             }
         }
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
@@ -210,7 +220,9 @@ void RayQueryPbr::createGbufferPass()
             storageBufferSizes[4] = numMeshes * sizeof(RayQueryGBufferShader::GeometryInfo);
 
             auto shader = std::static_pointer_cast<RayQueryGBufferShader>(rayQueryGBufferShader);
-            auto meshNames = m_scene->GetMeshNames();
+            
+            //auto numMeshes = m_scene->GetNumMeshes();
+            //auto meshNames = m_scene->GetMeshNames();
 
             shader->vertexBuffer.position.resize(numVertices);
             shader->indexBuffer.index.resize(numIndices);
@@ -222,8 +234,10 @@ void RayQueryPbr::createGbufferPass()
             int indexBufferIndex = 0;
             int instanceBufferIndex = 0;
 
-            for (auto meshName : meshNames) {
-                auto mesh = m_scene->GetMesh(meshName);
+            auto numPrims = m_scene->GetNumPrimInfos();
+
+            for (auto i = 0; i < numPrims;i++) {
+                auto mesh = m_scene->GetMesh(m_scene->m_primInfos[i].mesh_id);
 
                 auto meshVertexNum = mesh->vertices.size();
                 for (auto i = 0; i < meshVertexNum; i++) {

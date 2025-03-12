@@ -92,7 +92,9 @@ struct LightStruct {
 
 class RTAOShader :public ShaderModule {
 public:
-	RTAOShader() :ShaderModule("hlsl/ddgi/fullscreen.vert.hlsl", "hlsl/ddgi/rtao.frag.hlsl")
+	RTAOShader() :ShaderModule(
+		"hlsl/ddgi/fullscreen.vert.hlsl", 
+		"hlsl/ddgi/rtao.frag.hlsl")
 	{ }
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
@@ -136,7 +138,7 @@ public:
 		"hlsl/ddgi/probeTrace.frag.hlsl", 
 		"main",
 		"main",
-		m_compileEveryTime = true)
+		m_compileEveryTime = false)
 	{}
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
@@ -204,7 +206,7 @@ public:
 		int diffuseTextureIdx;
 		int metallicAndRoughnessTextureIdx;
 		int matId;
-		int padding0;
+		int normalMapIdx;
 	};
 
 	struct UniformBuffer0 {
@@ -231,9 +233,9 @@ private:
 class ProbeBlendShader :public ComputeShaderModule {
 public:
 	ProbeBlendShader(std::string entry) :ComputeShaderModule(
-		"hlsl/ddgi/probeBlendRadiance.comp.hlsl", 
+		"hlsl/ddgi/probeBlend.comp.hlsl", 
 		entry,
-		true)
+		false)
 	{
 	}
 
@@ -292,7 +294,7 @@ public:
 		"hlsl/ddgi/ddgiLighting.frag.hlsl",
 		"main",
 		"main", 
-		m_compileEveryTime = true)
+		m_compileEveryTime = false)
 	{
 	}
 
@@ -346,11 +348,46 @@ private:
 
 class CompositeShader :public ShaderModule {
 public:
-	CompositeShader() :ShaderModule("hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/composite.frag.hlsl")
+	CompositeShader() :ShaderModule(
+		"hlsl/ddgi/fullScreen.vert.hlsl", 
+		"hlsl/ddgi/composite.frag.hlsl")
 	{
 	}
 
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+		switch (binding) {
+		case 0:
+			return sizeof(CompositeShader::UniformBuffer0);
+		}
+	}
+
+	virtual void SetUBO(uint8_t binding, void* data) {
+		switch (binding) {
+		case 0:
+			ubo0 = *reinterpret_cast<CompositeShader::UniformBuffer0*>(data);
+			return;
+		}
+	}
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+		switch (binding) {
+		case 0:
+			return (void*)&ubo0;
+		}
+	}
+
 public:
+	struct UniformBuffer0 {
+		int visulizeProbe = 0;
+		int padding0;
+		int padding1;
+		int padding2;
+	};
+
+private:
+
+	UniformBuffer0 ubo0;
+
 };
 
 class DDGIProbeVisulizeShader :public ShaderModule {
@@ -422,7 +459,7 @@ public:
 	ProbeClassficationShader() :ComputeShaderModule(
 		"hlsl/ddgi/probeClassfication.comp.hlsl", 
 		"main",
-		true)
+		false)
 	{
 	}
 

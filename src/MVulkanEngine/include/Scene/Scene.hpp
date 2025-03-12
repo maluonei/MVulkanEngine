@@ -18,12 +18,16 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texcoord;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
 };
 
 static size_t VertexSize[] = {
     sizeof(Vertex::position),
     sizeof(Vertex::normal),
     sizeof(Vertex::texcoord),
+    sizeof(Vertex::tangent),
+    sizeof(Vertex::bitangent),
 };
 
 class Buffer;
@@ -38,6 +42,13 @@ struct Mesh {
     std::shared_ptr<Buffer> m_indexBuffer = nullptr;
 };
 
+struct PrimInfo {
+    uint32_t        mesh_id;
+    uint32_t        material_id;
+    glm::mat4       transform;
+    //Transform   transform;
+};
+
 class Light;
 
 class Scene {
@@ -47,17 +58,42 @@ public:
 
     void Clean();
 
-    inline void SetMesh(std::string name, std::shared_ptr<Mesh> mesh){
-        if (m_meshMap.find(name) != m_meshMap.end())
-            spdlog::error("mesh: {} already exist", name);
-        m_meshMap[name] = mesh;}
-    inline std::shared_ptr<Mesh> GetMesh(std::string name){return m_meshMap[name];}
+    //inline void SetMesh(std::string name, std::shared_ptr<Mesh> mesh)
+    //{
+    //    if (m_meshMap.find(name) != m_meshMap.end())
+    //        spdlog::error("mesh: {} already exist", name);
+    //    m_meshMap[name] = mesh;
+    //}
+    //inline std::shared_ptr<Mesh> GetMesh(std::string name){
+    //    if (m_meshMap.find(name) == m_meshMap.end()) return nullptr;
+    //    return m_meshMap[name];
+    //}
 
-    inline void SetVertexBuffer(std::string name, std::shared_ptr<Buffer> vertexBuffer){m_vertexBufferMap[name] = vertexBuffer;}
-    inline std::shared_ptr<Buffer> GetVertexBuffer(std::string name){return m_vertexBufferMap[name];}
+    inline void SetNumMeshes(int num){
+        m_meshs.resize(num);
+    }
 
-    inline void SetIndexBuffer(std::string name, std::shared_ptr<Buffer> indexBuffer){m_indexBufferMap[name] = indexBuffer;}
-    inline std::shared_ptr<Buffer> GetIndexBuffer(std::string name){return m_indexBufferMap[name];}
+    inline void SetMesh(int index, std::shared_ptr<Mesh> mesh)
+    {
+        m_meshs[index] = mesh;
+    }
+    inline std::shared_ptr<Mesh> GetMesh(int index) {
+        //if (m_meshMap.find(name) == m_meshMap.end()) return nullptr;
+        return m_meshs[index];
+    }
+
+    //inline void SetVertexBuffer(std::string name, std::shared_ptr<Buffer> vertexBuffer){m_vertexBufferMap[name] = vertexBuffer;}
+    //inline std::shared_ptr<Buffer> GetVertexBuffer(std::string name){return m_vertexBufferMap[name];}
+    //
+    //inline void SetIndexBuffer(std::string name, std::shared_ptr<Buffer> indexBuffer){m_indexBufferMap[name] = indexBuffer;}
+    //inline std::shared_ptr<Buffer> GetIndexBuffer(std::string name){return m_indexBufferMap[name];}
+
+    inline void SetVertexBuffer(int index, std::shared_ptr<Buffer> vertexBuffer) { m_vertexBuffers[index] = vertexBuffer; }
+    inline std::shared_ptr<Buffer> GetVertexBuffer(int index) { return m_vertexBuffers[index]; }
+
+    inline void SetIndexBuffer(int index, std::shared_ptr<Buffer> indexBuffer) { m_indexBuffers[index] = indexBuffer; }
+    inline std::shared_ptr<Buffer> GetIndexBuffer(int index) { return m_indexBuffers[index]; }
+
 
     inline void SetIndirectVertexBuffer(std::shared_ptr<Buffer> indirectVertexBuffer){m_indirectVertexBuffer = indirectVertexBuffer;}
     inline std::shared_ptr<Buffer> GetIndirectVertexBuffer(){return m_indirectVertexBuffer;}
@@ -77,7 +113,7 @@ public:
     inline std::vector<uint32_t> GetTotalIndeices(){return m_totalIndeices;}
 
     void GenerateIndirectDrawData();
-    std::vector<std::string> GetMeshNames();
+    //std::vector<std::string> GetMeshNames();
     void GenerateIndirectDrawCommand();
     void GenerateIndirectDrawCommand(int repeatNum);
     inline std::vector<VkDrawIndexedIndirectCommand> GetIndirectDrawCommands(){return m_indirectCommands;}
@@ -100,23 +136,33 @@ public:
 
     inline auto GetNumTriangles() const{return m_totalIndeices.size()/3;}
     inline auto GetNumVertices() const{return m_totalVertexs.size();}
-    inline auto GetNumMeshes() const { return m_meshMap.size(); }
+    //inline auto GetNumMeshes() const { return m_meshMap.size(); }
+    inline auto GetNumMeshes() const { return m_meshs.size(); }
+    inline auto GetNumPrimInfos() const { return m_primInfos.size(); }
+
+    std::vector<PrimInfo>   m_primInfos;
 private:
     BoundingBox m_bbx;
 
     //uint32_t                m_numTriangles = 0;
     std::vector<Vertex>     m_totalVertexs;
     std::vector<uint32_t>   m_totalIndeices;
+    //std::vector<PrimInfo>   m_primInfos;
     //std::vector<uint32_t>   m_totalInstances;
     std::shared_ptr<Buffer> m_indirectBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectVertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indirectIndexBuffer = nullptr;
+    
     std::vector<VkDrawIndexedIndirectCommand> m_indirectCommands;
 
-    std::unordered_map<std::string, std::shared_ptr<Mesh>>      m_meshMap;
-    std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_vertexBufferMap;
-    std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_indexBufferMap;
+    //std::unordered_map<std::string, std::shared_ptr<Mesh>>      m_meshMap;
+    //std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_vertexBufferMap;
+    //std::unordered_map<std::string, std::shared_ptr<Buffer>>    m_indexBufferMap;
     std::vector<std::shared_ptr<PhongMaterial>>                 m_materials;
+
+    std::vector<std::shared_ptr<Mesh>>      m_meshs;
+    std::vector<std::shared_ptr<Buffer>>    m_vertexBuffers;
+    std::vector<std::shared_ptr<Buffer>>    m_indexBuffers;
 
     std::unordered_map<std::string, std::shared_ptr<Light>>     m_lightMap;
 };

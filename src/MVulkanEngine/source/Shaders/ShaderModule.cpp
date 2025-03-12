@@ -1,4 +1,6 @@
 #include "Shaders/ShaderModule.hpp"
+#include "Scene/Scene.hpp"
+#include "Managers/TextureManager.hpp"
 
 ShaderModule::ShaderModule(
 	const std::string& vertPath, 
@@ -140,9 +142,7 @@ void GbufferShader::SetUBO(uint8_t binding, void* data)
 		ubo0 = *reinterpret_cast<UniformBufferObject0*>(data);
 		return;
 	case 1:
-		for (auto i = 0; i < 256; i++) {
-			ubo1[i] = reinterpret_cast<UniformBufferObject1*>(data)[i];
-		}
+		ubo1 = *reinterpret_cast<UniformBufferObject1*>(data);
 		return;
 	}
 }
@@ -153,8 +153,53 @@ void* GbufferShader::GetData(uint32_t binding, uint32_t index)
 	case 0:
 		return (void*)&ubo0;
 	case 1:
-		return (void*)&(ubo1[index]);
+		return (void*)&ubo1;
 	}
+}
+
+GbufferShader::UniformBufferObject1 GbufferShader::GetFromScene(const std::shared_ptr<Scene> m_scene) {
+	GbufferShader::UniformBufferObject1 ubo1;
+
+	//auto meshNames = m_scene->GetMeshNames();
+	auto numPrims = m_scene->GetNumPrimInfos();
+	auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
+
+	for (auto i = 0; i < numPrims; i++) {
+		//auto name = meshNames[i];
+		//auto mesh = m_scene->GetMesh(i);
+		auto primInfo = m_scene->m_primInfos[i];
+		auto mat = m_scene->GetMaterial(primInfo.material_id);
+
+		auto indirectCommand = drawIndexedIndirectCommands[i];
+		if (mat->diffuseTexture != "") {
+			auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+			ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+			ubo1.ubo[indirectCommand.firstInstance].diffuseColor = glm::vec3(mat->diffuseColor.r, mat->diffuseColor.g, mat->diffuseColor.b);
+		}
+
+		if (mat->metallicAndRoughnessTexture != "") {
+			auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+			ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+		}
+
+
+		if (mat->normalMap != "") {
+			auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+			ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = normalmapIdx;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = -1;
+		}
+	}
+
+	return ubo1;
+	//m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
 }
 
 SquadPhongShader::SquadPhongShader():ShaderModule("glsl/phong_sqad.vert.glsl", "glsl/phong_sqad.frag.glsl")

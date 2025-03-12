@@ -41,32 +41,45 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Projection = m_camera->GetProjMatrix();
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
-        GbufferShader::UniformBufferObject1 ubo1[256];
+        GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
 
-        auto meshNames = m_scene->GetMeshNames();
-        auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
-
-        for (auto i = 0; i < meshNames.size(); i++) {
-            auto name = meshNames[i];
-            auto mesh = m_scene->GetMesh(name);
-            auto mat = m_scene->GetMaterial(mesh->matId);
-            auto indirectCommand = drawIndexedIndirectCommands[i];
-            if (mat->diffuseTexture != "") {
-                auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
-            }
-
-            if (mat->metallicAndRoughnessTexture != "") {
-                auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
-            }
-        }
+        ////auto meshNames = m_scene->GetMeshNames();
+        //auto numPrims = m_scene->GetNumPrimInfos();
+        //auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
+        //
+        //for (auto i = 0; i < numPrims; i++) {
+        //    //auto name = meshNames[i];
+        //    //auto mesh = m_scene->GetMesh(i);
+        //    auto primInfo = m_scene->m_primInfos[i];
+        //    auto mat = m_scene->GetMaterial(primInfo.material_id);
+        //
+        //    auto indirectCommand = drawIndexedIndirectCommands[i];
+        //    if (mat->diffuseTexture != "") {
+        //        auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+        //        ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+        //    }
+        //    else {
+        //        ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+        //        ubo1.ubo[indirectCommand.firstInstance].diffuseColor = glm::vec3(mat->diffuseColor.r, mat->diffuseColor.g, mat->diffuseColor.b);
+        //    }
+        //
+        //    if (mat->metallicAndRoughnessTexture != "") {
+        //        auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+        //        ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+        //    }
+        //    else {
+        //        ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+        //    }
+        //
+        //
+        //    if (mat->normalMap != "") {
+        //        auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+        //        ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = normalmapIdx;
+        //    }
+        //    else {
+        //        ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = -1;
+        //    }
+        //}
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
@@ -102,6 +115,8 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+
+    spdlog::info("camera.pos: {0}, {1}, {2}", m_camera->GetPosition().x, m_camera->GetPosition().y, m_camera->GetPosition().z);
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()
@@ -278,6 +293,7 @@ void PBR::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -334,6 +350,7 @@ void PBR::loadScene()
 void PBR::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, 1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
     float intensity = 10.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
@@ -345,6 +362,9 @@ void PBR::createCamera()
     glm::vec3 center(0.f);
     glm::vec3 direction = glm::normalize(center - position);
 
+    //glm::vec3 position(-0.939732, 1.98241, 8.1362);
+    //glm::vec3 direction = glm::normalize(glm::vec3(1.f, -1.f, -5.f));
+    //
     float fov = 60.f;
     float aspectRatio = (float)WIDTH / (float)HEIGHT;
     float zNear = 0.01f;

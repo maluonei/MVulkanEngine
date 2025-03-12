@@ -62,7 +62,7 @@ public:
 		int diffuseTextureIdx;
 		int metallicAndRoughnessTextureIdx;
 		int matId;
-		int padding2;
+		int normalmapIdx;
 	};
 
 	struct UniformBuffer0

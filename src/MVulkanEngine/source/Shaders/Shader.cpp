@@ -81,7 +81,7 @@ void Shader::compile(std::string shaderPath)
 		size_t size = shaderPath.size();
 
 		fs::path hlslShader = shaderRootPath / (shaderPath);
-		fs::path outputShader = shaderRootPath / (shaderPath.substr(0, size - 5) + ".spv");
+		fs::path outputShader = shaderRootPath / (shaderPath.substr(0, size - 5) + "_" + m_entryPoint + ".spv");
 
 		if (!fs::exists(hlslShader)) {
 			spdlog::error("source shader don't exist: {0}", shaderPath);

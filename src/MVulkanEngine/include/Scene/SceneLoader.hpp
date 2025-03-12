@@ -30,8 +30,11 @@ private:
 
 	void processTextures(const aiScene* aiscene);
 	void processMaterials(const aiScene* aiscene, Scene* scene);
+	//void processMaterial(const aiMaterial* material, const aiScene* aiscene, std::string matName);
 	void processNode(const aiNode* node, const aiScene* aiscene, Scene* scene);
-	void processMesh(const aiMesh* mesh, const aiScene* aiscene, Scene* scene);
+	void processMeshs(const aiScene* aiscene, Scene* scene);
+
+	//std::unordered_map<std::string, std::shared_ptr<PhongMaterial>> materials;
 };
 
 

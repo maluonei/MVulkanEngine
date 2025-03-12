@@ -43,34 +43,35 @@ void MVulkanRaytracing::Clean() {
 
 void MVulkanRaytracing::TestCreateAccelerationStructure(const std::shared_ptr<Scene>& scene)
 {
-    auto names = scene->GetMeshNames();
+    //auto names = scene->GetMeshNames();
+    auto numPrims = scene->GetNumPrimInfos();
 
-    m_buildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(names.size());
-    m_rangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(names.size());
-    m_blas = std::vector<VkAccelerationStructureKHR>(names.size());
-    m_asBuffers = std::vector<Buffer>(names.size());
-    m_scrathBuffers = std::vector<Buffer>(names.size());
+    m_buildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(numPrims);
+    m_rangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(numPrims);
+    m_blas = std::vector<VkAccelerationStructureKHR>(numPrims);
+    m_asBuffers = std::vector<Buffer>(numPrims);
+    m_scrathBuffers = std::vector<Buffer>(numPrims);
 
-    std::vector<BLASBuildInfo>                                  blasBuildInfos(names.size());
+    std::vector<BLASBuildInfo>                                  blasBuildInfos(numPrims);
 
     auto rayTracingCommandList = Singleton<MVulkanEngine>::instance().GetRaytracingCommandList();
 
-    int i=0;
-    for(auto name:names)
+    //int i=0;
+    for(auto index = 0; index < numPrims; index++)
     {
-        auto mesh = scene->GetMesh(name);
+        auto mesh = scene->GetMesh(scene->m_primInfos[index].mesh_id);
 
-        spdlog::info("mesh->vertices.size():{0}", mesh->vertices.size());
+        //spdlog::info("mesh->vertices.size():{0}", mesh->vertices.size());
         
-        CreateBLAS(mesh, blasBuildInfos[i]);
+        CreateBLAS(mesh, blasBuildInfos[index]);
 
-        m_buildInfos[i] = blasBuildInfos[i].geometryInfo;
-        m_rangeInfos[i] = blasBuildInfos[i].rangeInfo;
-        m_blas[i] = blasBuildInfos[i].blas;
-        m_asBuffers[i] = blasBuildInfos[i].asBuffer;
-        m_scrathBuffers[i] = blasBuildInfos[i].scrathBuffer;
+        m_buildInfos[index] = blasBuildInfos[index].geometryInfo;
+        m_rangeInfos[index] = blasBuildInfos[index].rangeInfo;
+        m_blas[index] = blasBuildInfos[index].blas;
+        m_asBuffers[index] = blasBuildInfos[index].asBuffer;
+        m_scrathBuffers[index] = blasBuildInfos[index].scrathBuffer;
 
-        i++;
+        //i++;
     }
 
     rayTracingCommandList.Reset();

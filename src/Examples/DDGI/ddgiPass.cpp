@@ -48,32 +48,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Projection = m_camera->GetProjMatrix();
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
-        GbufferShader::UniformBufferObject1 ubo1[256];
+        GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
 
-        auto meshNames = m_scene->GetMeshNames();
-        auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
-
-        for (auto i = 0; i < meshNames.size(); i++) {
-            auto name = meshNames[i];
-            auto mesh = m_scene->GetMesh(name);
-            auto mat = m_scene->GetMaterial(mesh->matId);
-            auto indirectCommand = drawIndexedIndirectCommands[i];
-            if (mat->diffuseTexture != "") {
-                auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].diffuseTextureIdx = -1;
-            }
-
-            if (mat->metallicAndRoughnessTexture != "") {
-                auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
-            }
-            else {
-                ubo1[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
-            }
-        }
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
@@ -81,13 +57,14 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     {
         ProbeTracingShader::UniformBuffer0 ubo0{};
     
-        auto meshNames = m_scene->GetMeshNames();
+        //auto meshNames = m_scene->GetMeshNames();
+        auto numPrims = m_scene->GetNumPrimInfos();
         auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
     
-        for (auto i = 0; i < meshNames.size(); i++) {
-            auto name = meshNames[i];
-            auto mesh = m_scene->GetMesh(name);
-            auto mat = m_scene->GetMaterial(mesh->matId);
+        for (auto i = 0; i < numPrims; i++) {
+            //auto name = meshNames[m_scene->m_primInfos[i].meshId];
+            auto mesh = m_scene->GetMesh(m_scene->m_primInfos[i].mesh_id);
+            auto mat = m_scene->GetMaterial(m_scene->m_primInfos[i].material_id);
             auto indirectCommand = drawIndexedIndirectCommands[i];
             if (mat->diffuseTexture != "") {
                 auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
@@ -166,6 +143,13 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         m_probeVisulizePass->GetShader()->SetUBO(0, &ubo0);
     }
+
+    {
+        CompositeShader::UniformBuffer0 ubo0{};
+        ubo0.visulizeProbe = (int)m_visualizeProbes;
+
+        m_compositePass->GetShader()->SetUBO(0, &ubo0);
+    }
     
     graphicsList.Reset();
     graphicsList.Begin();
@@ -213,7 +197,12 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     }
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_rtaoPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
+    if (m_visualizeProbes) {
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
+    }
+    else {
+
+    }
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
     
     graphicsList.End();
@@ -353,6 +342,7 @@ void DDGIApplication::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    //fs::path modelPath = resourcePath / "breakfast_room" / "breakfast_room.obj";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -422,6 +412,7 @@ void DDGIApplication::createAS()
 void DDGIApplication::createLight()
 {
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, -1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
     float intensity = 20.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
@@ -432,6 +423,9 @@ void DDGIApplication::createCamera()
     glm::vec3 position(1.2925221, 3.7383504, -0.29563048);
     glm::vec3 center = position + glm::vec3(-0.8f, -0.3f, -0.1f);
     glm::vec3 direction = glm::normalize(center - position);
+
+    //glm::vec3 position(-4.6, 4.9, -9.0);
+    //glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, -2.f));
 
     float fov = 60.f;
     float aspectRatio = (float)WIDTH / (float)HEIGHT;
@@ -638,7 +632,8 @@ void DDGIApplication::createStorageBuffers()
         //storageBufferSizes[5] = probeBuffer.GetSize();
 
         //auto shader = std::static_pointer_cast<ProbeTracingShader>(probeTracingShader);
-        auto meshNames = m_scene->GetMeshNames();
+        //auto meshNames = m_scene->GetMeshNames();
+        auto primitiveNum = m_scene->GetNumPrimInfos();
 
         VertexBuffer   vertexBuffer;
         IndexBuffer    indexBuffer;
@@ -657,8 +652,8 @@ void DDGIApplication::createStorageBuffers()
         int indexBufferIndex = 0;
         int instanceBufferIndex = 0;
 
-        for (auto meshName : meshNames) {
-            auto mesh = m_scene->GetMesh(meshName);
+        for (auto j = 0; j < primitiveNum;j++) {
+            auto mesh = m_scene->GetMesh(m_scene->m_primInfos[j].mesh_id);
             auto meshVertexNum = mesh->vertices.size();
             for (auto i = 0; i < meshVertexNum; i++) {
                 vertexBuffer.position[vertexBufferIndex + i] = mesh->vertices[i].position;
@@ -676,7 +671,7 @@ void DDGIApplication::createStorageBuffers()
                     .indexOffset = indexBufferIndex,
                     .uvOffset = vertexBufferIndex * 2,
                     .normalOffset = vertexBufferIndex * 3,
-                    .materialIdx = int(mesh->matId)
+                    .materialIdx = int(m_scene->m_primInfos[j].material_id)
             };
 
             vertexBufferIndex += meshVertexNum;
@@ -700,11 +695,12 @@ void DDGIApplication::createStorageBuffers()
 
 void DDGIApplication::initDDGIVolumn()
 {
-    //glm::vec3 startPosition = glm::vec3(-11.f, 0.5f, -4.5f);
-    //glm::vec3 offset = glm::vec3(2.5f, 1.3f, 1.05f);
+    //glm::vec3 startPosition = glm::vec3(-5.6f, -1.1f, -9.3f);
+    //glm::vec3 endPosition = glm::vec3(4.8f, 7.4f, 4.5f);
+
     glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
     glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
-    glm::ivec3 probeDim = glm::ivec3(12, 12, 12);
+    glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
     //glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
     m_volume = std::make_shared<DDGIVolume>(startPosition, endPosition, probeDim);
 
@@ -837,62 +833,6 @@ void DDGIApplication::createProbeTracingPass()
         auto tlas = m_rayTracing.GetTLAS();
         std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
 
-        //std::vector<uint32_t> storageBufferSizes(6);
-        //{
-        //    auto probeBuffer = m_volume->GetProbeBuffer();
-        //
-        //    auto numVertices = m_scene->GetNumVertices();
-        //    auto numIndices = m_scene->GetNumTriangles() * 3;
-        //    auto numMeshes = m_scene->GetNumMeshes();
-        //
-        //    storageBufferSizes[0] = numVertices * sizeof(glm::vec3);
-        //    storageBufferSizes[1] = numIndices * sizeof(int);
-        //    storageBufferSizes[2] = storageBufferSizes[0];
-        //    storageBufferSizes[3] = numVertices * sizeof(glm::vec2);
-        //    storageBufferSizes[4] = numMeshes * sizeof(ProbeTracingShader::GeometryInfo);
-        //    storageBufferSizes[5] = probeBuffer.GetSize();
-        //
-        //    auto shader = std::static_pointer_cast<ProbeTracingShader>(probeTracingShader);
-        //    auto meshNames = m_scene->GetMeshNames();
-        //
-        //    shader->vertexBuffer.position.resize(numVertices);
-        //    shader->indexBuffer.index.resize(numIndices);
-        //    shader->normalBuffer.normal.resize(numVertices);
-        //    shader->uvBuffer.uv.resize(numVertices);
-        //    shader->instanceOffsetBuffer.geometryInfos.resize(numMeshes);
-        //    shader->probeBuffer = probeBuffer;
-        //
-        //    int vertexBufferIndex = 0;
-        //    int indexBufferIndex = 0;
-        //    int instanceBufferIndex = 0;
-        //
-        //    for (auto meshName : meshNames) {
-        //        auto mesh = m_scene->GetMesh(meshName);
-        //        auto meshVertexNum = mesh->vertices.size();
-        //        for (auto i = 0; i < meshVertexNum; i++) {
-        //            shader->vertexBuffer.position[vertexBufferIndex + i] = mesh->vertices[i].position;
-        //            shader->normalBuffer.normal[vertexBufferIndex + i] = mesh->vertices[i].normal;
-        //            shader->uvBuffer.uv[vertexBufferIndex + i] = mesh->vertices[i].texcoord;
-        //        }
-        //        auto meshIndexNum = mesh->indices.size();
-        //        for (auto i = 0; i < meshIndexNum; i++) {
-        //            shader->indexBuffer.index[indexBufferIndex + i] = mesh->indices[i];
-        //        }
-        //
-        //        shader->instanceOffsetBuffer.geometryInfos[instanceBufferIndex] =
-        //            ProbeTracingShader::GeometryInfo{
-        //                .vertexOffset = vertexBufferIndex * 3,
-        //                .indexOffset = indexBufferIndex,
-        //                .uvOffset = vertexBufferIndex * 2,
-        //                .normalOffset = vertexBufferIndex * 3,
-        //                .materialIdx = int(mesh->matId)
-        //        };
-        //
-        //        vertexBufferIndex += meshVertexNum;
-        //        indexBufferIndex += meshIndexNum;
-        //        instanceBufferIndex += 1;
-        //    }
-        //}
         std::vector<StorageBuffer> storageBuffers(0);
         storageBuffers.push_back(*m_tlasVertexBuffer);
         storageBuffers.push_back(*m_tlasIndexBuffer);
@@ -1182,6 +1122,10 @@ void DDGIApplication::createProbeVisulizePass()
         //visulizeShader->SetUBO(0, &m_ProbeVisulizeShaderUniformBuffer0);
         visulizeShader->SetUBO(1, &m_uniformBuffer1);
     }
+
+    if (m_visualizeProbes == 0) {
+        transitionProbeVisulizeTextureLayoutToShaderRead();
+    }
 }
 
 void DDGIApplication::createCompositePass()
@@ -1277,4 +1221,48 @@ void DDGIApplication::changeRWTextureLayoutToTexture()
     }
     Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
+}
+
+void DDGIApplication::transitionProbeVisulizeTextureLayoutToShaderRead()
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = m_probeVisulizePass->GetFrameBuffer(0).GetImage(0);
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barriers.push_back(barrier);
+
+        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+        //barriers.push_back(barrier);
+    }
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+}
+
+void DDGIApplication::transitionProbeVisulizeTextureLayoutToUndifined()
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = m_probeVisulizePass->GetFrameBuffer(0).GetImage(0);
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barriers.push_back(barrier);
+
+        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+        //barriers.push_back(barrier);
+    }
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }

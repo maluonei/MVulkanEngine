@@ -5,6 +5,7 @@
 #include <stb_image.h>
 #include <filesystem>
 #include <vulkan/vulkan_core.h>
+#include <assert.h>
 
 namespace fs = std::filesystem;
 
@@ -13,6 +14,8 @@ class MImage {
 public:
     bool Load(fs::path imagePath)
     {
+        assert(fs::exists(imagePath), "imagePath not exist");
+
         stbi_uc* pixels = stbi_load(imagePath.string().c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         //VkDeviceSize imageSize = texWidth * texHeight * 4;
 
