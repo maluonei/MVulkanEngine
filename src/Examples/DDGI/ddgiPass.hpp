@@ -48,6 +48,7 @@ private:
 	void createProbeTracingPass();
 	void createRTAOPass();
 	void createLightingPass();
+	void createProbeRelocationPass();
 	void createProbeBlendingRadiancePass();
 	void createProbeBlendingDepthPass();
 	void createProbeClassficationPass();
@@ -70,6 +71,7 @@ private:
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
 	std::shared_ptr<ComputePass> m_probeBlendingDepthPass;
 	std::shared_ptr<ComputePass> m_probeClassficationPass;
+	std::shared_ptr<ComputePass> m_probeRelocationPass;
 
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
@@ -97,10 +99,11 @@ private:
 	MVulkanRaytracing			m_rayTracing;
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
-	int							m_raysPerProbe = 128;
+	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
 	bool						m_probeClassfication = true;
-	bool						m_visualizeProbes = false;
+	bool						m_visualizeProbes = true;
+	bool						m_probeRelocationEnabled = true;
 
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;

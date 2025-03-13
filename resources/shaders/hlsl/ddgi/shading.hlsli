@@ -48,7 +48,7 @@ float3 BRDF(float3 albedo, float3 lightColor, float3 L, float3 V, float3 N, floa
 
     float3 color = float3(0.0, 0.0, 0.0);
 
-    if (dotNL > 0.0)
+    if (dotNL > 0.0) 
     {
         float rroughness = max(0.05, roughness);
 		// D = Normal distribution (Distribution of the microfacets)

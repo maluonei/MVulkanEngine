@@ -7,13 +7,13 @@ struct VSInput
     //[[vk::location(3)]] float2 Tangent : TEXCOORD1;
 };
 
-struct VSOutput
+struct VSOutput 
 {
     float2 texCoord : TEXCOORD0;
     float3 normal : NORMAL;
     //float3 tangent : NORMAL;
     float4 position : SV_POSITION;
-};
+}; 
 
 VSOutput main(VSInput input)
 {

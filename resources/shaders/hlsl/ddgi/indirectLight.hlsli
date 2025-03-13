@@ -6,8 +6,14 @@
 struct Probe{
     float3 position;
     int probeState;
-};
+    float3 offset;
+    float padding0;
 
+    //float3 closestFrontfaceDirection;
+    //float closestFrontfaceDistance;
+    //float3 farthestFrontfaceDirection;
+    //float closestBackfaceDistance;
+};
 
 struct UniformBuffer1
 {
@@ -16,13 +22,27 @@ struct UniformBuffer1
     int   raysPerProbe;
 
     float3 probePos0;
-	int	   padding0;
+	float  minFrontFaceDistance;
 	float3 probePos1;
-	int	   padding1;
+	int	   probeRelocationEnabled;
+
+    //int   probeRelocationEnabled;
+    //int   padding1;
+    //int   padding2;
+    //int   padding3;
 };
 
 int GetProbeIndex(int3 pIndex, int3 probeScale){
     return pIndex.x * probeScale.y * probeScale.z + pIndex.y * probeScale.z + pIndex.z;
+}
+
+float3 GetProbePosition(UniformBuffer1 ubo1, Probe probe){
+    if(ubo1.probeRelocationEnabled){
+        return probe.position + probe.offset;
+    }
+    else{
+        return probe.position;
+    }
 }
 
 float TrilinearInterpolationWeight(float3 gridSpaceDistance, int3 probeIndex, float3 probeSpacing){
@@ -164,7 +184,7 @@ IndirectLightingOutput CalculateIndirectLighting(
             //break;
         }   
         //break;
-    }
+    } 
 
     if(totalWeights == 0.f) return output;
 

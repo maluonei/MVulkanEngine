@@ -1,3 +1,5 @@
+//#include "indirectLight.hlsli"
+
 // HLSL Shader
 struct ModelBuffer
 {
@@ -29,7 +31,9 @@ cbuffer ubo0 : register(b0)
     UniformBuffer0 ubo0;
 };
 
+
 [[vk::binding(2, 0)]]StructuredBuffer<ModelBuffer> Models : register(t1);
+//[[vk::binding(2, 0)]]RWStructuredBuffer<Probe> probes : register(u0);
 
 struct VSInput
 {
@@ -82,11 +86,14 @@ float3x3 inverse(float3x3 m)
 
 VSOutput main(VSInput input)
 {
+    //float3 probePosition = GetProbePosition(probes[input.InstanceID]);
+    //float4x4 =  
+ 
     VSOutput output;
 
     // Pass through texture coordinates
     output.texCoord = input.Coord;
-
+  
     // Compute world space position
     float4 worldSpacePosition = mul(Models[input.InstanceID].Model, float4(input.Position, 1.0));
 

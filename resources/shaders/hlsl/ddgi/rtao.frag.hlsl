@@ -158,10 +158,10 @@ PSOutput main(PSInput input)
     accumulatedBuffer[input.texCoord * int2(ubo0.gbufferWidth, ubo0.gbufferHeight)] = float2(finalAO, accumulatedFrameCount+1);
     
     //output.color = float4(ao, ao, ao, 1.f);
-    float3 aoColor = float3(finalAO, finalAO, finalAO);
+    float3 aoColor = float3(finalAO, finalAO, finalAO); 
 
     //output.color = float4(finalAO * fragcolor, 1.f);
     output.color = float4(aoColor + fragcolor * 0.00000000000001, 1.f);
     
     return output;
-}
+} 

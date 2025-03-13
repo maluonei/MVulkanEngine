@@ -10,13 +10,13 @@ cbuffer ubo1 : register(b1)
 [[vk::binding(4, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t0); 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
-struct PSInput
+struct PSInput 
 {
     float3 normal : NORMAL;
-    float3 worldPos : POSITION;
+    float3 worldPos : POSITION; 
     float2 texCoord : TEXCOORD0;
     uint instanceID : INSTANCE_ID;
-    float4 position : SV_POSITION;
+    float4 position : SV_POSITION;  
 };
 
 struct PSOutput
@@ -43,7 +43,7 @@ PSOutput main(PSInput input)
     float2 baseUV = probeBaseIndex * float2(RadianceProbeResolution, RadianceProbeResolution) + float2(RadianceProbeResolution*0.5f, RadianceProbeResolution*0.5f);
     float2 octahedralUVOfNormalTexture_Int = float2(baseUV) + octahedralUVOfNormal * 0.5f * float2((RadianceProbeResolution-2.f), (RadianceProbeResolution-2.f));
     float2 octahedralUVOfNormalTexture_Float = float2(octahedralUVOfNormalTexture_Int) * radianceProbeResolutionInv;
-                
+                  
     float3 probeRadiance = VolumeProbeDatasRadiance.Sample(linearSampler, octahedralUVOfNormalTexture_Float).rgb;
     //probeRadiance = (1e-20) * probeRadiance + float3((octahedralUV + float2(1.f, 1.f)) / 2.f, 0.f);
     

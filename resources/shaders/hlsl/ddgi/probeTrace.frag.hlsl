@@ -146,10 +146,10 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     pathState.t = q.CommittedRayT();
 
     uint instanceIndex = q.CommittedInstanceID();
-
+  
     uint ioffset = instanceOffset[instanceIndex].indexOffset;
     uint voffset = instanceOffset[instanceIndex].vertexOffset;
-
+ 
     uint primitiveIndex = q.CommittedPrimitiveIndex();
 
     pathState.instanceID = instanceIndex;
@@ -223,11 +223,11 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
     //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
 
-    //float3x3 toWorld;
+    //float3x3 toWorld; 
     //toWorld[0] = objToWorld[0].xyz;
     //toWorld[1] = objToWorld[1].xyz;
     //toWorld[2] = objToWorld[2].xyz;
-
+ 
     //normal = mul(toWorld, normal);
 
     // compute position
@@ -290,8 +290,8 @@ PSOutput main(PSInput input)
     
     RayDesc ray;
     ray.TMin = 0.f;
-    ray.TMax = 10000.f;
-    ray.Origin = probe.position; 
+    ray.TMax = 10000.f; 
+    ray.Origin = GetProbePosition(ubo1, probe); 
     //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
     ray.Direction = SphericalFibonacci(rayIndex, ubo1.raysPerProbe);
 
@@ -299,6 +299,10 @@ PSOutput main(PSInput input)
         output.position = float4(pathState.position, 1.f);
         output.normal = float4(pathState.normal, 1.f);
         output.albedo = float4(pathState.albedo, 1.f);
+
+        //if(pathState.outside==false){
+        //    output.normal.a = -1.f;
+        //}
     } 
     else{ 
         output.position = float4(ray.Origin + ray.Direction * 10000.f, 0.f);
@@ -345,6 +349,9 @@ PSOutput main(PSInput input)
     }
 
     output.radiance = float4(diffuse, pathState.t);
+    if(pathState.outside==false){
+      output.radiance.a = -pathState.t;
+    }
 
     return output;
 }

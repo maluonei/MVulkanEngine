@@ -58,7 +58,7 @@ bool CalculateRadiance(
 
     uint2 probeOffset = CalculateProbeOffset(dispatchThreadID, probeResolution);
 
-    float3 probePosition = probes[probeIndex].position;
+    //float3 probePosition = probes[probeIndex].position + probes[probeIndex].offset;
     if(probeOffset.x!=0 && probeOffset.x!=(probeResolution-1) && probeOffset.y!=0 && probeOffset.y!=(probeResolution-1)){
 
         int2 threadCoords = probeOffset.xy - int2(1, 1);
@@ -113,7 +113,7 @@ bool CalculateDepth(
     int probeIndex = CalculateProbeIndex(dispatchThreadID, probeResolution, probeDim);
     uint2 probeOffset = CalculateProbeOffset(dispatchThreadID, probeResolution);
 
-    float3 probePosition = probes[probeIndex].position;
+    //float3 probePosition = probes[probeIndex].position;
     //float2 octahedralUV = probeOffset.xy / float2(probeResolution, probeResolution);
     //float weights = 0.f;
 
@@ -233,14 +233,14 @@ void LoadSharedMemory(int probeIndex, uint GroupIndex, int pixelsPerProbe){
     for(int i=0;i<totalIterations;i++){
         int rayIndex = (GroupIndex * totalIterations) + i;
         if (rayIndex >= ubo1.raysPerProbe) break;
-
+ 
         int3 volumeProbePositionUV_Int = int3(rayIndex, probeIndex, 0);
         float4 targetPositions = VolumeProbePosition.Load(volumeProbePositionUV_Int).rgba;
         float4 targetRadiances = VolumeProbeRadiance.Load(volumeProbePositionUV_Int).rgba;
-
+    
         RayRadiance[rayIndex] = targetRadiances.rgb;
-        RayDistance[rayIndex] = targetRadiances.a;
-        RayDirection[rayIndex] = normalize(targetPositions.rgb - probes[probeIndex].position);
+        RayDistance[rayIndex] = abs(targetRadiances.a);
+        RayDirection[rayIndex] = normalize(targetPositions.rgb - GetProbePosition(ubo1, probes[probeIndex]));
     }
     //GroupMemoryBarrierWithGroupSync();
 }

@@ -40,17 +40,17 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     float hitDistances[MaxPaysPerProbe];
     for(int i=0; i<numRays; i++){
         int2 texcoord = int2(i, probeIndex);
-        hitDistances[i] = VolumeProbeRadiance[texcoord].a;
+        hitDistances[i] = abs(VolumeProbeRadiance[texcoord].a);
         backfaceCount += (hitDistances[i] < 0.f);
-    }
+    } 
 
     if((float)backfaceCount / (float)numRays > ProbeFixedRayBackfaceThreshold){
         probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
         TestTexture[uint2(probeIndex, 0)] = float4(1.f, 0.f, 0.f, 1.f);
         return;
-    }
-
-    float3 probePosition = probes[probeIndex].position;
+    }  
+  
+    float3 probePosition = GetProbePosition(ubo1, probes[probeIndex]);
     float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim - 1.f);
 
     for(int i=0; i<numRays; i++){

@@ -8,7 +8,6 @@
 //	int    padding0;
 //};
 
-
 struct VertexBuffer {
 	std::vector<glm::vec3> position;
 
@@ -50,6 +49,13 @@ struct InstanceOffset {
 struct ProbeData {
 	glm::vec3   position;
 	int			probeState = 0;
+	glm::vec3   offset = glm::vec3(0.f, 0.f, 0.f);
+	
+	float		padding0;
+	//glm::vec3	closestFrontfaceDirection;
+	//float		closestFrontfaceDistance;
+	//glm::vec3	farthestFrontfaceDirection;
+	//float		closestBackfaceDistance;
 };
 
 struct ProbeBuffer {
@@ -75,10 +81,15 @@ struct UniformBuffer1
 	glm::ivec3	probeDim;
 	int			raysPerProbe;
 
-	glm::vec3 probePos0;
-	int		  padding0;
-	glm::vec3 probePos1;
-	int		  padding1;
+	glm::vec3	probePos0;
+	float		minFrontFaceDistance;
+	glm::vec3	probePos1;
+	//int		  farthestFrontfaceDistance;
+	
+	int			probeRelocationEnbled = true;
+	//int			padding0;
+	//int			padding1;
+	//int			padding2;
 };
 
 struct LightStruct {
@@ -510,6 +521,45 @@ private:
 	UniformBuffer0 ubo0;
 	UniformBuffer1 ubo1;
 };
+
+class ProbeRelocationShader :public ComputeShaderModule {
+public:
+	ProbeRelocationShader() :ComputeShaderModule(
+		"hlsl/ddgi/probeRelocation.comp.hlsl",
+		"main",
+		false)
+	{
+	}
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+		switch (binding) {
+		case 0:
+			return sizeof(UniformBuffer1);
+		}
+	}
+
+	virtual void SetUBO(uint8_t binding, void* data) {
+		switch (binding) {
+		case 0:
+			ubo0 = *reinterpret_cast<UniformBuffer1*>(data);
+			return;
+
+		}
+	}
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+		switch (binding) {
+		case 0:
+			return (void*)&ubo0;
+			//case 2:
+			//	return (void*)probeBuffer.probes.data();
+		}
+	}
+
+private:
+	UniformBuffer1 ubo0;
+};
+
 
 
 #endif

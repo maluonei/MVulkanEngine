@@ -271,12 +271,12 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     PathState pathState;
     {
         RayDesc ray;
-        ray.TMin = 0.f;
+        ray.TMin = 0.f; 
         ray.TMax = 1000.f;
-        ray.Origin = probe.position;
+        ray.Origin = GetProbePosition(ubo1, probe); 
         //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
         ray.Direction = SphericalFibonacci(rayIndex, 144);
-
+ 
         if(RayTracingClosestHit(ray, pathState)){
             output.position = float4(pathState.position, 1.f);
             output.normal = float4(pathState.normal, 1.f);

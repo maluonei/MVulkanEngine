@@ -56,19 +56,19 @@ bool RayTracingAnyHit(in RayDesc rayDesc) {
   RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
 
   q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
-  q.Proceed();
+  q.Proceed(); 
 
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     return true;
   }
 
   return false;
-}
-
+} 
+ 
 PSOutput main(PSInput input)
-{ 
-    PSOutput output; 
-    
+{  
+    PSOutput output;  
+     
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord); 

@@ -6,9 +6,9 @@ struct UniformBuffer0{
 };
 
 [[vk::binding(0, 0)]]
-cbuffer ubo0 : register(b0)
+cbuffer ubo0 : register(b0) 
 {
-    UniformBuffer0 ubo0;
+    UniformBuffer0 ubo0; 
 };
 
 
@@ -33,12 +33,12 @@ struct PSOutput
 PSOutput main(PSInput input)
 {
     PSOutput output;
-    
+     
     float4 gBufferValue0 = DirectLight.Sample(linearSampler, input.texCoord);
     float4 gBufferValue1 = IndirectLight.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = RTAO.Sample(linearSampler, input.texCoord);
     float4 gBufferValue3 = ProbeVisulize.Sample(linearSampler, input.texCoord);
-
+ 
     float3 directLight = gBufferValue0.rgb;
     float3 indirectLight = gBufferValue1.rgb;
     float rtao = gBufferValue2.r;

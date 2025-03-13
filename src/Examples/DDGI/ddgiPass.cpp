@@ -49,7 +49,6 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
-
         m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
@@ -174,6 +173,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
         auto probeDim = m_volume->GetProbeDim();
+        if(m_probeRelocationEnabled)
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
         if(m_probeClassfication)
             Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, 8 * probeDim.x * probeDim.y, 8 * probeDim.z, 1);
@@ -297,6 +298,7 @@ void DDGIApplication::CreateRenderPass()
     createProbeBlendingRadiancePass();
     createProbeBlendingDepthPass();
     createProbeClassficationPass();
+    createProbeRelocationPass();
     createLightingPass();
     createRTAOPass();
     createProbeVisulizePass();
@@ -701,8 +703,8 @@ void DDGIApplication::createStorageBuffers()
 
 void DDGIApplication::initDDGIVolumn()
 {
-    glm::vec3 startPosition = glm::vec3(-5.802552, 0.31353754, -6.384822);
-    glm::vec3 endPosition = glm::vec3(2.009489, 3.320252, 6.7349577);
+    glm::vec3 startPosition = glm::vec3(-5.902552, 0.11353754, -6.484822);
+    glm::vec3 endPosition = glm::vec3(2.109489, 3.620252, 6.8349577);
 
     //glm::vec3 startPosition = glm::vec3(-5.6f, -1.1f, -9.3f);
     //glm::vec3 endPosition = glm::vec3(4.8f, 7.4f, 4.5f);
@@ -724,6 +726,11 @@ void DDGIApplication::initDDGIVolumn()
 
         m_uniformBuffer1.probePos0 = m_volume->GetProbePosition(0, 0, 0);
         m_uniformBuffer1.probePos1 = m_volume->GetProbePosition(probeDim.x-1, probeDim.y-1, probeDim.z-1);
+    
+
+        m_uniformBuffer1.minFrontFaceDistance = 0.4f;
+        //m_uniformBuffer1.farthestFrontfaceDistance = 0.8f;
+        m_uniformBuffer1.probeRelocationEnbled = (int)m_probeRelocationEnabled;
     }
 }
 
@@ -1077,6 +1084,42 @@ void DDGIApplication::createProbeClassficationPass()
 
         probeclassficationShader->SetUBO(0, &ubo0);
         probeclassficationShader->SetUBO(1, &m_uniformBuffer1);
+    }
+}
+
+
+void DDGIApplication::createProbeRelocationPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    std::shared_ptr<ProbeRelocationShader> probeRelocationShader = std::make_shared<ProbeRelocationShader>();
+    m_probeRelocationPass = std::make_shared<ComputePass>(device);
+
+    auto probeBuffer = m_volume->GetProbeBuffer();
+    std::vector<StorageBuffer> storageBuffers(2);
+    storageBuffers[0] = *m_probesDataBuffer;
+    storageBuffers[1] = *m_probesModelBuffer;
+    //probeclassficationShader->probeBuffer = probeBuffer;
+
+    //std::vector<uint32_t> storageBufferSizes(0);
+
+    std::vector<VkSampler> samplers(1, m_linearSamplerWithAnisotropy.GetSampler());
+
+    std::vector<std::vector<VkImageView>> seperateImageViews(2);
+    seperateImageViews[0].resize(1);
+    seperateImageViews[0][0] = m_probeTracingPass->GetFrameBuffer(0).GetImageView(0);
+    seperateImageViews[1].resize(1);
+    seperateImageViews[1][0] = m_probeTracingPass->GetFrameBuffer(0).GetImageView(3);
+
+    std::vector<std::vector<VkImageView>> storageImageViews(0);
+    //storageImageViews[0].resize(1);
+    //storageImageViews[0][0] = m_testTexture->GetImageView();
+
+    Singleton<MVulkanEngine>::instance().CreateComputePass(m_probeRelocationPass, probeRelocationShader,
+        storageBuffers, seperateImageViews, storageImageViews, samplers);
+
+    {
+        probeRelocationShader->SetUBO(0, &m_uniformBuffer1);
     }
 }
 
