@@ -23,5 +23,5 @@ ray tracing ambient occlusion
 ![RTAO](images/rtao.png)
 
 ddgi:
-ddgi with rtao(without tone mapping)
-![DDGI](images/ddgi_no_tonemapping.png)
+ddgi with rtao
+![DDGI](images/ddgi_sponza.png)
