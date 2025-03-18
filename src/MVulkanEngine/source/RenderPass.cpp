@@ -330,6 +330,13 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
     std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
 
+    if (m_shader->UseGeometryShader()) {
+        MVulkanShaderReflector geomReflector(m_shader->GetGeometryShader().GetShader());
+        ShaderReflectorOut resourceOutGeom = geomReflector.GenerateShaderReflactorOut();
+        std::vector<MVulkanDescriptorSetLayoutBinding> bindingsGeom = resourceOutGeom.GetBindings();
+        bindings.insert(bindings.end(), bindingsGeom.begin(), bindingsGeom.end());
+    }
+
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
 
@@ -426,10 +433,22 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
 
     UpdateDescriptorSetWrite(imageViews, storageImageViews, samplers, accelerationStructure);
 
-    m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
-        m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
-        m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
-        m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
+    if (m_shader->UseGeometryShader()) {
+        m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
+            m_shader->GetVertexShader().GetShaderModule(), 
+            m_shader->GetGeometryShader().GetShaderModule(),
+            m_shader->GetFragmentShader().GetShaderModule(),
+            m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+            m_shader->GetVertEntryPoint(), 
+            m_shader->GetGeomEntryPoint(),
+            m_shader->GetFragEntryPoint());
+    }
+    else {
+        m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
+            m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
+            m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+            m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
+    }
 
     m_shader->Clean();
 }
@@ -569,6 +588,7 @@ void RenderPass::CreateRenderPass()
     gbufferFormats.depthStoreOp = m_info.depthStoreOp;
     gbufferFormats.loadOp = m_info.loadOp;
     gbufferFormats.storeOp = m_info.storeOp;
+    gbufferFormats.useDepth = m_info.useDepthBuffer;
 
     m_renderPass.Create(m_device, gbufferFormats);
 }
@@ -598,6 +618,7 @@ void RenderPass::CreateFrameBuffers(
 
         //info.reuseDepthView = m_info.reuseDepthView;
         info.depthView = m_info.depthView;
+        info.useDepthBuffer = m_info.useDepthBuffer;
 
         m_frameBuffers[i].Create(m_device, info);
     }

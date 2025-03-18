@@ -14,6 +14,8 @@ struct MVulkanPilelineCreateInfo {
 	VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
 
 	VkCullModeFlags cullmode = VK_CULL_MODE_BACK_BIT;
+	VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	float lineWidth = 1.f;
 };
 
 class MVulkanPipeline {
@@ -34,7 +36,6 @@ protected:
 
 class MVulkanGraphicsPipeline : public MVulkanPipeline {
 public:
-	
 	void Create(VkDevice device, 
 		MVulkanPilelineCreateInfo info, 
 		VkShaderModule vertShaderModule, 
@@ -43,8 +44,21 @@ public:
 		PipelineVertexInputStateInfo vertexStateInfo,
 		VkDescriptorSetLayout layout, 
 		uint32_t numAttachments,
-		std::string vertEntryPoint = "",
-		std::string fragEntryPoint = "");
+		std::string vertEntryPoint = "main",
+		std::string fragEntryPoint = "main");
+
+	void Create(VkDevice device,
+		MVulkanPilelineCreateInfo info,
+		VkShaderModule vertShaderModule,
+		VkShaderModule geomShaderModule,
+		VkShaderModule fragShaderModule,
+		VkRenderPass renderPass,
+		PipelineVertexInputStateInfo vertexStateInfo,
+		VkDescriptorSetLayout layout,
+		uint32_t numAttachments,
+		std::string vertEntryPoint = "main",
+		std::string geomEntryPoint = "main",
+		std::string fragEntryPoint = "main");
 
 private:
 

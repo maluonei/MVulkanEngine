@@ -208,6 +208,9 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         case spv::ExecutionModelGLCompute:
             stage = ShaderStageFlagBits::COMPUTE;
             break;
+        case spv::ExecutionModelGeometry:
+            stage = ShaderStageFlagBits::GEOMETRY;
+            break;
         default:
             stage = ShaderStageFlagBits::VERTEX;
             break;
@@ -235,6 +238,10 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     }
 
     for (const auto& sb : m_resources.storage_buffers) {
+        //if (sb.name.find("counter.var") != std::string::npos) {
+        //    continue;
+        //
+
         auto& type = m_compiler.get_type(sb.type_id);
         // 获取 Descriptor Set 和绑定点
         uint32_t set = m_compiler.get_decoration(sb.id, spv::DecorationDescriptorSet);

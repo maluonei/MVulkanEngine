@@ -6,7 +6,7 @@ project(MVulkanEngine_VOXELIZATION)
 set(CMAKE_CXX_STANDARD 20)
 
 file(GLOB VOXEL_SOURCES "*.cpp" "*.hpp")
-add_executable(MVulkanEngine_DDGI ${VOXEL_SOURCES})
+add_executable(MVulkanEngine_VOXELIZATION ${VOXEL_SOURCES})
 
 #message(STATUS "MVulkanEngine_include: ${MVulkanEngine_include}")
 # ���Ӱ���Ŀ¼

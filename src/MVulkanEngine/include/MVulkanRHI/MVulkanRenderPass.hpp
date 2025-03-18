@@ -5,6 +5,7 @@
 #include "MVulkanDevice.hpp"
 
 struct RenderPassFormatsInfo {
+	bool useDepth = true;
 	bool useResolvedRef = false;
 	std::vector<VkFormat> imageFormats;
 	VkFormat depthFormat;

@@ -93,7 +93,7 @@ private:
 
 class StorageBuffer {
 public:
-	StorageBuffer();
+	StorageBuffer(VkBufferUsageFlagBits usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	//~MCBV();
 	void Clean();
 
@@ -107,7 +107,7 @@ public:
 
 	inline void* GetMappedData()const { return m_dataBuffer.GetData();}
 private:
-
+	VkBufferUsageFlagBits m_usage;
 	BufferCreateInfo	m_info;
 	MVulkanBuffer		m_dataBuffer;
 };
@@ -130,9 +130,10 @@ private:
 };
 
 struct ImageCreateInfo {
-	uint32_t width, height, channels, mipLevels=1;
+	uint32_t width, height, depth=1, channels=3, mipLevels=1;
 	uint32_t arrayLength = 1;
 
+	VkImageType type = VK_IMAGE_TYPE_2D;
 	VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;

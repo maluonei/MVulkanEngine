@@ -17,16 +17,41 @@ ShaderModule::ShaderModule(
 	load();
 }
 
+ShaderModule::ShaderModule(
+	const std::string& vertPath, 
+	const std::string& geomPath, 
+	const std::string& fragPath, 
+	std::string vertEntry, 
+	std::string geomEntry, 
+	std::string fragEntry, 
+	bool compileEveryTime)
+	: m_vertPath(vertPath),
+	m_fragPath(fragPath),
+	m_geomPath(geomPath),
+	m_vertEntry(vertEntry),
+	m_fragEntry(fragEntry),
+	m_geomEntry(geomEntry),
+	m_compileEveryTime(compileEveryTime)
+{
+	load();
+}
+
 void ShaderModule::Create(VkDevice device)
 {
 	m_vertShader.Create(device);
 	m_fragShader.Create(device);
+	if (UseGeometryShader()) {
+		m_geomShader.Create(device);
+	}
 }
 
 void ShaderModule::Clean()
 {
 	m_vertShader.Clean();
 	m_fragShader.Clean();
+	if (UseGeometryShader()) {
+		m_geomShader.Clean();
+	}
 }
 
 size_t ShaderModule::GetBufferSizeBinding(uint32_t binding) const
@@ -48,6 +73,8 @@ void ShaderModule::load()
 {
 	m_vertShader = MVulkanShader(m_vertPath, ShaderStageFlagBits::VERTEX, m_vertEntry, m_compileEveryTime);
 	m_fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT, m_fragEntry, m_compileEveryTime);
+	if(m_geomPath.size() > 0)
+		m_geomShader = MVulkanShader(m_geomPath, ShaderStageFlagBits::GEOMETRY, m_geomEntry, m_compileEveryTime);
 }
 
 

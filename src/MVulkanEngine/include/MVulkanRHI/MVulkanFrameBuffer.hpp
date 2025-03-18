@@ -10,6 +10,7 @@
 struct FrameBufferCreateInfo {
 	bool useAttachmentResolve = false;
 	bool useSwapchainImageViews = false;
+	bool useDepthBuffer = true;
 
 	VkRenderPass renderPass;
 	VkExtent2D extent;

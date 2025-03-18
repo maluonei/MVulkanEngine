@@ -173,12 +173,18 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
         auto probeDim = m_volume->GetProbeDim();
-        if(m_probeRelocationEnabled)
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
-        if(m_probeClassfication)
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, 8 * probeDim.x * probeDim.y, 8 * probeDim.z, 1);
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 16 * probeDim.x * probeDim.y, 16 * probeDim.z, 1);
+        //if(m_probeRelocationEnabled)
+        //    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
+        //if(m_probeClassfication)
+        //    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, probeDim.x * probeDim.y * probeDim.z, 1, 1);
+        //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, 16 * probeDim.x * probeDim.y, 16 * probeDim.z, 1);
+        //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 8 * probeDim.x * probeDim.y, 8 * probeDim.z, 1);
+        if (m_probeRelocationEnabled)
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, (probeDim.x * probeDim.y * probeDim.z + 31) / 32, 1, 1);
+        if (m_probeClassfication)
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, (probeDim.x * probeDim.y * probeDim.z+31) / 32, 1, 1);
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, probeDim.x * probeDim.y, probeDim.z, 1);
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, probeDim.x * probeDim.y, probeDim.z, 1);
 
         computeList.End();
 

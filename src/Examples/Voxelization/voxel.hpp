@@ -18,11 +18,10 @@ class ComputePass;
 class Camera;
 class Light;
 
-class RTAO : public MRenderApplication {
+class VOXEL : public MRenderApplication {
 public:
 	virtual void SetUp();
 	virtual void ComputeAndDraw(uint32_t imageIndex);
-	//virtual void UpdatePerFrame(uint32_t imageIndex);
 
 	virtual void RecreateSwapchainAndRenderPasses();
 	virtual void CreateRenderPass();
@@ -31,62 +30,68 @@ public:
 	virtual void Clean();
 private:
 	void loadScene();
-	void createAS();
+	void createCube();
+	//void createAS();
 	void createLight();
 	void createCamera();
+
+	void setOrthCamera(int axis);
+	//void 
 	void createSamplers();
 
+	void createVoxelPass();
+	void createPostPass();
+	void createVoxelizeTestPass();
+	void createClearTexturesPass();
+	void createVoxeVisulizePass();
+	void createGenVoxelVisulizeIndirectComandsPass();
+	void createJFAPass();
+	void createSDFDebugPass();
+
 	void createTextures();
+	void initVoxelVisulizeBuffers();
+
+	void transitionVoxelTextureLayoutToComputeShaderRead();
+	void transitionVoxelTextureLayoutToGeneral();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
-	std::shared_ptr<RenderPass> m_rtao_lightingPass;
+	std::shared_ptr<RenderPass> m_voxelPass;
+	std::shared_ptr<RenderPass> m_voxelizeTestPass;
+	std::shared_ptr<RenderPass> m_voxelVisulizePass;
+	std::shared_ptr<ComputePass> m_genVoxelVisulizeIndirectComandsPass;
+	std::shared_ptr<ComputePass> m_JFAPass;
+	std::shared_ptr<ComputePass> m_clearTexturesPass;
+	std::shared_ptr<RenderPass> m_postPass;
+	std::shared_ptr<RenderPass> m_sdfDebugPass;
 
-	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	MVulkanSampler				m_linearSampler;
 
 	std::shared_ptr<Scene>		m_scene;
 	std::shared_ptr<Scene>		m_squad;
+	//std::shared_ptr<Scene>		m_cube;
+
+	std::shared_ptr<Buffer>		m_cube_vertexBuffer;
+	std::shared_ptr<Buffer>		m_cube_indexBuffer;
+	std::shared_ptr<Buffer>		m_cube_indirectBuffer;
+	std::shared_ptr<StorageBuffer>		m_voxelVisulizeBufferModel;
+	std::shared_ptr<StorageBuffer>		m_voxelDrawCommandBuffer;
+	//VkDrawIndirectCommand		m_cube_indirectCommand;
 
 	std::shared_ptr<Light>		m_directionalLight;
 
 	std::shared_ptr<Camera>		m_camera;
-	MVulkanRaytracing			m_rayTracing;
-};
+	std::shared_ptr<Camera>		m_orthCamera;
 
-class RTAOShader :public ShaderModule {
-public:
-	RTAOShader();
+	std::shared_ptr<MVulkanTexture>		m_voxelTexture;
+	std::shared_ptr<MVulkanTexture>		m_JFATexture0;
+	std::shared_ptr<MVulkanTexture>		m_JFATexture1;
+	std::shared_ptr<MVulkanTexture>		m_SDFTexture;
+	glm::ivec3 m_voxelResolution = { 64, 64, 64 };
 
-	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
-
-	virtual void SetUBO(uint8_t binding, void* data);
-
-	virtual void* GetData(uint32_t binding, uint32_t index = 0);
-
-public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
-
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
-	struct UniformBuffer0 {
-		Light lights[2];
-
-		glm::vec3 cameraPos;
-		int lightNum;
-
-		int resetAccumulatedBuffer;
-		int gbufferWidth;
-		int gbufferHeight;
-		float padding2;
-	};
-
-private:
-	UniformBuffer0 ubo0;
+	int m_maxRaymarchSteps = 24;
+	
+	//MVulkanRaytracing			m_rayTracing;
 };
 
 

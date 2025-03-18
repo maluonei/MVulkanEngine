@@ -128,7 +128,7 @@ void Shader::compile(std::string shaderPath)
 			//}
 
 			fs::path logFile = shaderRootPath / "log.txt";
-			std::string command = compilerPath.string() + " -T" + phase + " -E " + m_entryPoint + " -spirv -fspv-preserve-bindings -fspv-target-env=vulkan1.3 -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
+			std::string command = compilerPath.string() + " -T " + phase + " -E " + m_entryPoint + " -spirv -fspv-preserve-bindings -fspv-target-env=vulkan1.3 -Fo " + outputShader.string() + " " + hlslShader.string() + " > " + logFile.string();
 			//std::string command = compilerPath.string() + " -V --target-env vulkan1.3 -D -e main -Od -S " + phase + " " + hlslShader.string() + " -o " + outputShader.string() + " > " + logFile.string();
 
 			spdlog::info("comnmand: {0}", command);

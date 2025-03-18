@@ -146,7 +146,7 @@ void MCBV::UpdateData(float offset, void* data)
 }
 
 
-StorageBuffer::StorageBuffer() :m_dataBuffer(BufferType::STORAGE_BUFFER)
+StorageBuffer::StorageBuffer(VkBufferUsageFlagBits usage) :m_dataBuffer(BufferType::STORAGE_BUFFER), m_usage(usage)
 {
 }
 
@@ -164,7 +164,7 @@ void StorageBuffer::CreateAndLoadData(MVulkanCommandList* commandList, MVulkanDe
 
 void StorageBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 {
-    info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    info.usage = VkBufferUsageFlagBits(m_usage);
     m_info = info;
 
     m_dataBuffer.Create(device, info);
@@ -184,10 +184,10 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     // ���� Image
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.imageType = info.type;
     imageInfo.extent.width = info.width;
     imageInfo.extent.height = info.height;
-    imageInfo.extent.depth = 1;
+    imageInfo.extent.depth = info.depth;
     imageInfo.mipLevels = info.mipLevels;
     imageInfo.arrayLayers = info.arrayLength;
     imageInfo.format = info.format; //�Դ������ݴ洢��ʽ

@@ -1,12 +1,12 @@
-#include "rtao.hpp"
+#include "voxel.hpp"
 #include "Managers/singleton.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
 
 int main() {
-	RTAO rtao;
-	rtao.Init();
+	VOXEL voxel;
+	voxel.Init();
 
-	rtao.Run();
-	rtao.Clean();
+	voxel.Run();
+	voxel.Clean();
 }
 

@@ -188,6 +188,11 @@ public:
         bool flipY = true);
 
     void RecordCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
+        bool flipY = true);
+
+    void RecordCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
         bool flipY = true);
@@ -232,6 +237,11 @@ private:
     void recordCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
         bool flipY = true);
 
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,

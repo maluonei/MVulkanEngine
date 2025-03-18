@@ -17,14 +17,22 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     m_info = creatInfo;
 
     m_colorBuffers.resize(creatInfo.numAttachments);
-    std::vector<VkImageView> attachments;
-    attachments.resize(creatInfo.numAttachments + 1);
+    std::vector<VkImageView> attachments(creatInfo.numAttachments);
+    if(creatInfo.useDepthBuffer)    
+        attachments.resize(creatInfo.numAttachments + 1);
+
 
     if (creatInfo.useSwapchainImageViews) {
         m_swapChain = creatInfo.swapChain;
-        assert(creatInfo.numAttachments == 1);
+        //assert(creatInfo.numAttachments == 1);
         for (auto i = 0; i < creatInfo.numAttachments; i++) {
-            attachments[i] = m_swapChain.GetImageView(creatInfo.swapChainImageIndex);
+            if (i == 0) {
+                attachments[i] = m_swapChain.GetImageView(creatInfo.swapChainImageIndex);
+            }
+            else{
+                m_colorBuffers[i].Create(device, creatInfo.extent, COLOR_ATTACHMENT, creatInfo.imageAttachmentFormats[i]);
+                attachments[i] = m_colorBuffers[i].GetImageView();
+            }
         }
     }
     else {
@@ -34,12 +42,14 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
         }
     }
 
-    if (creatInfo.depthView) {
-        attachments[creatInfo.numAttachments] = creatInfo.depthView;
-    }
-    else {
-        m_depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
-        attachments[creatInfo.numAttachments] = m_depthBuffer.GetImageView();
+    if (creatInfo.useDepthBuffer) {
+        if (creatInfo.depthView) {
+            attachments[creatInfo.numAttachments] = creatInfo.depthView;
+        }
+        else {
+            m_depthBuffer.Create(device, creatInfo.extent, DEPTH_STENCIL_ATTACHMENT, m_info.depthStencilFormat);
+            attachments[creatInfo.numAttachments] = m_depthBuffer.GetImageView();
+        }
     }
 
     if(creatInfo.useAttachmentResolve)

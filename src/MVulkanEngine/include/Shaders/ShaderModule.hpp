@@ -17,17 +17,29 @@ public:
 		std::string vertEntry = "main",
 		std::string fragEntry = "main",
 		bool compileEveryTime = false);
+
+	ShaderModule(
+		const std::string& vertPath,
+		const std::string& geomPath,
+		const std::string& fragPath,
+		std::string vertEntry,
+		std::string geomEntry,
+		std::string fragEntry,
+		bool compileEveryTime = false);
 	void Create(VkDevice device);
 	void Clean();
 
 	inline MVulkanShader GetVertexShader() const{return m_vertShader;}
 	inline MVulkanShader GetFragmentShader() const{return m_fragShader;}
+	inline MVulkanShader GetGeometryShader() const { return m_geomShader; }
+	bool UseGeometryShader() const { return m_geomPath.size() > 0; }
 
 	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
 	virtual void SetUBO(uint8_t binding, void* data);
 	virtual void* GetData(uint32_t binding, uint32_t index = 0);
 	const inline std::string GetVertEntryPoint() { return m_vertEntry; }
 	const inline std::string GetFragEntryPoint() { return m_fragEntry; }
+	const inline std::string GetGeomEntryPoint() { return m_geomEntry; }
 
 protected:
 	bool m_compileEveryTime = false;
@@ -37,12 +49,15 @@ private:
 
 	MVulkanShader	m_vertShader;
 	MVulkanShader	m_fragShader;
+	MVulkanShader	m_geomShader;
 
-	std::string		m_vertPath;
-	std::string		m_fragPath;
+	std::string		m_vertPath="";
+	std::string		m_fragPath="";
+	std::string		m_geomPath="";
 
 	std::string		m_vertEntry = "main";
 	std::string		m_fragEntry = "main";
+	std::string		m_geomEntry = "main";
 };
 
 class TestShader : public ShaderModule {

@@ -47,6 +47,8 @@ public:
 
 	Camera(glm::vec3 _position, glm::vec3 _direction, float _fov, float _aspect_ratio, float _zNear, float _zFar);
 	Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _fov, float _aspect_ratio, float _zNear, float _zFar);
+	Camera(glm::vec3 _position, glm::vec3 _direction, glm::vec3 _up, float _aspect_ratio, float _xMin, float _xMax, float _yMin, float _yMax, float _zNear, float _zFar);
+
 
 	inline float GetZnear()const { return m_zNear; }
 	inline float GetZfar()const { return m_zFar; }

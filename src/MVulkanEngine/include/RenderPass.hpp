@@ -24,6 +24,7 @@ struct RenderPassCreateInfo {
 	VkImageView* colorAttachmentResolvedViews = nullptr;
 
 	//bool generateDepthMipmap = false;
+	bool useDepthBuffer = true;
 	bool reuseDepthView = false;
 	VkImageView depthView = nullptr;
 
