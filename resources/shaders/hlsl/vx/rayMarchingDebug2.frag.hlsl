@@ -8,14 +8,6 @@ struct PSInput
 struct PSOutput
 {
     [[vk::location(0)]] float4 Color : SV_TARGET0;
-    [[vk::location(1)]] float4 Color_Debug0 : SV_TARGET1;
-    [[vk::location(2)]] float4 Color_Debug1 : SV_TARGET2;
-    [[vk::location(3)]] float4 Color_Debug2 : SV_TARGET3;
-    [[vk::location(4)]] float4 Color_Debug3 : SV_TARGET4;
-    //[[vk::location(4)]] float4 Color_Debug3 : SV_TARGET4;
-    //[[vk::location(5)]] float4 Color_Debug4 : SV_TARGET5;
-    //[[vk::location(6)]] float4 Color_Debug5 : SV_TARGET6;
-    //[[vk::location(7)]] float4 Color_Debug6 : SV_TARGET7;
 };
 
 struct UniformBuffer0
@@ -82,8 +74,9 @@ cbuffer ubo2 : register(b2)
     UniformBuffer2 ubo2;
 };
 
-[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u2);
-
+[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u0);
+[[vk::binding(4, 0)]] RWTexture3D<float4> albedoTexture : register(u1);
+[[vk::binding(5, 0)]] RWTexture3D<float4> normalTexture : register(u2);
 
 //#define epsilon 1e-3
 
@@ -119,7 +112,7 @@ float3 GetSDFGridPosition(uint3 gridCoord){
 }
 
 float GetSDFValue(float3 position, out bool inSDFTex, out RayMarchSDFStruct debug){
-    float3 offset = 0.001f * (ubo0.aabbMax - ubo0.aabbMin) / float3(ubo0.gridResolution);
+    float3 offset = 0.5f * (ubo0.aabbMax - ubo0.aabbMin) / float3(ubo0.gridResolution);
     float epsilon = offset;
     //debug = 0;
 
@@ -262,8 +255,6 @@ int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc)
 PSOutput main(PSInput input)
 {
     PSOutput output;
-    //float depth = 0.f;
-    //int step = 0;
     RayMarchSDFStruct struc;
 
     struc.step = 0;
@@ -274,45 +265,16 @@ PSOutput main(PSInput input)
     uint3 res = RayMarchSDF(ubo1.cameraPos, camDir, struc);
     
     output.Color = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug0 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug2 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug3 = float4(0.f, 0.f, 0.f, 1.f);
-
-    if(res.x == -1 && res.y == -1 && res.z == -1){
-        output.Color = float4(0.f, 0.f, 0.f, 1.f);
-        output.Color_Debug0 = float4(1.f, 1.f, 1.f, 1.f);
-        output.Color_Debug1 = float4(1.f, 1.f, 1.f, 1.f);
-        output.Color_Debug3 = float4(0.f, 0.f, 1.f, 1.f);
-        return output;
-    }
 
     if( (res.x == 1 && res.y == 1 && res.z == 1)){
         float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
-        output.Color_Debug0 = float4(posCoord, 1.f);
-        output.Color_Debug1 = float4(struc.sdfValue / 10.f * float3(1.f, 1.f, 1.f), 1.f);
-        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
-        output.Color = float4(posCoord, 1.f);
-        output.Color_Debug3 = float4(1.f, 0.f, 0.f, 1.f);
-    }
-
-    if( (res.x == -2 && res.y == -2 && res.z == -2)){
-        float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
-        float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
-        output.Color_Debug0 = float4(posCoord, 1.f);
-        output.Color_Debug1 = float4(struc.sdfValue / 10.f * float3(1.f, 1.f, 1.f), 1.f);
-        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
-        output.Color_Debug3 = float4(0.f, 1.f, 0.f, 1.f);
-    }
-
-    if( (res.x == -3 && res.y == -3 && res.z == -3)){
-        float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
-        float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
-        output.Color_Debug0 = float4(posCoord, 1.f);
-        output.Color_Debug1 = float4(0.f, 1.f, 0.f, 1.f);
-        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
-        output.Color_Debug3 = float4(1.f, 1.f, 0.f, 1.f);
+        int3 coord = posCoord * ubo0.gridResolution;
+        float3 albedo = albedoTexture[coord].rgb;
+        float3 normal = normalTexture[coord].rgb;
+        
+        //output.Color = float4(posCoord, 1.f);
+        output.Color = float4(albedo * 1e-10 + normal, 1.f);
     }
 
     return output;

@@ -2,6 +2,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Managers/RandomGenerator.hpp"
+#include "Util.hpp"
+
 
 DDGIVolume::DDGIVolume(glm::vec3 startPosition, glm::vec3 offset):
 	m_startPosition(startPosition), m_offset(offset), m_probeNum(glm::ivec3(8, 8, 8))
@@ -28,6 +31,20 @@ glm::vec3 DDGIVolume::GetProbePosition(int index)
 	int y = (index % probeNumYZ) / m_probeNum.z;
 	int z = index % m_probeNum.z;
 	return GetProbePosition(x, y, z);
+}
+
+void DDGIVolume::SetRandomRotation()
+{
+	float x = 2 * PI * Singleton<RandomGenerator>::instance().GetRandomFloat();
+	float y = 2 * PI * Singleton<RandomGenerator>::instance().GetRandomFloat();
+	float z = 2 * PI * Singleton<RandomGenerator>::instance().GetRandomFloat();
+
+	glm::mat4 rotMat(1.f);
+	rotMat = glm::rotate(rotMat, x, glm::vec3(1.f, 0.f, 0.f));
+	rotMat = glm::rotate(rotMat, y, glm::vec3(0.f, 1.f, 0.f));
+	rotMat = glm::rotate(rotMat, z, glm::vec3(0.f, 0.f, 1.f));
+
+	m_quaternion = RotationMatrixToQuaternion(glm::mat3(rotMat));
 }
 
 void DDGIVolume::InitProbeBufferAndModelBuffer()

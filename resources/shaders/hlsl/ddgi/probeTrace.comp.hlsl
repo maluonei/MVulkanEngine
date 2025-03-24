@@ -255,6 +255,16 @@ float3 SphericalFibonacci(float index, float numSamples)
     return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
 }
 
+float3 SphericalFibonacci(float index, float numSamples, float t)
+{
+    const float b = (sqrt(5.f) * 0.5f + 0.5f) - 1.f + 100.f * t;
+    float phi = 2 * PI * frac(index * b);
+    float cosTheta = 1.f - (2.f * index + 1.f) * (1.f / numSamples);
+    float sinTheta = sqrt(saturate(1.f - (cosTheta * cosTheta)));
+
+    return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
+}
+
 [numthreads(16, 16, 1)] 
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
@@ -275,7 +285,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
         ray.TMax = 1000.f;
         ray.Origin = GetProbePosition(ubo1, probe); 
         //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-        ray.Direction = SphericalFibonacci(rayIndex, 144);
+        ray.Direction = SphericalFibonacci(rayIndex, ubo2.rayCount);
  
         if(RayTracingClosestHit(ray, pathState)){
             output.position = float4(pathState.position, 1.f);

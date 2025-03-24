@@ -3,7 +3,7 @@ struct VSOutput
     float3 normal : NORMAL;
     //float3 worldPos : POSITION;
     float2 texCoord : TEXCOORD0;
-    //uint instanceID : INSTANCE_ID;
+    uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
     //float3x3 TBN : TEXCOORD1;
 };
@@ -14,7 +14,7 @@ struct GSOutput
     //float3 worldPos : POSITION;
     float2 texCoord : TEXCOORD0;
     float3 voxPos : TEXCOORD1;
-    //uint instanceID : INSTANCE_ID;
+    uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
     //float3x3 TBN : TEXCOORD1;
 };
@@ -72,6 +72,7 @@ void main(triangle VSOutput inputs[3], inout TriangleStream<GSOutput> outputs, u
         float4 temp = float4(mul(ubo1.Projection, pos));
         output.voxPos = (temp.xyz + 1.f) * 0.5f * ubo1.volumeResolution.xyz;
         
+        output.instanceID = inputs[i].instanceID;
         output.position = mul(ubo1.Projection, float4(GetProjection(pos, axis)));
         output.position.z = 0.5f * (output.position.z + 1.f);
         outputs.Append(output);

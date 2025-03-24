@@ -25,7 +25,7 @@ struct VSOutput
     float3 normal : NORMAL;
     //float3 worldPos : POSITION;
     float2 texCoord : TEXCOORD0;
-    //uint instanceID : INSTANCE_ID;
+    uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
     //float3x3 TBN : TEXCOORD1;
 };
@@ -84,7 +84,7 @@ VSOutput main(VSInput input)
     output.normal = normalize(mul(normalMatrix, input.Normal));
 //
     //// Pass instance ID
-    //output.instanceID = input.InstanceID;
+    output.instanceID = input.InstanceID;
 //
     return output;
 }

@@ -92,11 +92,13 @@ private:
 	std::shared_ptr<MVulkanTexture>		m_JFATexture0;
 	std::shared_ptr<MVulkanTexture>		m_JFATexture1;
 	std::shared_ptr<MVulkanTexture>		m_SDFTexture;
+	std::shared_ptr<MVulkanTexture>		m_SDFAlbedoTexture;
+	std::shared_ptr<MVulkanTexture>		m_SDFNormalTexture;
 	//glm::ivec3 m_voxelResolution = { 64, 64, 64 };
 	//int m_maxRaymarchSteps = 16;
 
 	glm::ivec3 m_voxelResolution = { 128, 128, 128 };
-	int m_maxRaymarchSteps = 64;
+	int m_maxRaymarchSteps = 100;
 	
 	//MVulkanRaytracing			m_rayTracing;
 };

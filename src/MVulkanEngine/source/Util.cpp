@@ -35,3 +35,41 @@ std::ostream& operator<<(std::ostream& os, const glm::vec3& vec) {
     os << ")";
     return os;
 }
+
+glm::vec4 RotationMatrixToQuaternion(glm::mat3 R)
+{
+    glm::vec4 q;
+    float trace = R[0][0] + R[1][1] + R[2][2];
+
+    if (trace > 0) {
+        float S = sqrt(trace + 1.0f) * 2; // S = 4 * w
+        q.w = 0.25f * S;
+        q.x = (R[2][1] - R[1][2]) / S;
+        q.y = (R[0][2] - R[2][0]) / S;
+        q.z = (R[1][0] - R[0][1]) / S;
+    }
+    else {
+        if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
+            float S = sqrt(1.0f + R[0][0] - R[1][1] - R[2][2]) * 2;
+            q.w = (R[2][1] - R[1][2]) / S;
+            q.x = 0.25f * S;
+            q.y = (R[0][1] + R[1][0]) / S;
+            q.z = (R[0][2] + R[2][0]) / S;
+        }
+        else if (R[1][1] > R[2][2]) {
+            float S = sqrt(1.0f + R[1][1] - R[0][0] - R[2][2]) * 2;
+            q.w = (R[0][2] - R[2][0]) / S;
+            q.x = (R[0][1] + R[1][0]) / S;
+            q.y = 0.25f * S;
+            q.z = (R[1][2] + R[2][1]) / S;
+        }
+        else {
+            float S = sqrt(1.0f + R[2][2] - R[0][0] - R[1][1]) * 2;
+            q.w = (R[1][0] - R[0][1]) / S;
+            q.x = (R[0][2] + R[2][0]) / S;
+            q.y = (R[1][2] + R[2][1]) / S;
+            q.z = 0.25f * S;
+        }
+    }
+    return q;
+}

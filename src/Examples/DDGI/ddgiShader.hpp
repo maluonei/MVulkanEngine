@@ -229,8 +229,10 @@ public:
 
 		int    lightNum;
 		int    frameCount;
-		int padding1;
-		int padding2;
+		int		padding1;
+		float	t;
+
+		glm::vec4 probeRotateQuaternion;
 	};
 	//ProbeBuffer	   probeBuffer;
 

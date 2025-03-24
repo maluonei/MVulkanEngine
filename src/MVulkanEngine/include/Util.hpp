@@ -10,6 +10,8 @@
 #include <array>
 #include "glm/glm.hpp"
 
+#define PI 3.1415926535f
+
 struct BoundingBox {
     glm::vec3 pMin;
     glm::vec3 pMax;
@@ -25,6 +27,8 @@ void PitchYawToDirection(float pitch, float yaw, glm::vec3& direction);
 std::ostream& operator<<(std::ostream& os, const glm::mat4& mat);
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec);
+
+glm::vec4 RotationMatrixToQuaternion(glm::mat3 R);
 
 
 #endif

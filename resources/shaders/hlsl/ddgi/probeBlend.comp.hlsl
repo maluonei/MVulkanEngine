@@ -32,6 +32,7 @@ cbuffer ub1 : register(b1)
 groupshared float3 RayRadiance[MAXRAYSPERPROBE];
 groupshared float  RayDistance[MAXRAYSPERPROBE];
 groupshared float3 RayDirection[MAXRAYSPERPROBE];
+//groupshared int    AccumulateCount[MAXRAYSPERPROBE];
 //#define ProbeResolution 8
 //#define RadianceProbeResolution 8
 //#define DepthProbeResolution 16
@@ -97,7 +98,10 @@ bool CalculateRadiance(
         
         irradiance = irradiance / max(2.f * totalIradianceWeights, 1e-8);
 
-        VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance, 1.f);
+        float4 value = VolumeProbeDatasRadiance[dispatchThreadID.xy];
+        float a = value.a;
+        float3 irradianceAvg = (value.rgb * a + irradiance) / (a + 1.f);
+        VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradianceAvg, a + 1.f);
         //VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance * (1e-20) + float3(probeIndex, 0, 0) / 512.f, 1.f);
 
         return true;
@@ -137,14 +141,6 @@ bool CalculateDepth(
         for(int i=0;i<ubo1.raysPerProbe;i++){
             int3 volumeProbePositionUV_Int = int3(i, probeIndex, 0);
         
-            //float4 targetPositions = VolumeProbePosition.Load(volumeProbePositionUV_Int).rgba;
-            //float4 targetRadiances = VolumeProbeRadiance.Load(volumeProbePositionUV_Int).rgba;;
-//
-            //float3 targetPosition = targetPositions.rgb;
-            //float targetDepth = targetRadiances.a;
-            //float targetDepthSquared = targetDepth * targetDepth;
-            //float cosTheta = max(0.f, dot(sphereDirection, normalize(targetPosition - probePosition)));
-
             //float3 radiance = RayRadiance[i];
             float distance = RayDistance[i];
             float3 direction = RayDirection[i];
@@ -164,7 +160,10 @@ bool CalculateDepth(
         depth = depth / max(totalDepthWeights, 1e-10);
         depthSquared = depthSquared / max(totalDepthWeights, 1e-10);
 
-        VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depth, depthSquared, 0.f, 0.f);
+        float4 value = VolumeProbeDatasDepth[dispatchThreadID.xy];
+        float a = value.r;
+        float2 depthAvg = (value.rg * a + float2(depth, depthSquared)) / (a + 1.f);
+        VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depthAvg, 0.f, a + 1.f);
 
         return true;
     }

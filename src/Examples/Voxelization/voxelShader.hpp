@@ -33,6 +33,8 @@ public:
 			return sizeof(VoxelShader::UniformBuffer0);
 		case 1:
 			return sizeof(VoxelShader::UniformBuffer1);
+		case 2:
+			return sizeof(VoxelShader::UniformBufferObject2);
 		}
 	}
 
@@ -44,6 +46,9 @@ public:
 		case 1:
 			ubo1 = *reinterpret_cast<VoxelShader::UniformBuffer1*>(data);
 			return;
+		case 2:
+			ubo2 = *reinterpret_cast<VoxelShader::UniformBufferObject2*>(data);
+			return;
 		}
 	}
 
@@ -53,6 +58,8 @@ public:
 			return (void*)&ubo0;
 		case 1:
 			return (void*)&ubo1;
+		case 2:
+			return (void*)&ubo2;
 		}
 	}
 
@@ -69,9 +76,25 @@ public:
 		int padding2;
 	};
 
+	struct UniformBuffer2 {
+		int diffuseTextureIdx;
+		int metallicAndRoughnessTexIdx;
+		int matId;
+		int normalMapIdx;
+
+		glm::vec3 diffuseColor;
+		int padding0;
+	};
+
+	struct UniformBufferObject2
+	{
+		UniformBuffer2 texBuffer[512];
+	};
+
 private:
 	UniformBuffer0 ubo0;
 	UniformBuffer1 ubo1;
+	UniformBufferObject2 ubo2;
 };
 
 class VoxelVisulizeShader : public ShaderModule {

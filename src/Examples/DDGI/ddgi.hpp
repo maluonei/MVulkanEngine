@@ -38,6 +38,12 @@ public:
 		return m_modelBuffer;
 	}
 
+	void SetRandomRotation();
+
+	inline glm::vec4 GetQuaternion() const {
+		return m_quaternion;
+	}
+
 private:
 	void InitProbeBufferAndModelBuffer();
 
@@ -45,6 +51,7 @@ private:
 	glm::vec3	m_startPosition;
 	glm::vec3	m_offset;
 	glm::ivec3	m_probeNum;
+	glm::vec4   m_quaternion;
 
 	ProbeBuffer m_probeBuffer;
 	ModelBuffer m_modelBuffer;

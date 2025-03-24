@@ -29,7 +29,9 @@ struct UniformBuffer2
     int    lightNum;
     int    frameCount;
     int    padding1;
-    float  padding2;
+    float  t;
+
+    float4 probeRotateQuaternion;
 };
 
 [[vk::binding(0, 0)]]
@@ -274,6 +276,17 @@ float3 SphericalFibonacci(float index, float numSamples)
     return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
 }
 
+float4 QuaternionConjugate(float4 q)
+{
+    return float4(-q.xyz, q.w);
+}
+
+float3 QuaternionRotate(float3 v, float4 q){
+    float3 b = q.xyz;
+    float b2 = dot(b, b);
+    return (v * (q.w * q.w - b2) + b * (dot(v, b) * 2.f) + cross(b, v) * (q.w * 2.f));
+}
+
 PSOutput main(PSInput input)
 {
     const int2 FullResolution = int2(ubo1.raysPerProbe, ubo1.probeDim.x * ubo1.probeDim.y * ubo1.probeDim.z);
@@ -294,6 +307,7 @@ PSOutput main(PSInput input)
     ray.Origin = GetProbePosition(ubo1, probe); 
     //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
     ray.Direction = SphericalFibonacci(rayIndex, ubo1.raysPerProbe);
+    ray.Direction = QuaternionRotate(ray.Direction, QuaternionConjugate(ubo2.probeRotateQuaternion));
 
     if(RayTracingClosestHit(ray, pathState)){
         output.position = float4(pathState.position, 1.f);
