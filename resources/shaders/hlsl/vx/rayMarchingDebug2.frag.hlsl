@@ -10,7 +10,8 @@ struct PSOutput
     [[vk::location(0)]] float4 Color : SV_TARGET0;
     [[vk::location(1)]] float4 Color_Debug0 : SV_TARGET1;
     [[vk::location(2)]] float4 Color_Debug1 : SV_TARGET2;
-    //[[vk::location(3)]] float4 Color_Debug2 : SV_TARGET3;
+    [[vk::location(3)]] float4 Color_Debug2 : SV_TARGET3;
+    [[vk::location(4)]] float4 Color_Debug3 : SV_TARGET4;
     //[[vk::location(4)]] float4 Color_Debug3 : SV_TARGET4;
     //[[vk::location(5)]] float4 Color_Debug4 : SV_TARGET5;
     //[[vk::location(6)]] float4 Color_Debug5 : SV_TARGET6;
@@ -51,6 +52,7 @@ struct UniformBuffer2{
 struct RayMarchSDFStruct{
     float depth;
     int step;
+    float sdfValue;
     float3 debuginfo0;
     float3 debuginfo1;
     float3 debuginfo2;
@@ -80,7 +82,6 @@ cbuffer ubo2 : register(b2)
     UniformBuffer2 ubo2;
 };
 
-//[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u2);
 [[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u2);
 
 
@@ -118,68 +119,45 @@ float3 GetSDFGridPosition(uint3 gridCoord){
 }
 
 float GetSDFValue(float3 position, out bool inSDFTex, out RayMarchSDFStruct debug){
-    //float epsilon = (ubo0.aabbMax.x - ubo0.aabbMin.x) / ubo0.gridResolution.x;
-    //float epsilon = 0.2f;
-    float3 offset = 0.1f / float3(ubo0.gridResolution);
+    float3 offset = 0.001f * (ubo0.aabbMax - ubo0.aabbMin) / float3(ubo0.gridResolution);
     float epsilon = offset;
     //debug = 0;
 
     if( position.x < (ubo0.aabbMin.x - epsilon) || position.x > (ubo0.aabbMax.x + epsilon) || 
         position.y < (ubo0.aabbMin.y - epsilon) || position.y > (ubo0.aabbMax.y + epsilon) || 
         position.z < (ubo0.aabbMin.z - epsilon) || position.z > (ubo0.aabbMax.z + epsilon))
-    //if( position.x < ubo0.aabbMin.x || position.x > ubo0.aabbMax.x || 
-    //    position.y < ubo0.aabbMin.y || position.y > ubo0.aabbMax.y || 
-    //    position.z < ubo0.aabbMin.z || position.z > ubo0.aabbMax.z)
     {
-        if(position.x < (ubo0.aabbMin.x - epsilon)){
-            debug.debuginfo4.r = 1.f;
-        }
-        if(position.x > (ubo0.aabbMax.x + epsilon)){
-            debug.debuginfo4.g = 1.f;
-        }
-        if(position.y < (ubo0.aabbMin.y - epsilon)){
-            debug.debuginfo4.b = 1.f;
-        }
-        if(position.y > (ubo0.aabbMax.y + epsilon)){
-            debug.debuginfo5.r = 1.f;
-        }
-        if(position.z < (ubo0.aabbMin.z - epsilon)){
-            debug.debuginfo5.g = 1.f;
-        }
-        if(position.z > (ubo0.aabbMax.z + epsilon)){
-            debug.debuginfo5.b = 1.f;
-        }
         inSDFTex = false;
 
         //float3 offset = 0.5f / float3(ubo0.gridResolution);
-        uint3 gridCoord = uint3(((position + offset - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin)) * (ubo0.gridResolution-1));
-        //gridCoord = clamp(gridCoord, 0, ubo0.gridResolution-1);
-        //debug.debuginfo7.xyz = gridCoord / float3(ubo0.gridResolution-1);
+        uint3 gridCoord = uint3(((position - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin)) * (ubo0.gridResolution));
         debug.debuginfo7.xyz = 0.5f * gridCoord / float3(ubo0.gridResolution-1);
-        //debug.debuginfo7.xyz = gridCoord / float3(ubo0.gridResolution-1);
 
         return -1.f;
     }
 
     inSDFTex = true;
 
-    //float3 offset = 0.5f / float3(ubo0.gridResolution);
-    uint3 gridCoord = uint3(((position + offset - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin)) * (ubo0.gridResolution-1));
-    gridCoord = clamp(gridCoord, 0, ubo0.gridResolution-1);
-    debug.debuginfo7.xyz = gridCoord / float3(ubo0.gridResolution-1);
+    uint3 gridCoord = uint3(((position - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin)) * float3(ubo0.gridResolution));
+    gridCoord.x = clamp(gridCoord.x, 0, ubo0.gridResolution.x-1);
+    gridCoord.y = clamp(gridCoord.y, 0, ubo0.gridResolution.y-1);
+    gridCoord.z = clamp(gridCoord.z, 0, ubo0.gridResolution.z-1);
     
     //return 10.f;
     return SDFTexture.Load(gridCoord);
 }
 
-float GetNearestDistance(float3 position, float3 direction, out bool hit){
+float2 GetNearestDistance(
+    float3 position, float3 direction, 
+    float3 aabbMin, float3 aabbMax,
+    out bool hit){
     float tMin = -1e20f;
     float tMax = 1e20f;
 
     //x axis
     if(direction.x != 0.f){
-        float t1 = (ubo0.aabbMin.x - position.x) / direction.x;
-        float t2 = (ubo0.aabbMax.x - position.x) / direction.x;
+        float t1 = (aabbMin.x - position.x) / direction.x;
+        float t2 = (aabbMax.x - position.x) / direction.x;
 
         if (t1 > t2) Swap(t1, t2);
         
@@ -189,8 +167,8 @@ float GetNearestDistance(float3 position, float3 direction, out bool hit){
 
     //y axis
     if(direction.y != 0.f){
-        float t1 = (ubo0.aabbMin.y - position.y) / direction.y;
-        float t2 = (ubo0.aabbMax.y - position.y) / direction.y;
+        float t1 = (aabbMin.y - position.y) / direction.y;
+        float t2 = (aabbMax.y - position.y) / direction.y;
 
         if (t1 > t2) Swap(t1, t2);
         
@@ -200,8 +178,8 @@ float GetNearestDistance(float3 position, float3 direction, out bool hit){
 
     //z axis
     if(direction.z != 0.f){
-        float t1 = (ubo0.aabbMin.z - position.z) / direction.z;
-        float t2 = (ubo0.aabbMax.z - position.z) / direction.z;
+        float t1 = (aabbMin.z - position.z) / direction.z;
+        float t2 = (aabbMax.z - position.z) / direction.z;
 
         if (t1 > t2) Swap(t1, t2);
         
@@ -209,36 +187,46 @@ float GetNearestDistance(float3 position, float3 direction, out bool hit){
         tMax = min(tMax, t2);
     }
 
-    if(tMin > tMax  || (tMin <= tMax && tMax < 0)){
+    if(tMin > tMax || (tMin <= tMax && tMax < 0)){
         hit = false;
-        return -1.f;
+        return float2(-1.f, -1.f);
     }
 
     hit = true;
-    if(tMin < 0 && tMax > 0) return 0.f;
+    if(tMin < 0 && tMax > 0) float2(0.f, tMax);
 
-    return tMin;
+    return float2(tMin, tMax);
 } 
 
+float GetNextPixelSDF(float3 position, float3 direction){
+    int3 currentIndex = int3(float3((position - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin)) * (ubo0.gridResolution));
+    //currentIndex = clamp(currentIndex, 0, ubo0.gridResolution-1);
+    float3 voxelSize = (ubo0.aabbMax - ubo0.aabbMin) / (ubo0.gridResolution);
+
+    float3 currentAabbMin = ubo0.aabbMin + currentIndex * voxelSize;
+    float3 currentAabbMax = currentAabbMin + voxelSize;
+
+    bool hit = false;
+    float2 nextHitT = GetNearestDistance(position, direction, currentAabbMin, currentAabbMax, hit);
+    if(hit) 
+        return nextHitT.y + 2e-3 * voxelSize.x;
+    else
+        return 0.5f * voxelSize.x;
+}
 
 int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc){
     float start = 0.f;
     bool hit = false;
-    struc.depth = GetNearestDistance(position, direction, hit);
+    float2 aabbT = GetNearestDistance(position, direction, ubo0.aabbMin, ubo0.aabbMax, hit);
+    float voxelSize = (ubo0.aabbMax - ubo0.aabbMin) / (ubo0.gridResolution);
+    struc.depth = aabbT.x + 1e-3 * voxelSize.x;
+    struc.depth = max(0.f, struc.depth);
 
     if(!hit) return uint3(-1, -1, -1);
 
-    float3 gridOffset = 1.f / ubo0.gridResolution;
-
     struc.step=0;
-    struc.debuginfo1.xyz = position + direction * struc.depth;
-    bool _isSdf = false;
-    RayMarchSDFStruct _struct;
-    float firstSdfValue = GetSDFValue(struc.debuginfo1.xyz, _isSdf, _struct);
-    struc.debuginfo6 = firstSdfValue * float3(1.f, 1.f, 1.f) / 10.f;
-    struc.debuginfo8 = _struct.debuginfo7;
 
-    for(;struc.step<ubo1.maxRaymarchSteps;struc.step++){
+    for(;struc.step<ubo1.maxRaymarchSteps && struc.depth<=aabbT.y;struc.step++){
         float3 pos = position + direction * struc.depth;// * gridOffset;
         struc.debuginfo0.xyz = pos + 0.2f;
 
@@ -246,9 +234,11 @@ int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc)
         int debug = 0;
         float sdfValue = GetSDFValue(pos, inSdf, struc);
 
+        struc.sdfValue = sdfValue;
+
         if(!inSdf){
             struc.depth = -1.f;
-            struc.debuginfo8 = struc.debuginfo7;
+            //struc.debuginfo8 = struc.debuginfo7;
             return uint3(-3, -3, -3);
         }
 
@@ -256,7 +246,14 @@ int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc)
             return uint3(1, 1, 1);
         }
 
-        struc.depth += sdfValue * gridOffset.x;
+        if(sdfValue > 0.f && sdfValue < 2.f){
+            float nextPosSdf = GetNextPixelSDF(pos, direction);
+            struc.depth += nextPosSdf;
+        }
+        else{
+            struc.depth += (sdfValue - 1.f) * voxelSize.x;
+        }
+        //struc.depth = max(0.f, struc.depth);
     }
 
     return int3(-2, -2, -2);
@@ -265,85 +262,58 @@ int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc)
 PSOutput main(PSInput input)
 {
     PSOutput output;
-    //output.Color_Debug0 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug2 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug3 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug4 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug5 = float4(0.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug6 = float4(0.f, 0.f, 0.f, 1.f);
-
     //float depth = 0.f;
     //int step = 0;
     RayMarchSDFStruct struc;
-    struc.debuginfo4 = float3(0.f, 0.f, 0.f);
-    struc.debuginfo5 = float3(0.f, 0.f, 0.f);
-    struc.debuginfo6 = float3(0.f, 0.f, 0.f);
-    struc.debuginfo8 = float3(0.f, 0.f, 0.f);
 
     struc.step = 0;
     float3 camDir = GetPixelDirection(input.texCoord);
-    float nearestDis = GetNearestDistance(ubo1.cameraPos, camDir, struc.depth);
+    float nearestDis = GetNearestDistance(ubo1.cameraPos, camDir, ubo0.aabbMin, ubo0.aabbMax, struc.depth);
     //depth = 0.f;
     
     uint3 res = RayMarchSDF(ubo1.cameraPos, camDir, struc);
     
-    //output.Color_Debug0 = float4(struc.step / 16.f, 0.f, 0.f, 1.f);
-    //output.Color_Debug1 = float4((struc.debuginfo0.xyz + 1.f) * 0.5f, 1.f);
-    //output.Color_Debug2 = float4((struc.debuginfo1.xyz + 1.f) * 0.5f, 1.f);
     output.Color = float4(0.f, 0.f, 0.f, 1.f);
     output.Color_Debug0 = float4(0.f, 0.f, 0.f, 1.f);
     output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
+    output.Color_Debug2 = float4(0.f, 0.f, 0.f, 1.f);
+    output.Color_Debug3 = float4(0.f, 0.f, 0.f, 1.f);
 
     if(res.x == -1 && res.y == -1 && res.z == -1){
         output.Color = float4(0.f, 0.f, 0.f, 1.f);
-        output.Color_Debug0 = float4(0.f, 0.f, 0.f, 1.f);
-        output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
-        //output.Color_Debug3 = float4(1.f, 0.f, 0.f, 1.f);
+        output.Color_Debug0 = float4(1.f, 1.f, 1.f, 1.f);
+        output.Color_Debug1 = float4(1.f, 1.f, 1.f, 1.f);
+        output.Color_Debug3 = float4(0.f, 0.f, 1.f, 1.f);
         return output;
     }
-    //else if(res.x == -2 && res.y == -2 && res.z == -2){
-    //    //output.Color = float4(1.f, 0.f, 0.f, 1.f);
-    //    output.Color_Debug3 = float4(0.f, 1.f, 0.f, 1.f);
-    //}
-    //else if(res.x == -3 && res.y == -3 && res.z == -3){
-    //    //output.Color = float4(0.f, 1.f, 0.f, 1.f);
-    //    output.Color_Debug3 = float4(0.f, 0.f, 1.f, 1.f);
-    //}
-    //else{
-    //    //output.Color = float4(0.f, 0.f, 1.f, 1.f);
-    //    output.Color_Debug3 = float4(1.f, 1.f, 1.f, 1.f);
-    //    //output.Color = float4(nearestDis/5.f, nearestDis/5.f, nearestDis/5.f, 1.f + ubo2.lightIntensity * 1e-10);
-    //}
-    //output.Color_Debug4 = float4(struc.debuginfo4, 1.f);
-    //output.Color_Debug5 = float4(struc.debuginfo4, 1.f);
-    //output.Color_Debug6 = float4(struc.debuginfo5, 1.f);
-    
-    //output.Color_Debug4 = float4(struc.debuginfo8, 1.f);
 
-    if( (res.x == 1 && res.y == 1 && res.z == 1)  || (res.x == -2 && res.y == -2 && res.z == -2)){
+    if( (res.x == 1 && res.y == 1 && res.z == 1)){
         float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
+        output.Color_Debug0 = float4(posCoord, 1.f);
+        output.Color_Debug1 = float4(struc.sdfValue / 10.f * float3(1.f, 1.f, 1.f), 1.f);
+        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
         output.Color = float4(posCoord, 1.f);
+        output.Color_Debug3 = float4(1.f, 0.f, 0.f, 1.f);
     }
 
     if( (res.x == -2 && res.y == -2 && res.z == -2)){
         float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
         output.Color_Debug0 = float4(posCoord, 1.f);
+        output.Color_Debug1 = float4(struc.sdfValue / 10.f * float3(1.f, 1.f, 1.f), 1.f);
+        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
+        output.Color_Debug3 = float4(0.f, 1.f, 0.f, 1.f);
     }
 
-    
     if( (res.x == -3 && res.y == -3 && res.z == -3)){
         float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
-        output.Color_Debug1 = float4(posCoord, 1.f);
+        output.Color_Debug0 = float4(posCoord, 1.f);
+        output.Color_Debug1 = float4(0.f, 1.f, 0.f, 1.f);
+        output.Color_Debug2 = float4(struc.step / 100.f * float3(1.f, 1.f, 1.f), 1.f);
+        output.Color_Debug3 = float4(1.f, 1.f, 0.f, 1.f);
     }
-
-
-    //output.Color = float4(posCoord, 1.f);
-    
-
 
     return output;
 }

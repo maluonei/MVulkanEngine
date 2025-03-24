@@ -49,7 +49,7 @@ void VOXEL::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Model = glm::mat4(1.f);
         m_voxelPass->GetShader()->SetUBO(0, &ubo0);
 
-        auto aabb = m_scene->GetBoundingBox();
+        auto aabb = GetSameSizeAABB(m_scene);
         VoxelShader::UniformBuffer1 ubo1{};
         ubo1.Projection = m_orthCamera->GetOrthoMatrix();
         ubo1.volumeResolution = m_voxelResolution;
@@ -57,7 +57,7 @@ void VOXEL::ComputeAndDraw(uint32_t imageIndex)
     }
 
     {
-        auto aabb = m_scene->GetBoundingBox();
+        auto aabb = GetSameSizeAABB(m_scene);
         auto resolution = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
 
         SDFTraceShader::UniformBuffer0 ubo0;
@@ -144,7 +144,7 @@ void VOXEL::ComputeAndDraw(uint32_t imageIndex)
         uint32_t stepSizeInit = m_voxelResolution.x / 2;
         uint32_t dispatchSize = m_voxelResolution.x / 8;
 
-        auto aabb = m_scene->GetBoundingBox();
+        auto aabb = GetSameSizeAABB(m_scene);
 
         JFAShader::UniformBuffer0 ubo0;
         ubo0.aabbMin = aabb.pMin;
@@ -205,6 +205,7 @@ void VOXEL::ComputeAndDraw(uint32_t imageIndex)
 
         }
     }
+    //transitionSDFTextureLayoutToFragmentShaderRead();
     //computeList.Reset();
     //computeList.Begin();
     //
@@ -237,7 +238,9 @@ void VOXEL::ComputeAndDraw(uint32_t imageIndex)
     //spdlog::info("camera_position:({0}, {1}, {2})", camPos.x, camPos.y, camPos.z);
 
     graphicsList.End();
+    
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+    //transitionSDFTextureLayoutToComputeShaderWrite();
 
     auto cameraDir = m_camera->GetDirection();
     spdlog::info("cameraDir:({0}, {1}, {2})", cameraDir[0], cameraDir[1], cameraDir[2]);
@@ -313,7 +316,9 @@ void VOXEL::loadScene()
 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
-    fs::path modelPath = resourcePath / "sphere.obj ";
+    //fs::path modelPath = resourcePath / "sphere.obj ";
+    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    //fs::path modelPath = resourcePath / "suzanne.obj ";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -464,7 +469,7 @@ void VOXEL::createCamera()
 
 void VOXEL::setOrthCamera(int axis)
 {
-    auto aabb = m_scene->GetBoundingBox();
+    auto aabb = GetSameSizeAABB(m_scene);
     glm::vec3 position;
     glm::vec3 direction;
     float xMin, xMax, yMin, yMax;
@@ -748,7 +753,7 @@ void VOXEL::createGenVoxelVisulizeIndirectComandsPass()
         storageBuffers, seperateImageViews, storageImageViews, samplers);
 
     {
-        auto aabb = m_scene->GetBoundingBox();
+        auto aabb = GetSameSizeAABB(m_scene);
 
         GenIndirectDrawShader::UniformBuffer0 ubo0;
         ubo0.aabbMin = aabb.pMin;
@@ -784,7 +789,7 @@ void VOXEL::createJFAPass()
         storageBuffers, seperateImageViews, storageImageViews, samplers);
 
     {
-        auto aabb = m_scene->GetBoundingBox();
+        auto aabb = GetSameSizeAABB(m_scene);
 
         JFAShader::UniformBuffer0 ubo0;
         ubo0.aabbMin = aabb.pMin;
@@ -805,8 +810,9 @@ void VOXEL::createSDFDebugPass()
     sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
     sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
     sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-    sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-    sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+    //sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+    //sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+    //sdfDebugPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
     RenderPassCreateInfo info{};
     info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
@@ -823,21 +829,25 @@ void VOXEL::createSDFDebugPass()
     m_sdfDebugPass = std::make_shared<RenderPass>(device, info);
 
     std::shared_ptr<SDFTraceShader> sdfDebugShader = std::make_shared<SDFTraceShader>();
-    std::vector<std::vector<VkImageView>> gbufferViews(0);
+    std::vector<std::vector<VkImageView>> seperateImageViews(0);
+    //std::vector<std::vector<VkImageView>> seperateImageViews(1);
+    //seperateImageViews[0] = std::vector<VkImageView>(1, m_SDFTexture->GetImageView());
 
     std::vector<StorageBuffer> storageBuffers(1, *m_voxelVisulizeBufferModel);
 
+    //std::vector<std::vector<VkImageView>> storageTextureViews(0);
     std::vector<std::vector<VkImageView>> storageTextureViews(1);
     storageTextureViews[0] = std::vector<VkImageView>(1, m_SDFTexture->GetImageView());
 
     std::vector<VkSampler> samplers(0);
+    //std::vector<VkSampler> samplers(1);
     //samplers[0] = m_linearSampler.GetSampler();
 
     //auto tlas = m_rayTracing.GetTLAS();
     std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
 
     Singleton<MVulkanEngine>::instance().CreateRenderPass(
-        m_sdfDebugPass, sdfDebugShader, storageBuffers, gbufferViews, storageTextureViews, samplers, accelerationStructures);
+        m_sdfDebugPass, sdfDebugShader, storageBuffers, seperateImageViews, storageTextureViews, samplers, accelerationStructures);
 }
 
 
@@ -902,7 +912,7 @@ void VOXEL::createTextures()
         imageInfo.width = m_voxelResolution.x;
         imageInfo.height = m_voxelResolution.y;
         imageInfo.depth = m_voxelResolution.z;
-        imageInfo.format = VK_FORMAT_R32_SFLOAT;
+        imageInfo.format = VK_FORMAT_R16_SFLOAT;
 
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
         viewInfo.format = imageInfo.format;
@@ -1005,4 +1015,59 @@ void VOXEL::transitionVoxelTextureLayoutToGeneral()
         //barriers.push_back(barrier);
     }
     Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+}
+
+void VOXEL::transitionSDFTextureLayoutToComputeShaderWrite()
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = m_SDFTexture->GetImage();
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        barriers.push_back(barrier);
+
+        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+        //barriers.push_back(barrier);
+    }
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+}
+
+void VOXEL::transitionSDFTextureLayoutToFragmentShaderRead()
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = m_SDFTexture->GetImage();
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barriers.push_back(barrier);
+
+        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+        //barriers.push_back(barrier);
+    }
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+}
+
+BoundingBox VOXEL::GetSameSizeAABB(std::shared_ptr<Scene> scene)
+{
+    auto sceneAABB = scene->GetBoundingBox();
+
+    auto aabbCenter = 0.5f * (sceneAABB.pMax + sceneAABB.pMin);
+    auto aabbHalfScale = 0.5f * (sceneAABB.pMax - sceneAABB.pMin);
+    float maxScale = std::max(std::max(aabbHalfScale.x, aabbHalfScale.y), aabbHalfScale.z);
+
+    return BoundingBox(aabbCenter - glm::vec3(maxScale), aabbCenter + glm::vec3(maxScale));
 }

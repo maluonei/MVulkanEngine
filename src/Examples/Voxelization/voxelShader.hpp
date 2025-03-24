@@ -292,7 +292,7 @@ class SDFTraceShader : public ShaderModule {
 public:
 	SDFTraceShader() :ShaderModule(
 		"hlsl/lighting_pbr.vert.hlsl",
-		"hlsl/vx/rayMarchingDebug.frag.hlsl",
+		"hlsl/vx/rayMarchingDebug2.frag.hlsl",
 		"main", "main")
 	{}
 

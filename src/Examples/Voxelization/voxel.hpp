@@ -54,6 +54,11 @@ private:
 	void transitionVoxelTextureLayoutToComputeShaderRead();
 	void transitionVoxelTextureLayoutToGeneral();
 
+	void transitionSDFTextureLayoutToComputeShaderWrite();
+	void transitionSDFTextureLayoutToFragmentShaderRead();
+
+	BoundingBox GetSameSizeAABB(std::shared_ptr<Scene> scene);
+
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_voxelPass;
@@ -87,9 +92,11 @@ private:
 	std::shared_ptr<MVulkanTexture>		m_JFATexture0;
 	std::shared_ptr<MVulkanTexture>		m_JFATexture1;
 	std::shared_ptr<MVulkanTexture>		m_SDFTexture;
-	glm::ivec3 m_voxelResolution = { 64, 64, 64 };
+	//glm::ivec3 m_voxelResolution = { 64, 64, 64 };
+	//int m_maxRaymarchSteps = 16;
 
-	int m_maxRaymarchSteps = 24;
+	glm::ivec3 m_voxelResolution = { 128, 128, 128 };
+	int m_maxRaymarchSteps = 64;
 	
 	//MVulkanRaytracing			m_rayTracing;
 };

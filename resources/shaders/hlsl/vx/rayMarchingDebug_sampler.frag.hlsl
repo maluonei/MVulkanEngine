@@ -81,8 +81,8 @@ cbuffer ubo2 : register(b2)
 };
 
 //[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u2);
-[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u2);
-
+[[vk::binding(3, 0)]] Texture3D<float> SDFTexture : register(t2);
+[[vk::binding(4, 0)]] SamplerState linearSampler : register(s0);
 
 //#define epsilon 1e-3
 
@@ -169,7 +169,12 @@ float GetSDFValue(float3 position, out bool inSDFTex, out RayMarchSDFStruct debu
     debug.debuginfo7.xyz = gridCoord / float3(ubo0.gridResolution-1);
     
     //return 10.f;
-    return SDFTexture.Load(gridCoord);
+    //return SDFTexture.Load(gridCoord);
+    float sdfValue = SDFTexture.SampleLevel(linearSampler, float3(gridCoord) / float3(ubo0.gridResolution-1), 0).x;
+    sdfValue = max(sdfValue, 1e-3);
+
+    return sdfValue;
+    //return SDFTexture.Load(gridCoord);
 }
 
 float GetNearestDistance(float3 position, float3 direction, out bool hit){
@@ -252,7 +257,7 @@ int3 RayMarchSDF(float3 position, float3 direction, out RayMarchSDFStruct struc)
             return uint3(-3, -3, -3);
         }
 
-        if(sdfValue == 0.f){
+        if(sdfValue < 1e-3){
             return uint3(1, 1, 1);
         }
 
@@ -321,7 +326,7 @@ PSOutput main(PSInput input)
     
     //output.Color_Debug4 = float4(struc.debuginfo8, 1.f);
 
-    if( (res.x == 1 && res.y == 1 && res.z == 1)  || (res.x == -2 && res.y == -2 && res.z == -2)){
+    if( (res.x == 1 && res.y == 1 && res.z == 1)){
         float3 hitPoint = ubo1.cameraPos + camDir * struc.depth;
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
         output.Color = float4(posCoord, 1.f);
