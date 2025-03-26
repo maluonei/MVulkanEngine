@@ -129,7 +129,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
         fullOffset = offset + (moveBackMargin * moveBackDirection);
     }
 
-    float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim - 1);
+    float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim);
     float3 normalizedOffset = fullOffset / probeSpacing;
     if (dot(normalizedOffset, normalizedOffset) < 0.2025f) // 0.45 * 0.45 == 0.2025
     {

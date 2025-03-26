@@ -105,7 +105,7 @@ private:
 	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
 	bool						m_probeClassfication = true;
-	bool						m_visualizeProbes = true;
+	bool						m_visualizeProbes = false;
 	bool						m_probeRelocationEnabled = true;
 	bool						m_addAO = true;
 	//glm::ivec3					m_probeDim = { 16, 16, 16 };
