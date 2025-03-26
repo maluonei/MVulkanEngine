@@ -68,15 +68,15 @@ cbuffer ubo1 : register(b1)
     UniformBuffer1 ubo1;
 };
 
-[[vk::binding(2, 0)]]
-cbuffer ubo2 : register(b2)
-{
-    UniformBuffer2 ubo2;
-};
+//[[vk::binding(2, 0)]]
+//cbuffer ubo2 : register(b2)
+//{
+//    UniformBuffer2 ubo2;
+//};
 
-[[vk::binding(3, 0)]] RWTexture3D<float> SDFTexture : register(u0);
-[[vk::binding(4, 0)]] RWTexture3D<float4> albedoTexture : register(u1);
-[[vk::binding(5, 0)]] RWTexture3D<float4> normalTexture : register(u2);
+[[vk::binding(2, 0)]] RWTexture3D<float> SDFTexture : register(u0);
+[[vk::binding(3, 0)]] RWTexture3D<float4> albedoTexture : register(u1);
+//[[vk::binding(5, 0)]] RWTexture3D<float4> normalTexture : register(u2);
 
 //#define epsilon 1e-3
 
@@ -91,8 +91,8 @@ float3 GetPixelDirection(float2 uv){
     float aspectRatio = (float)ubo1.ScreenResolution.x / (float)ubo1.ScreenResolution.y;
 
     float3 forward = normalize(ubo1.cameraDir);
-    float3 right = cross(forward, UP);
-    float3 up = cross(right, forward);
+    float3 right = normalize(cross(forward, UP));
+    float3 up = normalize(cross(right, forward));
 
     float halfHeight = tan(ubo1.fovY * 0.5f) * ubo1.zNear;
     float halfWidth = aspectRatio * halfHeight;
@@ -259,7 +259,7 @@ PSOutput main(PSInput input)
 
     struc.step = 0;
     float3 camDir = GetPixelDirection(input.texCoord);
-    float nearestDis = GetNearestDistance(ubo1.cameraPos, camDir, ubo0.aabbMin, ubo0.aabbMax, struc.depth);
+    //float nearestDis = GetNearestDistance(ubo1.cameraPos, camDir, ubo0.aabbMin, ubo0.aabbMax, struc.depth);
     //depth = 0.f;
     
     uint3 res = RayMarchSDF(ubo1.cameraPos, camDir, struc);
@@ -271,10 +271,11 @@ PSOutput main(PSInput input)
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
         int3 coord = posCoord * ubo0.gridResolution;
         float3 albedo = albedoTexture[coord].rgb;
-        float3 normal = normalTexture[coord].rgb;
+        //float3 normal = normalize(normalTexture[coord].rgb);
         
         //output.Color = float4(posCoord, 1.f);
-        output.Color = float4(albedo * 1e-10 + normal, 1.f);
+        output.Color = float4(albedo, 1.f);
+        //output.Color = float4(albedo + normal * 1e-10 , 1.f);
     }
 
     return output;

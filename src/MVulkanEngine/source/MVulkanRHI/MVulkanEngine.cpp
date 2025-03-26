@@ -327,16 +327,34 @@ void MVulkanEngine::SubmitGraphicsCommands(
 //
 //}
 
-void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
+void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
+    uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, 
+    bool flipY)
 {
     recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
 }
 
+void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
+    uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, 
+    std::string eventName, bool flipY)
+{
+    recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+}
+
 void MVulkanEngine::RecordCommandBuffer(
     uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
-    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
+    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, 
+    uint32_t indirectBufferOffset, uint32_t indirectCount,
     bool flipY) {
     recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectBufferOffset, indirectCount, flipY);
+}
+
+void MVulkanEngine::RecordCommandBuffer(
+    uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, 
+    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount, 
+    std::string eventName, bool flipY)
+{
+    recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], vertexBuffer, indexBuffer, indirectBuffer, indirectBufferOffset, indirectCount, eventName, flipY);
 }
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
@@ -349,6 +367,13 @@ void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
 {
     recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ);
 }
+
+void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+    uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName)
+{
+    recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ, eventName);
+}
+
 
 void MVulkanEngine::SetCamera(std::shared_ptr<Camera> camera)
 {
@@ -878,6 +903,73 @@ void MVulkanEngine::recordCommandBuffer(
     commandList.EndRenderPass();
 }
 
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList, 
+    std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, 
+    std::string eventName, bool flipY)
+{
+    commandList.BeginDebugLabel(eventName);
+
+    VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass->GetRenderPass().Get();
+    renderPassInfo.framebuffer = renderPass->GetFrameBuffer(imageIndex).Get();
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = extent;
+
+    uint32_t attachmentCount = renderPass->GetAttachmentCount();
+    std::vector<VkClearValue> clearValues(attachmentCount + 1);
+    for (auto i = 0; i < attachmentCount; i++) {
+        clearValues[i].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    }
+    clearValues[attachmentCount].depthStencil = { 1.0f, 0 };
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+    commandList.BeginRenderPass(&renderPassInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+    //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+
+    commandList.EndRenderPass();
+
+    commandList.EndDebugLabel();
+}
+
 void MVulkanEngine::recordCommandBuffer(
     uint32_t imageIndex, 
     std::shared_ptr<RenderPass> renderPass,
@@ -948,6 +1040,71 @@ void MVulkanEngine::recordCommandBuffer(
     commandList.EndRenderPass();
 }
 
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount, std::string eventName, bool flipY)
+{
+    commandList.BeginDebugLabel(eventName);
+
+    VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass->GetRenderPass().Get();
+    renderPassInfo.framebuffer = renderPass->GetFrameBuffer(imageIndex).Get();
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = extent;
+
+    uint32_t attachmentCount = renderPass->GetAttachmentCount();
+    std::vector<VkClearValue> clearValues(attachmentCount + 1);
+    for (auto i = 0; i < attachmentCount; i++) {
+        clearValues[i].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    }
+    clearValues[attachmentCount].depthStencil = { 1.0f, 0 };
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+    commandList.BeginRenderPass(&renderPassInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+    //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, indirectBufferOffset);
+
+    commandList.EndRenderPass();
+
+    commandList.EndDebugLabel();
+}
+
 void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
     uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
 {
@@ -960,4 +1117,21 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
 
     m_computeList.Dispatch(groupCountX, groupCountY, groupCountZ);
+}
+
+void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName)
+{
+    m_computeList.BeginDebugLabel(eventName);
+
+    m_computeList.BindPipeline(computePass->GetPipeline().Get());
+
+    computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSet = computePass->GetDescriptorSet().Get();
+    m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+    m_computeList.Dispatch(groupCountX, groupCountY, groupCountZ);
+
+    m_computeList.EndDebugLabel();
 }

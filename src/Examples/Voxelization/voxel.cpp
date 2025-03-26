@@ -15,7 +15,8 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "voxel.hpp"
-#include "voxelShader.hpp"
+#include "Shaders/voxelShader.hpp"
+#include "Shaders/ddgiShader.hpp"
 
 void VOXEL::SetUp()
 {
@@ -603,11 +604,11 @@ void VOXEL::createVoxelPass()
 
     std::vector<uint32_t> storageBufferSizes(0);
 
-    std::vector<std::vector<VkImageView>> storageTextureViews(3);
+    std::vector<std::vector<VkImageView>> storageTextureViews(2);
     //storageTextureViews[0].resize(1, m_voxelTexture->GetImageView());
     storageTextureViews[0].resize(1, m_JFATexture0->GetImageView());
     storageTextureViews[1].resize(1, m_SDFAlbedoTexture->GetImageView());
-    storageTextureViews[2].resize(1, m_SDFNormalTexture->GetImageView());
+    //storageTextureViews[2].resize(1, m_SDFNormalTexture->GetImageView());
 
     std::vector<VkSampler> samplers(1);
     samplers[0] = m_linearSampler.GetSampler();
@@ -873,10 +874,10 @@ void VOXEL::createSDFDebugPass()
     std::vector<StorageBuffer> storageBuffers(1, *m_voxelVisulizeBufferModel);
 
     //std::vector<std::vector<VkImageView>> storageTextureViews(0);
-    std::vector<std::vector<VkImageView>> storageTextureViews(3);
+    std::vector<std::vector<VkImageView>> storageTextureViews(2);
     storageTextureViews[0] = std::vector<VkImageView>(1, m_SDFTexture->GetImageView());
     storageTextureViews[1] = std::vector<VkImageView>(1, m_SDFAlbedoTexture->GetImageView());
-    storageTextureViews[2] = std::vector<VkImageView>(1, m_SDFNormalTexture->GetImageView());
+    //storageTextureViews[2] = std::vector<VkImageView>(1, m_SDFNormalTexture->GetImageView());
 
     std::vector<VkSampler> samplers(0);
     //std::vector<VkSampler> samplers(1);
@@ -902,17 +903,17 @@ void VOXEL::createClearTexturesPass()
 
     std::vector<std::vector<VkImageView>> seperateImageViews(0);
 
-    std::vector<std::vector<VkImageView>> storageImageViews(5);
+    std::vector<std::vector<VkImageView>> storageImageViews(3);
     storageImageViews[0].resize(1);
     storageImageViews[0][0] = m_JFATexture0->GetImageView();
     storageImageViews[1].resize(1);
     storageImageViews[1][0] = m_JFATexture1->GetImageView();
     storageImageViews[2].resize(1);
     storageImageViews[2][0] = m_SDFTexture->GetImageView();
-    storageImageViews[3].resize(1);
-    storageImageViews[3][0] = m_SDFAlbedoTexture->GetImageView();
-    storageImageViews[4].resize(1);
-    storageImageViews[4][0] = m_SDFNormalTexture->GetImageView();
+    //storageImageViews[3].resize(1);
+    //storageImageViews[3][0] = m_SDFAlbedoTexture->GetImageView();
+    //storageImageViews[4].resize(1);
+    //storageImageViews[4][0] = m_SDFNormalTexture->GetImageView();
 
     Singleton<MVulkanEngine>::instance().CreateComputePass(m_clearTexturesPass, clearShader,
         storageBuffers, seperateImageViews, storageImageViews, samplers);
@@ -970,7 +971,7 @@ void VOXEL::createTextures()
 
     {
         m_SDFAlbedoTexture = std::make_shared<MVulkanTexture>();
-        m_SDFNormalTexture = std::make_shared<MVulkanTexture>();
+        //m_SDFNormalTexture = std::make_shared<MVulkanTexture>();
 
         ImageCreateInfo imageInfo;
         ImageViewCreateInfo viewInfo;
@@ -991,7 +992,7 @@ void VOXEL::createTextures()
         viewInfo.layerCount = 1;
 
         Singleton<MVulkanEngine>::instance().CreateImage(m_SDFAlbedoTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
-        Singleton<MVulkanEngine>::instance().CreateImage(m_SDFNormalTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
+        //Singleton<MVulkanEngine>::instance().CreateImage(m_SDFNormalTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
     }
 
     {
@@ -1027,7 +1028,7 @@ void VOXEL::initVoxelVisulizeBuffers()
         BufferCreateInfo info{};
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         info.arrayLength = 1;
-        info.size = sizeof(ModelBuffer) * m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
+        info.size = sizeof(ModelsBuffer) * m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
 
         m_voxelVisulizeBufferModel = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, nullptr);
     }
@@ -1086,49 +1087,49 @@ void VOXEL::transitionVoxelTextureLayoutToGeneral()
     Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
-void VOXEL::transitionSDFTextureLayoutToComputeShaderWrite()
-{
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    {
-        MVulkanImageMemoryBarrier barrier{};
-        barrier.image = m_SDFTexture->GetImage();
-        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.baseArrayLayer = 0;
-        barrier.layerCount = 1;
-        barrier.levelCount = 1;
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = 0;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barriers.push_back(barrier);
-
-        //barrier.image = m_volumeProbeDatasDepth->GetImage();
-        //barriers.push_back(barrier);
-    }
-    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-}
-
-void VOXEL::transitionSDFTextureLayoutToFragmentShaderRead()
-{
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    {
-        MVulkanImageMemoryBarrier barrier{};
-        barrier.image = m_SDFTexture->GetImage();
-        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.baseArrayLayer = 0;
-        barrier.layerCount = 1;
-        barrier.levelCount = 1;
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barriers.push_back(barrier);
-
-        //barrier.image = m_volumeProbeDatasDepth->GetImage();
-        //barriers.push_back(barrier);
-    }
-    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-}
+//void VOXEL::transitionSDFTextureLayoutToComputeShaderWrite()
+//{
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//    {
+//        MVulkanImageMemoryBarrier barrier{};
+//        barrier.image = m_SDFTexture->GetImage();
+//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        barrier.baseArrayLayer = 0;
+//        barrier.layerCount = 1;
+//        barrier.levelCount = 1;
+//        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//        barrier.dstAccessMask = 0;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+//        barriers.push_back(barrier);
+//
+//        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+//        //barriers.push_back(barrier);
+//    }
+//    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+//}
+//
+//void VOXEL::transitionSDFTextureLayoutToFragmentShaderRead()
+//{
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//    {
+//        MVulkanImageMemoryBarrier barrier{};
+//        barrier.image = m_SDFTexture->GetImage();
+//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        barrier.baseArrayLayer = 0;
+//        barrier.layerCount = 1;
+//        barrier.levelCount = 1;
+//        barrier.srcAccessMask = 0;
+//        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        barriers.push_back(barrier);
+//
+//        //barrier.image = m_volumeProbeDatasDepth->GetImage();
+//        //barriers.push_back(barrier);
+//    }
+//    Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+//}
 
 BoundingBox VOXEL::GetSameSizeAABB(std::shared_ptr<Scene> scene)
 {

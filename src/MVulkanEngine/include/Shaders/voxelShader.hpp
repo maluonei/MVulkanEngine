@@ -12,7 +12,7 @@ struct DrawCommand {
 	float		paddings[3];
 };
 
-struct ModelBuffer
+struct ModelMatrixBuffer
 {
 	glm::mat4 Model;
 };
@@ -315,7 +315,7 @@ class SDFTraceShader : public ShaderModule {
 public:
 	SDFTraceShader() :ShaderModule(
 		"hlsl/lighting_pbr.vert.hlsl",
-		"hlsl/vx/rayMarchingDebug2.frag.hlsl",
+		"hlsl/vx/rayMarchingDebug3.frag.hlsl",
 		"main", "main")
 	{}
 
@@ -388,11 +388,94 @@ public:
 		float lightIntensity;
 	};
 
-
 private:
 	SDFTraceShader::UniformBuffer0 ubo0;
 	SDFTraceShader::UniformBuffer1 ubo1;
 	SDFTraceShader::UniformBuffer2 ubo2;
 };
+
+//class SDFTraceShader3 : public ShaderModule {
+//public:
+//	SDFTraceShader3() :ShaderModule(
+//		"hlsl/lighting_pbr.vert.hlsl",
+//		"hlsl/vx/rayMarchingDebug3.frag.hlsl",
+//		"main", "main")
+//	{
+//	}
+//
+//	virtual size_t GetBufferSizeBinding(uint32_t binding) const {
+//		switch (binding) {
+//		case 0:
+//			return sizeof(SDFTraceShader3::UniformBuffer0);
+//		case 1:
+//			return sizeof(SDFTraceShader3::UniformBuffer1);
+//		case 2:
+//			return sizeof(SDFTraceShader3::UniformBuffer2);
+//		}
+//	}
+//
+//	virtual void SetUBO(uint8_t binding, void* data) {
+//		switch (binding) {
+//		case 0:
+//			ubo0 = *reinterpret_cast<SDFTraceShader3::UniformBuffer0*>(data);
+//			return;
+//		case 1:
+//			ubo1 = *reinterpret_cast<SDFTraceShader3::UniformBuffer1*>(data);
+//			return;
+//		case 2:
+//			ubo2 = *reinterpret_cast<SDFTraceShader3::UniformBuffer2*>(data);
+//			return;
+//		}
+//	}
+//
+//	virtual void* GetData(uint32_t binding, uint32_t index = 0) {
+//		switch (binding) {
+//		case 0:
+//			return (void*)&ubo0;
+//		case 1:
+//			return (void*)&ubo1;
+//		case 2:
+//			return (void*)&ubo2;
+//		}
+//	}
+//
+//public:
+//	struct UniformBuffer0
+//	{
+//		glm::vec3 aabbMin;
+//		float padding0;
+//		glm::vec3 aabbMax;
+//		float padding1;
+//		glm::ivec3 voxelResolusion;
+//		float padding3;
+//	};
+//
+//	struct UniformBuffer1
+//	{
+//		glm::vec3 cameraPos;
+//		float padding;
+//
+//		glm::vec3 cameraDir;
+//		uint32_t maxRaymarchSteps;
+//
+//		glm::ivec2 ScreenResolution;
+//		float fovY;
+//		float zNear;
+//	};
+//
+//	struct UniformBuffer2
+//	{
+//		glm::vec3 lightDir;
+//		float padding2;
+//
+//		glm::vec3 lightColor;
+//		float lightIntensity;
+//	};
+//
+//private:
+//	SDFTraceShader3::UniformBuffer0 ubo0;
+//	SDFTraceShader3::UniformBuffer1 ubo1;
+//	SDFTraceShader3::UniformBuffer2 ubo2;
+//};
 
 #endif

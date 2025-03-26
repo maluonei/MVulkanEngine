@@ -1,12 +1,12 @@
-#include "rtao.hpp"
+#include "sdfgi.hpp"
 #include "Managers/singleton.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
 
 int main() {
-	RTAO rtao;
-	rtao.Init();
+	SDFGIApplication sdfgi;
+	sdfgi.Init();
 
-	rtao.Run();
-	rtao.Clean();
+	sdfgi.Run();
+	sdfgi.Clean();
 }
 

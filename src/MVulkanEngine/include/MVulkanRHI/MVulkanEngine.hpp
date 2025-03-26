@@ -109,6 +109,12 @@ public:
 
         m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
         m_graphicsQueue.WaitForQueueComplete();
+
+        //auto vkCmdBeginDebugUtilsLabelEXT =
+        //    (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+        //
+        //auto vkCmdEndDebugUtilsLabelEXT =
+        //    (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
     }
 
     inline uint32_t GetUniformBufferOffsetAlignment() const {
@@ -189,8 +195,18 @@ public:
 
     void RecordCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
         bool flipY = true);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
 
     void RecordCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
@@ -199,6 +215,10 @@ public:
 
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
+    void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
+
 
     void SetCamera(std::shared_ptr<Camera> camera);
 
@@ -241,11 +261,24 @@ private:
 
     void recordCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
         bool flipY = true);
 
+    void recordCommandBuffer(
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
+        std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
+    void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
 
@@ -269,6 +302,7 @@ private:
     //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
     void createPlaceHolderTexture();
+
 private:
     uint16_t m_windowWidth = 800, m_windowHeight = 600;
 

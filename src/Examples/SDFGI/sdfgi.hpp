@@ -1,5 +1,5 @@
-#ifndef RTAO_HPP
-#define RTAO_HPP
+#ifndef DDGI_PASS_HPP
+#define DDGI_PASS_HPP
 
 #include <MRenderApplication.hpp>
 #include <memory>
@@ -8,6 +8,10 @@
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanRayTracing.hpp"
 #include "Shaders/ShaderModule.hpp"
+#include "Shaders/ddgiShader.hpp"
+
+
+class DDGIVolume;
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -17,8 +21,9 @@ class RenderPass;
 class ComputePass;
 class Camera;
 class Light;
+class JsonFileLoader;
 
-class RTAO : public MRenderApplication {
+class SDFGIApplication : public MRenderApplication {
 public:
 	virtual void SetUp();
 	virtual void ComputeAndDraw(uint32_t imageIndex);
@@ -31,64 +36,114 @@ public:
 	virtual void Clean();
 private:
 	void loadScene();
-	void createAS();
+	//void createAS();
 	void createLight();
 	void createCamera();
 	void createSamplers();
 
 	void createTextures();
+	void createStorageBuffers();
+	void initDDGIVolumn();
+
+	void createGbufferPass();
+	void createProbeTracingPass();
+	//void createRTAOPass();
+	void createLightingPass();
+	void createProbeRelocationPass();
+	void createProbeBlendingRadiancePass();
+	void createProbeBlendingDepthPass();
+	void createProbeClassficationPass();
+	void createProbeVisulizePass();
+	void createCompositePass();
+
+	void createShadowMapPass();
+	void createJFAPass();
+	void createVoxelPass();
+	void createClearTexturesPass();
+	BoundingBox GetSameSizeAABB(std::shared_ptr<Scene> scene);
+
+	void createLightCamera();
+	void setOrthCamera(int axis);
+
+	void changeTextureLayoutToRWTexture();
+	void changeRWTextureLayoutToTexture();
+	void transitionProbeVisulizeTextureLayoutToShaderRead();
+	void transitionProbeVisulizeTextureLayoutToUndifined();
+
+	void transitionVoxelTextureLayoutToComputeShaderRead();
+	void transitionVoxelTextureLayoutToGeneral();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
-	std::shared_ptr<RenderPass> m_rtao_lightingPass;
+	std::shared_ptr<RenderPass> m_probeTracingPass;
+	//std::shared_ptr<RenderPass> m_probeTracingPass2;
+	std::shared_ptr<RenderPass> m_lightingPass;
+	//std::shared_ptr<RenderPass> m_rtaoPass;
+	std::shared_ptr<RenderPass> m_probeVisulizePass;
+	std::shared_ptr<RenderPass> m_compositePass;
+
+	std::shared_ptr<RenderPass> m_shadowPass;
+	std::shared_ptr<RenderPass> m_voxelPass;
+	std::shared_ptr<ComputePass> m_JFAPass;
+	std::shared_ptr<ComputePass> m_clearTexturesPass;
+
+	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
+	std::shared_ptr<ComputePass> m_probeBlendingDepthPass;
+	std::shared_ptr<ComputePass> m_probeClassficationPass;
+	std::shared_ptr<ComputePass> m_probeRelocationPass;
 
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
-	MVulkanSampler				m_linearSampler;
+	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
+	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
+	std::shared_ptr<MVulkanTexture> m_testTexture = nullptr;
+
+	std::shared_ptr<MVulkanTexture>		m_voxelTexture = nullptr;
+	std::shared_ptr<MVulkanTexture>		m_JFATexture0 = nullptr;
+	std::shared_ptr<MVulkanTexture>		m_JFATexture1 = nullptr;
+	std::shared_ptr<MVulkanTexture>		m_SDFTexture = nullptr;
+	std::shared_ptr<MVulkanTexture>		m_SDFAlbedoTexture = nullptr;
+
+	std::shared_ptr<StorageBuffer> m_probesDataBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;
+	//std::shared_ptr<StorageBuffer> m_tlasVertexBuffer = nullptr;
+	//std::shared_ptr<StorageBuffer> m_tlasIndexBuffer = nullptr;
+	//std::shared_ptr<StorageBuffer> m_tlasNormalBuffer = nullptr;
+	//std::shared_ptr<StorageBuffer> m_tlasUVBuffer = nullptr;
+	//std::shared_ptr<StorageBuffer> m_geometryInfo = nullptr;
+
+	MVulkanSampler				m_linearSamplerWithoutAnisotropy;
+	MVulkanSampler				m_linearSamplerWithAnisotropy;
 
 	std::shared_ptr<Scene>		m_scene;
 	std::shared_ptr<Scene>		m_squad;
+	std::shared_ptr<Scene>		m_sphere;
 
 	std::shared_ptr<Light>		m_directionalLight;
 
 	std::shared_ptr<Camera>		m_camera;
-	MVulkanRaytracing			m_rayTracing;
-};
+	std::shared_ptr<Camera>		m_lightCamera;
+	std::shared_ptr<Camera>		m_orthCamera;
+	//MVulkanRaytracing			m_rayTracing;
+	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
-class RTAOShader :public ShaderModule {
-public:
-	RTAOShader();
+	std::shared_ptr<JsonFileLoader> m_jsonLoader = nullptr;
 
-	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	int							m_raysPerProbe = 64;
+	bool						m_sceneChange = true;
+	bool						m_probeClassfication = true;
+	bool						m_visualizeProbes = false;
+	bool						m_probeRelocationEnabled = true;
+	glm::ivec3					m_probeDim = { 8, 8, 8 };
+	float						m_start = 0.f;
 
-	virtual void SetUBO(uint8_t binding, void* data);
+	glm::ivec3 m_voxelResolution = { 128, 128, 128 };
+	int m_maxRaymarchSteps = 100;
 
-	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
+	UniformBuffer1				m_uniformBuffer1;
 
-public:
-	struct Light {
-		glm::vec3 direction;
-		float intensity;
 
-		glm::vec3 color;
-		int shadowMapIndex;
-	};
-
-	struct UniformBuffer0 {
-		Light lights[2];
-
-		glm::vec3 cameraPos;
-		int lightNum;
-
-		int resetAccumulatedBuffer;
-		int gbufferWidth;
-		int gbufferHeight;
-		float padding2;
-	};
-
-private:
-	UniformBuffer0 ubo0;
 };
 
 
-
-#endif // RTAO_HPP
+#endif // 

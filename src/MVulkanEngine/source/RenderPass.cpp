@@ -703,7 +703,6 @@ void RenderPass::UpdateCBVData()
 
 }
 
-
 MVulkanDescriptorSet RenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator)
 {
     MVulkanDescriptorSet descriptorSet;

@@ -284,7 +284,7 @@ float4 QuaternionConjugate(float4 q)
 float3 QuaternionRotate(float3 v, float4 q){
     float3 b = q.xyz;
     float b2 = dot(b, b);
-    return (v * (q.w * q.w - b2) + b * (dot(v, b) * 2.f) + cross(b, v) * (q.w * 2.f));
+    return normalize(v * (q.w * q.w - b2) + b * (dot(v, b) * 2.f) + cross(b, v) * (q.w * 2.f));
 }
 
 PSOutput main(PSInput input)

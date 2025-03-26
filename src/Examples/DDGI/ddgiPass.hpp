@@ -8,7 +8,7 @@
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanRayTracing.hpp"
 #include "Shaders/ShaderModule.hpp"
-#include "ddgiShader.hpp"
+#include "Shaders/ddgiShader.hpp"
 
 
 class DDGIVolume;
@@ -21,6 +21,7 @@ class RenderPass;
 class ComputePass;
 class Camera;
 class Light;
+class JsonFileLoader;
 
 class DDGIApplication : public MRenderApplication {
 public:
@@ -99,11 +100,14 @@ private:
 	MVulkanRaytracing			m_rayTracing;
 	std::shared_ptr<DDGIVolume> m_volume = nullptr;
 
+	std::shared_ptr<JsonFileLoader> m_jsonLoader = nullptr;
+
 	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
 	bool						m_probeClassfication = true;
 	bool						m_visualizeProbes = false;
 	bool						m_probeRelocationEnabled = true;
+	bool						m_addAO = true;
 	glm::ivec3					m_probeDim = {8, 8, 8};
 	float						m_start = 0.f;
 	

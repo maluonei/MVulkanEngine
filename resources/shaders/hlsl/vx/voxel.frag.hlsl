@@ -21,8 +21,8 @@ cbuffer ubo2 : register(b1)
 [[vk::binding(3, 0)]] Texture2D textures[1024] : register(t2);
 [[vk::binding(4, 0)]] RWTexture3D<uint4> voxelTexture : register(u0);
 [[vk::binding(5, 0)]] RWTexture3D<float4> albedoTexture : register(u1);
-[[vk::binding(6, 0)]] RWTexture3D<float4> normalTexture : register(u2);
-[[vk::binding(7, 0)]] SamplerState linearSampler : register(s2);
+//[[vk::binding(6, 0)]] RWTexture3D<float4> normalTexture : register(u2);
+[[vk::binding(6, 0)]] SamplerState linearSampler : register(s1);
 
 struct PSInput
 {
@@ -50,20 +50,22 @@ void StoreAlbedo(int3 coord, float3 albedo){
     float3 color = val.rgb;
     float sum = val.a;
 
-    float3 avgAlbedo = ((color * sum) + albedo) / (sum+1);
-
-    albedoTexture[coord] = float4(avgAlbedo, sum+1);
+    if(sum < 409600.f){
+        float3 avgAlbedo = ((color * sum) + albedo) / (sum + 1);
+        albedoTexture[coord] = float4(avgAlbedo, sum + 1);
+    }
 }
 
-void StoreNormal(int3 coord, float3 normal){
-    float4 val = normalTexture[coord];
-    float3 color = val.rgb;
-    float sum = val.a;
-
-    float3 avgNormal = ((color * sum) + normal) / (sum+1);
-
-    normalTexture[coord] = float4(normalize(avgNormal), sum+1);
-}
+//void StoreNormal(int3 coord, float3 normal){
+//    float4 val = normalTexture[coord];
+//    float3 color = val.rgb;
+//    float sum = val.a;
+//
+//    if(sum < 409600.f){
+//        float3 avgNormal = ((color * sum) + normal) / (sum + 1);
+//        normalTexture[coord] = float4(normalize(avgNormal), sum + 1);
+//    }
+//}
 
 PSOutput main(PSInput input)
 {
@@ -83,9 +85,9 @@ PSOutput main(PSInput input)
     {
         albedo = float4(ubo2[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
     }
-
+    
     StoreAlbedo(int3(input.voxPos), albedo.rgb);
-    StoreNormal(int3(input.voxPos), normalize(input.normal));
+    //StoreNormal(int3(input.voxPos), input.normal);
 
     return output;
 

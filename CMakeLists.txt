@@ -19,6 +19,7 @@ set(spdlog_include "${third_party_dir}/spdlog/include")
 set(stbimage_include "${third_party_dir}/stb_image")
 set(vulkan_include "${third_party_dir}/VulkanSDK/include")
 set(spirv_cross_include "${third_party_dir}/SPIRV-CROSS/include")
+set(json_include "${third_party_dir}/json")
 
 set(stbimage_src "${third_party_dir}/stb_image/stb_image.h" "${third_party_dir}/stb_image/stb_image.cpp")
 #set(shaderc_include "${shaderc_SOURCE_DIR}/libshaderc/include"

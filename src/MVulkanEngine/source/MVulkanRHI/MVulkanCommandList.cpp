@@ -196,6 +196,35 @@ void MVulkanCommandList::Clean()
     //vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
+void MVulkanCommandList::BeginDebugLabel(const std::string& labelName, glm::vec3 rgb)
+{
+    auto vkCmdBeginDebugUtilsLabelEXT =
+        (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(m_device, "vkCmdBeginDebugUtilsLabelEXT");
+
+
+    if (vkCmdBeginDebugUtilsLabelEXT) {
+        VkDebugUtilsLabelEXT labelInfo{};
+        labelInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+        labelInfo.pLabelName = labelName.c_str();
+        labelInfo.color[0] = rgb.x;  // RGB 颜色值
+        labelInfo.color[1] = rgb.y;
+        labelInfo.color[2] = rgb.z;
+        labelInfo.color[3] = 1.0f;  // Alpha 值
+
+        vkCmdBeginDebugUtilsLabelEXT(m_commandBuffer, &labelInfo);
+    }
+}
+
+void MVulkanCommandList::EndDebugLabel()
+{
+    auto vkCmdEndDebugUtilsLabelEXT =
+        (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(m_device, "vkCmdEndDebugUtilsLabelEXT");
+
+    if (vkCmdEndDebugUtilsLabelEXT) {
+        vkCmdEndDebugUtilsLabelEXT(m_commandBuffer);
+    }
+}
+
 //void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
 //{
 //    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);

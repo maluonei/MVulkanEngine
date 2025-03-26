@@ -11,15 +11,21 @@
 #include "Scene/Light/DirectionalLight.hpp"
 
 #include <glm/glm.hpp>
-#include "ddgi.hpp"
+#include "Scene/ddgi.hpp"
 #include <chrono>
+
+#include "JsonLoader.hpp"
 
 //#define raysPerProbe
 
 
 void DDGIApplication::SetUp()
 {
-    //Singleton<InputManager>::instance().RegisterApplication(this);
+    fs::path projectRootPath = PROJECT_ROOT;
+    fs::path resourcePath = projectRootPath.append("resources").append("DDGIScene");
+    fs::path jsonPath = resourcePath / "sponza.json";
+    //fs::path jsonPath = resourcePath / "Arcade.json";
+    m_jsonLoader = std::make_shared<JsonFileLoader>(jsonPath.string());
 
     createSamplers();
     createLight();
@@ -164,6 +170,7 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     {
         CompositeShader::UniformBuffer0 ubo0{};
         ubo0.visulizeProbe = (int)m_visualizeProbes;
+        ubo0.useAO = (int)m_addAO;
 
         m_compositePass->GetShader()->SetUBO(0, &ubo0);
     }
@@ -171,9 +178,15 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     graphicsList.Reset();
     graphicsList.Begin();
     
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+        0, m_gbufferPass, m_currentFrame,
+        m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(),
+        std::string("Generate Gbuffer"));
     if (m_sceneChange) {
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeTracingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+            0, m_probeTracingPass, m_currentFrame, 
+            m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(),
+            std::string("Probe Tracing"));
         graphicsList.End();
 
         VkSubmitInfo submitInfo{};
@@ -198,11 +211,15 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, 16 * probeDim.x * probeDim.y, 16 * probeDim.z, 1);
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 8 * probeDim.x * probeDim.y, 8 * probeDim.z, 1);
         if (m_probeRelocationEnabled)
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, (probeDim.x * probeDim.y * probeDim.z + 31) / 32, 1, 1);
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, (probeDim.x * probeDim.y * probeDim.z + 31) / 32, 1, 1,
+                std::string("Probe Reloction"));
         if (m_probeClassfication)
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, (probeDim.x * probeDim.y * probeDim.z+31) / 32, 1, 1);
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, probeDim.x * probeDim.y, probeDim.z, 1);
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, probeDim.x * probeDim.y, probeDim.z, 1);
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, (probeDim.x * probeDim.y * probeDim.z+31) / 32, 1, 1,
+                std::string("Probe Classfication"));
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, probeDim.x * probeDim.y, probeDim.z, 1,
+            std::string("Probe Blend Depth"));
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, probeDim.x * probeDim.y, probeDim.z, 1,
+            std::string("Probe Blend Radiance"));
 
         computeList.End();
 
@@ -221,15 +238,26 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.Begin();
        // m_sceneChange = false;
     }
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_rtaoPass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+        0, m_lightingPass, m_currentFrame, 
+        m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(),
+        std::string("DDGI Lighting"));
+    if (m_addAO) {
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+            0, m_rtaoPass, m_currentFrame,
+            m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(),
+            std::string("RTAO"));
+    }
     if (m_visualizeProbes) {
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_probeVisulizePass, m_currentFrame, m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size());
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+            0, m_probeVisulizePass, m_currentFrame, 
+            m_sphere->GetIndirectVertexBuffer(), m_sphere->GetIndirectIndexBuffer(), m_sphere->GetIndirectBuffer(), m_sphere->GetIndirectDrawCommands().size(),
+            std::string("Visulize Probe"));
     }
-    else {
-
-    }
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size());
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+        imageIndex, m_compositePass, m_currentFrame, 
+        m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(),
+        std::string("Composite"));
     
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
@@ -368,9 +396,12 @@ void DDGIApplication::loadScene()
 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
-    //fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
-    fs::path modelPath = resourcePath / "Arcade" / "Arcade.gltf";
+    ////fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    ////fs::path modelPath = resourcePath / "Arcade" / "Arcade.gltf";
     //fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
+
+    std::string scenePath = m_jsonLoader->GetScenePath();
+    fs::path modelPath = resourcePath / scenePath;
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -440,13 +471,15 @@ void DDGIApplication::createAS()
 void DDGIApplication::createLight()
 {
     //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
-    glm::vec3 direction = glm::normalize(glm::vec3(-3.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-3.f, -6.f, -1.f));
     //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
-    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, -1.f));
-    glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-    //float intensity = 20.f;
-    float intensity = 10.f;
-    m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
+    ////glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -1.f, -1.f));
+    //glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
+    ////float intensity = 20.f;
+    //float intensity = 100.f;
+    //m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
+
+    m_directionalLight = m_jsonLoader->GetLights();
 }
 
 void DDGIApplication::createCamera()
@@ -461,15 +494,16 @@ void DDGIApplication::createCamera()
     //glm::vec3 position(-4.6, 4.9, -9.0);
     //glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, -2.f));
 
-    glm::vec3 position(0.f, 1.f, 2.f);
-    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -1.f, -2.f));
-
-    float fov = 60.f;
-    float aspectRatio = (float)WIDTH / (float)HEIGHT;
-    float zNear = 0.01f;
-    float zFar = 1000.f;
-
-    m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    //glm::vec3 position(0.f, 1.f, 2.f);
+    //glm::vec3 direction = glm::normalize(glm::vec3(0.f, -1.f, -2.f));
+    //
+    //float fov = 60.f;
+    //float aspectRatio = (float)WIDTH / (float)HEIGHT;
+    //float zNear = 0.01f;
+    //float zFar = 1000.f;
+    //
+    //m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    m_camera = m_jsonLoader->GetCamera();
     Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
 }
 
@@ -738,15 +772,18 @@ void DDGIApplication::initDDGIVolumn()
     //glm::vec3 startPosition = glm::vec3(-5.6f, -1.1f, -9.3f);
     //glm::vec3 endPosition = glm::vec3(4.8f, 7.4f, 4.5f);
 
-    glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
-    glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
+    //glm::vec3 startPosition = glm::vec3(-11.7112f, -0.678682f, -5.10776f);
+    //glm::vec3 endPosition = glm::vec3(10.7607f, 11.0776f, 5.90468f);
+    //glm::vec3 scale = endPosition - startPosition;
     //glm::ivec3 probeDim = glm::ivec3(8, 8, 8);
-    glm::ivec3 probeDim = m_probeDim;
+    //glm::ivec3 probeDim = m_probeDim;
+    glm::ivec3 probeDim = m_jsonLoader->GetDDGIProbeDim();
     //glm::vec3 offset = glm::vec3(3.0f, 1.5f, 1.5f);
 
     auto sceneAABB = m_scene->GetBoundingBox();
+    glm::vec3 scale = sceneAABB.pMax - sceneAABB.pMin;
 
-    m_volume = std::make_shared<DDGIVolume>(sceneAABB.pMin + glm::vec3(0.1f), sceneAABB.pMax - glm::vec3(0.1f), probeDim);
+    m_volume = std::make_shared<DDGIVolume>(sceneAABB.pMin + 0.3f * scale / (glm::vec3)m_probeDim, sceneAABB.pMax - glm::vec3(0.1f), probeDim);
 
 
     {

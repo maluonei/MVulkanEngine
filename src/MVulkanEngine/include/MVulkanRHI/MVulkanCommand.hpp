@@ -87,6 +87,9 @@ public:
 	void Create(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	void Clean();
 
+	void BeginDebugLabel(const std::string& labelName, glm::vec3 rgb = glm::vec3(1.f, 0.f, 0.f));
+	void EndDebugLabel();
+
 	inline VkCommandBuffer& GetBuffer() {
 		return m_commandBuffer;
 	};

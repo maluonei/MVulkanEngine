@@ -1,6 +1,6 @@
 struct UniformBuffer0{
     int visulizeProbe;
-    int padding0;
+    int useAO;
     int padding1;
     int padding2;
 };
@@ -44,6 +44,10 @@ PSOutput main(PSInput input)
     float rtao = gBufferValue2.r;
     float3 probeVisulize = gBufferValue3.rgb;
     //float hasProbe = gBufferValue3.a;
+
+    if(ubo0.useAO == 0){
+        rtao = 1.f;
+    }
 
     bool hasProbe = (gBufferValue3.a - 0.5f) < 1e-8;
     float3 finalColor;

@@ -1,0 +1,35 @@
+{
+    "Light" : [
+        {
+            "type": "Directional",
+            "direction": "-1, -2, -1",
+            "color": "1, 1, 1",
+            "intensity": "10.0"
+        }
+    ],
+
+    "Camera": [
+        {
+            "type": "Perspective",
+            "position": "0.0, 2.0, 4.0",
+            "direction": "0.0, -2.0, -4.0",
+            "fov": "60.0",
+            "aspectRatio": "1.5",
+            "nearPlane": "0.01",
+            "farPlane": "1000.0"
+        }
+    ],
+
+    "Scene": [
+        {
+            "path": "Arcade/Arcade.gltf"
+        }
+    ],
+
+    "DDGIVolume": [
+        {
+            "probeDim": "8, 8, 8"
+        }
+    ]
+}
+

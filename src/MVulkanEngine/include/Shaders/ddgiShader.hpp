@@ -2,78 +2,8 @@
 #define DDGI_SHADER_HPP
 
 #include "Shaders/ShaderModule.hpp"
+#include "Scene/ddgi.hpp"
 
-//struct Probe {
-//	glm::vec3 position;
-//	int    padding0;
-//};
-
-struct VertexBuffer {
-	std::vector<glm::vec3> position;
-
-	inline int GetSize() const { return position.size() * sizeof(glm::vec3); }
-};
-
-struct IndexBuffer {
-	std::vector<int> index;
-
-	inline int GetSize() const { return index.size() * sizeof(int); }
-};
-
-struct NormalBuffer {
-	std::vector < glm::vec3> normal;
-
-	inline int GetSize() const { return normal.size() * sizeof(glm::vec3); }
-};
-
-struct UVBuffer {
-	std::vector < glm::vec2> uv;
-
-	inline int GetSize() const { return uv.size() * sizeof(glm::vec2); }
-};
-
-struct GeometryInfo {
-	int vertexOffset;
-	int indexOffset;
-	int uvOffset;
-	int normalOffset;
-	int materialIdx;
-};
-
-struct InstanceOffset {
-	std::vector<GeometryInfo> geometryInfos;
-
-	inline int GetSize() const { return geometryInfos.size() * sizeof(GeometryInfo); }
-};
-
-struct ProbeData {
-	glm::vec3   position;
-	int			probeState = 0;
-	glm::vec3   offset = glm::vec3(0.f, 0.f, 0.f);
-	
-	float		padding0;
-	//glm::vec3	closestFrontfaceDirection;
-	//float		closestFrontfaceDistance;
-	//glm::vec3	farthestFrontfaceDirection;
-	//float		closestBackfaceDistance;
-};
-
-struct ProbeBuffer {
-	std::vector<ProbeData> probes;
-
-	inline int GetSize() const { return probes.size() * sizeof(ProbeData); }
-};
-
-struct Model {
-	glm::mat4 Model;
-};
-
-
-struct ModelBuffer {
-	std::vector<Model> models;
-
-	inline int GetSize() const { return models.size() * sizeof(Model); }
-};
 
 struct UniformBuffer1
 {
@@ -93,6 +23,8 @@ struct UniformBuffer1
 };
 
 struct LightStruct {
+	glm::mat4 shadowViewProjMat;
+
 	glm::vec3 direction;
 	float intensity;
 
@@ -160,18 +92,6 @@ public:
 			return sizeof(UniformBuffer1);
 		case 2:
 			return sizeof(UniformBuffer2);
-		//case 3:
-		//	return vertexBuffer.GetSize();;
-		//case 4:
-		//	return indexBuffer.GetSize();
-		//case 5:
-		//	return normalBuffer.GetSize();
-		//case 6:
-		//	return uvBuffer.GetSize();
-		//case 7:
-		//	return instanceOffsetBuffer.GetSize();
-		//case 8:
-		//	return probeBuffer.GetSize();
 		}
 	}
 
@@ -197,18 +117,6 @@ public:
 			return (void*)&ubo1;
 		case 2:
 			return (void*)&ubo2;
-		//case 3:
-		//	return (void*)vertexBuffer.position.data();
-		//case 4:
-		//	return (void*)indexBuffer.index.data();
-		//case 5:
-		//	return (void*)normalBuffer.normal.data();
-		//case 6:
-		//	return (void*)uvBuffer.uv.data();
-		//case 7:
-		//	return (void*)instanceOffsetBuffer.geometryInfos.data();
-		//case 8:
-		//	return (void*)probeBuffer.probes.data();
 		}
 	}
 
@@ -392,7 +300,7 @@ public:
 public:
 	struct UniformBuffer0 {
 		int visulizeProbe = 0;
-		int padding0;
+		int useAO = 1;
 		int padding1;
 		int padding2;
 	};

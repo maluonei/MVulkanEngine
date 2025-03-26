@@ -89,10 +89,10 @@ bool CalculateRadiance(
 
             float cosTheta = max(0.f, dot(sphereDirection, direction));
             //if(cosTheta > 0.f){
-                float irradianceWeight = cosTheta * ubo0.sharpness;
-                //irradiance += targetRadiance * irradianceWeight;
-                irradiance += radiance * irradianceWeight;
-                totalIradianceWeights += irradianceWeight;
+            float irradianceWeight = cosTheta * ubo0.sharpness;
+            //irradiance += targetRadiance * irradianceWeight;
+            irradiance += radiance * irradianceWeight;
+            totalIradianceWeights += irradianceWeight;
             //}
         }
         
@@ -100,8 +100,10 @@ bool CalculateRadiance(
 
         float4 value = VolumeProbeDatasRadiance[dispatchThreadID.xy];
         float a = value.a;
-        float3 irradianceAvg = (value.rgb * a + irradiance) / (a + 1.f);
-        VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradianceAvg, a + 1.f);
+        if(a<1024.f){
+            float3 irradianceAvg = (value.rgb * a + irradiance) / (a + 1.f);
+            VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradianceAvg, a + 1.f);
+        }
         //VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance * (1e-20) + float3(probeIndex, 0, 0) / 512.f, 1.f);
 
         return true;
@@ -150,10 +152,10 @@ bool CalculateDepth(
             float cosTheta = max(0.f, dot(sphereDirection, direction));
 
             //if(cosTheta > 0.f){
-                float depthWeight = pow(cosTheta, ubo0.sharpness);
-                depth += targetDepth * depthWeight;
-                depthSquared += targetDepthSquared * depthWeight;
-                totalDepthWeights += depthWeight;
+            float depthWeight = pow(cosTheta, ubo0.sharpness);
+            depth += targetDepth * depthWeight;
+            depthSquared += targetDepthSquared * depthWeight;
+            totalDepthWeights += depthWeight;
             //}
         }
         
@@ -161,9 +163,11 @@ bool CalculateDepth(
         depthSquared = depthSquared / max(totalDepthWeights, 1e-10);
 
         float4 value = VolumeProbeDatasDepth[dispatchThreadID.xy];
-        float a = value.r;
-        float2 depthAvg = (value.rg * a + float2(depth, depthSquared)) / (a + 1.f);
-        VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depthAvg, 0.f, a + 1.f);
+        float a = value.a;
+        if(a<1024.f){
+            float2 depthAvg = (value.rg * a + float2(depth, depthSquared)) / (a + 1.f);
+            VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depthAvg, 0.f, a + 1.f);
+        }
 
         return true;
     }

@@ -9,7 +9,7 @@ file(GLOB_RECURSE MVULKANENGINE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${MVULKANENGINE_HEADERS} ${MVULKANENGINE_SOURCES})
 
-# Ìí¼Ó¿ÉÖ´ÐÐÎÄ¼þ
+# ï¿½ï¿½ï¿½Ó¿ï¿½Ö´ï¿½ï¿½ï¿½Ä¼ï¿½
 #add_executable(MVulkanEngine 
 #	${MVULKANENGINE_HEADERS} 
 #	${MVULKANENGINE_SOURCES}
@@ -32,10 +32,10 @@ target_compile_definitions(MVulkanEngine PUBLIC GLFW_STATIC)
 target_link_libraries(MVulkanEngine PUBLIC glfw ${vulkan_lib} assimp spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv-cross-reflect)
 
 if (MSVC)
-    add_compile_options(/MP)  # Ìí¼Ó¶àÏß³Ì±àÒëÑ¡Ïî
+    add_compile_options(/MP)  # ï¿½ï¿½ï¿½Ó¶ï¿½ï¿½ß³Ì±ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½
 endif()
 
-# Ìí¼Ó°üº¬Ä¿Â¼
+# ï¿½ï¿½ï¿½Ó°ï¿½ï¿½ï¿½Ä¿Â¼
 target_include_directories(MVulkanEngine PUBLIC 
 										"include" 
 										${vulkan_include}
@@ -45,6 +45,7 @@ target_include_directories(MVulkanEngine PUBLIC
 										${stbimage_include}
 										${spdlog_include}
 										${spirv_cross_include}
+										${json_include}
 )
 
 set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")

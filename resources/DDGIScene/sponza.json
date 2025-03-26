@@ -1,0 +1,35 @@
+{
+    "Light" : [
+        {
+            "type": "Directional",
+            "direction": "-1, -6, -1",
+            "color": "1, 1, 1",
+            "intensity": "10.0"
+        }
+    ],
+
+    "Camera": [
+        {
+            "type": "Perspective",
+            "position": "1.2925221, 3.7383504, -0.29563048",
+            "direction": "-0.8, -0.3, -0.1",
+            "fov": "60.0",
+            "aspectRatio": "1.5",
+            "nearPlane": "0.01",
+            "farPlane": "1000.0"
+        }
+    ],
+
+    "Scene": [
+        {
+            "path": "Sponza/glTF/Sponza.gltf"
+        }
+    ],
+
+    "DDGIVolume": [
+        {
+            "probeDim": "8, 8, 8"
+        }
+    ]
+}
+

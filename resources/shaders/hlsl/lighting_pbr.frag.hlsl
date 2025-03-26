@@ -38,7 +38,7 @@ cbuffer ubo : register(b0)
 [[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
 [[vk::binding(3, 0)]]Texture2D<float4> gAlbedo : register(t2);
 [[vk::binding(4, 0)]]Texture2D<float4> gMetallicAndRoughness : register(t3);
-[[vk::binding(5, 0)]]Texture2D shadowMaps[2] : register(t4);
+[[vk::binding(5, 0)]]Texture2D<float> shadowMaps[2] : register(t4);
 
 [[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
 

@@ -254,9 +254,9 @@ void PBR::loadScene()
 
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
-    //fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
     //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
-    fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
+    //fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
 
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
 
@@ -312,8 +312,8 @@ void PBR::loadScene()
 
 void PBR::createLight()
 {
-    //glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
-    glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
+    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
     float intensity = 10.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
