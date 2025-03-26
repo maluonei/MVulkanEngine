@@ -76,9 +76,7 @@ private:
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_probeTracingPass;
-	//std::shared_ptr<RenderPass> m_probeTracingPass2;
 	std::shared_ptr<RenderPass> m_lightingPass;
-	//std::shared_ptr<RenderPass> m_rtaoPass;
 	std::shared_ptr<RenderPass> m_probeVisulizePass;
 	std::shared_ptr<RenderPass> m_compositePass;
 
