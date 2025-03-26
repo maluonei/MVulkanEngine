@@ -70,7 +70,9 @@ void main(triangle VSOutput inputs[3], inout TriangleStream<GSOutput> outputs, u
 
         float4 pos = inputs[i].position;
         float4 temp = float4(mul(ubo1.Projection, pos));
+        temp.z = -temp.z;
         output.voxPos = (temp.xyz + 1.f) * 0.5f * ubo1.volumeResolution.xyz;
+        //output.voxPos.z = 
         
         output.instanceID = inputs[i].instanceID;
         output.position = mul(ubo1.Projection, float4(GetProjection(pos, axis)));

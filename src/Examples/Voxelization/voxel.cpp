@@ -479,9 +479,9 @@ void VOXEL::createLight()
 void VOXEL::createCamera()
 {
     {
-        glm::vec3 position(0.f, 0.f, 3.f);
-        glm::vec3 center = position + glm::vec3(0.f, 0.f, -1.f);
-        glm::vec3 direction = glm::normalize(center - position);
+        glm::vec3 position(1.2925221, 3.7383504, -0.29563048);
+        //glm::vec3 center = position + glm::vec3(0.f, 0.f, -1.f);
+        glm::vec3 direction = glm::normalize(glm::vec3(-0.8, -0.3, -0.1));
 
         float fov = 60.f;
         float aspectRatio = (float)WIDTH / (float)HEIGHT;
