@@ -61,7 +61,7 @@ struct ProbeData {
 	int			probeState = 0;
 	glm::vec3   offset = glm::vec3(0.f, 0.f, 0.f);
 
-	float		padding0;
+	int		moved = 0;
 	//glm::vec3	closestFrontfaceDirection;
 	//float		closestFrontfaceDistance;
 	//glm::vec3	farthestFrontfaceDirection;

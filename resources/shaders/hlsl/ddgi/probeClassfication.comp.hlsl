@@ -40,7 +40,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     float hitDistances[MaxPaysPerProbe];
     for(int i=0; i<numRays; i++){
         int2 texcoord = int2(i, probeIndex);
-        hitDistances[i] = abs(VolumeProbeRadiance[texcoord].a);
+        hitDistances[i] = VolumeProbeRadiance[texcoord].a;
         backfaceCount += (hitDistances[i] < 0.f);
     } 
 
@@ -51,7 +51,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     }  
   
     float3 probePosition = GetProbePosition(ubo1, probes[probeIndex]);
-    float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim - 1.f);
+    float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim);
 
     for(int i=0; i<numRays; i++){
         if(hitDistances[i] > ubo0.maxRayDistance) continue;

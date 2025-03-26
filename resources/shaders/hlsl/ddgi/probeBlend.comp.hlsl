@@ -32,6 +32,7 @@ cbuffer ub1 : register(b1)
 groupshared float3 RayRadiance[MAXRAYSPERPROBE];
 groupshared float  RayDistance[MAXRAYSPERPROBE];
 groupshared float3 RayDirection[MAXRAYSPERPROBE];
+groupshared int  ProbeMoved;
 //groupshared int    AccumulateCount[MAXRAYSPERPROBE];
 //#define ProbeResolution 8
 //#define RadianceProbeResolution 8
@@ -98,12 +99,17 @@ bool CalculateRadiance(
         
         irradiance = irradiance / max(2.f * totalIradianceWeights, 1e-8);
 
-        float4 value = VolumeProbeDatasRadiance[dispatchThreadID.xy];
-        float a = value.a;
-        if(a<1024.f){
-            float3 irradianceAvg = (value.rgb * a + irradiance) / (a + 1.f);
-            VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradianceAvg, a + 1.f);
-        }
+        //if(ProbeMoved == 1){
+        //    VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance, 1.f);
+        //}
+        //else{
+            float4 value = VolumeProbeDatasRadiance[dispatchThreadID.xy];
+            float a = value.a;
+            if(a<1024.f){
+                float3 irradianceAvg = (value.rgb * a + irradiance) / (a + 1.f);
+                VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradianceAvg, a + 1.f);
+            }
+        //}
         //VolumeProbeDatasRadiance[dispatchThreadID.xy] = float4(irradiance * (1e-20) + float3(probeIndex, 0, 0) / 512.f, 1.f);
 
         return true;
@@ -162,12 +168,17 @@ bool CalculateDepth(
         depth = depth / max(totalDepthWeights, 1e-10);
         depthSquared = depthSquared / max(totalDepthWeights, 1e-10);
 
-        float4 value = VolumeProbeDatasDepth[dispatchThreadID.xy];
-        float a = value.a;
-        if(a<1024.f){
-            float2 depthAvg = (value.rg * a + float2(depth, depthSquared)) / (a + 1.f);
-            VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depthAvg, 0.f, a + 1.f);
-        }
+        //if(ProbeMoved == 1){
+        //    VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depth, depthSquared, 0.f, 1.f);
+        //}
+        //else{
+            float4 value = VolumeProbeDatasDepth[dispatchThreadID.xy];
+            float a = value.a;
+            if(a<1024.f){
+                float2 depthAvg = (value.rg * a + float2(depth, depthSquared)) / (a + 1.f);
+                VolumeProbeDatasDepth[dispatchThreadID.xy] = float4(depthAvg, 0.f, a + 1.f);
+            }
+        //}
 
         return true;
     }
@@ -255,6 +266,9 @@ void main_radiance(  uint3 DispatchThreadID : SV_DispatchThreadID,
 {
     int probeIndex = CalculateProbeIndex(DispatchThreadID, RadianceProbeResolution, ubo1.probeDim);
 
+    //if(DispatchThreadID.x==0 && DispatchThreadID.y==0){
+    //    ProbeMoved = probes[probeIndex].moved;
+    //}
     LoadSharedMemory(probeIndex, GroupIndex, 8*8);
     GroupMemoryBarrierWithGroupSync();
     
@@ -279,6 +293,9 @@ void main_depth(  uint3 DispatchThreadID : SV_DispatchThreadID,
 {
     int probeIndex = CalculateProbeIndex(DispatchThreadID, DepthProbeResolution, ubo1.probeDim);
 
+    //if(DispatchThreadID.x==0 && DispatchThreadID.y==0){
+    //    ProbeMoved = probes[probeIndex].moved;
+    //}
     LoadSharedMemory(probeIndex, GroupIndex, 16*16);
     GroupMemoryBarrierWithGroupSync();
 

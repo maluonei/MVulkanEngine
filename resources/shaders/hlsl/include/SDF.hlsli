@@ -112,6 +112,33 @@ float GetNextPixelSDF(
         return 0.5f * voxelSize.x;
 }
 
+void RayMarchSDF_inv(float3 position, float3 direction, MDFStruct mdf, int maxRaymarchSteps, out float depth){
+    depth = 0.f;
+    int step = 0;
+
+    float3 pos = position;
+    while(step < maxRaymarchSteps){
+        float nextPosSdf = GetNextPixelSDF(pos, direction, mdf);
+        depth += nextPosSdf;
+
+        pos = position + direction * depth;
+
+        bool inSdf = false;
+        float sdfValue = GetSDFValue(pos, mdf, inSdf);
+
+        if(sdfValue!=0.f || !inSdf){
+            depth *= -1;
+            return;
+        }
+
+        step++;
+    }
+    depth *= -1;
+    return;
+    //float nextPosSdf = GetNextPixelSDF(pos, direction, mdf);
+
+}
+
 bool RayMarchSDF(float3 position, float3 direction, MDFStruct mdf, int maxRaymarchSteps, out float depth){
     float start = 0.f;
     bool hit = false;
@@ -135,12 +162,15 @@ bool RayMarchSDF(float3 position, float3 direction, MDFStruct mdf, int maxRaymar
         //struc.sdfValue = sdfValue;
 
         if(!inSdf){
-            depth = -1.f;
+            depth = -1000.f;
             //struc.debuginfo8 = struc.debuginfo7;
             return false;
         }
 
         if(sdfValue == 0.f){
+            if(step == 0){
+                RayMarchSDF_inv(pos, direction, mdf, maxRaymarchSteps, depth);
+            }
             return true;
         }
 
@@ -156,15 +186,3 @@ bool RayMarchSDF(float3 position, float3 direction, MDFStruct mdf, int maxRaymar
 
     return false;
 } 
-
-//bool VisibleToLight(float3 position, Light light, MDFStruct mdf){
-//    bool hit = false;
-//    float distance = 0.f;
-//
-//    if(RayMarchSDF(position, -light.direction, mdf, distance)){
-//        return false;
-//    }
-//    else{
-//        return true;
-//    }
-//}

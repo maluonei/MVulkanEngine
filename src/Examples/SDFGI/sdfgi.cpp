@@ -336,8 +336,11 @@ void SDFGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
         //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingRadiancePass, 512, 64, 1);
         auto probeDim = m_volume->GetProbeDim();
-        if (m_probeRelocationEnabled)
+        if (m_probeRelocationEnabled) {
             Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeRelocationPass, (probeDim.x * probeDim.y * probeDim.z + 31) / 32, 1, 1, "Probe Relocation");
+            m_probeRelocationEnabled = false;
+        }
+        
         if (m_probeClassfication)
             Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeClassficationPass, (probeDim.x * probeDim.y * probeDim.z + 31) / 32, 1, 1, "Probe Classfication");
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_probeBlendingDepthPass, probeDim.x * probeDim.y, probeDim.z, 1, "Probe Blending Depth");
@@ -558,7 +561,9 @@ void SDFGIApplication::loadScene()
     Singleton<SceneLoader>::instance().Load(spherePath.string(), m_sphere.get());
 
     m_squad->GenerateIndirectDataAndBuffers();
-    m_sphere->GenerateIndirectDataAndBuffers(m_probeDim.x * m_probeDim.y * m_probeDim.z);
+
+    auto probeDim = m_jsonLoader->GetDDGIProbeDim();
+    m_sphere->GenerateIndirectDataAndBuffers(probeDim.x * probeDim.y * probeDim.z);
     m_scene->GenerateIndirectDataAndBuffers();
 
     m_scene->GenerateMeshBuffers();
@@ -944,7 +949,7 @@ void SDFGIApplication::initDDGIVolumn()
     auto sceneAABB = m_scene->GetBoundingBox();
     glm::vec3 scale = sceneAABB.pMax - sceneAABB.pMin;
 
-    m_volume = std::make_shared<DDGIVolume>(sceneAABB.pMin + 0.3f * scale / (glm::vec3)m_probeDim, sceneAABB.pMax - glm::vec3(0.1f), probeDim);
+    m_volume = std::make_shared<DDGIVolume>(sceneAABB.pMin + 0.3f * scale / (glm::vec3)probeDim, sceneAABB.pMax - glm::vec3(0.1f), probeDim);
 
 
     {
@@ -958,7 +963,7 @@ void SDFGIApplication::initDDGIVolumn()
         m_uniformBuffer1.probePos1 = m_volume->GetProbePosition(probeDim.x - 1, probeDim.y - 1, probeDim.z - 1);
 
 
-        m_uniformBuffer1.minFrontFaceDistance = 0.4f;
+        m_uniformBuffer1.minFrontFaceDistance = 0.2f;
         //m_uniformBuffer1.farthestFrontfaceDistance = 0.8f;
         m_uniformBuffer1.probeRelocationEnbled = (int)m_probeRelocationEnabled;
     }

@@ -33,6 +33,7 @@ float3 GetProbeRayDirection(int rayIndex, int probeIndex){
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
     uint probeIndex = DispatchThreadID.x;
+    probes[probeIndex].moved = 0;
 
     int numProbes = ubo1.probeDim.x * ubo1.probeDim.y * ubo1.probeDim.z;
 
@@ -133,12 +134,12 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     if (dot(normalizedOffset, normalizedOffset) < 0.2025f) // 0.45 * 0.45 == 0.2025
     {
         offset = fullOffset;
-
+        probes[probeIndex].moved = 1;
     } 
     //probes[probeIndex].padding1 = fullOffset;
     //probes[probeIndex].padding0 = farthestFrontfaceDistance;
     //probes[probeIndex].padding2 = closestFrontfaceDistance;
- 
+
     probes[probeIndex].offset = offset;
     
     float3 neWPosition = probePosition + offset;

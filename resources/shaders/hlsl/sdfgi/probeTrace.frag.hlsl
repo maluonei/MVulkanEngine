@@ -160,7 +160,7 @@ PSOutput main(PSInput input)
     output.radiance = float4(0.f, 0.f, 0.f, 0.f);
 
     if(RayMarchSDF(position, direction, mdf, ubo3.maxRaymarchSteps, distance)){
-      float3 hitPoint = position + direction * distance;
+      float3 hitPoint = position + direction * max(distance, 0.f));
 
       float3 posCoord = (hitPoint - mdf.aabbMin) / (mdf.aabbMax - mdf.aabbMin);
       int3 coord = posCoord * mdf.gridResolution;
@@ -179,7 +179,7 @@ PSOutput main(PSInput input)
 
           float3 lightColor = light.color * light.intensity;
           float3 L = -light.direction;
-          float3 V = -direction;
+          float3 V = distance > 0 ? -direction : direction;
           float3 N = normalize(L+V);
 
           float3 brdf = BRDF(albedo, lightColor, L, V, N, 0.f, 1.f);

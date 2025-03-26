@@ -7,7 +7,7 @@ struct Probe{
     float3 position;
     int probeState;
     float3 offset;
-    float padding0;
+    int moved;
 
     //float3 closestFrontfaceDirection;
     //float closestFrontfaceDistance;
@@ -25,6 +25,11 @@ struct UniformBuffer1
 	float  minFrontFaceDistance;
 	float3 probePos1;
 	int	   probeRelocationEnabled;
+
+    int    reAccumulate;
+    float    padding0;
+    float    padding1;
+    float    padding2;
 
     //int   probeRelocationEnabled;
     //int   padding1;

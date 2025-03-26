@@ -17,6 +17,12 @@ struct UniformBuffer1
 	//int		  farthestFrontfaceDistance;
 	
 	int			probeRelocationEnbled = true;
+
+	int    reAccumulate = 1;
+	float    padding0;
+	float    padding1;
+	float    padding2;
+
 	//int			padding0;
 	//int			padding1;
 	//int			padding2;

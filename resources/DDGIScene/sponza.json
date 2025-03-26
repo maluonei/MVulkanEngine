@@ -4,7 +4,7 @@
             "type": "Directional",
             "direction": "-1, -6, -1",
             "color": "1, 1, 1",
-            "intensity": "10.0"
+            "intensity": "15.0"
         }
     ],
 
@@ -28,7 +28,7 @@
 
     "DDGIVolume": [
         {
-            "probeDim": "8, 8, 8"
+            "probeDim": "12, 12, 12"
         }
     ]
 }

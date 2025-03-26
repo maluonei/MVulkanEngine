@@ -98,16 +98,18 @@ PSOutput main(PSInput input)
     mdf.gridResolution = ubo0.gridResolution;
     
     uint3 res = RayMarchSDF(ubo1.cameraPos, camDir, mdf, ubo1.maxRaymarchSteps, depth);
-    
+     
     output.Color = float4(0.f, 0.f, 0.f, 1.f);
 
     if( (res.x == 1 && res.y == 1 && res.z == 1)){
-        float3 hitPoint = ubo1.cameraPos + camDir * depth;
+        float3 hitPoint = ubo1.cameraPos + camDir * abs(depth);
         float3 posCoord = (hitPoint - ubo0.aabbMin) / (ubo0.aabbMax - ubo0.aabbMin);
+        //posCoord.z = 1.f - posCoord.z;
         int3 coord = posCoord * ubo0.gridResolution;
         float3 albedo = albedoTexture[coord].rgb;
-
-        output.Color = float4(albedo, 1.f);
+        
+        float3 d = abs(depth) * float3(1.f, 1.f, 1.f);
+        output.Color = float4(albedo * (1e-20) + d, 1.f);
     }
 
     return output;

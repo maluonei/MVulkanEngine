@@ -129,9 +129,9 @@ private:
 	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
 	bool						m_probeClassfication = true;
-	bool						m_visualizeProbes = false;
+	bool						m_visualizeProbes = true;
 	bool						m_probeRelocationEnabled = true;
-	glm::ivec3					m_probeDim = { 8, 8, 8 };
+	//glm::ivec3					m_probeDim = { 16, 16, 16 };
 	float						m_start = 0.f;
 
 	glm::ivec3 m_voxelResolution = { 128, 128, 128 };

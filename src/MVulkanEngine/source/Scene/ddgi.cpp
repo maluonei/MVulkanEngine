@@ -45,6 +45,8 @@ void DDGIVolume::SetRandomRotation()
 	rotMat = glm::rotate(rotMat, z, glm::vec3(0.f, 0.f, 1.f));
 
 	m_quaternion = RotationMatrixToQuaternion(glm::mat3(rotMat));
+
+	//m_quaternion = glm::vec4(0.f, 0.f, 0.f, 1.f);
 }
 
 void DDGIVolume::InitProbeBufferAndModelBuffer()
