@@ -60,6 +60,60 @@ private:
 	std::string		m_geomEntry = "main";
 };
 
+class MeshShaderModule {
+public:
+	MeshShaderModule(
+		const std::string& taskPath,
+		const std::string& meshPath,
+		const std::string& fragPath,
+		std::string taskEntry = "main",
+		std::string meshEntry = "main",
+		std::string fragEntry = "main",
+		bool compileEveryTime = false);
+	
+	MeshShaderModule(
+		const std::string& meshPath,
+		const std::string& fragPath,
+		std::string meshEntry = "main",
+		std::string fragEntry = "main",
+		bool compileEveryTime = false);
+
+	
+	void Create(VkDevice device);
+	void Clean();
+
+	inline MVulkanShader GetTaskShader() const { return m_taskShader; }
+	inline MVulkanShader GetMeshShader() const { return m_meshShader; }
+	inline MVulkanShader GetFragmentShader() const { return m_fragShader; }
+	bool UseTaskShader() const { return m_taskPath.size() > 0; }
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t binding, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+	const inline std::string GetTaskEntryPoint() { return m_taskEntry; }
+	const inline std::string GetMeshEntryPoint() { return m_meshEntry; }
+	const inline std::string GetFragEntryPoint() { return m_fragEntry; }
+
+protected:
+	bool m_compileEveryTime = false;
+
+private:
+	void load();
+
+	MVulkanShader	m_taskShader;
+	MVulkanShader	m_meshShader;
+	MVulkanShader	m_fragShader;
+
+	std::string		m_taskPath = "";
+	std::string		m_meshPath = "";
+	std::string		m_fragPath = "";
+
+	std::string		m_taskEntry = "main";
+	std::string		m_meshEntry = "main";
+	std::string		m_fragEntry = "main";
+};
+
+
 class TestShader : public ShaderModule {
 private:
 	struct UniformBufferObjectVert {

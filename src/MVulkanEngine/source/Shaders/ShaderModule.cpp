@@ -581,3 +581,62 @@ void* SSRShader::GetData(uint32_t binding, uint32_t index)
 		return (void*)&ubo0;
 	}
 }
+
+MeshShaderModule::MeshShaderModule(
+	const std::string& taskPath, const std::string& meshPath, const std::string& fragPath, 
+	std::string taskEntry, std::string meshEntry, std::string fragEntry, bool compileEveryTime)
+	: 
+	m_taskPath(taskPath),
+	m_meshPath(meshPath),
+	m_fragPath(fragPath),
+	m_taskEntry(taskEntry),
+	m_meshEntry(meshEntry),
+	m_fragEntry(fragEntry),
+	m_compileEveryTime(compileEveryTime)
+{
+	load();
+}
+
+MeshShaderModule::MeshShaderModule(const std::string& meshPath, const std::string& fragPath, std::string meshEntry, std::string fragEntry, bool compileEveryTime)
+	:MeshShaderModule("", meshPath, fragPath, "", meshEntry, fragEntry, compileEveryTime)
+{
+}
+
+void MeshShaderModule::Create(VkDevice device)
+{
+	if(UseTaskShader())
+		m_taskShader.Create(device);
+	m_meshShader.Create(device);
+	m_fragShader.Create(device);
+}
+
+void MeshShaderModule::Clean()
+{
+	m_meshShader.Clean();
+	m_fragShader.Clean();
+	if (UseTaskShader()) {
+		m_taskShader.Clean();
+	}
+}
+
+size_t MeshShaderModule::GetBufferSizeBinding(uint32_t binding) const
+{
+	return size_t(0);
+}
+
+void MeshShaderModule::SetUBO(uint8_t binding, void* data)
+{
+}
+
+void* MeshShaderModule::GetData(uint32_t binding, uint32_t index)
+{
+	return nullptr;
+}
+
+void MeshShaderModule::load()
+{
+	m_meshShader = MVulkanShader(m_meshPath, ShaderStageFlagBits::MESH, m_meshEntry, m_compileEveryTime);
+	m_fragShader = MVulkanShader(m_fragPath, ShaderStageFlagBits::FRAGMENT, m_fragEntry, m_compileEveryTime);
+	if (m_taskPath.size() > 0)
+		m_taskShader = MVulkanShader(m_taskPath, ShaderStageFlagBits::TASK, m_taskEntry, m_compileEveryTime);
+}

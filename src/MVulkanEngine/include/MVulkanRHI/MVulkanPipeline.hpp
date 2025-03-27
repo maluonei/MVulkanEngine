@@ -60,6 +60,18 @@ public:
 		std::string geomEntryPoint = "main",
 		std::string fragEntryPoint = "main");
 
+	void Create(VkDevice device,
+		MVulkanPilelineCreateInfo info,
+		VkShaderModule taskShaderModule,
+		VkShaderModule meshShaderModule,
+		VkShaderModule fragShaderModule,
+		VkRenderPass renderPass,
+		VkDescriptorSetLayout layout,
+		uint32_t numAttachments,
+		std::string taskEntryPoint = "main",
+		std::string meshEntryPoint = "main",
+		std::string fragEntryPoint = "main");
+
 private:
 
 

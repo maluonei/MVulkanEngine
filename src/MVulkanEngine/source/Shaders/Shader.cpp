@@ -113,6 +113,12 @@ void Shader::compile(std::string shaderPath)
 			else if (shaderPath.substr(size - 9, 4) == "comp") {
 				phase = "cs_6_4";
 			}
+			else if (shaderPath.substr(size - 9, 4) == "task") {
+				phase = "as_6_5";
+			}
+			else if (shaderPath.substr(size - 9, 4) == "mesh") {
+				phase = "ms_6_5";
+			}
 
 			//if (shaderPath.substr(size - 9, 4) == "vert") {
 			//	phase = "vert";

@@ -146,6 +146,14 @@ public:
         std::vector<VkSampler> samplers,
         std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
+    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+        std::shared_ptr<MeshShaderModule> shader,
+        std::vector<StorageBuffer> storageBuffers,
+        std::vector<std::vector<VkImageView>> imageViews,
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers,
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
     void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
         std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
         std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
@@ -219,6 +227,13 @@ public:
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
 
+    void RecordMeshShaderCommandBuffer(
+        uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ,
+        std::string eventName = "",
+        bool flipY = true);
 
     void SetCamera(std::shared_ptr<Camera> camera);
 
@@ -279,6 +294,13 @@ private:
 
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
+
+    void recordMeshShaderCommandBuffer(
+        uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ,
+        std::string eventName = "", bool flipY = true);
 
     void renderPass(uint32_t currentFrame, uint32_t imageIndex, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore);
 

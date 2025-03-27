@@ -107,6 +107,8 @@ enum ShaderStageFlagBits {
     MISS = 0X20,
     CLOESTHIT = 0X40,
     ANYHIT = 0X80,
+    TASK,
+    MESH
 };
 
 enum DescriptorType {
@@ -148,6 +150,8 @@ inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderSta
     case MISS: return VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR;
     case ANYHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     case CLOESTHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    case TASK: return VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_EXT;
+    case MESH: return VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT;
     default: return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
     }
 }
