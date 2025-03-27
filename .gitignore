@@ -22,6 +22,7 @@ Makefile
 *.dll
 *.so
 *.dylib
+*.github
 
 !resources/models
 !resources/textures
