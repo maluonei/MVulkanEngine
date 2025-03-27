@@ -93,6 +93,14 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             else {
                 spdlog::warn("device don't support raytracing");
             }
+
+            if (m_supportMeshShader) {
+                spdlog::info("device support mesh shader");
+                initMeshShaderFeatures();
+            }
+            else {
+                spdlog::warn("device don't support mesh shader");
+            }
             break;
         }
     }
@@ -145,9 +153,15 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     queueCreateInfos[1].queueFamilyIndex = m_indices.computeFamily.value();
     queueCreateInfos[2].queueFamilyIndex = m_indices.transferFamily.value();
 
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
+    meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    meshShaderFeatures.meshShader = VK_TRUE;
+    meshShaderFeatures.taskShader = VK_TRUE; // 任务着色器可选
+
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
     rayQueryFeatures.rayQuery = VK_TRUE;
+    //rayQueryFeatures.pNext = &meshShaderFeatures;
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures = {};
     rayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
@@ -164,7 +178,15 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     deviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
     deviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
     if (m_supportRayTracing) {
+        if (m_supportMeshShader) {
+            rayQueryFeatures.pNext = &meshShaderFeatures;
+        }
         deviceAddressFeatures.pNext = &accelerationStructureFeatures;
+    }
+    //VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
+    //meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    else if (m_supportMeshShader) {
+        deviceAddressFeatures.pNext = &meshShaderFeatures;
     }
 
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
@@ -206,6 +228,9 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     if (m_supportRayTracing) {
         enabledExtensionNames.insert(enabledExtensionNames.end(), raytracingExtensions.begin(), raytracingExtensions.end());
     } 
+    if (m_supportMeshShader) {
+        enabledExtensionNames.insert(enabledExtensionNames.end(), meshShaderExtensions.begin(), meshShaderExtensions.end());
+    }
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
     createInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
 
@@ -274,13 +299,32 @@ bool MVulkanDevice::checkRayracingExtensionSupport(VkPhysicalDevice device)
     return requiredExtensions.empty();
 }
 
+bool MVulkanDevice::checkMeshShaderExtensionSupport(VkPhysicalDevice device)
+{
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(meshShaderExtensions.begin(), meshShaderExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
 bool MVulkanDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
     QueueFamilyIndices indices = QueryQueueFamilyIndices(device, surface); 
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
     bool rayTracingSupported = checkRayracingExtensionSupport(device);
+    bool meshShaderSupported = checkMeshShaderExtensionSupport(device);
 
     if (rayTracingSupported) m_supportRayTracing = true;
+    if (meshShaderSupported) m_supportMeshShader = true;
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {
@@ -351,6 +395,11 @@ void MVulkanDevice::initRaytracing()
     spdlog::info("shaderGroupBaseAlignment:{0}", m_rtProperties.shaderGroupBaseAlignment);
     spdlog::info("maxRayDispatchInvocationCount:{0}", m_rtProperties.maxRayDispatchInvocationCount);
     spdlog::info("maxRayHitAttributeSize:{0}", m_rtProperties.maxRayHitAttributeSize);
+}
+
+void MVulkanDevice::initMeshShaderFeatures()
+{
+
 }
 
 MVulkanDevice::MVulkanDevice()
