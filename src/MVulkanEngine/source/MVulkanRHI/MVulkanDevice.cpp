@@ -313,7 +313,20 @@ bool MVulkanDevice::checkMeshShaderExtensionSupport(VkPhysicalDevice device)
         requiredExtensions.erase(extension.extensionName);
     }
 
-    return requiredExtensions.empty();
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
+    meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+
+    VkPhysicalDeviceFeatures2 deviceFeatures{};
+    deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    deviceFeatures.pNext = &meshShaderFeatures;
+
+    vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
+
+    //if (!meshShaderFeatures.meshShader) {
+    //    throw std::runtime_error("Mesh Shader is not supported on this device!");
+    //}
+
+    return requiredExtensions.empty() && meshShaderFeatures.meshShader;
 }
 
 bool MVulkanDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
