@@ -324,7 +324,8 @@ private:
     //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
     void createPlaceHolderTexture();
-
+protected:
+    virtual void InitSingleton();
 private:
     uint16_t m_windowWidth = 800, m_windowHeight = 600;
 

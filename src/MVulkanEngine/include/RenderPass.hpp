@@ -103,6 +103,8 @@ public:
 	
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
 
+	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
+
 	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator);
 
 	void TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList,VkImageLayout oldLayout, VkImageLayout newLayout);

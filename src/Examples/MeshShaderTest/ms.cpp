@@ -15,14 +15,19 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Meshlet/meshlet.hpp"
+#include "Managers/RandomGenerator.hpp"
+
 
 void MSTestApplication::SetUp()
 {
     //createSamplers();
     //createLight();
-    //createCamera();
+    createCamera();
     //
-    //loadScene();
+    loadScene();
+
+    createStorageBuffers();
 }
 
 void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
@@ -30,12 +35,68 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
     auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
     auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
 
+    {
+        MeshletShader::CameraProperties cam;
+    
+        auto model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(3.f));
+        auto view = m_camera->GetViewMatrix();
+        auto proj = m_camera->GetProjMatrix();
+    
+        cam.Model = model;
+        cam.View = view;
+        cam.Projection = proj;
+        cam.MVP = proj * view * model;
+
+        //cam.View = model;
+        //cam.Projection = model;
+        //cam.MVP = model;
+        //cam.MVP = model;
+        m_meshletPass->GetMeshShader()->SetUBO(0, &cam);
+        m_meshShaderTestPass2->GetMeshShader()->SetUBO(0, &cam);
+    }
+
+    {
+        TestMeshShader3::CameraProperties cam;
+    
+        auto model = glm::mat4(1.0f);
+        auto view = m_camera->GetViewMatrix();
+        auto proj = m_camera->GetProjMatrix();
+        auto vertices = m_suzanne->GetTotalVertexs();
+        auto indices = m_suzanne->GetTotalIndices();
+    
+        cam.Model = model;
+        cam.View = view;
+        cam.Projection = proj;
+        cam.MVP = proj * view * model;
+        cam.numVertices = vertices.size();
+        cam.numIndices = indices.size();
+    
+        //cam.View = model;
+        //cam.Projection = model;
+        //cam.MVP = model;
+        //cam.MVP = model;
+        m_meshShaderTestPass3->GetMeshShader()->SetUBO(0, &cam);
+    }
+
     graphicsList.Reset();
     graphicsList.Begin();
 
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshShaderTestPass, m_currentFrame,
+    //    1, 1, 1, "Test Mesh Shader Pass");
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshShaderTestPass2, m_currentFrame,
+    //    1, 1, 1, "Test Mesh Shader Pass2");
     Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-        imageIndex, m_meshShaderTestPass, m_currentFrame,
-        1, 1, 1, "Test Mesh Shader Pass");
+        imageIndex, m_meshletPass, m_currentFrame,
+        m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshShaderTestPass3, m_currentFrame,
+    //    1, 1, 1, "Test Mesh Shader Pass");
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshletPass, m_currentFrame,
+    //    m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
     ////prepare gbufferPass ubo
     //{
     //    GbufferShader::UniformBufferObject0 ubo0{};
@@ -111,8 +172,223 @@ void MSTestApplication::RecreateSwapchainAndRenderPasses()
 
 void MSTestApplication::CreateRenderPass()
 {
-    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    createMeshletPass();
+    createTestPass();
+    createTestPass2();
+    createTestPass3();
+}
+
+void MSTestApplication::PreComputes()
+{
+
+}
+
+void MSTestApplication::Clean()
+{
+    //m_gbufferPass->Clean();
+    //m_lightingPass->Clean();
+    //m_shadowPass->Clean();
+    //
+    //m_linearSampler.Clean();
+    //
+    //m_squad->Clean();
+    //m_scene->Clean();
+
+    MRenderApplication::Clean();
+}
+
+void MSTestApplication::loadScene()
+{
+    //m_scene = std::make_shared<Scene>();
+    //
+    fs::path projectRootPath = PROJECT_ROOT;
+    fs::path resourcePath = projectRootPath.append("resources").append("models");
+    //fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    ////fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
+    ////fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
+    //
+    //Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
+    //
+    ////split Image
+    //{
+    //    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    //
+    //    auto& transferList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::TRANSFER);
+    //
+    //    transferList.Reset();
+    //    transferList.Begin();
+    //    std::vector<MVulkanImageMemoryBarrier> barriers(wholeTextures.size());
+    //    for (auto i = 0; i < wholeTextures.size(); i++) {
+    //        MVulkanImageMemoryBarrier barrier{};
+    //        barrier.image = wholeTextures[i]->GetImage();
+    //
+    //        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    //        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    //        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    //        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    //        barrier.levelCount = wholeTextures[i]->GetImageInfo().mipLevels;
+    //
+    //        barriers[i] = barrier;
+    //    }
+    //
+    //    transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    //
+    //    transferList.End();
+    //
+    //    VkSubmitInfo submitInfo{};
+    //    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //    submitInfo.commandBufferCount = 1;
+    //    submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    //
+    //    auto& transferQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::TRANSFER);
+    //
+    //    transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //    transferQueue.WaitForQueueComplete();
+    //
+    //    for (auto item : wholeTextures) {
+    //        auto texture = item;
+    //        Singleton<MVulkanEngine>::instance().GenerateMipMap(*texture);
+    //    }
+    //}
+    //
+    //m_squad = std::make_shared<Scene>();
+    //fs::path squadPath = resourcePath / "squad.obj";
+    //Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
+    //
+    //m_squad->GenerateIndirectDataAndBuffers();
+    //m_scene->GenerateIndirectDataAndBuffers();
+
+    m_suzanne = std::make_shared<Scene>();
+    //fs::path squadPath = resourcePath / "suzanne.obj";
+    fs::path squadPath = resourcePath / "horse_statue_01_1k_LOD_1.obj";
+    //Singleton<SceneLoader>::instance().LoadForMeshlet(squadPath.string(), m_suzanne.get());
+
+    //fs::path squadPath = resourcePath / "cube.obj";
+    Singleton<SceneLoader>::instance().Load(squadPath.string(), m_suzanne.get());
+
+    m_meshLet = std::make_shared<Meshlet>();
+
+    auto mesh = m_suzanne->GetMesh(0);
+    auto numMeshes = m_suzanne->GetNumMeshes();
+    //spdlog::info("numMeshes;{0}", numMeshes);
+    auto vertices = mesh->vertices;
+    auto indices = mesh->indices;
+
+    //spdlog::info("numVertices;{0}", vertices.size());
+
+    auto numVertices = vertices.size();
+    std::vector<glm::vec3> positions(numVertices);
+    for (int i = 0; i < numVertices; i++) {
+        positions[i] = vertices[i].position;
+    }
+
+
+    m_meshLet->createMeshlets(&vertices, &indices);
+}
+//
+//void MSTestApplication::createLight()
+//{
+//    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+//    //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
+//    glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
+//    float intensity = 10.f;
+//    m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
+//}
+//
+void MSTestApplication::createCamera()
+{
+    //glm::vec3 position(-1.f, 0.f, 4.f);
+    //glm::vec3 center(0.f);
+    //glm::vec3 direction = glm::normalize(center - position);
+
+    //-4.9944386, 2.9471996, -5.8589
+    glm::vec3 position(0, 1.f, 4.f);
+    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -0.2f, -1.f));
+
+    //volumn pmin : -6.512552, 0.31353754, -6.434822
+    // volumn pmax : 2.139489, 3.020252, 6.2549577
+    //
+    float fov = 60.f;
+    float aspectRatio = (float)WIDTH / (float)HEIGHT;
+    float zNear = 0.01f;
+    float zFar = 1000.f;
+
+    m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
+}
+
+void MSTestApplication::createStorageBuffers()
+{
+    {
+        auto meshlets = m_meshLet->meshlets;
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = meshlets.size() * sizeof(meshopt_Meshlet);
+
+        m_meshletsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, meshlets.data());
+    }
+
+    {
+        auto meshletVertices = m_meshLet->meshletVertices;
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = meshletVertices.size() * sizeof(uint32_t);
+
+        m_meshletVerticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, meshletVertices.data());
+    }
+
+    {
+        auto meshletTrianglesU32 = m_meshLet->meshletTrianglesU32;
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = meshletTrianglesU32.size() * sizeof(uint32_t);
+
+        m_meshletTrianglesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, meshletTrianglesU32.data());
+    }
+
+    {
+        auto vertices = m_suzanne->GetTotalVertexs();
+        auto indices = m_suzanne->GetTotalIndices();
+
+        auto numVertices = vertices.size();
+        std::vector<glm::vec4> positions(numVertices);
+        std::vector<glm::vec4> positions2(2*numVertices);
+        for (int i = 0; i < numVertices; i++) {
+            positions2[2*i] = glm::vec4(vertices[i].position, 0.f);
+            positions2[2*i+1] = glm::vec4(Singleton<RandomGenerator>::instance().GetRandomFloat(), Singleton<RandomGenerator>::instance().GetRandomFloat(), Singleton<RandomGenerator>::instance().GetRandomFloat(), 0.f);
+            positions[i] = glm::vec4(vertices[i].position, 0.f);
+            //positions[i] = glm::vec3(vertices[i].position);
+        }
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = positions.size() * sizeof(glm::vec4);
+        spdlog::info("sizeof(glm::vec3):{0}", sizeof(glm::vec3));
+        spdlog::info("sizeof(glm::vec4):{0}", sizeof(glm::vec4));
+
+        m_verticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, positions.data());
     
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = positions2.size() * sizeof(glm::vec4);
+        m_testVerticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, positions2.data());
+        
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = indices.size() * sizeof(uint32_t);
+        m_testIndexBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indices.data());
+    }
+}
+void MSTestApplication::createTestPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
     {
         std::vector<VkFormat> testPassFormats;
         testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
@@ -150,237 +426,141 @@ void MSTestApplication::CreateRenderPass()
             m_meshShaderTestPass, meshShader,
             storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
     }
-
-    //{
-    //    std::vector<VkFormat> gbufferFormats;
-    //    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    //    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    //    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    //    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    //    gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
-    //
-    //    RenderPassCreateInfo info{};
-    //    info.depthFormat = device.FindDepthFormat();
-    //    info.frambufferCount = 1;
-    //    info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-    //    info.useAttachmentResolve = false;
-    //    info.useSwapchainImages = false;
-    //    info.imageAttachmentFormats = gbufferFormats;
-    //    info.colorAttachmentResolvedViews = nullptr;
-    //    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-    //    info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-    //    info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
-    //
-    //    m_gbufferPass = std::make_shared<RenderPass>(device, info);
-    //
-    //    std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
-    //    std::vector<std::vector<VkImageView>> bufferTextureViews(1);
-    //    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-    //    auto wholeTextureSize = wholeTextures.size();
-    //    for (auto i = 0; i < bufferTextureViews.size(); i++) {
-    //        if (wholeTextureSize == 0) {
-    //            bufferTextureViews[i].resize(1);
-    //            bufferTextureViews[i][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
-    //        }
-    //        else {
-    //            bufferTextureViews[i].resize(wholeTextureSize);
-    //            for (auto j = 0; j < wholeTextureSize; j++) {
-    //                bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
-    //            }
-    //        }
-    //    }
-    //
-    //    std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
-    //
-    //    Singleton<MVulkanEngine>::instance().CreateRenderPass(
-    //        m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
-    //}
-    //
-    //{
-    //    std::vector<VkFormat> shadowFormats(0);
-    //    shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-    //
-    //    RenderPassCreateInfo info{};
-    //    info.depthFormat = VK_FORMAT_D32_SFLOAT;
-    //    info.frambufferCount = 1;
-    //    info.extent = VkExtent2D(4096, 4096);
-    //    info.useAttachmentResolve = false;
-    //    info.useSwapchainImages = false;
-    //    info.imageAttachmentFormats = shadowFormats;
-    //    info.colorAttachmentResolvedViews = nullptr;
-    //    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //
-    //    m_shadowPass = std::make_shared<RenderPass>(device, info);
-    //
-    //    std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
-    //    std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
-    //    shadowShaderTextures[0].resize(0);
-    //
-    //    std::vector<VkSampler> samplers(0);
-    //
-    //    Singleton<MVulkanEngine>::instance().CreateRenderPass(
-    //        m_shadowPass, shadowShader, shadowShaderTextures, samplers);
-    //}
-    //
-    //{
-    //    std::vector<VkFormat> lightingPassFormats;
-    //    lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-    //
-    //    RenderPassCreateInfo info{};
-    //    info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-    //    info.depthFormat = device.FindDepthFormat();
-    //    info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-    //    info.useSwapchainImages = true;
-    //    info.imageAttachmentFormats = lightingPassFormats;
-    //    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //    info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //    info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    //    info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-    //    info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-    //    info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-    //
-    //    m_lightingPass = std::make_shared<RenderPass>(device, info);
-    //
-    //    std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader>();
-    //    std::vector<std::vector<VkImageView>> gbufferViews(5);
-    //    for (auto i = 0; i < 4; i++) {
-    //        gbufferViews[i].resize(1);
-    //        gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
-    //    }
-    //    gbufferViews[4] = std::vector<VkImageView>(2);
-    //    gbufferViews[4][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    //    gbufferViews[4][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-    //
-    //    std::vector<VkSampler> samplers(1);
-    //    samplers[0] = m_linearSampler.GetSampler();
-    //
-    //    Singleton<MVulkanEngine>::instance().CreateRenderPass(
-    //        m_lightingPass, lightingShader, gbufferViews, samplers);
-    //}
-    //
-    //createLightCamera();
 }
 
-void MSTestApplication::PreComputes()
+void MSTestApplication::createTestPass2()
 {
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> testPassFormats;
+        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = testPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_meshShaderTestPass2 = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<TestMeshShader2>();
+
+        std::vector<std::vector<VkImageView>> views(0);
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(0);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_meshShaderTestPass2, meshShader,
+            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
+    }
 }
 
-void MSTestApplication::Clean()
+void MSTestApplication::createTestPass3()
 {
-    //m_gbufferPass->Clean();
-    //m_lightingPass->Clean();
-    //m_shadowPass->Clean();
-    //
-    //m_linearSampler.Clean();
-    //
-    //m_squad->Clean();
-    //m_scene->Clean();
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> testPassFormats;
+        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
-    MRenderApplication::Clean();
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = testPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_meshShaderTestPass3 = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<TestMeshShader3>();
+
+        std::vector<std::vector<VkImageView>> views(0);
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(2);
+        storageBuffers[0] = *m_testVerticesBuffer;
+        storageBuffers[1] = *m_testIndexBuffer;
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_meshShaderTestPass3, meshShader,
+            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
+    }
 }
 
-//void MSTestApplication::loadScene()
-//{
-//    m_scene = std::make_shared<Scene>();
-//
-//    fs::path projectRootPath = PROJECT_ROOT;
-//    fs::path resourcePath = projectRootPath.append("resources").append("models");
-//    fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
-//    //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
-//    //fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
-//
-//    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
-//
-//    //split Image
-//    {
-//        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-//
-//        auto& transferList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::TRANSFER);
-//
-//        transferList.Reset();
-//        transferList.Begin();
-//        std::vector<MVulkanImageMemoryBarrier> barriers(wholeTextures.size());
-//        for (auto i = 0; i < wholeTextures.size(); i++) {
-//            MVulkanImageMemoryBarrier barrier{};
-//            barrier.image = wholeTextures[i]->GetImage();
-//
-//            barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-//            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//            barrier.levelCount = wholeTextures[i]->GetImageInfo().mipLevels;
-//
-//            barriers[i] = barrier;
-//        }
-//
-//        transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-//
-//        transferList.End();
-//
-//        VkSubmitInfo submitInfo{};
-//        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-//        submitInfo.commandBufferCount = 1;
-//        submitInfo.pCommandBuffers = &transferList.GetBuffer();
-//
-//        auto& transferQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::TRANSFER);
-//
-//        transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-//        transferQueue.WaitForQueueComplete();
-//
-//        for (auto item : wholeTextures) {
-//            auto texture = item;
-//            Singleton<MVulkanEngine>::instance().GenerateMipMap(*texture);
-//        }
-//    }
-//
-//    m_squad = std::make_shared<Scene>();
-//    fs::path squadPath = resourcePath / "squad.obj";
-//    Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
-//
-//    m_squad->GenerateIndirectDataAndBuffers();
-//    m_scene->GenerateIndirectDataAndBuffers();
-//}
-//
-//void MSTestApplication::createLight()
-//{
-//    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
-//    //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
-//    glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
-//    float intensity = 10.f;
-//    m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
-//}
-//
-//void MSTestApplication::createCamera()
-//{
-//    //glm::vec3 position(-1.f, 0.f, 4.f);
-//    //glm::vec3 center(0.f);
-//    //glm::vec3 direction = glm::normalize(center - position);
-//
-//    //-4.9944386, 2.9471996, -5.8589
-//    glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
-//    glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
-//
-//    //volumn pmin : -6.512552, 0.31353754, -6.434822
-//    // volumn pmax : 2.139489, 3.020252, 6.2549577
-//    //
-//    float fov = 60.f;
-//    float aspectRatio = (float)WIDTH / (float)HEIGHT;
-//    float zNear = 0.01f;
-//    float zFar = 1000.f;
-//
-//    m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
-//    Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
-//}
+void MSTestApplication::createMeshletPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> testPassFormats;
+        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = testPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_meshletPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<MeshletShader>();
+
+        std::vector<std::vector<VkImageView>> views(0);
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(4);
+        storageBuffers[0] = *m_verticesBuffer;
+        storageBuffers[1] = *m_meshletsBuffer;
+        storageBuffers[2] = *m_meshletVerticesBuffer;
+        storageBuffers[3] = *m_meshletTrianglesBuffer;
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_meshletPass, meshShader,
+            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
+    }
+}
 //
 //void MSTestApplication::createSamplers()
 //{

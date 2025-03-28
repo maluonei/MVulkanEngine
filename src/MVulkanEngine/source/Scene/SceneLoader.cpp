@@ -4,6 +4,9 @@
 #include "Managers/TextureManager.hpp"
 #include <spdlog/spdlog.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 int SceneLoader::g_meshId = 0;
 
 SceneLoader::SceneLoader()
@@ -30,6 +33,11 @@ void SceneLoader::Load(std::string path, Scene* scene)
         //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
     );
 
+    //const aiScene* aiscene = importer.ReadFile(path,
+    //    aiProcess_JoinIdenticalVertices
+    //    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    //);
+
     // 检查加载是否成功
     if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
         //std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
@@ -47,6 +55,138 @@ void SceneLoader::Load(std::string path, Scene* scene)
     scene->GenerateIndirectDrawData();
 
     scene->CalculateBB();
+}
+
+void SceneLoader::LoadForMeshlet(std::string path, Scene* scene)
+{
+    if (scene == nullptr) {
+        spdlog::error("Scene is nullptr");
+    }
+
+    m_currentScenePath = path;
+
+    //Assimp::Importer importer;
+    //
+    //spdlog::info("assimp start loading");
+    //
+    //// 通过指定路径加载模型
+    ////const aiScene* aiscene = importer.ReadFile(path,
+    ////    aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    ////    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    ////);
+    //
+    //const aiScene* aiscene = importer.ReadFile(path,
+    //    0
+    //    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    //);
+    //
+    //// 检查加载是否成功
+    //if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
+    //    //std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
+    //    spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
+    //    return;
+    //}
+    //
+    //spdlog::info("start processing scene");
+    //processMeshs(aiscene, scene);
+    //processTextures(aiscene);
+    //processMaterials(aiscene, scene);
+    //
+    //processNode(aiscene->mRootNode, aiscene, scene);
+
+    tinyobj::attrib_t                attrib;
+    std::vector<tinyobj::shape_t>    shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    //std::string warn;
+    std::string err;
+
+    bool        loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), nullptr, false);
+
+    if (!loaded || !err.empty())
+    {
+        spdlog::error("fail to load obj model: {0}", path.c_str());
+        throw std::exception();
+    }
+
+    size_t numShapes = shapes.size();
+    if (numShapes == 0)
+    {
+        spdlog::error("model.numShapes = 0");
+        throw std::exception();
+    }
+
+    // Make sure all vertex positions are 3 components wide
+    if ((attrib.vertices.size() % 3) != 0)
+    {
+        spdlog::error("model.vertices.size is not a multiple of 3");
+        throw std::exception();
+    }
+
+    // If there's normals and tex coords, they need to line up with the vertex positions
+    const size_t positionCount = attrib.vertices.size() / 3;
+    const size_t normalCount = attrib.normals.size() / 3;
+    const size_t texCoordCount = attrib.texcoords.size() / 2;
+    if ((normalCount > 0) && (normalCount != positionCount))
+    {
+        spdlog::warn("model don't have normal data");
+    }
+    if ((texCoordCount > 0) && (texCoordCount != positionCount))
+    {
+        spdlog::warn("model don't have uv data");
+    }
+
+
+    {
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+
+        auto indicesNum = 0;
+        for (size_t shapeIdx = 0; shapeIdx < numShapes; ++shapeIdx)
+        {
+            auto& shape = shapes[shapeIdx];
+
+            indicesNum += shape.mesh.indices.size();
+        }
+
+        mesh->vertices.resize(positionCount);
+        mesh->indices.resize(indicesNum);
+
+        auto positions = reinterpret_cast<const glm::vec3*>(attrib.vertices.data());
+
+        for (int i = 0; i < positionCount; i++) {
+            Vertex vertex;
+            vertex.position = positions[i];
+            mesh->vertices[i] = vertex;
+        }
+
+        int indexid = 0;
+        for (size_t shapeIdx = 0; shapeIdx < numShapes; ++shapeIdx)
+        {
+            auto& shape = shapes[shapeIdx];
+
+            size_t numTriangles = shape.mesh.indices.size() / 3;
+            for (size_t triIdx = 0; triIdx < numTriangles; ++triIdx)
+            {
+                uint32_t vIdx0 = static_cast<uint32_t>(shape.mesh.indices[3 * triIdx + 0].vertex_index);
+                uint32_t vIdx1 = static_cast<uint32_t>(shape.mesh.indices[3 * triIdx + 1].vertex_index);
+                uint32_t vIdx2 = static_cast<uint32_t>(shape.mesh.indices[3 * triIdx + 2].vertex_index);
+                mesh->indices[indexid++] = vIdx0;
+                mesh->indices[indexid++] = vIdx1;
+                mesh->indices[indexid++] = vIdx2;
+            }
+        }
+
+        scene->SetNumMeshes(1);
+        scene->SetMesh(0, mesh);
+    }
+
+    scene->GenerateIndirectDrawData();
+
+    scene->CalculateBB();
+}
+
+void SceneLoader::InitSingleton()
+{
 }
 
 //void SceneLoader::processMaterial(const aiMaterial* material, const aiScene* aiscene, std::string matName)
@@ -102,7 +242,9 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
         for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
             Vertex vertex;
             vertex.position = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
-            vertex.normal = glm::vec3(mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z);
+            if (mesh->mNormals) {
+                vertex.normal = glm::vec3(mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z);
+            }
             if (mesh->mTangents && mesh->mBitangents) {
                 vertex.tangent = glm::vec3(mesh->mTangents[j].x, mesh->mTangents[j].y, mesh->mTangents[j].z);
                 vertex.bitangent = glm::vec3(mesh->mBitangents[j].x, mesh->mBitangents[j].y, mesh->mBitangents[j].z);

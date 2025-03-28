@@ -858,6 +858,10 @@ void MVulkanEngine::createPlaceHolderTexture()
     m_graphicsQueue.WaitForQueueComplete();
 }
 
+void MVulkanEngine::InitSingleton()
+{
+}
+
 void MVulkanEngine::recordCommandBuffer(
     uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
     std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)

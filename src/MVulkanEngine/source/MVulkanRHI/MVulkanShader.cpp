@@ -211,6 +211,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         case spv::ExecutionModelGeometry:
             stage = ShaderStageFlagBits::GEOMETRY;
             break;
+        case spv::ExecutionModelTaskEXT:
+            stage = ShaderStageFlagBits::TASK;
+            break;
+        case spv::ExecutionModelMeshEXT:
+            stage = ShaderStageFlagBits::MESH;
+            break;
         default:
             stage = ShaderStageFlagBits::VERTEX;
             break;

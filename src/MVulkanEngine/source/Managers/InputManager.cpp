@@ -16,6 +16,10 @@ void InputManager::RegisterApplication(MRenderApplication* _application)
 //	m_setCameraMoved = func;
 //}
 
+void InputManager::InitSingleton()
+{
+}
+
 void InputManager::DealMouseMoveInput()
 {
 	if (!cursorEnter) {

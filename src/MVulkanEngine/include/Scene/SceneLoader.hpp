@@ -20,9 +20,13 @@ class SceneLoader : public Singleton<SceneLoader> {
 public:
 	SceneLoader();
 	void Load(std::string path, Scene* scene);
+	void LoadForMeshlet(std::string path, Scene* scene);
 
-
+protected:
+	virtual void InitSingleton();
 private:
+	void load();
+
 	static int g_meshId;
 	std::string m_currentScenePath;
 

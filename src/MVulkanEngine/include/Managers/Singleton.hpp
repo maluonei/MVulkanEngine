@@ -18,14 +18,21 @@ public:
     Singleton& operator =(const Singleton&) = delete;
 
     //virtual void DestroySingleton() = 0;
+    virtual void InitSingleton() {
+
+    }
+
+
 protected:
+   //virtual void InitSingleton() {
+   //
+   //}
+
     Singleton() {
         InitSingleton();
         
-        //std::cout << "constructor called!" << std::endl;
+        std::cout << "constructor called!" << std::endl;
     }
-
-    virtual void InitSingleton(){}
 };
 
 #endif

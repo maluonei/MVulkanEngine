@@ -25,6 +25,9 @@ public:
 
 	//void RegisterSetCameraMoveFunc(MRenderApplication::SetCameraMove);
 
+protected:
+	virtual void InitSingleton();
+
 private:
 	void DealMouseMoveInput();
 	void DealMouseClickInput();
