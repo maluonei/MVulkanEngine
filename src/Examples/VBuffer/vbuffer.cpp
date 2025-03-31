@@ -462,7 +462,8 @@ void MSTestApplication::createVBufferPass()
         std::vector<VkFormat> testPassFormats;
         testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
         testPassFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
-        testPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //testPassFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        //testPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
         RenderPassCreateInfo info{};
         info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
@@ -535,24 +536,24 @@ void MSTestApplication::createShadingPass()
 
         std::shared_ptr<ShaderModule> shadingShader = std::make_shared<VBufferShadingShader>();
         
-        std::vector<std::vector<VkImageView>> bufferTextureViews(4);
+        std::vector<std::vector<VkImageView>> bufferTextureViews(3);
         auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
         auto wholeTextureSize = wholeTextures.size();
 
         if (wholeTextureSize == 0) {
-            bufferTextureViews[2].resize(1);
-            bufferTextureViews[2][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+            bufferTextureViews[1].resize(1);
+            bufferTextureViews[1][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
         }
         else {
-            bufferTextureViews[2].resize(wholeTextureSize);
+            bufferTextureViews[1].resize(wholeTextureSize);
             for (auto j = 0; j < wholeTextureSize; j++) {
-                bufferTextureViews[2][j] = wholeTextures[j]->GetImageView();
+                bufferTextureViews[1][j] = wholeTextures[j]->GetImageView();
             }
         }
 
         bufferTextureViews[0] = std::vector<VkImageView>(1, m_vbufferPass->GetFrameBuffer(0).GetImageView(1));
-        bufferTextureViews[1] = std::vector<VkImageView>(1, m_vbufferPass->GetFrameBuffer(0).GetImageView(2));
-        bufferTextureViews[3] = std::vector<VkImageView>(2, m_shadowPass->GetFrameBuffer(0).GetDepthImageView());
+        //bufferTextureViews[1] = std::vector<VkImageView>(1, m_vbufferPass->GetFrameBuffer(0).GetImageView(2));
+        bufferTextureViews[2] = std::vector<VkImageView>(2, m_shadowPass->GetFrameBuffer(0).GetDepthImageView());
 
         std::vector<std::vector<VkImageView>> storageTextureViews(0);
         //storageTextureViews[0].resize(1, m_volumeProbeDatasRadiance->GetImageView());
