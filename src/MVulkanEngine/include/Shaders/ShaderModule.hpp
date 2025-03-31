@@ -201,6 +201,47 @@ private:
 	UniformBufferObject1 ubo1;
 };
 
+class GbufferShader2 : public ShaderModule
+{
+public:
+	GbufferShader2();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t binding, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+public:
+	struct UniformBufferObject0
+	{
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+	};
+
+	struct UniformBuffer1 {
+		int diffuseTextureIdx;
+		int metallicAndRoughnessTexIdx;
+		int matId;
+		int normalMapIdx;
+
+		glm::vec3 diffuseColor;
+		int padding0;
+	};
+
+	struct UniformBufferObject1
+	{
+		UniformBuffer1 ubo[512];
+	};
+
+	static UniformBufferObject1 GetFromScene(const std::shared_ptr<Scene> scene);
+
+private:
+	UniformBufferObject0 ubo0;
+	UniformBufferObject1 ubo1;
+};
+
+
 class SquadPhongShader:public ShaderModule {
 public:
 	SquadPhongShader();
@@ -273,7 +314,46 @@ private:
 	UniformBuffer0 ubo0;
 };
 
+class LightingPbrShader2 :public ShaderModule {
+public:
+	LightingPbrShader2();
 
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t binding, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct Light {
+		glm::mat4 shadowViewProj;
+
+		glm::vec3 direction;
+		float intensity;
+
+		glm::vec3 color;
+		int shadowMapIndex;
+
+		float cameraZnear;
+		float cameraZfar;
+		float padding6;
+		float padding7;
+	};
+
+	struct UniformBuffer0 {
+		Light lights[2];
+		glm::vec3 cameraPos;
+		int lightNum;
+
+		int ResolusionWidth;
+		int ResolusionHeight;
+		int WindowResWidth;
+		int WindowResHeight;
+	};
+
+private:
+	UniformBuffer0 ubo0;
+};
 
 class LightingIBLShader :public ShaderModule {
 public:

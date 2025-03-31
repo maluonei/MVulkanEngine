@@ -229,6 +229,91 @@ GbufferShader::UniformBufferObject1 GbufferShader::GetFromScene(const std::share
 	//m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
 }
 
+GbufferShader2::GbufferShader2() :
+	//ShaderModule("gbuffer.vert.glsl", "gbuffer.frag.glsl")
+	ShaderModule("hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl")
+{
+}
+
+size_t GbufferShader2::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(UniformBufferObject0);
+	case 1:
+		return sizeof(UniformBufferObject1);
+	default:
+		return -1;
+	}
+}
+
+void GbufferShader2::SetUBO(uint8_t binding, void* data)
+{
+	switch (binding) {
+	case 0:
+		ubo0 = *reinterpret_cast<UniformBufferObject0*>(data);
+		return;
+	case 1:
+		ubo1 = *reinterpret_cast<UniformBufferObject1*>(data);
+		return;
+	}
+}
+
+void* GbufferShader2::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	case 1:
+		return (void*)&ubo1;
+	}
+}
+
+GbufferShader2::UniformBufferObject1 GbufferShader2::GetFromScene(const std::shared_ptr<Scene> m_scene) {
+	GbufferShader2::UniformBufferObject1 ubo1;
+
+	//auto meshNames = m_scene->GetMeshNames();
+	auto numPrims = m_scene->GetNumPrimInfos();
+	auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
+
+	for (auto i = 0; i < numPrims; i++) {
+		//auto name = meshNames[i];
+		//auto mesh = m_scene->GetMesh(i);
+		auto primInfo = m_scene->m_primInfos[i];
+		auto mat = m_scene->GetMaterial(primInfo.material_id);
+
+		auto indirectCommand = drawIndexedIndirectCommands[i];
+		if (mat->diffuseTexture != "") {
+			auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+			ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+			ubo1.ubo[indirectCommand.firstInstance].diffuseColor = glm::vec3(mat->diffuseColor.r, mat->diffuseColor.g, mat->diffuseColor.b);
+		}
+
+		if (mat->metallicAndRoughnessTexture != "") {
+			auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+			ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = metallicAndRoughnessTexId;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].metallicAndRoughnessTexIdx = -1;
+		}
+
+
+		if (mat->normalMap != "") {
+			auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+			ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = normalmapIdx;
+		}
+		else {
+			ubo1.ubo[indirectCommand.firstInstance].normalMapIdx = -1;
+		}
+	}
+
+	return ubo1;
+	//m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+}
+
 SquadPhongShader::SquadPhongShader():ShaderModule("glsl/phong_sqad.vert.glsl", "glsl/phong_sqad.frag.glsl")
 {
 }
@@ -295,6 +380,37 @@ void LightingPbrShader::SetUBO(uint8_t binding, void* data)
 }
 
 void* LightingPbrShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	}
+}
+
+LightingPbrShader2::LightingPbrShader2() :ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl")
+{
+
+}
+
+size_t LightingPbrShader2::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(LightingPbrShader2::UniformBuffer0);
+	}
+	//return sizeof(DirectionalLightBuffer);
+}
+
+void LightingPbrShader2::SetUBO(uint8_t binding, void* data)
+{
+	switch (binding) {
+	case 0:
+		ubo0 = *reinterpret_cast<LightingPbrShader2::UniformBuffer0*>(data);
+		return;
+	}
+}
+
+void* LightingPbrShader2::GetData(uint32_t binding, uint32_t index)
 {
 	switch (binding) {
 	case 0:
