@@ -78,7 +78,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
 
-    spdlog::info("camera.pos: {0}, {1}, {2}", m_camera->GetPosition().x, m_camera->GetPosition().y, m_camera->GetPosition().z);
+    //spdlog::info("camera.pos: {0}, {1}, {2}", m_camera->GetPosition().x, m_camera->GetPosition().y, m_camera->GetPosition().z);
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()
