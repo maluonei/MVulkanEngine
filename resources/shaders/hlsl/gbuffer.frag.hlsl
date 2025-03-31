@@ -85,7 +85,7 @@ PSOutput main(PSInput input)
     output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
 
     // Output material ID
-    output.MatId = uint4(ubo1[input.instanceID].matId, 0, 0, 0);
+    output.MatId = uint4(ubo1[input.instanceID].matId, input.instanceID, 0, 0);
 
     return output;
 }

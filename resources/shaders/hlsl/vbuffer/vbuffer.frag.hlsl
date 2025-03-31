@@ -1,7 +1,8 @@
 struct MeshOutput {
     float4 Position : SV_POSITION;
-    uint4 InstanceIDAndPrimitiveIDAndMaterialID : TEXCOORD0;
+    uint4 InstanceIDAndMatletIDAndMaterialID : TEXCOORD0;
     float2 Barycentrics : SV_Barycentrics; // DX12 自动提供重心坐标
+    uint primitiveID : SV_PrimitiveID;
     //float3 Normal   : NORMAL;
     float3 Color    : COLOR;
 };
@@ -20,7 +21,7 @@ PSOutput main(MeshOutput input)
 {
     PSOutput output;
 
-    output.VBuffer1.xyz = input.InstanceIDAndPrimitiveIDAndMaterialID.xyz; // 16-bit instance ID
+    output.VBuffer1.xyzw = uint4(input.InstanceIDAndMatletIDAndMaterialID.xyz, input.primitiveID); // 16-bit instance ID
     output.VBuffer2.rg = input.Barycentrics; // 16-bit barycentric coordinates
     //float3 normal = normalize(input.Normal);
 

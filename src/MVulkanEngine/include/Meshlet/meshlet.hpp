@@ -18,6 +18,8 @@
 struct MeshletAddon {
 	uint32_t instanceIndex;
 	uint32_t materialIndex;
+	uint32_t padding0;
+	uint32_t padding1;
 };
 
 class Meshlet {
@@ -141,7 +143,9 @@ public:
 		
 		MeshletAddon addOn{
 			.instanceIndex = (uint32_t)(instanceId),
-			.materialIndex = (uint32_t)(matId)
+			.materialIndex = (uint32_t)(matId),
+			.padding0 = 0,
+			.padding1 = 0
 		};
 		std::vector<MeshletAddon>	 addons(meshletVertices.size(), addOn);
 		//addons.resize(meshletCount);
@@ -192,13 +196,18 @@ public:
 		int meshIndexOffset = 0;
 		int meshVertexOffset = 0;
 		int meshVertexIndexOffset = 0;
+		auto drawIndexedIndirectCommands = scene->GetIndirectDrawCommands();
+
 		for(auto i=0;i<numPrims;i++){
+			//to mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
+			auto indirectCommand = drawIndexedIndirectCommands[i];
 			auto mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
-	
+
 			auto vertices = mesh->vertices;
 			auto indices = mesh->indices;
-			auto matId = scene->m_primInfos[i].material_id;
-			auto meshId = scene->m_primInfos[i].mesh_id;
+			//auto matId = scene->m_primInfos[i].material_id;
+			auto matId = indirectCommand.firstInstance;
+			auto meshId = indirectCommand.firstInstance;
 			//auto mat = m_scene->GetMaterial(m_scene->m_primInfos[i].material_id);
 
 			auto meshVertexOffset = m_meshletVertices.size();

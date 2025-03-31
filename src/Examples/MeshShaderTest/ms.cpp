@@ -120,14 +120,14 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
     //    imageIndex, m_meshletPass, m_currentFrame,
     //    m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
     auto dispatchX = 32;// *32;
-    auto instanceCount = 16;
+    //auto instanceCount = 16;
     auto meshletCount = m_meshLet->m_meshlets.size();
-    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-    //    imageIndex, m_meshletPass, m_currentFrame,
-    //    (m_meshLet->meshlets.size() + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass");
     Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-        imageIndex, m_meshletPass2, m_currentFrame,
-        (instanceCount * meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass2");
+        imageIndex, m_meshletPass, m_currentFrame,
+        (meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass");
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshletPass2, m_currentFrame,
+    //    (instanceCount * meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass2");
     //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
     //    imageIndex, m_meshShaderTestPass3, m_currentFrame,
     //    1, 1, 1, "Test Mesh Shader Pass");

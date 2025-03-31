@@ -30,15 +30,17 @@ public:
 	virtual void Clean();
 private:
 	void loadScene();
-	//void createLight();
+	void createLight();
 	void createCamera();
-	//void createSamplers();
+	void createSamplers();
 	//
-	//void createLightCamera();
+	void createLightCamera();
 
 	void createStorageBuffers();
 
 	void createVBufferPass();
+	void createShadingPass();
+	void createShadowmapPass();
 
 	//void createTestPass();
 	//void createTestPass2();
@@ -52,16 +54,18 @@ private:
 	//std::shared_ptr<RenderPass> m_meshShaderTestPass3;
 	//std::shared_ptr<RenderPass> m_meshletPass;
 	//std::shared_ptr<RenderPass> m_meshletPass2;
+	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_vbufferPass;
+	std::shared_ptr<RenderPass> m_shadingPass;
 
-	//MVulkanSampler				m_linearSampler;
+	MVulkanSampler				m_linearSampler;
 
 	std::shared_ptr<Scene>		m_scene;
-	//std::shared_ptr<Scene>			m_suzanne;
+	std::shared_ptr<Scene>		m_squad;
 	//
-	//std::shared_ptr<Light>		m_directionalLight;
+	std::shared_ptr<Light>		m_directionalLight;
 	//
-	//std::shared_ptr<Camera>		m_directionalLightCamera;
+	std::shared_ptr<Camera>		m_directionalLightCamera;
 	std::shared_ptr<Camera>		m_camera;
 
 	std::shared_ptr<Meshlet>	m_meshLet;

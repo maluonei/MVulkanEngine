@@ -162,3 +162,41 @@ void* VBufferShader::GetData(uint32_t binding, uint32_t index)
 		return (void*)&ubo1;
 	}
 }
+
+VBufferShadingShader::VBufferShadingShader() :
+	ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/vbuffer/shading.frag.hlsl", "main", "main", false)
+{
+
+}
+
+size_t VBufferShadingShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(ubo0);
+	case 1:
+		return sizeof(ubo1);
+	}
+}
+
+void VBufferShadingShader::SetUBO(uint8_t binding, void* data)
+{
+	switch (binding) {
+	case 0:
+		ubo0 = *reinterpret_cast<VBufferShadingShader::UnifomBuffer0*>(data);
+		return;
+	case 1:
+		ubo1 = *reinterpret_cast<VBufferShadingShader::UnifomBuffer1*>(data);
+		return;
+	}
+}
+
+void* VBufferShadingShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	case 1:
+		return (void*)&ubo1;
+	}
+}

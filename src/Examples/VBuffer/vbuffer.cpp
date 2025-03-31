@@ -21,8 +21,8 @@
 
 void MSTestApplication::SetUp()
 {
-    //createSamplers();
-    //createLight();
+    createSamplers();
+    createLight();
     createCamera();
     //
     loadScene();
@@ -64,25 +64,84 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
         m_vbufferPass->GetMeshShader()->SetUBO(1, &cam);
     }
 
+    {
+        auto shader = m_shadingPass->GetShader();
+        VBufferShadingShader::UnifomBuffer0 ubo0{};
+        VBufferShadingShader::UnifomBuffer1 ubo1{};
+
+        //auto meshNames = m_scene->GetMeshNames();
+        auto numPrims = m_scene->GetNumPrimInfos();
+        auto drawIndexedIndirectCommands = m_scene->GetIndirectDrawCommands();
+
+        for (auto i = 0; i < numPrims; i++) {
+            //auto name = meshNames[m_scene->m_primInfos[i].meshId];
+            auto mesh = m_scene->GetMesh(m_scene->m_primInfos[i].mesh_id);
+            auto mat = m_scene->GetMaterial(m_scene->m_primInfos[i].material_id);
+            auto indirectCommand = drawIndexedIndirectCommands[i];
+            if (mat->diffuseTexture != "") {
+                auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+                ubo1.tex[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+            }
+            else {
+                ubo1.tex[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+            }
+
+            if (mat->metallicAndRoughnessTexture != "") {
+                auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+                ubo1.tex[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = metallicAndRoughnessTexId;
+            }
+            else {
+                ubo1.tex[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = -1;
+            }
+        }
+        shader->SetUBO(1, &ubo1);
+
+        ubo0.lightNum = 1;
+        ubo0.lights[0].direction = m_directionalLightCamera->GetDirection();
+        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
+        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
+        ubo0.lights[0].shadowMapIndex = 0;
+        ubo0.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        ubo0.lights[0].cameraZnear = m_directionalLightCamera->GetZnear();
+        ubo0.lights[0].cameraZfar = m_directionalLightCamera->GetZfar();
+        ubo0.cameraPos = m_camera->GetPosition();
+
+        ubo0.ShadowmapResWidth = m_shadowPass->GetFrameBuffer(0).GetExtent2D().width;
+        ubo0.ShadowmapResHeight = m_shadowPass->GetFrameBuffer(0).GetExtent2D().height;
+        ubo0.WindowResWidth = m_shadingPass->GetFrameBuffer(0).GetExtent2D().width;
+        ubo0.WindowResHeight = m_shadingPass->GetFrameBuffer(0).GetExtent2D().height;
+
+        shader->SetUBO(0, &ubo0);
+    }
+
+    //prepare shadowPass ubo
+    {
+        ShadowShader::ShadowUniformBuffer ubo0{};
+        ubo0.shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        m_shadowPass->GetShader()->SetUBO(0, &ubo0);
+    }
+
     graphicsList.Reset();
     graphicsList.Begin();
 
-    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-    //    imageIndex, m_meshShaderTestPass, m_currentFrame,
-    //    1, 1, 1, "Test Mesh Shader Pass");
-    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-    //    imageIndex, m_meshShaderTestPass2, m_currentFrame,
-    //    1, 1, 1, "Test Mesh Shader Pass2");
-    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-    //    imageIndex, m_meshletPass, m_currentFrame,
-    //    m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
+    
     auto dispatchX = 32;// *32;
     //auto instanceCount = 16;
     auto meshletCount = m_meshLet->m_meshlets.size();
 
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+        0, m_shadowPass, m_currentFrame, 
+        m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), 
+        m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
+
     Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-        imageIndex, m_vbufferPass, m_currentFrame,
-        (meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass2");
+        0, m_vbufferPass, m_currentFrame,
+        (meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, std::string("VBuffer Pass"));
+
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(
+        imageIndex, m_shadingPass, m_currentFrame, 
+        m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
+
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
@@ -122,7 +181,9 @@ void MSTestApplication::CreateRenderPass()
     //createTestPass();
     //createTestPass2();
     //createTestPass3();
+    createShadowmapPass();
     createVBufferPass();
+    createShadingPass();
 }
 
 void MSTestApplication::PreComputes()
@@ -200,12 +261,12 @@ void MSTestApplication::loadScene()
         }
     }
     //
-    //m_squad = std::make_shared<Scene>();
-    //fs::path squadPath = resourcePath / "squad.obj";
-    //Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
-    //
-    //m_squad->GenerateIndirectDataAndBuffers();
-    //m_scene->GenerateIndirectDataAndBuffers();
+    m_squad = std::make_shared<Scene>();
+    fs::path squadPath = resourcePath / "squad.obj";
+    Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
+    
+    m_squad->GenerateIndirectDataAndBuffers();
+    m_scene->GenerateIndirectDataAndBuffers();
 
     //m_suzanne = std::make_shared<Scene>();
     ////fs::path squadPath = resourcePath / "suzanne.obj";
@@ -227,6 +288,15 @@ void MSTestApplication::loadScene()
 
     m_meshLet->createMeshlets(m_scene);
 }
+
+void MSTestApplication::createLight()
+{
+    glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
+    //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
+    glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
+    float intensity = 10.f;
+    m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
+}
 //
 //void MSTestApplication::createLight()
 //{
@@ -244,8 +314,9 @@ void MSTestApplication::createCamera()
     //glm::vec3 direction = glm::normalize(center - position);
 
     //-4.9944386, 2.9471996, -5.8589
-    glm::vec3 position(0, 1.f, 4.f);
-    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -0.2f, -1.f));
+    glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
+    glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
+
 
     //volumn pmin : -6.512552, 0.31353754, -6.434822
     // volumn pmax : 2.139489, 3.020252, 6.2549577
@@ -257,6 +328,37 @@ void MSTestApplication::createCamera()
 
     m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
     Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
+}
+
+void MSTestApplication::createSamplers()
+{
+    {
+        MVulkanSamplerCreateInfo info{};
+        info.minFilter = VK_FILTER_LINEAR;
+        info.magFilter = VK_FILTER_LINEAR;
+        info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        //info.minFilter = VK_FILTER_NEAREST;
+        //info.magFilter = VK_FILTER_NEAREST;
+        //info.mipMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        info.maxLod = 0.f;
+        info.anisotropyEnable = false;
+        m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+    }
+}
+
+void MSTestApplication::createLightCamera()
+{
+    VkExtent2D extent = m_shadowPass->GetFrameBuffer(0).GetExtent2D();
+
+    glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
+    glm::vec3 position = -50.f * direction;
+
+    float fov = 60.f;
+    float aspect = (float)extent.width / (float)extent.height;
+    float zNear = 0.001f;
+    float zFar = 60.f;
+    m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
+    m_directionalLightCamera->SetOrth(true);
 }
 
 void MSTestApplication::createStorageBuffers()
@@ -306,22 +408,33 @@ void MSTestApplication::createStorageBuffers()
     }
 
     {
+        struct Vertex {
+            glm::vec3 pos;
+            float u;
+            glm::vec3 normal;
+            float v;
+        };
+
         auto vertices = m_scene->GetTotalVertexs();
         //auto indices = m_scene->GetTotalIndices();
 
         auto numVertices = vertices.size();
-        std::vector<glm::vec4> vertices2(numVertices);
+        std::vector<Vertex> vertices2(numVertices);
         for (int i = 0; i < numVertices; i++) {
 
-            vertices2[i] = glm::vec4(vertices[i].position, 0.f);
+            vertices2[i] = Vertex{
+                .pos = vertices[i].position,
+                .u = vertices[i].texcoord.x,
+                .normal = vertices[i].normal,
+                .v = vertices[i].texcoord.y,
+            };
             //vertices2[2 * i + 1] = glm::vec4(vertices[i].normal, 0.f);
         }
 
         BufferCreateInfo info{};
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         info.arrayLength = 1;
-        info.size = vertices2.size() * sizeof(glm::vec4);
-
+        info.size = vertices2.size() * sizeof(Vertex);
 
         m_verticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, vertices2.data());
     }
@@ -354,14 +467,17 @@ void MSTestApplication::createVBufferPass()
         RenderPassCreateInfo info{};
         info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
         info.depthFormat = device.FindDepthFormat();
-        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-        info.useSwapchainImages = true;
+        info.frambufferCount = 1;
+        info.useSwapchainImages = false;
+        info.useAttachmentResolve = false;
         info.imageAttachmentFormats = testPassFormats;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
         //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
@@ -395,253 +511,103 @@ void MSTestApplication::createVBufferPass()
 
 }
 
-//void MSTestApplication::createTestPass()
-//{
-//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-//    {
-//        std::vector<VkFormat> testPassFormats;
-//        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-//
-//        RenderPassCreateInfo info{};
-//        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-//        info.depthFormat = device.FindDepthFormat();
-//        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-//        info.useSwapchainImages = true;
-//        info.imageAttachmentFormats = testPassFormats;
-//        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-//        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-//        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-//        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-//
-//        m_meshShaderTestPass = std::make_shared<RenderPass>(device, info);
-//
-//        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<TestMeshShader>();
-//
-//        std::vector<std::vector<VkImageView>> views(0);
-//
-//        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-//
-//        std::vector<VkSampler> samplers(0);
-//
-//        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-//
-//        std::vector<StorageBuffer> storageBuffers(0);
-//        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-//            m_meshShaderTestPass, meshShader,
-//            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
-//    }
-//}
-//
-//void MSTestApplication::createTestPass2()
-//{
-//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-//    {
-//        std::vector<VkFormat> testPassFormats;
-//        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-//
-//        RenderPassCreateInfo info{};
-//        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-//        info.depthFormat = device.FindDepthFormat();
-//        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-//        info.useSwapchainImages = true;
-//        info.imageAttachmentFormats = testPassFormats;
-//        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-//        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-//        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-//        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-//
-//        m_meshShaderTestPass2 = std::make_shared<RenderPass>(device, info);
-//
-//        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<TestMeshShader2>();
-//
-//        std::vector<std::vector<VkImageView>> views(0);
-//
-//        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-//
-//        std::vector<VkSampler> samplers(0);
-//
-//        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-//
-//        std::vector<StorageBuffer> storageBuffers(0);
-//        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-//            m_meshShaderTestPass2, meshShader,
-//            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
-//    }
-//}
-//
-//void MSTestApplication::createTestPass3()
-//{
-//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-//    {
-//        std::vector<VkFormat> testPassFormats;
-//        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-//
-//        RenderPassCreateInfo info{};
-//        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-//        info.depthFormat = device.FindDepthFormat();
-//        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-//        info.useSwapchainImages = true;
-//        info.imageAttachmentFormats = testPassFormats;
-//        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-//        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-//        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-//        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-//
-//        m_meshShaderTestPass3 = std::make_shared<RenderPass>(device, info);
-//
-//        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<TestMeshShader3>();
-//
-//        std::vector<std::vector<VkImageView>> views(0);
-//
-//        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-//
-//        std::vector<VkSampler> samplers(0);
-//
-//        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-//
-//        std::vector<StorageBuffer> storageBuffers(2);
-//        storageBuffers[0] = *m_testVerticesBuffer;
-//        storageBuffers[1] = *m_testIndexBuffer;
-//
-//        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-//            m_meshShaderTestPass3, meshShader,
-//            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
-//    }
-//}
-//
-//void MSTestApplication::createMeshletPass()
-//{
-//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-//    {
-//        std::vector<VkFormat> testPassFormats;
-//        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-//
-//        RenderPassCreateInfo info{};
-//        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-//        info.depthFormat = device.FindDepthFormat();
-//        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-//        info.useSwapchainImages = true;
-//        info.imageAttachmentFormats = testPassFormats;
-//        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-//        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-//        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-//        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-//
-//        m_meshletPass = std::make_shared<RenderPass>(device, info);
-//
-//        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<MeshletShader>();
-//
-//        std::vector<std::vector<VkImageView>> views(0);
-//
-//        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-//
-//        std::vector<VkSampler> samplers(0);
-//
-//        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-//
-//        std::vector<StorageBuffer> storageBuffers(4);
-//        storageBuffers[0] = *m_verticesBuffer;
-//        storageBuffers[1] = *m_meshletsBuffer;
-//        storageBuffers[2] = *m_meshletVerticesBuffer;
-//        storageBuffers[3] = *m_meshletTrianglesBuffer;
-//
-//        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-//            m_meshletPass, meshShader,
-//            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
-//    }
-//}
-//void MSTestApplication::createMeshletPass2()
-//{
-//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-//    {
-//        std::vector<VkFormat> testPassFormats;
-//        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-//
-//        RenderPassCreateInfo info{};
-//        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-//        info.depthFormat = device.FindDepthFormat();
-//        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-//        info.useSwapchainImages = true;
-//        info.imageAttachmentFormats = testPassFormats;
-//        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
-//        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
-//        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-//        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-//
-//        m_meshletPass2 = std::make_shared<RenderPass>(device, info);
-//
-//        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<MeshletShader2>();
-//
-//        std::vector<std::vector<VkImageView>> views(0);
-//
-//        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-//
-//        std::vector<VkSampler> samplers(0);
-//
-//        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-//
-//        std::vector<StorageBuffer> storageBuffers(5);
-//        //storageBuffers[0] = *m_verticesBuffer;
-//        storageBuffers[0] = *m_testVerticesBuffer2;
-//        storageBuffers[1] = *m_meshletsBuffer;
-//        storageBuffers[2] = *m_meshletVerticesBuffer;
-//        storageBuffers[3] = *m_meshletTrianglesBuffer;
-//        storageBuffers[4] = *m_modelsBuffer;
-//
-//        Singleton<MVulkanEngine>::instance().CreateRenderPass(
-//            m_meshletPass2, meshShader,
-//            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
-//    }
-//
-//}
-//
-//void MSTestApplication::createSamplers()
-//{
-//    {
-//        MVulkanSamplerCreateInfo info{};
-//        info.minFilter = VK_FILTER_LINEAR;
-//        info.magFilter = VK_FILTER_LINEAR;
-//        info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-//        m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
-//    }
-//}
-//
-//void MSTestApplication::createLightCamera()
-//{
-//    VkExtent2D extent = m_shadowPass->GetFrameBuffer(0).GetExtent2D();
-//
-//    glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
-//    glm::vec3 position = -50.f * direction;
-//
-//    float fov = 60.f;
-//    float aspect = (float)extent.width / (float)extent.height;
-//    float zNear = 0.001f;
-//    float zFar = 60.f;
-//    m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
-//    m_directionalLightCamera->SetOrth(true);
-//}
+void MSTestApplication::createShadingPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        std::vector<VkFormat> shadingFormats;
+        shadingFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = shadingFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        //info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+
+        m_shadingPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> shadingShader = std::make_shared<VBufferShadingShader>();
+        
+        std::vector<std::vector<VkImageView>> bufferTextureViews(4);
+        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+        auto wholeTextureSize = wholeTextures.size();
+
+        if (wholeTextureSize == 0) {
+            bufferTextureViews[2].resize(1);
+            bufferTextureViews[2][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+        }
+        else {
+            bufferTextureViews[2].resize(wholeTextureSize);
+            for (auto j = 0; j < wholeTextureSize; j++) {
+                bufferTextureViews[2][j] = wholeTextures[j]->GetImageView();
+            }
+        }
+
+        bufferTextureViews[0] = std::vector<VkImageView>(1, m_vbufferPass->GetFrameBuffer(0).GetImageView(1));
+        bufferTextureViews[1] = std::vector<VkImageView>(1, m_vbufferPass->GetFrameBuffer(0).GetImageView(2));
+        bufferTextureViews[3] = std::vector<VkImageView>(2, m_shadowPass->GetFrameBuffer(0).GetDepthImageView());
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+        //storageTextureViews[0].resize(1, m_volumeProbeDatasRadiance->GetImageView());
+        //storageTextureViews[1].resize(1, m_volumeProbeDatasDepth->GetImageView());
+
+        std::vector<VkSampler> samplers(1);
+        samplers[0] = m_linearSampler .GetSampler();
+
+        //auto tlas = m_rayTracing.GetTLAS();
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(4);
+        storageBuffers[0] = *m_verticesBuffer;
+        storageBuffers[1] = *m_meshletsBuffer;
+        storageBuffers[2] = *m_meshletVerticesBuffer;
+        storageBuffers[3] = *m_meshletTrianglesBuffer;
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_shadingPass, shadingShader,
+            storageBuffers, bufferTextureViews, storageTextureViews, samplers, accelerationStructures);
+
+    }
+}
+
+void MSTestApplication::createShadowmapPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> shadowFormats(0);
+        shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+
+        RenderPassCreateInfo info{};
+        info.depthFormat = VK_FORMAT_D32_SFLOAT;
+        info.frambufferCount = 1;
+        info.extent = VkExtent2D(4096, 4096);
+        info.useAttachmentResolve = false;
+        info.useSwapchainImages = false;
+        info.imageAttachmentFormats = shadowFormats;
+        info.colorAttachmentResolvedViews = nullptr;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        m_shadowPass = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
+        std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
+        shadowShaderTextures[0].resize(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_shadowPass, shadowShader, shadowShaderTextures, samplers);
+    }
+
+    createLightCamera();
+}

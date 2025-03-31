@@ -18,9 +18,9 @@ cbuffer ubo1 : register(b1)
 
 struct Vertex {
     float3 Position;
-    float padiing0;
-    //float3 Normal;
-    //float padiing1;
+    float u;
+    float3 Normal;
+    float v;
 };
 
 struct Meshlet {
@@ -33,6 +33,8 @@ struct Meshlet {
 struct MeshletAddon{
     uint        InstanceID;
     uint        MaterialID;
+    uint padding0;
+    uint padding1;
 };
 
 //struct Model{
@@ -49,12 +51,16 @@ struct MeshletAddon{
 
 struct MeshOutput {
     float4 Position : SV_POSITION;
-    uint4 InstanceIDAndPrimitiveIDAndMaterialID : TEXCOORD0;
+    uint4 InstanceIDAndMatletIDAndMaterialID : TEXCOORD0;
     //uint InstanceIDAndPrimitiveID : SV_TEXCOORD0;
     //uint MaterialID : SV_TEXCOORD0;
     //float3 Normal   : NORMAL;
     float3 Color    : COLOR;
 
+};
+
+struct ToFragmentPrimitive {
+  uint primitive_id: SV_PrimitiveID;
 };
 
 struct Payload {
@@ -70,6 +76,7 @@ void main(
                  uint       gid  : SV_GroupID, 
     in payload   Payload    payload, 
     out indices  uint3      triangles[128], 
+    out primitives ToFragmentPrimitive primitives[128],
     out vertices MeshOutput vertices[64]) 
 {
     //uint instanceIndex = payload.ModelIndices[gid];
@@ -85,21 +92,20 @@ void main(
         uint vIdx1  = (packed >>  8) & 0xFF;
         uint vIdx2  = (packed >> 16) & 0xFF;
         triangles[gtid] = uint3(vIdx0, vIdx1, vIdx2);
+        primitives[gtid].primitive_id = gtid;
     }
 
     if (gtid < m.VertexCount) {
-        uint vertexIndex = m.VertexOffset + gtid;        
-        vertexIndex = VertexIndices[vertexIndex];
-
+        uint vertexIndex = m.VertexOffset + gtid;
         uint matID = MeshletsAddon[vertexIndex].MaterialID;
         uint instanceID = MeshletsAddon[vertexIndex].InstanceID;
+
+        vertexIndex = VertexIndices[vertexIndex];
 
         //float3 normal = Vertices[vertexIndex].Normal;
         float4 pos = float4(Vertices[vertexIndex].Position, 1.0);
 
         vertices[gtid].Position = mul(Cam.MVP, pos);
-        //vertices[gtid].Position = mul(MVPs[], pos);
-        //vertices[gtid].Position = mul(Models[instanceIndex], pos);
 
         //float4 worldPos = mul(Models[instanceIndex], pos);
         float4 worldPos = mul(Cam.Model, pos);
@@ -107,7 +113,7 @@ void main(
         float4 clipSpacePos = mul(Cam.Projection, cameraSpacePos);
         vertices[gtid].Position = clipSpacePos;
 
-        vertices[gtid].InstanceIDAndPrimitiveIDAndMaterialID = uint4(instanceID, vertexIndex, matID, 0);
+        vertices[gtid].InstanceIDAndMatletIDAndMaterialID = uint4(instanceID, meshletIndex, matID, 0);
 
         float3 color = float3(
             float(gid & 1),

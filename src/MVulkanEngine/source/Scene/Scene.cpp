@@ -85,6 +85,8 @@ void Scene::GenerateIndirectDrawCommand()
         m_indirectCommands.push_back(cmd);
 
         currentIndex += cmd.indexCount;
+
+        //if (i == 0) break;
     }
 }
 

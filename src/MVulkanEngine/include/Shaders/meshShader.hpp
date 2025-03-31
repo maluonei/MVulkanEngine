@@ -121,4 +121,63 @@ private:
 	CameraProperties ubo1;
 };
 
+class VBufferShadingShader :public ShaderModule {
+public:
+	VBufferShadingShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t binding, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+public:
+	struct Light
+	{
+		glm::mat4 shadowViewProj;
+
+		glm::vec3 direction;
+		float intensity;
+
+		glm::vec3 color;
+		int shadowMapIndex;
+
+		float cameraZnear;
+		float cameraZfar;
+		float padding6;
+		float padding7;
+	};
+
+	struct UnifomBuffer0
+	{
+		Light lights[2];
+
+		glm::vec3 cameraPos;
+		int lightNum;
+
+		int ShadowmapResWidth;
+		int ShadowmapResHeight;
+		int WindowResWidth;
+		int WindowResHeight;
+	};
+
+	struct TexBuffer
+	{
+		int diffuseTextureIdx;
+		int metallicAndRoughnessTextureIdx;
+		int matId;
+		int normalTextureIdx;
+
+		glm::vec3 diffuseColor;
+		int padding0;
+	};
+
+	struct UnifomBuffer1
+	{
+		TexBuffer tex[512];
+	};
+
+private:
+	UnifomBuffer0 ubo0;
+	UnifomBuffer1 ubo1;
+};
+
 #endif

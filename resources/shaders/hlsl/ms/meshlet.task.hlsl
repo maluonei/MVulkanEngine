@@ -19,6 +19,10 @@ void main(
 {
     sPayload.MeshletIndices[gtid] = dtid;
     // Assumes all meshlets are visible
-    //if(gtid==0)
+    GroupMemoryBarrierWithGroupSync();
+    if(gtid==1){
+        printf("DispatchMesh, gtid==1");
         DispatchMesh(32, 1, 1, sPayload);
+    
+    }
 }

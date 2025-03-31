@@ -41,6 +41,8 @@ void main(
     }
 
     uint visibleCount = WaveActiveCountBits(visible);
-    if(gtid == 0)   
+
+    GroupMemoryBarrierWithGroupSync();
+    if(gtid == 1)   
         DispatchMesh(visibleCount, 1, 1, sPayload);
 }
