@@ -153,10 +153,15 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     queueCreateInfos[1].queueFamilyIndex = m_indices.computeFamily.value();
     queueCreateInfos[2].queueFamilyIndex = m_indices.transferFamily.value();
 
+    VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR barycentricFeatures{};
+    barycentricFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+    barycentricFeatures.fragmentShaderBarycentric = VK_TRUE;
+
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
     meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
     meshShaderFeatures.meshShader = VK_TRUE;
     meshShaderFeatures.taskShader = VK_TRUE; // 任务着色器可选
+    meshShaderFeatures.pNext = &barycentricFeatures;
 
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;

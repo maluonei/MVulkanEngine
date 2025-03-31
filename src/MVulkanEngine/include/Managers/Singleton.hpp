@@ -31,7 +31,7 @@ protected:
     Singleton() {
         InitSingleton();
         
-        std::cout << "constructor called!" << std::endl;
+        //std::cout << "constructor called!" << std::endl;
     }
 };
 

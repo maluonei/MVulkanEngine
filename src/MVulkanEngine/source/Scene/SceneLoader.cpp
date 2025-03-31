@@ -202,6 +202,7 @@ void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene*
     if (node->mMeshes) {
         for (auto i = 0; i < node->mNumMeshes; i++) {
             const auto meshIndex = node->mMeshes[i];
+            //if (meshIndex == 0) continue;
             auto* const ai_mesh = aiscene->mMeshes[meshIndex];
 
             uint32_t          material_id = ai_mesh->mMaterialIndex;
@@ -210,6 +211,10 @@ void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene*
 
             scene->m_primInfos.push_back(
                 PrimInfo({ .mesh_id = meshIndex, .material_id = material_id, .transform = transform })
+                //PrimInfo({
+                //    .mesh_id = meshIndex - 1, 
+                //    .material_id = material_id,
+                //    .transform = transform })
             );
         }
     }
@@ -225,8 +230,11 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
     auto numMeshes = aiscene->mNumMeshes;
     //auto _mesh = std::make_shared<Mesh>();
     scene->SetNumMeshes(numMeshes);
+    //scene->SetNumMeshes(numMeshes - 1);
 
     for (auto i = 0; i < numMeshes; i++) {
+        //if (i == 0) continue;
+
         auto mesh = aiscene->mMeshes[i];
         auto _mesh = std::make_shared<Mesh>();
 
@@ -263,6 +271,7 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
         //_mesh->matId = mesh->mMaterialIndex;
 
         scene->SetMesh(i, _mesh);
+        //scene->SetMesh(i-1, _mesh);
     }
 
 }

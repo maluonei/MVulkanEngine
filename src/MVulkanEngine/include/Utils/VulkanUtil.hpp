@@ -58,7 +58,8 @@ const std::vector<const char*> raytracingExtensions = {
 const std::vector<const char*> meshShaderExtensions = {
     VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
     VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-    VK_EXT_MESH_SHADER_EXTENSION_NAME
+    VK_EXT_MESH_SHADER_EXTENSION_NAME,
+    VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME
 };
 
 struct PipelineVertexInputStateInfo {

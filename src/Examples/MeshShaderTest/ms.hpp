@@ -42,12 +42,14 @@ private:
 	void createTestPass2();
 	void createTestPass3();
 	void createMeshletPass();
+	void createMeshletPass2();
 
 private:
 	std::shared_ptr<RenderPass> m_meshShaderTestPass;
 	std::shared_ptr<RenderPass> m_meshShaderTestPass2;
 	std::shared_ptr<RenderPass> m_meshShaderTestPass3;
 	std::shared_ptr<RenderPass> m_meshletPass;
+	std::shared_ptr<RenderPass> m_meshletPass2;
 
 	//MVulkanSampler				m_linearSampler;
 
@@ -65,8 +67,11 @@ private:
 	std::shared_ptr<StorageBuffer> m_meshletsBuffer;
 	std::shared_ptr<StorageBuffer> m_meshletVerticesBuffer;
 	std::shared_ptr<StorageBuffer> m_meshletTrianglesBuffer;
+	std::shared_ptr<StorageBuffer> m_modelsBuffer;
+	std::shared_ptr<StorageBuffer> m_meshletBoundsBuffer;
 
 	std::shared_ptr<StorageBuffer> m_testVerticesBuffer;
+	std::shared_ptr<StorageBuffer> m_testVerticesBuffer2;
 	std::shared_ptr<StorageBuffer> m_testIndexBuffer;
 	//std::shared_ptr<StorageBuffer> m_meshletTrianglesU32Buffer;
 };

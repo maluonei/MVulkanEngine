@@ -79,6 +79,34 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
         m_meshShaderTestPass3->GetMeshShader()->SetUBO(0, &cam);
     }
 
+    {
+        MeshletShader2::CameraProperties cam;
+        MeshletShader2::SceneProperties sce;
+
+        auto model = glm::mat4(1.0f);
+        auto view = m_camera->GetViewMatrix();
+        auto proj = m_camera->GetProjMatrix();
+        auto vertices = m_suzanne->GetTotalVertexs();
+        auto indices = m_suzanne->GetTotalIndices();
+
+        cam.Model = model;
+        cam.View = view;
+        cam.Projection = proj;
+        cam.MVP = proj * view * model;
+        //cam.numVertices = vertices.size();
+        //cam.numIndices = indices.size();
+
+        sce.InstanceCount = 16;
+        sce.MeshletCount = m_meshLet->m_meshlets.size();
+
+        //cam.View = model;
+        //cam.Projection = model;
+        //cam.MVP = model;
+        //cam.MVP = model;
+        m_meshletPass2->GetMeshShader()->SetUBO(0, &sce);
+        m_meshletPass2->GetMeshShader()->SetUBO(1, &cam);
+    }
+
     graphicsList.Reset();
     graphicsList.Begin();
 
@@ -88,9 +116,18 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
     //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
     //    imageIndex, m_meshShaderTestPass2, m_currentFrame,
     //    1, 1, 1, "Test Mesh Shader Pass2");
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshletPass, m_currentFrame,
+    //    m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
+    auto dispatchX = 32;// *32;
+    auto instanceCount = 16;
+    auto meshletCount = m_meshLet->m_meshlets.size();
+    //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
+    //    imageIndex, m_meshletPass, m_currentFrame,
+    //    (m_meshLet->meshlets.size() + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass");
     Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
-        imageIndex, m_meshletPass, m_currentFrame,
-        m_meshLet->meshlets.size(), 1, 1, "Test Mesh Shader Pass");
+        imageIndex, m_meshletPass2, m_currentFrame,
+        (instanceCount * meshletCount + (dispatchX - 1)) / dispatchX, 1, 1, "Meshlet Shader Pass2");
     //Singleton<MVulkanEngine>::instance().RecordMeshShaderCommandBuffer(
     //    imageIndex, m_meshShaderTestPass3, m_currentFrame,
     //    1, 1, 1, "Test Mesh Shader Pass");
@@ -173,6 +210,7 @@ void MSTestApplication::RecreateSwapchainAndRenderPasses()
 void MSTestApplication::CreateRenderPass()
 {
     createMeshletPass();
+    createMeshletPass2();
     createTestPass();
     createTestPass2();
     createTestPass3();
@@ -320,7 +358,7 @@ void MSTestApplication::createCamera()
 void MSTestApplication::createStorageBuffers()
 {
     {
-        auto meshlets = m_meshLet->meshlets;
+        auto meshlets = m_meshLet->m_meshlets;
 
         BufferCreateInfo info{};
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -331,7 +369,7 @@ void MSTestApplication::createStorageBuffers()
     }
 
     {
-        auto meshletVertices = m_meshLet->meshletVertices;
+        auto meshletVertices = m_meshLet->m_meshletVertices;
 
         BufferCreateInfo info{};
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -342,7 +380,7 @@ void MSTestApplication::createStorageBuffers()
     }
 
     {
-        auto meshletTrianglesU32 = m_meshLet->meshletTrianglesU32;
+        auto meshletTrianglesU32 = m_meshLet->m_meshletTrianglesU32;
 
         BufferCreateInfo info{};
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -359,10 +397,14 @@ void MSTestApplication::createStorageBuffers()
         auto numVertices = vertices.size();
         std::vector<glm::vec4> positions(numVertices);
         std::vector<glm::vec4> positions2(2*numVertices);
+        std::vector<glm::vec4> vertices2(2 * numVertices);
         for (int i = 0; i < numVertices; i++) {
             positions2[2*i] = glm::vec4(vertices[i].position, 0.f);
             positions2[2*i+1] = glm::vec4(Singleton<RandomGenerator>::instance().GetRandomFloat(), Singleton<RandomGenerator>::instance().GetRandomFloat(), Singleton<RandomGenerator>::instance().GetRandomFloat(), 0.f);
             positions[i] = glm::vec4(vertices[i].position, 0.f);
+
+            vertices2[2 * i] = glm::vec4(vertices[i].position, 0.f);
+            vertices2[2 * i + 1] = glm::vec4(vertices[i].normal, 0.f);
             //positions[i] = glm::vec3(vertices[i].position);
         }
 
@@ -379,11 +421,37 @@ void MSTestApplication::createStorageBuffers()
         info.arrayLength = 1;
         info.size = positions2.size() * sizeof(glm::vec4);
         m_testVerticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, positions2.data());
+
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = vertices2.size() * sizeof(glm::vec4);
+        m_testVerticesBuffer2 = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, vertices2.data());
         
         info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         info.arrayLength = 1;
         info.size = indices.size() * sizeof(uint32_t);
         m_testIndexBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indices.data());
+    }
+
+    {
+        std::vector<glm::mat4> models(4 * 4);
+        int index = 0;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                auto rotM = glm::scale(glm::mat4(1.0f), glm::vec3(5.f));
+                auto tranM = glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.f, 0.f, j * 2.f));
+
+                models[index] = tranM * rotM;
+
+                index++;
+            }
+        }
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = models.size() * sizeof(glm::mat4);
+        m_modelsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, models.data());
     }
 }
 void MSTestApplication::createTestPass()
@@ -560,6 +628,55 @@ void MSTestApplication::createMeshletPass()
             m_meshletPass, meshShader,
             storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
     }
+}
+void MSTestApplication::createMeshletPass2()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> testPassFormats;
+        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.useSwapchainImages = true;
+        info.imageAttachmentFormats = testPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_meshletPass2 = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<MeshletShader2>();
+
+        std::vector<std::vector<VkImageView>> views(0);
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(5);
+        //storageBuffers[0] = *m_verticesBuffer;
+        storageBuffers[0] = *m_testVerticesBuffer2;
+        storageBuffers[1] = *m_meshletsBuffer;
+        storageBuffers[2] = *m_meshletVerticesBuffer;
+        storageBuffers[3] = *m_meshletTrianglesBuffer;
+        storageBuffers[4] = *m_modelsBuffer;
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_meshletPass2, meshShader,
+            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
+    }
+
 }
 //
 //void MSTestApplication::createSamplers()

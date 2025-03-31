@@ -71,4 +71,54 @@ private:
 	CameraProperties ubo0;
 };
 
+class MeshletShader2 : public MeshShaderModule {
+public:
+	MeshletShader2();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t binding, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+	struct CameraProperties {
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+		glm::mat4 MVP;
+	};
+
+	struct SceneProperties {
+		uint32_t     InstanceCount;
+		uint32_t     MeshletCount;
+	};
+
+private:
+	SceneProperties ubo0;
+	CameraProperties ubo1;
+};
+
+class VBufferShader : public MeshShaderModule {
+public:
+	VBufferShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t binding, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+	struct CameraProperties {
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+		glm::mat4 MVP;
+	};
+
+	struct SceneProperties {
+		//uint32_t     InstanceCount;
+		uint32_t     MeshletCount;
+	};
+
+private:
+	SceneProperties ubo0;
+	CameraProperties ubo1;
+};
+
 #endif
