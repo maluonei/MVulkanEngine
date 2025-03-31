@@ -37,7 +37,7 @@ struct PSOutput
     [[vk::location(1)]] float4 Position : SV_TARGET1;
     [[vk::location(2)]] float4 Albedo : SV_TARGET2;
     [[vk::location(3)]] float4 MetallicAndRoughness : SV_TARGET3;
-    [[vk::location(4)]] uint4 MatId : SV_TARGET4;
+    //[[vk::location(4)]] uint4 MatId : SV_TARGET4;
 };
 
 PSOutput main(PSInput input)
@@ -85,7 +85,7 @@ PSOutput main(PSInput input)
     output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
 
     // Output material ID
-    output.MatId = uint4(ubo1[input.instanceID].matId, input.instanceID, 0, 0);
+    //output.MatId = uint4(ubo1[input.instanceID].matId, input.instanceID, 0, 0);
 
     return output;
 }
