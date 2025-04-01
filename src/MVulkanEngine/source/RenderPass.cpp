@@ -245,6 +245,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
     std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
     std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    bindings = RemoveRepeatedBindings(bindings);
 
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
@@ -343,6 +344,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
     std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
     std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    //bindings = RemoveRepeatedBindings(bindings);
 
     if (m_shader->UseGeometryShader()) {
         MVulkanShaderReflector geomReflector(m_shader->GetGeometryShader().GetShader());
@@ -483,6 +485,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
     std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
     std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
     bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    //bindings = RemoveRepeatedBindings(bindings);
 
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());
@@ -614,6 +617,7 @@ void RenderPass::CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocat
         std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
         bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
     }
+    //bindings = RemoveRepeatedBindings(bindings);
 
     m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
     std::vector<VkDescriptorSetLayout> layouts(m_frameBuffers.size(), m_descriptorLayouts.Get());

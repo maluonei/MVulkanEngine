@@ -10,11 +10,48 @@
 
 //static const glm::vec3 UP = { 0.f, 1.f, 0.f };
 
-class Frustum;
+//class Frustum;
 
 enum Direction {
 	Right, Up, Forward
 };
+
+struct FrustumPlane {
+	glm::vec3 Normal;
+	glm::vec3 Position;
+
+	// Corners - counter clock wise if frustum plane is
+	// transformed  to eye position.
+	//
+	glm::vec3 C0;
+	glm::vec3 C1;
+	glm::vec3 C2;
+	glm::vec3 C3;
+};
+
+struct FrustumCone {
+	glm::vec3 Tip;
+	float  Height;
+	glm::vec3 Direction;
+	float  Angle;
+};
+
+struct FrustumData {
+	FrustumPlane  Planes[6];
+	glm::vec4     Sphere;
+	FrustumCone   Cone;
+};
+
+enum
+{
+	FRUSTUM_PLANE_LEFT = 0,
+	FRUSTUM_PLANE_RIGHT = 1,
+	FRUSTUM_PLANE_TOP = 2,
+	FRUSTUM_PLANE_BOTTOM = 3,
+	FRUSTUM_PLANE_NEAR = 4,
+	FRUSTUM_PLANE_FAR = 5,
+};
+
 
 class Camera {
 private:
@@ -111,6 +148,20 @@ public:
 	void Move(Direction direction, float scale);
 
 	void Rotate(float pitch, float yaw);
+
+	FrustumData GetFrustumData();
+
+	FrustumCone GetFrustumCone();
+
+	glm::vec4 GetFrustumSphere();
+
+	void GetFrustumPlane(
+		FrustumPlane* pLeft,
+		FrustumPlane* pRight,
+		FrustumPlane* pTop,
+		FrustumPlane* pBottom,
+		FrustumPlane* pNear,
+		FrustumPlane* pFar);
 };
 
 

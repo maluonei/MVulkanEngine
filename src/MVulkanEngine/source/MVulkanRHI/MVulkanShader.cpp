@@ -427,3 +427,17 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
 
     return bindings;
 }
+
+std::vector<MVulkanDescriptorSetLayoutBinding> RemoveRepeatedBindings(std::vector<MVulkanDescriptorSetLayoutBinding> bindings)
+{
+    std::vector<MVulkanDescriptorSetLayoutBinding> res;
+    std::unordered_set<int> binding_set;
+    for (auto binding : bindings) {
+        int bindingPoint = binding.binding.binding;
+        if (binding_set.find(bindingPoint) == binding_set.end()) {
+            res.push_back(binding);
+            binding_set.insert(bindingPoint);
+        }
+    }
+    return res;
+}

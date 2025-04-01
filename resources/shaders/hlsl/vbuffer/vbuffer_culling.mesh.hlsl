@@ -2,20 +2,13 @@
 #define MS_GROUP_SIZE 128
 
 struct CameraProperties {
-    float4x4 Model;
+    //float4x4 Model;
     float4x4 View;
     float4x4 Projection;
-    float4x4 MVP;
+    //float4x4 MVP;
 };
 
 //ConstantBuffer<CameraProperties> Cam : register(b0);
-
-[[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
-{
-    CameraProperties Cam;
-};
-
 struct Vertex {
     float3 Position;
     float u;
@@ -41,11 +34,18 @@ struct MeshletAddon{
 //    float4x4 Model;
 //}
 
-[[vk::binding(2, 0)]]StructuredBuffer<Vertex>  Vertices                 : register(t1);
-[[vk::binding(3, 0)]]StructuredBuffer<Meshlet> Meshlets                 : register(t2);
-[[vk::binding(4, 0)]]StructuredBuffer<uint>    VertexIndices            : register(t3);
-[[vk::binding(5, 0)]]StructuredBuffer<uint>    TriangleIndices          : register(t4);
-[[vk::binding(6, 0)]]StructuredBuffer<MeshletAddon> MeshletsAddon       : register(t5);
+[[vk::binding(1, 0)]]
+cbuffer ubo1 : register(b1)
+{
+    CameraProperties Cam;
+};
+
+[[vk::binding(6, 0)]]StructuredBuffer<float4x4>        Models           : register(t4);
+[[vk::binding(7, 0)]]StructuredBuffer<Meshlet> Meshlets                 : register(t5);
+[[vk::binding(8, 0)]]StructuredBuffer<MeshletAddon> MeshletsAddon       : register(t6);
+[[vk::binding(9, 0)]]StructuredBuffer<Vertex>  Vertices                 : register(t7);    
+[[vk::binding(10,0)]]StructuredBuffer<uint>    VertexIndices            : register(t8);
+[[vk::binding(11,0)]]StructuredBuffer<uint>    TriangleIndices          : register(t9);
 //[[vk::binding(6, 0)]]StructuredBuffer<float4x4>    Models      : register(t5);
 //[[vk::binding(5, 0)]]StructuredBuffer<CameraProperties>    MVPs : register(t5);
 
@@ -105,10 +105,11 @@ void main(
         //float3 normal = Vertices[vertexIndex].Normal;
         float4 pos = float4(Vertices[vertexIndex].Position, 1.0);
 
-        vertices[gtid].Position = mul(Cam.MVP, pos);
+        //vertices[gtid].Position = mul(Cam.MVP, pos);
 
         //float4 worldPos = mul(Models[instanceIndex], pos);
-        float4 worldPos = mul(Cam.Model, pos);
+        //float4 worldPos = mul(Cam.Model, pos);
+        float4 worldPos = mul(Models[instanceID], pos);
         float4 cameraSpacePos = mul(Cam.View, worldPos);
         float4 clipSpacePos = mul(Cam.Projection, cameraSpacePos);
         vertices[gtid].Position = clipSpacePos;
@@ -120,9 +121,5 @@ void main(
             float(gid & 3) / 4,
             float(gid & 7) / 8);
         vertices[gtid].Color = color;
-        //vertices[gtid].Normal = normal;
-
-        
-        //vertices[gtid].Color = (2 * normal - 1.f);
     }
 }

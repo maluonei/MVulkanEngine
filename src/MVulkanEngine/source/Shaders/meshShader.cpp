@@ -163,6 +163,44 @@ void* VBufferShader::GetData(uint32_t binding, uint32_t index)
 	}
 }
 
+VBufferCullingShader::VBufferCullingShader() :
+	MeshShaderModule("hlsl/vbuffer/vbuffer_culling.task.hlsl", "hlsl/vbuffer/vbuffer_culling.mesh.hlsl", "hlsl/vbuffer/vbuffer.frag.hlsl", "main", "main", "main", false)
+{
+
+}
+
+size_t VBufferCullingShader::GetBufferSizeBinding(uint32_t binding) const
+{
+	switch (binding) {
+	case 0:
+		return sizeof(ubo0);
+	case 1:
+		return sizeof(ubo1);
+	}
+}
+
+void VBufferCullingShader::SetUBO(uint8_t binding, void* data)
+{
+	switch (binding) {
+	case 0:
+		ubo0 = *reinterpret_cast<VBufferCullingShader::SceneProperties*>(data);
+		return;
+	case 1:
+		ubo1 = *reinterpret_cast<VBufferCullingShader::CameraProperties*>(data);
+		return;
+	}
+}
+
+void* VBufferCullingShader::GetData(uint32_t binding, uint32_t index)
+{
+	switch (binding) {
+	case 0:
+		return (void*)&ubo0;
+	case 1:
+		return (void*)&ubo1;
+	}
+}
+
 VBufferShadingShader::VBufferShadingShader() :
 	ShaderModule("hlsl/lighting_pbr.vert.hlsl", "hlsl/vbuffer/shading.frag.hlsl", "main", "main", false)
 {

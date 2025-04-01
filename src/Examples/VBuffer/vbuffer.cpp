@@ -40,28 +40,60 @@ void MSTestApplication::ComputeAndDraw(uint32_t imageIndex)
         VBufferShader::SceneProperties sce;
 
         auto model = glm::mat4(1.0f);
-        //model = glm::scale(model, glm::vec3(5.f));
         auto view = m_camera->GetViewMatrix();
         auto proj = m_camera->GetProjMatrix();
-        //auto vertices = m_scene->GetTotalVertexs();
-        //auto indices = m_scene->GetTotalIndices();
 
         cam.Model = model;
         cam.View = view;
         cam.Projection = proj;
         cam.MVP = proj * view * model;
-        //cam.numVertices = vertices.size();
-        //cam.numIndices = indices.size();
 
         //sce.InstanceCount = 16;
         sce.MeshletCount = m_meshLet->m_meshlets.size();
 
-        //cam.View = model;
-        //cam.Projection = model;
-        //cam.MVP = model;
-        //cam.MVP = model;
         m_vbufferPass->GetMeshShader()->SetUBO(0, &sce);
         m_vbufferPass->GetMeshShader()->SetUBO(1, &cam);
+    }
+
+    {
+        VBufferCullingShader::CameraProperties cam;
+        VBufferCullingShader::SceneProperties sce;
+    
+        //auto model = glm::mat4(1.0f);
+        auto view = m_camera->GetViewMatrix();
+        auto proj = m_camera->GetProjMatrix();
+    
+        cam.View = view;
+        cam.Projection = proj;
+        //cam.MVP = proj * view * model;
+    
+        //sce.InstanceCount = 16;
+        sce.MeshletCount = m_meshLet->m_meshlets.size();
+    
+        auto cameraFrustumData = m_camera->GetFrustumData();
+    
+        FrustumPlane frLeft = cameraFrustumData.Planes[0];
+        FrustumPlane frRight = cameraFrustumData.Planes[1];
+        FrustumPlane frTop = cameraFrustumData.Planes[2];
+        FrustumPlane frBottom = cameraFrustumData.Planes[3];
+        FrustumPlane frNear = cameraFrustumData.Planes[4];
+        FrustumPlane frFar = cameraFrustumData.Planes[5];
+        //sce.CameraVP = camera.GetViewProjectionMatrix();
+        sce.Frustum.Planes[FRUSTUM_PLANE_LEFT] = { frLeft.Normal, 0.0f, frLeft.Position, 0.0f };
+        sce.Frustum.Planes[FRUSTUM_PLANE_RIGHT] = { frRight.Normal, 0.0f, frRight.Position, 0.0f };
+        sce.Frustum.Planes[FRUSTUM_PLANE_TOP] = { frTop.Normal, 0.0f, frTop.Position, 0.0f };
+        sce.Frustum.Planes[FRUSTUM_PLANE_BOTTOM] = { frBottom.Normal, 0.0f, frBottom.Position, 0.0f };
+        sce.Frustum.Planes[FRUSTUM_PLANE_NEAR] = { frNear.Normal, 0.0f, frNear.Position, 0.0f };
+        sce.Frustum.Planes[FRUSTUM_PLANE_FAR] = { frFar.Normal, 0.0f, frFar.Position, 0.0f };
+        sce.Frustum.Sphere = cameraFrustumData.Sphere;
+        sce.Frustum.Cone.Tip = cameraFrustumData.Cone.Tip;
+        sce.Frustum.Cone.Height = cameraFrustumData.Cone.Height;
+        sce.Frustum.Cone.Direction = cameraFrustumData.Cone.Direction;
+        sce.Frustum.Cone.Angle = cameraFrustumData.Cone.Angle;
+        sce.VisibilityFunc = 1;
+    
+        m_vbufferPass2->GetMeshShader()->SetUBO(0, &sce);
+        m_vbufferPass2->GetMeshShader()->SetUBO(1, &cam);
     }
 
     {
@@ -183,6 +215,7 @@ void MSTestApplication::CreateRenderPass()
     //createTestPass3();
     createShadowmapPass();
     createVBufferPass();
+    createVBufferPass2();
     createShadingPass();
 }
 
@@ -439,6 +472,29 @@ void MSTestApplication::createStorageBuffers()
         m_verticesBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, vertices2.data());
     }
 
+    {
+        auto numPrims = m_scene->GetNumPrimInfos();
+        std::vector<glm::mat4> models(numPrims, glm::mat4(1.0f));
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = models.size() * sizeof(glm::mat4);
+
+        m_modelMatrixBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, models.data());
+    }
+
+    {
+        auto meshletBounds = m_meshLet->m_meshletBounds;
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = meshletBounds.size() * sizeof(glm::vec4);
+
+        m_meshletBoundsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, meshletBounds.data());
+    }
+
     //{
     //    std::vector<glm::mat4> models(4 * 4);
     //    int index = 0;
@@ -476,7 +532,7 @@ void MSTestApplication::createVBufferPass()
         info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        //info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
         info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
         info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
         //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -510,6 +566,66 @@ void MSTestApplication::createVBufferPass()
             storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
     }
 
+}
+
+void MSTestApplication::createVBufferPass2()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+    {
+        std::vector<VkFormat> testPassFormats;
+        testPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        testPassFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        //testPassFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        //testPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+
+        RenderPassCreateInfo info{};
+        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        info.depthFormat = device.FindDepthFormat();
+        info.frambufferCount = 1;
+        info.useSwapchainImages = false;
+        info.useAttachmentResolve = false;
+        info.imageAttachmentFormats = testPassFormats;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.pipelineCreateInfo.cullmode = VK_CULL_MODE_NONE;
+        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_vbufferPass2 = std::make_shared<RenderPass>(device, info);
+
+        std::shared_ptr<MeshShaderModule> meshShader = std::make_shared<VBufferCullingShader>();
+
+        std::vector<std::vector<VkImageView>> views(0);
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
+        std::vector<VkSampler> samplers(0);
+
+        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+
+        std::vector<StorageBuffer> storageBuffers(10);
+        storageBuffers[0] = *m_meshletBoundsBuffer;
+        storageBuffers[1] = *m_modelMatrixBuffer;
+        storageBuffers[2] = *m_meshletsBuffer;
+        storageBuffers[3] = *m_meshletAddonBuffer;
+        storageBuffers[4] = *m_modelMatrixBuffer;
+        storageBuffers[5] = *m_meshletsBuffer;
+        storageBuffers[6] = *m_meshletAddonBuffer;
+        storageBuffers[7] = *m_verticesBuffer;
+        storageBuffers[8] = *m_meshletVerticesBuffer;
+        storageBuffers[9] = *m_meshletTrianglesBuffer;
+        //storageBuffers[4] = *m_modelsBuffer;
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_vbufferPass2, meshShader,
+            storageBuffers, views, storageTextureViews, samplers, accelerationStructures);
+    }
 }
 
 void MSTestApplication::createShadingPass()

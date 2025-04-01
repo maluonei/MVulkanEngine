@@ -244,7 +244,7 @@ void Unpack(
 
     uint3 unpackedAlbedo = uint3((gBuffer1.x & 0xFFFF0000) >> 16, gBuffer1.x & 0xFFFF, (gBuffer1.y & 0xFFFF0000) >> 16);
     uint unpackedMetallic = gBuffer1.y & 0xFFFF;
-    uint unpackedRoughness = (gBuffer1.z & 0xFFFF) >> 16;
+    uint unpackedRoughness = gBuffer1.z & 0xFFFF;
 
     normal = normalize(f16tof32(unpackedNormal));
     position = f16tof32(unpackedPosition);

@@ -6,6 +6,7 @@
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "Shaders/meshShader.hpp"
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -39,6 +40,7 @@ private:
 	void createStorageBuffers();
 
 	void createVBufferPass();
+	void createVBufferPass2();
 	void createShadingPass();
 	void createShadowmapPass();
 
@@ -47,6 +49,9 @@ private:
 	//void createTestPass3();
 	//void createMeshletPass();
 	//void createMeshletPass2();
+	//VBufferCullingShader::FrustumData GetFrustumData(std::shared_ptr<Camera>& camera);
+	//VBufferCullingShader::FrustumCone GetFrustumCone(std::shared_ptr<Camera>& camera);
+	//VBufferCullingShader::FrustumPlane GetFrustumPlane(std::shared_ptr<Camera>& camera);
 
 private:
 	//std::shared_ptr<RenderPass> m_meshShaderTestPass;
@@ -56,6 +61,7 @@ private:
 	//std::shared_ptr<RenderPass> m_meshletPass2;
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_vbufferPass;
+	std::shared_ptr<RenderPass> m_vbufferPass2;
 	std::shared_ptr<RenderPass> m_shadingPass;
 
 	MVulkanSampler				m_linearSampler;
@@ -77,6 +83,7 @@ private:
 	std::shared_ptr<StorageBuffer> m_meshletAddonBuffer;
 	//std::shared_ptr<StorageBuffer> m_modelsBuffer;
 	std::shared_ptr<StorageBuffer> m_meshletBoundsBuffer;
+	std::shared_ptr<StorageBuffer> m_modelMatrixBuffer;
 
 	//std::shared_ptr<StorageBuffer> m_testVerticesBuffer;
 	//std::shared_ptr<StorageBuffer> m_testVerticesBuffer2;

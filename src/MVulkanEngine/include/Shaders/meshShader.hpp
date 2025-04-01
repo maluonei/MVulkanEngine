@@ -2,6 +2,7 @@
 #define MVULKANENGINE_MESHSHADER_HPP
 
 #include "ShaderModule.hpp"
+#include "Camera.hpp"
 
 class TestMeshShader : public MeshShaderModule {
 public:
@@ -96,6 +97,7 @@ private:
 	CameraProperties ubo1;
 };
 
+
 class VBufferShader : public MeshShaderModule {
 public:
 	VBufferShader();
@@ -114,6 +116,54 @@ public:
 	struct SceneProperties {
 		//uint32_t     InstanceCount;
 		uint32_t     MeshletCount;
+	};
+
+private:
+	SceneProperties ubo0;
+	CameraProperties ubo1;
+};
+
+class VBufferCullingShader : public MeshShaderModule {
+public:
+	VBufferCullingShader();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+	virtual void SetUBO(uint8_t binding, void* data);
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+
+	struct CameraProperties {
+		//glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+		//glm::mat4 MVP;
+	};
+
+	//struct SceneProperties {
+	//	//uint32_t     InstanceCount;
+	//	uint32_t     MeshletCount;
+	//};
+
+
+	struct FrustumPlane
+	{
+		glm::vec3  Normal;
+		float __pad0;
+		glm::vec3  Position;
+		float __pad1;
+	};
+
+	struct FrustumData
+	{
+		FrustumPlane Planes[6];
+		glm::vec4    Sphere;
+		FrustumCone  Cone;
+	};
+
+	struct SceneProperties {
+		//uint     InstanceCount;
+		VBufferCullingShader::FrustumData	Frustum;
+		uint32_t			MeshletCount;
+		uint32_t			VisibilityFunc = 4;
 	};
 
 private:
@@ -174,6 +224,7 @@ public:
 	{
 		TexBuffer tex[512];
 	};
+
 
 private:
 	UnifomBuffer0 ubo0;

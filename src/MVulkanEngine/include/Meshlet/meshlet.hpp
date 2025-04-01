@@ -136,6 +136,20 @@ public:
 			kConeWeight
 		);
 
+		std::vector<glm::vec4> meshletBounds; // Storage for meshlet bounding spheres
+		for (auto& meshlet : meshlets)
+		{
+			auto bounds = meshopt_computeMeshletBounds(
+				&meshletVertices[meshlet.vertex_offset],                 // Meshlet's starting vertex index
+				&meshletTriangles[meshlet.triangle_offset],              // Meshlet's starting triangle
+				meshlet.triangle_count,                                  // Meshlet's triangle count
+				reinterpret_cast<const float*>(vertices->data()),  // Pointer to vertex positions
+				vertices->size(),                                  // Number of vertex positions
+				sizeof(T));                                         // Vertex data stride, only poistion in this case
+			meshletBounds.push_back(glm::vec4(bounds.center[0], bounds.center[1], bounds.center[2], bounds.radius));
+		}
+
+
 		auto& last = meshlets[meshletCount - 1];
 		meshletVertices.resize(last.vertex_offset + last.vertex_count);
 		meshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));	//保证一定是4的倍数
@@ -174,6 +188,7 @@ public:
 			m.triangle_offset = meshIndexOffset + triangleOffset;
 			m.vertex_offset += meshVertexOffset;
 		}
+
 		vertexCount = meshletVertices.size();
 		indexCound = meshletTrianglesU32.size();
 
@@ -188,6 +203,7 @@ public:
 		m_meshletTriangles.insert(m_meshletTriangles.end(), meshletTriangles.begin(), meshletTriangles.end());
 		m_meshletTrianglesU32.insert(m_meshletTrianglesU32.end(), meshletTrianglesU32.begin(), meshletTrianglesU32.end());
 		m_addons.insert(m_addons.end(), addons.begin(), addons.end());
+		m_meshletBounds.insert(m_meshletBounds.end(), meshletBounds.begin(), meshletBounds.end());
 	}
 
 	void createMeshlets(std::shared_ptr<Scene> scene) {
@@ -221,74 +237,8 @@ public:
 			meshVertexIndexOffset += vertices.size();
 			//meshVertexOffset += vertices.size();
 			meshIndexOffset += iCount;
-
-			//spdlog::info("vCount: {0}", vCount);
-			//spdlog::info("meshIndexOffset: {0}", meshIndexOffset);
-			//spdlog::info("numMeshlets: {0}", m_meshlets.size());
-
-			//if (i == 0) break;
 		}
 	
-
-		//auto meshlet406 = m_meshlets[406];
-		//auto meshlet407 = m_meshlets[407];
-
-	
-		//const size_t kMaxVertices = 64;
-		//const size_t kMaxTriangles = 124;
-		//const float kConeWeight = 0.0f;
-		//
-		////meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), vertices.size());
-		//
-		//const size_t maxMeshlets = meshopt_buildMeshletsBound(indices->size(), kMaxVertices, kMaxTriangles);
-		//meshlets.resize(maxMeshlets);
-		//meshletVertices.resize(maxMeshlets * kMaxVertices);
-		//meshletTriangles.resize(maxMeshlets * kMaxTriangles * 3);
-		//
-		//size_t meshletCount = meshopt_buildMeshlets(
-		//	meshlets.data(),
-		//	meshletVertices.data(),
-		//	meshletTriangles.data(),
-		//	reinterpret_cast<const uint32_t*>(indices->data()),
-		//	indices->size(),
-		//	reinterpret_cast<const float*>(vertices->data()),
-		//	vertices->size(),
-		//	sizeof(T),
-		//	kMaxVertices,
-		//	kMaxTriangles,
-		//	kConeWeight
-		//);
-		//
-		//auto& last = meshlets[meshletCount - 1];
-		//meshletVertices.resize(last.vertex_offset + last.vertex_count);
-		//meshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));	//保证一定是4的倍数
-		//meshlets.resize(meshletCount);
-		//
-		//for (auto& m : meshlets) {
-		//	uint32_t triangleOffset = static_cast<uint32_t>(meshletTrianglesU32.size());
-		//	for (uint32_t i = 0; i < m.triangle_count; ++i) {
-		//
-		//		uint32_t i0 = 3 * i + 0 + m.triangle_offset;
-		//		uint32_t i1 = 3 * i + 1 + m.triangle_offset;
-		//		uint32_t i2 = 3 * i + 2 + m.triangle_offset;
-		//
-		//		uint8_t vIdx0 = meshletTriangles[i0];
-		//		uint8_t vIdx1 = meshletTriangles[i1];
-		//		uint8_t vIdx2 = meshletTriangles[i2];
-		//		uint32_t packed = ((static_cast<uint32_t>(vIdx0) & 0xFF) << 0) |
-		//			((static_cast<uint32_t>(vIdx1) & 0xFF) << 8) |
-		//			((static_cast<uint32_t>(vIdx2) & 0xFF) << 16);
-		//		meshletTrianglesU32.push_back(packed);
-		//
-		//	}
-		//	m.triangle_offset = triangleOffset;
-		//}
-		//
-		//std::cout << "verticesNum:  " << vertices->size() << std::endl;
-		//std::cout << "meshletNum:  " << meshletCount << std::endl;
-		//std::cout << "meshletVerticesNum:  " << meshletVertices.size() << std::endl;
-		//std::cout << "meshletTrianglesNum:  " << meshletTriangles.size() << std::endl;
-		//std::cout << "meshletTrianglesU32Num:  " << meshletTrianglesU32.size() << std::endl;
 	}
 
 	void packTriangles();
@@ -301,6 +251,12 @@ public:
 	std::vector<uint32_t>			m_meshletTrianglesU32;
 
 	std::vector<MeshletAddon>		m_addons;
+	
+	//std::vector<>
+	std::vector<glm::vec4>			m_meshletBounds;
+	//std::vector<glm::mat4>			m_modelMatrixs;
+
+
 };
 
 
