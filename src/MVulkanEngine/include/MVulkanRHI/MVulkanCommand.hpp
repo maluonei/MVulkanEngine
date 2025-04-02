@@ -115,6 +115,9 @@ public:
 	void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance);
 	void DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride);
 	void DrawMeshTask(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
+	void BeginRendering();
+	void EndRendering();
 };
 
 class MComputeCommandList :public MVulkanCommandList {

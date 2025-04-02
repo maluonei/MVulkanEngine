@@ -48,7 +48,8 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_UNIFORM_BUFFER_STANDARD_LAYOUT_EXTENSION_NAME,
     VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
     "VK_NV_compute_shader_derivatives",
-    VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
+    VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
     //VK_EXT_DEBUG_PRINTF_EXTENSION_NAME
 };
 
@@ -70,6 +71,7 @@ struct PipelineVertexInputStateInfo {
     VkVertexInputBindingDescription bindingDesc;
     std::vector<VkVertexInputAttributeDescription> attribDesc;
 };
+
 
 //enum class BindingType {
 //    Normal,
