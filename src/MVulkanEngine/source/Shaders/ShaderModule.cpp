@@ -756,7 +756,6 @@ void MeshShaderModule::load()
 	if (m_taskPath.size() > 0)
 		m_taskShader = MVulkanShader(m_taskPath, ShaderStageFlagBits::TASK, m_taskEntry, m_compileEveryTime);
 }
-}
 
 GbufferShader_bindless::GbufferShader_bindless() :
 	ShaderModule("hlsl/gbuffer.vert.hlsl", "hlsl/bindless/gbuffer.frag.hlsl")

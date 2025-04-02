@@ -32,7 +32,7 @@ target_compile_definitions(MVulkanEngine PUBLIC GLFW_STATIC)
 target_link_libraries(MVulkanEngine PUBLIC glfw ${vulkan_lib} assimp spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv-cross-reflect meshoptimizer)
 
 if (MSVC)
-    add_compile_options(/MP)  # ���Ӷ��̱߳���ѡ��
+    add_compile_options(/MP)  # 启用 MSVC 多线程编译
 endif()
 
 # ���Ӱ���Ŀ¼
