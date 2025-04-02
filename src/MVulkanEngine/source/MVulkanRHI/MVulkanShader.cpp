@@ -211,6 +211,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         case spv::ExecutionModelGeometry:
             stage = ShaderStageFlagBits::GEOMETRY;
             break;
+        case spv::ExecutionModelTaskEXT:
+            stage = ShaderStageFlagBits::TASK;
+            break;
+        case spv::ExecutionModelMeshEXT:
+            stage = ShaderStageFlagBits::MESH;
+            break;
         default:
             stage = ShaderStageFlagBits::VERTEX;
             break;
@@ -443,4 +449,18 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
     }
 
     return bindings;
+}
+
+std::vector<MVulkanDescriptorSetLayoutBinding> RemoveRepeatedBindings(std::vector<MVulkanDescriptorSetLayoutBinding> bindings)
+{
+    std::vector<MVulkanDescriptorSetLayoutBinding> res;
+    std::unordered_set<int> binding_set;
+    for (auto binding : bindings) {
+        int bindingPoint = binding.binding.binding;
+        if (binding_set.find(bindingPoint) == binding_set.end()) {
+            res.push_back(binding);
+            binding_set.insert(bindingPoint);
+        }
+    }
+    return res;
 }

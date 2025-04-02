@@ -85,6 +85,8 @@ void Scene::GenerateIndirectDrawCommand()
         m_indirectCommands.push_back(cmd);
 
         currentIndex += cmd.indexCount;
+
+        //if (i == 0) break;
     }
 }
 
@@ -168,7 +170,7 @@ void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)
 void Scene::GenerateIndirectDataAndBuffers(int repeatNums)
 {
     auto totalVertexs = GetTotalVertexs();
-    auto totalIndeices = GetTotalIndeices();
+    auto totalIndeices = GetTotalIndices();
 
     std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
     std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
@@ -189,7 +191,7 @@ void Scene::GenerateIndirectDataAndBuffers(int repeatNums)
 void Scene::GenerateIndirectDataAndBuffers()
 {
     auto totalVertexs = GetTotalVertexs();
-    auto totalIndeices = GetTotalIndeices();
+    auto totalIndeices = GetTotalIndices();
 
     std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
     std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);

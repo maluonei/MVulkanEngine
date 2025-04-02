@@ -56,6 +56,8 @@ struct ShaderReflectorOut {
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
 };
 
+std::vector<MVulkanDescriptorSetLayoutBinding> RemoveRepeatedBindings(std::vector<MVulkanDescriptorSetLayoutBinding> bindings);
+
 class MVulkanShaderReflector {
 public:
 	MVulkanShaderReflector(Shader shader);

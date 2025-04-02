@@ -141,7 +141,7 @@ void RTAO::CreateRenderPass()
         gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        //gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
 
         RenderPassCreateInfo info{};
         info.depthFormat = device.FindDepthFormat();

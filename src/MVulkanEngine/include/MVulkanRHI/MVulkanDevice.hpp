@@ -80,6 +80,7 @@ private:
 
     uint32_t                alignment = 0;
     bool                    m_supportRayTracing = false;
+    bool                    m_supportMeshShader = false;
 
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     void createLogicalDevice(VkInstance instance, VkSurfaceKHR surface);
@@ -90,12 +91,14 @@ private:
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     bool checkRayracingExtensionSupport(VkPhysicalDevice device);
+    bool checkMeshShaderExtensionSupport(VkPhysicalDevice device);
 
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkSampleCountFlagBits getMaxUsableSampleCount();
 
     void initRaytracing();
+    void initMeshShaderFeatures();
 };
 
 

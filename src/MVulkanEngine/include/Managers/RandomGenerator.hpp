@@ -7,12 +7,14 @@
 
 class RandomGenerator : public Singleton<RandomGenerator> {
 public:
-
 	float GetRandomFloat();
 
 
-private:
-    virtual void InitSingleton();
+protected:
+    friend class Singleton<RandomGenerator>; // 让 Singleton 访问构造函数
+    RandomGenerator(); // 只能通过 Singleton::instance() 访问
+
+    //virtual void InitSingleton() override;
 
 	std::random_device rd;  // 硬件随机数种子
     std::mt19937 gen; // 伪随机数生成器（Mersenne Twister）

@@ -269,6 +269,18 @@ void MGraphicsCommandList::DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceS
     vkCmdDrawIndexedIndirect(m_commandBuffer, buffer, offset, drawCount, stride);
 }
 
+void MGraphicsCommandList::DrawMeshTask(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+{
+    PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT =
+        (PFN_vkCmdDrawMeshTasksEXT)vkGetDeviceProcAddr(m_device, "vkCmdDrawMeshTasksEXT");
+
+    if (!vkCmdDrawMeshTasksEXT) {
+        throw std::runtime_error("Failed to load vkCmdDrawMeshTasksEXT!");
+    }
+
+    vkCmdDrawMeshTasksEXT(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
+}
+
 void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
 {
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);

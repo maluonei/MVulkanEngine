@@ -69,6 +69,7 @@ public:
 	void Reset();
 	void BeginRenderPass(VkRenderPassBeginInfo* info);
 	void EndRenderPass();
+
 	virtual void BindPipeline(VkPipeline pipeline) = 0;
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -113,6 +114,7 @@ public:
 	void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 	void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance);
 	void DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride);
+	void DrawMeshTask(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 };
 
 class MComputeCommandList :public MVulkanCommandList {

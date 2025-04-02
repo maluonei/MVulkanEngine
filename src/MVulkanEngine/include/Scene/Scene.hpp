@@ -40,6 +40,10 @@ struct Mesh {
 
     std::shared_ptr<Buffer> m_vertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indexBuffer = nullptr;
+
+    //void SetPositions(size_t count, const glm::vec3* pPositions);
+    //void SetPositions(size_t count, const glm::vec3* pPositions);
+    //void SetPositions(size_t count, const glm::vec3* pPositions);
 };
 
 struct PrimInfo {
@@ -75,10 +79,18 @@ public:
 
     inline void SetMesh(int index, std::shared_ptr<Mesh> mesh)
     {
+        if (index<0 || index > m_meshs.size()) {
+            spdlog::error("index out of size");
+            throw std::exception();
+        }
         m_meshs[index] = mesh;
     }
     inline std::shared_ptr<Mesh> GetMesh(int index) {
         //if (m_meshMap.find(name) == m_meshMap.end()) return nullptr;
+        if (index<0 || index > m_meshs.size()) {
+            spdlog::error("index out of size");
+            throw std::exception();
+        }
         return m_meshs[index];
     }
 
@@ -110,7 +122,7 @@ public:
     inline std::vector<Vertex> GetTotalVertexs(){return m_totalVertexs;}
 
     inline void SetTotalIndeices(std::vector<uint32_t> totalIndeices){m_totalIndeices = totalIndeices;}
-    inline std::vector<uint32_t> GetTotalIndeices(){return m_totalIndeices;}
+    inline std::vector<uint32_t> GetTotalIndices(){return m_totalIndeices;}
 
     void GenerateIndirectDrawData();
     //std::vector<std::string> GetMeshNames();

@@ -47,7 +47,9 @@ const std::vector<const char*> deviceExtensions = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     VK_KHR_UNIFORM_BUFFER_STANDARD_LAYOUT_EXTENSION_NAME,
     VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-    "VK_NV_compute_shader_derivatives"
+    "VK_NV_compute_shader_derivatives",
+    VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
+    //VK_EXT_DEBUG_PRINTF_EXTENSION_NAME
 };
 
 const std::vector<const char*> raytracingExtensions = {
@@ -55,6 +57,13 @@ const std::vector<const char*> raytracingExtensions = {
     VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
     VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
     VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+};
+
+const std::vector<const char*> meshShaderExtensions = {
+    VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+    VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+    VK_EXT_MESH_SHADER_EXTENSION_NAME,
+    VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME
 };
 
 struct PipelineVertexInputStateInfo {
@@ -109,6 +118,8 @@ enum ShaderStageFlagBits {
     MISS = 0X20,
     CLOESTHIT = 0X40,
     ANYHIT = 0X80,
+    TASK,
+    MESH
 };
 
 enum DescriptorType {
@@ -150,6 +161,8 @@ inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderSta
     case MISS: return VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR;
     case ANYHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
     case CLOESTHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    case TASK: return VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_EXT;
+    case MESH: return VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT;
     default: return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
     }
 }

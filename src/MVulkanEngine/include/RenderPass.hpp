@@ -13,6 +13,7 @@
 #include "MVulkanRHI/MVulkanSampler.hpp"
 
 class ShaderModule;
+class MeshShaderModule;
 
 struct RenderPassCreateInfo {
 	uint32_t frambufferCount = 1;
@@ -71,6 +72,15 @@ public:
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
+	void Create(std::shared_ptr<MeshShaderModule> shader,
+		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+		MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent);
@@ -92,6 +102,8 @@ public:
 	MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
 	
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
+
+	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
 
 	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator);
 
@@ -121,15 +133,27 @@ private:
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
+	void CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList);
 	void SetShader(std::shared_ptr<ShaderModule> shader);
+	void SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader);
 
 private:
 	MVulkanDevice			m_device;
 	RenderPassCreateInfo	m_info;
 
-	std::shared_ptr<ShaderModule>	m_shader;
+	//union Shader{
+	std::shared_ptr<ShaderModule>	m_shader = nullptr;
+	std::shared_ptr<MeshShaderModule> m_meshShader = nullptr;
+	//};
+		//std::shared_ptr<ShaderModule>	m_shader;
 	std::vector<std::vector<MCBV>>	m_uniformBuffers;
 	std::vector<StorageBuffer>		m_storageBuffer;
 
