@@ -22,6 +22,7 @@ void PBR::SetUp()
     createCamera();
 
     loadScene();
+    createStorageBuffer();
 }
 
 void PBR::ComputeAndDraw(uint32_t imageIndex)
@@ -136,7 +137,7 @@ void PBR::CreateRenderPass()
 
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
+        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader_bindless>();
         std::vector<std::vector<VkImageView>> bufferTextureViews(1);
         auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
         auto wholeTextureSize = wholeTextures.size();
@@ -153,10 +154,16 @@ void PBR::CreateRenderPass()
             }
         }
 
+        std::vector<StorageBuffer> storageBuffers(1);
+        storageBuffers[0] = *m_TexBuffer;
+
+        std::vector<std::vector<VkImageView>> storageTextureViews(0);
+
         std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
+            m_gbufferPass, gbufferShader,
+            storageBuffers, bufferTextureViews, storageTextureViews, samplers);
     }
 
     {
@@ -365,4 +372,20 @@ void PBR::createLightCamera()
     float zFar = 60.f;
     m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
     m_directionalLightCamera->SetOrth(true);
+}
+
+void PBR::createStorageBuffer()
+{
+    {
+        //auto modelBuffer = m_volume->GetModelBuffer();
+        GbufferShader_bindless::UniformBufferObject1 ubo1;
+        ubo1 = GbufferShader_bindless::GetFromScene(m_scene);
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = sizeof(ubo1);
+
+        m_TexBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, &ubo1);
+    }
 }

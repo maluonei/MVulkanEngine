@@ -363,7 +363,12 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        binding.binding.descriptorCount = info.descriptorCount;
+        if (info.descriptorCount == 0) {
+            binding.binding.descriptorCount = BindlessDescriptorCount;
+        }
+        else {
+            binding.binding.descriptorCount = info.descriptorCount;
+        }
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
         binding.size = info.size;
         bindings.push_back(binding);
@@ -373,7 +378,13 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        binding.binding.descriptorCount = info.descriptorCount;
+        if (info.descriptorCount == 0) {
+            binding.binding.descriptorCount = BindlessDescriptorCount;
+        }
+        else {
+            binding.binding.descriptorCount = info.descriptorCount;
+        }
+        //binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
         bindings.push_back(binding);
@@ -383,7 +394,13 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        binding.binding.descriptorCount = info.descriptorCount;
+        if (info.descriptorCount == 0) {
+            binding.binding.descriptorCount = BindlessDescriptorCount;
+        }
+        else {
+            binding.binding.descriptorCount = info.descriptorCount;
+        }
+        //binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
         bindings.push_back(binding);
@@ -393,7 +410,13 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
         MVulkanDescriptorSetLayoutBinding binding{};
         binding.binding.binding = info.binding;
         binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        binding.binding.descriptorCount = info.descriptorCount;
+        if (info.descriptorCount == 0) {
+            binding.binding.descriptorCount = BindlessDescriptorCount;
+        }
+        else {
+            binding.binding.descriptorCount = info.descriptorCount;
+        }
+        //binding.binding.descriptorCount = info.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(info.stage);
         bindings.push_back(binding);

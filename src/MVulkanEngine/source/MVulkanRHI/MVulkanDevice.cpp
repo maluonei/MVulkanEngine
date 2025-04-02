@@ -172,6 +172,7 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
     descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
     descriptorIndexingFeatures.pNext = &deviceAddressFeatures;
 
     VkPhysicalDeviceFeatures deviceFeatures{};

@@ -14,7 +14,7 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     std::vector<VkDescriptorPoolSize> poolSizes(DescriptorType::DESCRIPORTYPE_NUM);
     for (int type = 0; type < DescriptorType::DESCRIPORTYPE_NUM; type++) {
         poolSizes[type].type = DescriptorType2VkDescriptorType((DescriptorType)type);
-        poolSizes[type].descriptorCount = static_cast<uint32_t>(32);
+        poolSizes[type].descriptorCount = static_cast<uint32_t>(64);
     }
 
     VkDescriptorPoolCreateInfo poolInfo{};
@@ -22,10 +22,11 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(1024);
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
 
     VK_CHECK_RESULT(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool));
 }
+
 
 void MVulkanDescriptorSetAllocator::Clean()
 {
@@ -47,17 +48,40 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<VkDescript
 void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDescriptorSetLayoutBinding> bindings)
 {
     m_device = device;
-
+    //
     std::vector<VkDescriptorSetLayoutBinding> bindings2;
     for (auto i = 0; i < bindings.size(); i++) {
         bindings2.push_back(bindings[i].binding);
     }
+    
+    //VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    //layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    //layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    //layoutInfo.pBindings = bindings2.data();
+    //
+    //VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
+
+    //m_device = device;
+
+    //std::vector<VkDescriptorSetLayoutBinding> bindings2;
+    //for (auto i = 0; i < bindings.size(); i++) {
+    //    VkDescriptorSetLayoutBinding _binding = bindings[i].binding;
+    //    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    //    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    //    layoutInfo.bindingCount = static_cast<uint32_t>(1);
+    //    layoutInfo.pBindings = &_binding;
+    //    if(bindings[i].bindingType == BindingType::Bindless)
+    //        layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;  // 允许动态更新
+    //    
+    //    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
+    //}
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings2.data();
-
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;  // 允许动态更新
+    
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
 }
 

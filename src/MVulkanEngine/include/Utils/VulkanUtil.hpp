@@ -19,6 +19,8 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+#define BindlessDescriptorCount 2048
+
 #define VK_CHECK_RESULT(f)                 \
     {                                      \
         VkResult res = (f);                \
@@ -60,9 +62,15 @@ struct PipelineVertexInputStateInfo {
     std::vector<VkVertexInputAttributeDescription> attribDesc;
 };
 
+//enum class BindingType {
+//    Normal,
+//    Bindless
+//};
+
 struct MVulkanDescriptorSetLayoutBinding {
     VkDescriptorSetLayoutBinding binding;
     uint32_t size = 0;
+    //BindingType bindingType = BindingType::Normal;
 };
 
 enum class MVulkanTextureType {

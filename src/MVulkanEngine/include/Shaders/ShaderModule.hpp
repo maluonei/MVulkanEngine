@@ -487,4 +487,44 @@ private:
 	UniformBuffer0 ubo0;
 };
 
+class GbufferShader_bindless : public ShaderModule
+{
+public:
+	GbufferShader_bindless();
+
+	virtual size_t GetBufferSizeBinding(uint32_t binding) const;
+
+	virtual void SetUBO(uint8_t binding, void* data);
+
+	virtual void* GetData(uint32_t binding, uint32_t index = 0);
+public:
+	struct UniformBufferObject0
+	{
+		glm::mat4 Model;
+		glm::mat4 View;
+		glm::mat4 Projection;
+	};
+
+	struct UniformBuffer1 {
+		int diffuseTextureIdx;
+		int metallicAndRoughnessTexIdx;
+		int matId;
+		int normalMapIdx;
+
+		glm::vec3 diffuseColor;
+		int padding0;
+	};
+
+	struct UniformBufferObject1
+	{
+		UniformBuffer1 ubo[512];
+	};
+
+	static UniformBufferObject1 GetFromScene(const std::shared_ptr<Scene> scene);
+
+private:
+	UniformBufferObject0 ubo0;
+	UniformBufferObject1 ubo1;
+};
+
 #endif
