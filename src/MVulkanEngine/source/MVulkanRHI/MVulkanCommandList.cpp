@@ -281,6 +281,67 @@ void MGraphicsCommandList::DrawMeshTask(uint32_t groupCountX, uint32_t groupCoun
     vkCmdDrawMeshTasksEXT(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
 }
 
+void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
+{
+    //VkRenderingInfo info = RenderingInfo2VkRenderingInfo(renderingInfo);
+
+    std::vector<VkRenderingAttachmentInfo> colorAttachments;
+    VkRenderingAttachmentInfo depthAttachments = {};
+    VkRenderingAttachmentInfo stencilAttachment = {};
+    for (auto i = 0; i < renderingInfo.colorAttachments.size(); i++) {
+        auto attachment = renderingInfo.colorAttachments[i];
+
+        VkRenderingAttachmentInfo ainfo = {};
+        ainfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        ainfo.imageView = attachment.view;
+        ainfo.imageLayout = attachment.layout;
+        ainfo.loadOp = attachment.loadOp;
+        ainfo.storeOp = attachment.storeOp;
+        ainfo.clearValue.color = { {attachment.clearColor.x, attachment.clearColor.y, attachment.clearColor.z, attachment.clearColor.w} };
+
+        colorAttachments.push_back(ainfo);
+    }
+
+    {
+        auto depthAttachment = renderingInfo.depthAttachment;
+
+        depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachments.imageView = depthAttachment.view;
+        depthAttachments.imageLayout = depthAttachment.layout;
+        depthAttachments.loadOp = depthAttachment.loadOp;
+        depthAttachments.storeOp = depthAttachment.storeOp;
+        depthAttachments.clearValue.color = { {depthAttachment.clearColor.x, depthAttachment.clearColor.y, depthAttachment.clearColor.z, depthAttachment.clearColor.w} };
+    }
+
+    //{
+    //    auto depthAttachment = renderingInfo.stencilAttachment;
+    //
+    //    depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    //    depthAttachments.imageView = depthAttachment.view;
+    //    depthAttachments.imageLayout = depthAttachment.layout;
+    //    depthAttachments.loadOp = depthAttachment.loadOp;
+    //    depthAttachments.storeOp = depthAttachment.storeOp;
+    //    depthAttachments.clearValue.color = { {depthAttachment.clearColor.x, depthAttachment.clearColor.y, depthAttachment.clearColor.z, depthAttachment.clearColor.w} };
+    //}
+
+    VkRenderingInfo vrenderingInfo = {};
+    vrenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    vrenderingInfo.renderArea.offset = renderingInfo.offset;
+    vrenderingInfo.renderArea.extent = renderingInfo.extent;
+    vrenderingInfo.layerCount = 1;
+    vrenderingInfo.colorAttachmentCount = colorAttachments.size();
+    vrenderingInfo.pColorAttachments = colorAttachments.data();
+    vrenderingInfo.pDepthAttachment = &depthAttachments;
+    vrenderingInfo.pStencilAttachment = nullptr;
+
+    vkCmdBeginRendering(m_commandBuffer, &vrenderingInfo);
+}
+
+void MGraphicsCommandList::EndRendering()
+{
+    vkCmdEndRendering(m_commandBuffer);
+}
+
 void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
 {
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);

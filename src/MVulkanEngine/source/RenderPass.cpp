@@ -901,3 +901,253 @@ MVulkanDescriptorSet RenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocat
     descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get());
     return descriptorSet;
 }
+
+DynamicRenderPass::DynamicRenderPass(MVulkanDevice device, DynamicRenderPassCreateInfo info):
+    m_device(device), m_info(info)
+{
+}
+
+void DynamicRenderPass::Create(
+    std::shared_ptr<ShaderModule> shader, 
+    MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, 
+    MVulkanDescriptorSetAllocator& allocator, 
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> imageViews, 
+    std::vector<std::vector<VkImageView>> storageImageViews, 
+    std::vector<VkSampler> samplers, 
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
+{
+    SetShader(shader);
+    CreatePipeline(allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructure);
+}
+
+MVulkanDescriptorSet DynamicRenderPass::CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator)
+{
+    MVulkanDescriptorSet descriptorSet;
+    descriptorSet.Create(m_device.GetDevice(), allocator.Get(), m_descriptorLayouts.Get());
+    return descriptorSet;
+}
+
+void DynamicRenderPass::UpdateDescriptorSetWrite(
+    std::vector<StorageBuffer> storageBuffers,
+    std::vector<std::vector<VkImageView>> imageViews, 
+    std::vector<std::vector<VkImageView>> storageImageViews, 
+    std::vector<VkSampler> samplers, 
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
+{
+    for (auto i = 0; i < m_descriptorSets.size(); i++) {
+        MVulkanDescriptorSetWrite write;
+
+        std::vector<std::vector<VkDescriptorImageInfo>> combinedImageInfos(m_combinedImageCount);
+        std::vector<std::vector<VkDescriptorImageInfo>> separateImageInfos(m_separateImageCount);
+        std::vector<std::vector<VkDescriptorImageInfo>> storageImageInfos(m_storageImageCount);
+        std::vector<VkDescriptorImageInfo> separateSamplerInfos(m_separateSamplerCount);
+
+        for (auto binding = 0; binding < m_combinedImageCount; binding++) {
+            combinedImageInfos[binding].resize(imageViews[binding].size());
+            for (auto j = 0; j < imageViews[binding].size(); j++) {
+                combinedImageInfos[binding][j].sampler = samplers[binding];
+                combinedImageInfos[binding][j].imageView = imageViews[binding][j];
+                combinedImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+        }
+
+        for (auto binding = 0; binding < m_separateImageCount; binding++) {
+            separateImageInfos[binding].resize(imageViews[binding].size());
+            for (auto j = 0; j < imageViews[binding].size(); j++) {
+                separateImageInfos[binding][j].sampler = nullptr;
+                separateImageInfos[binding][j].imageView = imageViews[binding][j];
+                separateImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+        }
+
+        for (auto binding = 0; binding < m_storageImageCount; binding++) {
+            storageImageInfos[binding].resize(storageImageViews[binding].size());
+            for (auto j = 0; j < storageImageViews[binding].size(); j++) {
+                storageImageInfos[binding][j].sampler = nullptr;
+                storageImageInfos[binding][j].imageView = storageImageViews[binding][j];
+                storageImageInfos[binding][j].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            }
+        }
+
+        for (auto binding = 0; binding < m_separateSamplerCount; binding++) {
+            separateSamplerInfos[binding].sampler = samplers[binding];
+            separateSamplerInfos[binding].imageView = nullptr;
+            separateSamplerInfos[binding].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+
+        std::vector<std::vector<VkDescriptorBufferInfo>> constantBufferInfos(m_cbvCount);
+        std::vector<std::vector<VkDescriptorBufferInfo>> storageBufferInfos(m_storageBufferCount);
+
+        for (auto binding = 0; binding < m_cbvCount; binding++) {
+            constantBufferInfos[binding].resize(m_uniformBuffers[i][binding].GetArrayLength());
+            for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
+                constantBufferInfos[binding][j].buffer = m_uniformBuffers[i][binding].GetBuffer();
+                constantBufferInfos[binding][j].offset = j * CalculateAlignedSize(m_uniformBuffers[i][binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+                constantBufferInfos[binding][j].range = m_uniformBuffers[i][binding].GetBufferSize();
+            }
+        }
+
+        for (auto binding = 0; binding < m_storageBufferCount; binding++) {
+            storageBufferInfos[binding].resize(storageBuffers[binding].GetArrayLength());
+            for (auto j = 0; j < storageBuffers[binding].GetArrayLength(); j++) {
+                storageBufferInfos[binding][j].buffer = storageBuffers[binding].GetBuffer();
+                storageBufferInfos[binding][j].offset = j * CalculateAlignedSize(storageBuffers[binding].GetBufferSize(), Singleton<MVulkanEngine>::instance().GetUniformBufferOffsetAlignment());
+                storageBufferInfos[binding][j].range = storageBuffers[binding].GetBufferSize();
+            }
+        }
+
+        write.Update(m_device.GetDevice(), m_descriptorSets[i].Get(),
+            constantBufferInfos, storageBufferInfos,
+            combinedImageInfos, separateImageInfos, storageImageInfos, separateSamplerInfos, accelerationStructure);
+    }
+}
+
+void DynamicRenderPass::CreatePipeline(
+    MVulkanDescriptorSetAllocator& allocator, 
+    std::vector<StorageBuffer> storageBuffers, 
+    std::vector<std::vector<VkImageView>> imageViews,
+    std::vector<std::vector<VkImageView>> storageImageViews,
+    std::vector<VkSampler> samplers,
+    std::vector<VkAccelerationStructureKHR> accelerationStructure)
+{
+    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
+    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
+    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+
+    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
+    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindings = resourceOutVert.GetBindings();
+    std::vector<MVulkanDescriptorSetLayoutBinding> bindingsFrag = resourceOutFrag.GetBindings();
+    bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    //bindings = RemoveRepeatedBindings(bindings);
+
+    m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
+    std::vector<VkDescriptorSetLayout> layouts(m_info.numFrameBuffers, m_descriptorLayouts.Get());
+
+    m_descriptorSets.resize(layouts.size());
+    for (auto i = 0; i < layouts.size(); i++) {
+        m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
+    }
+
+    m_cbvCount = 0;
+    m_separateSamplerCount = 0;
+    m_separateImageCount = 0;
+    m_combinedImageCount = 0;
+    m_asCount = 0;
+
+    for (auto binding = 0; binding < bindings.size(); binding++) {
+        switch (bindings[binding].binding.descriptorType) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        {
+            m_cbvCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        {
+            m_storageBufferCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        {
+            m_combinedImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+        {
+            m_separateSamplerCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        {
+            m_separateImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        {
+            m_storageImageCount++;
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+        {
+            m_asCount++;
+            break;
+        }
+        }
+    }
+
+    m_uniformBuffers.resize(m_info.numFrameBuffers);
+    //m_storageBuffer.resize(m_storageBufferCount);
+
+    for (auto i = 0; i < m_info.numFrameBuffers; i++) {
+        m_uniformBuffers[i].resize(m_cbvCount);
+        for (auto binding = 0; binding < bindings.size(); binding++) {
+            switch (bindings[binding].binding.descriptorType) {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            {
+                MCBV buffer;
+                BufferCreateInfo info;
+                info.arrayLength = bindings[binding].binding.descriptorCount;
+                info.size = bindings[binding].size;
+                buffer.Create(m_device, info);
+
+                //m_uniformBuffers[i].push_back(buffer);
+                m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
+                break;
+            }
+            }
+        }
+    }
+
+    UpdateDescriptorSetWrite(storageBuffers, imageViews, storageImageViews, samplers, accelerationStructure);
+
+    //m_info.pipelineCreateInfo.colorAttachmentFormats = m_info.colorAttachmentFormats;
+
+    m_pipeline.Create(m_device.GetDevice(), 
+        m_info.pipelineCreateInfo,
+        m_shader->GetVertexShader().GetShaderModule(), 
+        m_shader->GetGeometryShader().GetShaderModule(),
+        m_shader->GetFragmentShader().GetShaderModule(),
+        info, m_descriptorLayouts.Get(), 
+        m_shader->GetVertEntryPoint(), 
+        m_shader->GetGeomEntryPoint(),
+        m_shader->GetFragEntryPoint());
+
+    m_shader->Clean();
+}
+
+void DynamicRenderPass::SetShader(std::shared_ptr<ShaderModule> shader)
+{
+    m_shader = shader;
+    m_shader->Create(m_device.GetDevice());
+}
+
+void DynamicRenderPass::SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader)
+{
+    m_meshShader = meshShader;
+    m_meshShader->Create(m_device.GetDevice());
+}
+
+void DynamicRenderPass::LoadCBV(uint32_t alignment) {
+    if (m_shader != nullptr) {
+        for (auto i = 0; i < m_info.numFrameBuffers; i++) {
+            for (auto binding = 0; binding < m_cbvCount; binding++) {
+                for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
+                    uint32_t offset = j * alignment;
+                    m_uniformBuffers[i][binding].UpdateData(offset, (void*)(m_shader->GetData(binding, j)));
+                }
+            }
+        }
+    }
+
+    if (m_meshShader != nullptr) {
+        for (auto i = 0; i < m_info.numFrameBuffers; i++) {
+            for (auto binding = 0; binding < m_cbvCount; binding++) {
+                for (auto j = 0; j < m_uniformBuffers[i][binding].GetArrayLength(); j++) {
+                    uint32_t offset = j * alignment;
+                    m_uniformBuffers[i][binding].UpdateData(offset, (void*)(m_meshShader->GetData(binding, j)));
+                }
+            }
+        }
+    }
+}

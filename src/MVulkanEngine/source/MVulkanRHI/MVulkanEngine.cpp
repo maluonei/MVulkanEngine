@@ -227,6 +227,11 @@ void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
     renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
 }
 
+void MVulkanEngine::CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<StorageBuffer> storageBuffers, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
+{
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
+}
+
 void MVulkanEngine::CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader, 
     std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
     std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
@@ -371,6 +376,20 @@ void MVulkanEngine::RecordCommandBuffer(
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, bool flipY)
 {
     recordCommandBuffer(frameIndex, renderPass, m_generalGraphicList, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
+}
+
+void MVulkanEngine::RecordCommandBuffer2(
+    uint32_t frameIndex, 
+    std::shared_ptr<DynamicRenderPass> renderPass, 
+    uint32_t currentFrame,
+    const RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer, 
+    std::shared_ptr<Buffer> indexBuffer,
+    std::shared_ptr<Buffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName, bool flipY)
+{
+    recordCommandBuffer2(frameIndex, renderPass, m_graphicsLists[currentFrame], renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
 }
 
 void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
@@ -776,6 +795,58 @@ void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* dat
     m_transferQueue.WaitForQueueComplete();
 }
 
+void  MVulkanEngine::CreateColorAttachmentImage(
+    std::shared_ptr<MVulkanTexture> texture,
+    VkExtent2D extent,
+    VkFormat format
+) {
+    //texture = std::make_shared<MVulkanTexture>();
+    
+    ImageCreateInfo imageInfo;
+    ImageViewCreateInfo viewInfo;
+    imageInfo.arrayLength = 1;
+    imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.width = extent.width;
+    imageInfo.height = extent.height;
+    imageInfo.format = format;
+
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = imageInfo.format;
+    viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.baseMipLevel = 0;
+    viewInfo.levelCount = 1;
+    viewInfo.baseArrayLayer = 0;
+    viewInfo.layerCount = 1;
+
+    CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+}
+
+void  MVulkanEngine::CreateDepthAttachmentImage(
+    std::shared_ptr<MVulkanTexture> texture,
+    VkExtent2D extent,
+    VkFormat format
+) {
+    //texture = std::make_shared<MVulkanTexture>();
+
+    ImageCreateInfo imageInfo;
+    ImageViewCreateInfo viewInfo;
+    imageInfo.arrayLength = 1;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.width = extent.width;
+    imageInfo.height = extent.height;
+    imageInfo.format = format;
+
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = imageInfo.format;
+    viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.baseMipLevel = 0;
+    viewInfo.levelCount = 1;
+    viewInfo.baseArrayLayer = 0;
+    viewInfo.layerCount = 1;
+
+    CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+}
+
 void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
 {
     //texture = std::make_shared<MVulkanTexture>();
@@ -1125,6 +1196,82 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.EndRenderPass();
 
     commandList.EndDebugLabel();
+}
+
+void MVulkanEngine::recordCommandBuffer2(
+    uint32_t imageIndex, 
+    std::shared_ptr<DynamicRenderPass> renderPass, 
+    MGraphicsCommandList commandList, 
+    const RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer, 
+    std::shared_ptr<Buffer> indexBuffer, 
+    std::shared_ptr<Buffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName, bool flipY)
+{
+    //VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
+    //
+    //VkRenderPassBeginInfo renderPassInfo{};
+    //renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    //renderPassInfo.renderPass = renderPass->GetRenderPass().Get();
+    //renderPassInfo.framebuffer = renderPass->GetFrameBuffer(imageIndex).Get();
+    //renderPassInfo.renderArea.offset = { 0, 0 };
+    //renderPassInfo.renderArea.extent = extent;
+    //
+    //uint32_t attachmentCount = renderPass->GetAttachmentCount();
+    //std::vector<VkClearValue> clearValues(attachmentCount + 1);
+    //for (auto i = 0; i < attachmentCount; i++) {
+    //    clearValues[i].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    //}
+    //clearValues[attachmentCount].depthStencil = { 1.0f, 0 };
+    //
+    //renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    //renderPassInfo.pClearValues = clearValues.data();
+    //commandList.BeginRenderPass(&renderPassInfo);
+
+    auto extent = renderingInfo.extent;
+    auto offset = renderingInfo.offset;
+
+    commandList.BeginRendering(renderingInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+    //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+
+    commandList.EndRendering();
+    //commandList.EndRenderPass();
 }
 
 void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,

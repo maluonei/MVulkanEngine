@@ -231,7 +231,7 @@ GbufferShader::UniformBufferObject1 GbufferShader::GetFromScene(const std::share
 
 GbufferShader2::GbufferShader2() :
 	//ShaderModule("gbuffer.vert.glsl", "gbuffer.frag.glsl")
-	ShaderModule("hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl")
+	ShaderModule("hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main", false)
 {
 }
 

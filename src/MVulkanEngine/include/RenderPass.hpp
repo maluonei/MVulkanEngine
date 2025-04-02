@@ -72,7 +72,8 @@ public:
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
-	void Create(std::shared_ptr<MeshShaderModule> shader,
+	void Create(
+		std::shared_ptr<MeshShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
 		MVulkanDescriptorSetAllocator& allocator,
 		std::vector<StorageBuffer> storageBuffers,
@@ -80,6 +81,16 @@ public:
 		std::vector<std::vector<VkImageView>> storageImageViews,
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
+	//void Create(
+	//	std::shared_ptr<ShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> imageViews,
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void Clean();
 
@@ -174,6 +185,89 @@ private:
 	uint32_t m_combinedImageCount = 0;
 
 	uint32_t m_asCount = 0;
+};
+
+struct DynamicRenderPassCreateInfo {
+	MVulkanPilelineCreateInfo pipelineCreateInfo;
+	//std::vector<VkFormat> colorAttachmentFormats;
+	//VkFormat depthAttachmentFormats;
+	//VkFormat stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+	uint8_t numFrameBuffers = 1;
+	//uint8_t numAttachments = 1;
+};
+
+class DynamicRenderPass {
+public:
+	DynamicRenderPass(MVulkanDevice device, DynamicRenderPassCreateInfo info);
+
+	void Create(
+		std::shared_ptr<ShaderModule> shader,
+		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+		MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
+	MVulkanPipeline GetPipeline() const { return m_pipeline; }
+	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
+	MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
+
+	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
+
+	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
+
+	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator);
+	
+	void UpdateDescriptorSetWrite(
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews, 
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers, 
+		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
+	void TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+	void LoadCBV(uint32_t alignment);
+private:
+	void CreatePipeline(
+		MVulkanDescriptorSetAllocator& allocator,
+		std::vector<StorageBuffer> storageBuffers,
+		std::vector<std::vector<VkImageView>> imageViews,
+		std::vector<std::vector<VkImageView>> storageImageViews,
+		std::vector<VkSampler> samplers,
+		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+
+	void SetShader(std::shared_ptr<ShaderModule> shader);
+	void SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader);
+
+private:
+	MVulkanDevice			m_device;
+	DynamicRenderPassCreateInfo	m_info;
+
+	MVulkanGraphicsPipeline			m_pipeline;
+
+	MVulkanDescriptorSetLayouts		m_descriptorLayouts;
+	std::vector<MVulkanDescriptorSet> m_descriptorSets;
+
+	std::shared_ptr<ShaderModule>	m_shader = nullptr;
+	std::shared_ptr<MeshShaderModule> m_meshShader = nullptr;
+
+	std::vector<std::vector<MCBV>>	m_uniformBuffers;
+
+	uint32_t m_cbvCount = 0;
+	uint32_t m_storageBufferCount = 0;
+	uint32_t m_separateSamplerCount = 0;
+	uint32_t m_separateImageCount = 0;
+	uint32_t m_storageImageCount = 0;
+	uint32_t m_combinedImageCount = 0;
+
+	uint32_t m_asCount = 0;
+
+
+
+
 };
 
 

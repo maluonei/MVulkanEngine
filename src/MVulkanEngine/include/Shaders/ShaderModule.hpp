@@ -57,7 +57,7 @@ private:
 
 	std::string		m_vertEntry = "main";
 	std::string		m_fragEntry = "main";
-	std::string		m_geomEntry = "main";
+	std::string		m_geomEntry = "";
 };
 
 class MeshShaderModule {

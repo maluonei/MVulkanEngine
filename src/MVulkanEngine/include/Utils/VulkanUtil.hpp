@@ -73,6 +73,30 @@ struct PipelineVertexInputStateInfo {
 };
 
 
+struct RenderingAttachment {
+    VkImageView view;
+    VkImageLayout layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+    VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    glm::vec4 clearColor = glm::vec4(0.f, 0.f, 0.f, 1.f);
+    //VkRenderingAttachmentInfo info;
+};
+
+struct RenderingInfo {
+    std::vector<RenderingAttachment> colorAttachments;
+    RenderingAttachment depthAttachment;
+    VkExtent2D extent;
+    VkOffset2D offset;
+    
+    //VkRenderingInfo vkRenderingInfo;
+    //void RenderingInfo2VkRenderingInfo();
+    //VkRect2D            renderArea;
+    //
+    //VkRenderingInfo renderInfo;
+};
+
+VkRenderingInfo RenderingInfo2VkRenderingInfo(CONST RenderingInfo& info);
+
 //enum class BindingType {
 //    Normal,
 //    Bindless
@@ -265,4 +289,5 @@ static uint32_t CalculateMipLevels(VkExtent2D extent) {
     return static_cast<uint32_t>(std::floor(std::log2(static_cast<float>(minDim)))) + 1;
 }
 
+bool IsDepthFormat(VkFormat format);
 #endif

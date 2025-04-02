@@ -16,6 +16,10 @@ struct MVulkanPilelineCreateInfo {
 	VkCullModeFlags cullmode = VK_CULL_MODE_BACK_BIT;
 	VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	float lineWidth = 1.f;
+
+	std::vector<VkFormat> colorAttachmentFormats;
+	VkFormat depthAttachmentFormats;
+	VkFormat stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 };
 
 class MVulkanPipeline {
@@ -72,7 +76,20 @@ public:
 		std::string meshEntryPoint = "main",
 		std::string fragEntryPoint = "main");
 
+	void Create(VkDevice device,
+		MVulkanPilelineCreateInfo info,
+		VkShaderModule vertShaderModule,
+		VkShaderModule geomShaderModule,
+		VkShaderModule fragShaderModule,
+		PipelineVertexInputStateInfo vertexStateInfo,
+		VkDescriptorSetLayout layout,
+		std::string vertEntryPoint = "main",
+		std::string geomEntryPoint = "main",
+		std::string fragEntryPoint = "main");
+
+
 private:
+
 
 
 

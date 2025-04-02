@@ -30,6 +30,7 @@ class MWindow;
 class Camera;
 class Scene;
 class RenderPass;
+class DynamicRenderPass;
 class ComputePass;
 class Light;
 
@@ -59,7 +60,20 @@ public:
 
     void CreateBuffer(std::shared_ptr<Buffer> buffer, const void* data, size_t size);
 
+    void CreateColorAttachmentImage(
+        std::shared_ptr<MVulkanTexture> texture,
+        VkExtent2D extent,
+        VkFormat format
+    );
+
+    void CreateDepthAttachmentImage(
+        std::shared_ptr<MVulkanTexture> texture,
+        VkExtent2D extent,
+        VkFormat format
+    );
+
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
+
 
     template<class T>
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
@@ -154,6 +168,14 @@ public:
         std::vector<VkSampler> samplers,
         std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
+    void CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass,
+        std::shared_ptr<ShaderModule> shader,
+        std::vector<StorageBuffer> storageBuffers,
+        std::vector<std::vector<VkImageView>> imageViews,
+        std::vector<std::vector<VkImageView>> storageImageViews,
+        std::vector<VkSampler> samplers,
+        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+
     void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
         std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
         std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
@@ -221,6 +243,18 @@ public:
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
         bool flipY = true);
 
+    void RecordCommandBuffer2(
+        uint32_t frameIndex, 
+        std::shared_ptr<DynamicRenderPass> renderPass,
+        uint32_t currentFrame,
+        const RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer, 
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<Buffer> indirectBuffer, 
+        uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
+
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 
@@ -250,6 +284,7 @@ public:
     void Present(
         uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
+    const MVulkanSwapchain GetSwapchain() { return m_swapChain; }
 private: 
     void initVulkan();
 
@@ -289,6 +324,19 @@ private:
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
         std::string eventName, bool flipY = true);
 
+    void recordCommandBuffer2(
+        uint32_t imageIndex, 
+        std::shared_ptr<DynamicRenderPass> renderPass, 
+        MGraphicsCommandList commandList,
+        const RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer, 
+        std::shared_ptr<Buffer> indexBuffer, 
+        std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName, 
+        bool flipY = true);
+
+
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 
@@ -324,6 +372,7 @@ private:
     //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
     void createPlaceHolderTexture();
+
 protected:
     virtual void InitSingleton();
 private:

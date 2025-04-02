@@ -254,7 +254,11 @@ void MVulkanTexture::Clean()
 }
 
 void MVulkanTexture::Create(
-    MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
+    MVulkanCommandList* commandList, 
+    MVulkanDevice device, 
+    ImageCreateInfo imageInfo, 
+    ImageViewCreateInfo viewInfo, 
+    VkImageLayout layout)
 {
     m_imageInfo = imageInfo;
     m_viewInfo = viewInfo;
@@ -272,6 +276,10 @@ void MVulkanTexture::Create(
     barrier.levelCount = m_image.GetMipLevel();
     barrier.baseArrayLayer = 0;
     barrier.layerCount = imageInfo.arrayLength;
+    if (IsDepthFormat(imageInfo.format)) {
+        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    //if(imageInfo.format == )
 
     commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }

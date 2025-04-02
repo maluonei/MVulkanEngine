@@ -1,4 +1,5 @@
 #include "Managers/TextureManager.hpp"
+#include "MVulkanRHI/MVulkanEngine.hpp"
 
 bool TextureManager::ExistTexture(const std::string& name)
 {
@@ -32,4 +33,25 @@ std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateTextureVect
     }
 
     return textures;
+}
+
+
+std::vector<VkImageView> TextureManager::GenerateTextureViews() {
+    std::vector<VkImageView> views;
+
+    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    auto wholeTextureSize = wholeTextures.size();
+    
+    if (wholeTextureSize == 0) {
+        views.resize(1);
+        views[0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+    }
+    else {
+        views.resize(wholeTextureSize);
+        for (auto j = 0; j < wholeTextureSize; j++) {
+            views[j] = wholeTextures[j]->GetImageView();
+        }
+    }
+
+    return views;
 }
