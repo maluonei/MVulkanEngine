@@ -49,7 +49,8 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
     "VK_NV_compute_shader_derivatives",
     VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
     //VK_EXT_DEBUG_PRINTF_EXTENSION_NAME
 };
 
@@ -79,6 +80,7 @@ struct RenderingAttachment {
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     glm::vec4 clearColor = glm::vec4(0.f, 0.f, 0.f, 1.f);
+    VkClearDepthStencilValue depthStencil = { 1.0f,  0 };
     //VkRenderingAttachmentInfo info;
 };
 

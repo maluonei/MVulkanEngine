@@ -309,40 +309,6 @@ void MVulkanEngine::SubmitGraphicsCommands(
     //present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
 }
 
-//void MVulkanEngine::SubmitCommandsAndPresent(
-//    uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain)
-//{
-//    VkSubmitInfo submitInfo{};
-//    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-//
-//    VkSemaphore waitSemaphores3[] = { m_imageAvailableSemaphores[currentFrame].GetSemaphore() };
-//    VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-//    submitInfo.waitSemaphoreCount = 1;
-//    submitInfo.pWaitSemaphores = waitSemaphores3;
-//    submitInfo.pWaitDstStageMask = waitStages3;
-//
-//    submitInfo.commandBufferCount = 1;
-//    submitInfo.pCommandBuffers = &m_graphicsLists[currentFrame].GetBuffer();
-//
-//    VkSemaphore signalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-//    submitInfo.signalSemaphoreCount = 1;
-//    submitInfo.pSignalSemaphores = signalSemaphores3;
-//
-//    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_inFlightFences[currentFrame].GetFence());
-//    m_graphicsQueue.WaitForQueueComplete();
-//
-//    VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
-//
-//    vkDeviceWaitIdle(m_device.GetDevice());
-//    present(m_swapChain.GetPtr(), currentFrame, &imageIndex, recreateSwapchain);
-//    //present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
-//}
-
-//void MVulkanEngine::SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame)
-//{
-//
-//}
-
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
     uint32_t currentFrame, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, 
     bool flipY)
@@ -492,6 +458,24 @@ void MVulkanEngine::TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkP
 
     m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     m_graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    //m_generalGraphicList.Reset();
+    //m_generalGraphicList.Begin();
+
+    auto graphicsList = m_graphicsLists[commandListId];
+    graphicsList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    //m_generalGraphicList.End();
+    //
+    //VkSubmitInfo submitInfo{};
+    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //submitInfo.commandBufferCount = 1;
+    //submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+    //
+    //m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //m_graphicsQueue.WaitForQueueComplete();
 }
 
 void MVulkanEngine::initVulkan()
@@ -818,6 +802,7 @@ void  MVulkanEngine::CreateColorAttachmentImage(
     viewInfo.baseArrayLayer = 0;
     viewInfo.layerCount = 1;
 
+    //CreateImage(texture, imageInfo, viewInfo);
     CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
@@ -844,6 +829,7 @@ void  MVulkanEngine::CreateDepthAttachmentImage(
     viewInfo.baseArrayLayer = 0;
     viewInfo.layerCount = 1;
 
+    //CreateImage(texture, imageInfo, viewInfo);
     CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
@@ -855,6 +841,26 @@ void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCr
     m_generalGraphicList.Begin();
 
     texture->Create(&m_generalGraphicList, m_device, imageInfo, viewInfo, layout);
+
+    m_generalGraphicList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
+{
+    //texture = std::make_shared<MVulkanTexture>();
+
+    m_generalGraphicList.Reset();
+    m_generalGraphicList.Begin();
+
+    texture->Create(&m_generalGraphicList, m_device, imageInfo, viewInfo);
 
     m_generalGraphicList.End();
 
@@ -1228,6 +1234,7 @@ void MVulkanEngine::recordCommandBuffer2(
     //renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     //renderPassInfo.pClearValues = clearValues.data();
     //commandList.BeginRenderPass(&renderPassInfo);
+    commandList.BeginDebugLabel(eventName);
 
     auto extent = renderingInfo.extent;
     auto offset = renderingInfo.offset;
@@ -1271,6 +1278,8 @@ void MVulkanEngine::recordCommandBuffer2(
     commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
 
     commandList.EndRendering();
+
+    commandList.EndDebugLabel();
     //commandList.EndRenderPass();
 }
 

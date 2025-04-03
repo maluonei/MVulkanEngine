@@ -284,3 +284,13 @@ void MVulkanTexture::Create(
     commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
 
+void MVulkanTexture::Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
+{
+    m_imageInfo = imageInfo;
+    m_viewInfo = viewInfo;
+    m_imageValid = true;
+
+    m_image.CreateImage(device, m_imageInfo);
+    m_image.CreateImageView(m_viewInfo);
+}
+

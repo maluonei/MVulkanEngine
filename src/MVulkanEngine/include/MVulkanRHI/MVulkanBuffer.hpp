@@ -239,7 +239,7 @@ public:
 	}
 
 	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
-
+	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
 	inline VkImage GetImage() const { return m_image.GetImage(); }
 	inline VkImageView GetImageView() const { return m_image.GetImageView(); }
 	inline VkDeviceMemory GetImageMemory() const { return m_image.GetImageMemory(); }

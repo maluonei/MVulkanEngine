@@ -310,7 +310,7 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
         depthAttachments.imageLayout = depthAttachment.layout;
         depthAttachments.loadOp = depthAttachment.loadOp;
         depthAttachments.storeOp = depthAttachment.storeOp;
-        depthAttachments.clearValue.color = { {depthAttachment.clearColor.x, depthAttachment.clearColor.y, depthAttachment.clearColor.z, depthAttachment.clearColor.w} };
+        depthAttachments.clearValue.depthStencil = depthAttachment.depthStencil;
     }
 
     //{

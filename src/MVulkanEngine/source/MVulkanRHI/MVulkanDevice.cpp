@@ -194,10 +194,15 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
         deviceAddressFeatures.pNext = &meshShaderFeatures;
     }
 
+    VkPhysicalDeviceSynchronization2Features sync2Features = {};
+    sync2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+    sync2Features.synchronization2 = VK_TRUE;
+    sync2Features.pNext = &deviceAddressFeatures;
+
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{};
     dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
     dynamicRenderingFeature.dynamicRendering = VK_TRUE;
-    dynamicRenderingFeature.pNext = &deviceAddressFeatures;
+    dynamicRenderingFeature.pNext = &sync2Features;
 
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
     descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
