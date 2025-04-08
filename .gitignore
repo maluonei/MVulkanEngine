@@ -3,6 +3,7 @@ build/
 build2/
 out/
 .vs/
+.vscode/
 .git/
 
 # Ignore CMake generated files
