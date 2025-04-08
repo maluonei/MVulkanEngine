@@ -33,6 +33,7 @@ private:
 	void createSamplers();
 
 	void createLightCamera();
+	void loadShaders();
 
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;

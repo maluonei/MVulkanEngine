@@ -14,9 +14,13 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Managers/ShaderManager.hpp"
+
 
 void PBR::SetUp()
 {
+    loadShaders();
+
     createSamplers();
     createLight();
     createCamera();
@@ -139,7 +143,7 @@ void PBR::CreateRenderPass()
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader2>();
-        std::vector<std::vector<VkImageView>> bufferTextureViews(1);
+    	std::vector<std::vector<VkImageView>> bufferTextureViews(1);
         auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
         auto wholeTextureSize = wholeTextures.size();
         for (auto i = 0; i < bufferTextureViews.size(); i++) {
@@ -248,6 +252,16 @@ void PBR::Clean()
     m_scene->Clean();
 
     MRenderApplication::Clean();
+}
+
+void PBR::loadShaders()
+{
+    Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl / shadow.vert.glsl", "glsl / shadow.frag.glsl" });
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
+
+    int shaderNum = Singleton<ShaderManager>::instance().GetNumShaders();
+	//Singleton<ShaderManager>::instance().AddShader();
 }
 
 void PBR::loadScene()
