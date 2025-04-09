@@ -48,49 +48,56 @@ struct RenderPassCreateInfo {
 class RenderPass {
 public:
 	RenderPass(MVulkanDevice device, RenderPassCreateInfo info);
-	void Create(std::shared_ptr<ShaderModule> shader,
-		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<std::vector<VkImageView>> imageViews, 
-		std::vector<VkSampler> samplers, 
-		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
-
-	void Create(std::shared_ptr<ShaderModule> shader,
-		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<uint32_t> storageBufferSizes,
-		std::vector<std::vector<VkImageView>> imageViews, 
-		std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
-
-	void Create(std::shared_ptr<ShaderModule> shader,
-		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<StorageBuffer> storageBuffers,
-		std::vector<std::vector<VkImageView>> imageViews,
-		std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//void Create(std::shared_ptr<ShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator, 
+	//	std::vector<std::vector<VkImageView>> imageViews, 
+	//	std::vector<VkSampler> samplers, 
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//
+	//void Create(std::shared_ptr<ShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator, 
+	//	std::vector<uint32_t> storageBufferSizes,
+	//	std::vector<std::vector<VkImageView>> imageViews, 
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//
+	//void Create(std::shared_ptr<ShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator, 
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> imageViews,
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//
+	//void Create(
+	//	std::shared_ptr<MeshShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> imageViews,
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void Create(
-		std::shared_ptr<MeshShaderModule> shader,
+		std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
 		MVulkanDescriptorSetAllocator& allocator,
-		std::vector<StorageBuffer> storageBuffers,
-		std::vector<std::vector<VkImageView>> imageViews,
-		std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+		std::vector<PassResources> resources
+		);
 
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent);
 	
-	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, 
-		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
-	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, 
+	//	std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+	//void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
 	void UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResources> resources);
 
@@ -102,7 +109,7 @@ public:
 	MVulkanRenderPass GetRenderPass() const { return m_renderPass; }
 	MVulkanPipeline GetPipeline() const { return m_pipeline; }
 	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
-	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
+	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts(int frameIndex) const { return m_descriptorLayouts[frameIndex]; }
 	//MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
 	//std::vector<MVulkanDescriptorSet> GetDescriptorSets(int frameIndex) const { return m_descriptorSets[index]; }
 	std::unordered_map<int, MVulkanDescriptorSet> GetDescriptorSets(int frameIndex) const { return m_descriptorSets[frameIndex]; }
@@ -111,7 +118,7 @@ public:
 
 	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
 
-	MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator);
+	//MVulkanDescriptorSet CreateDescriptorSet(MVulkanDescriptorSetAllocator& allocator);
 
 	void TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
@@ -120,24 +127,24 @@ public:
 
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 private:
-	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
-		std::vector<std::vector<VkImageView>> imageViews, 
-		std::vector<VkSampler> samplers, 
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
-
-	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
-		std::vector<uint32_t> storageBufferSizes,
-		std::vector<std::vector<VkImageView>> imageViews, 
-		std::vector<std::vector<VkImageView>> storageImageViews, 
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
-
-	void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
-		std::vector<StorageBuffer> storageBuffers,
-		std::vector<std::vector<VkImageView>> imageViews,
-		std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
+	//void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
+	//	std::vector<std::vector<VkImageView>> imageViews, 
+	//	std::vector<VkSampler> samplers, 
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure);
+	//
+	//void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<uint32_t> storageBufferSizes,
+	//	std::vector<std::vector<VkImageView>> imageViews, 
+	//	std::vector<std::vector<VkImageView>> storageImageViews, 
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure);
+	//
+	//void CreatePipeline(MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> imageViews,
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
 	void CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocator,
 		std::vector<StorageBuffer> storageBuffers,

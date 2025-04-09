@@ -108,14 +108,22 @@ void PBR::RecreateSwapchainAndRenderPasses()
         std::vector<VkSampler> samplers(1);
         samplers[0] = m_linearSampler.GetSampler();
 
-        m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
+        //m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
     }
 }
 
 void PBR::CreateRenderPass()
 {
+    createGbufferPass();
+    createShadowPass();
+    createShadingPass();
+
+    createLightCamera();
+}
+
+void PBR::createGbufferPass() {
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-    
+
     {
         std::vector<VkFormat> gbufferFormats;
         gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
@@ -143,7 +151,7 @@ void PBR::CreateRenderPass()
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
         std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader2>();
-    	std::vector<std::vector<VkImageView>> bufferTextureViews(1);
+        std::vector<std::vector<VkImageView>> bufferTextureViews(1);
         auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
         auto wholeTextureSize = wholeTextures.size();
         for (auto i = 0; i < bufferTextureViews.size(); i++) {
@@ -163,8 +171,16 @@ void PBR::CreateRenderPass()
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
-    }
 
+        std::vector<PassResources> resources;
+        resources.push_back(PassResources{
+
+            });
+    }
+}
+
+void PBR::createShadowPass() {
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
     {
         std::vector<VkFormat> shadowFormats(0);
         shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
@@ -193,6 +209,10 @@ void PBR::CreateRenderPass()
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_shadowPass, shadowShader, shadowShaderTextures, samplers);
     }
+}
+
+void PBR::createShadingPass() {
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
         std::vector<VkFormat> lightingPassFormats;
@@ -231,8 +251,6 @@ void PBR::CreateRenderPass()
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_lightingPass, lightingShader, gbufferViews, samplers);
     }
-
-    createLightCamera();
 }
 
 void PBR::PreComputes()

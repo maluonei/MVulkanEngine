@@ -141,32 +141,36 @@ public:
     inline MRaytracingCommandList& GetRaytracingCommandList(){return m_raytracingList;}
     MGraphicsCommandList& GetGraphicsList(int i);
 
-    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, 
-        std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    
-    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<ShaderModule> shader, 
-        std::vector<uint32_t> storageBufferSizes, 
-        std::vector<std::vector<VkImageView>> imageViews, 
-        std::vector<std::vector<VkImageView>> storageImageViews,
-        std::vector<VkSampler> samplers, 
-        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, 
+    //    std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+    //
+    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+    //    std::shared_ptr<ShaderModule> shader, 
+    //    std::vector<uint32_t> storageBufferSizes, 
+    //    std::vector<std::vector<VkImageView>> imageViews, 
+    //    std::vector<std::vector<VkImageView>> storageImageViews,
+    //    std::vector<VkSampler> samplers, 
+    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+    //
+    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+    //    std::shared_ptr<ShaderModule> shader,
+    //    std::vector<StorageBuffer> storageBuffers,
+    //    std::vector<std::vector<VkImageView>> imageViews,
+    //    std::vector<std::vector<VkImageView>> storageImageViews,
+    //    std::vector<VkSampler> samplers,
+    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+    //
+    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+    //    std::shared_ptr<MeshShaderModule> shader,
+    //    std::vector<StorageBuffer> storageBuffers,
+    //    std::vector<std::vector<VkImageView>> imageViews,
+    //    std::vector<std::vector<VkImageView>> storageImageViews,
+    //    std::vector<VkSampler> samplers,
+    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<ShaderModule> shader,
-        std::vector<StorageBuffer> storageBuffers,
-        std::vector<std::vector<VkImageView>> imageViews,
-        std::vector<std::vector<VkImageView>> storageImageViews,
-        std::vector<VkSampler> samplers,
-        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-
-    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<MeshShaderModule> shader,
-        std::vector<StorageBuffer> storageBuffers,
-        std::vector<std::vector<VkImageView>> imageViews,
-        std::vector<std::vector<VkImageView>> storageImageViews,
-        std::vector<VkSampler> samplers,
-        std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
+        std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources
+    );
 
     void CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass,
         std::shared_ptr<ShaderModule> shader,

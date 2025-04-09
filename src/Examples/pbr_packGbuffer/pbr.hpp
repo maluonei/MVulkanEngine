@@ -27,6 +27,10 @@ public:
 	virtual void PreComputes();
 	virtual void Clean();
 private:
+	void createGbufferPass();
+	void createShadowPass();
+	void createShadingPass();
+
 	void loadScene();
 	void createLight();
 	void createCamera();

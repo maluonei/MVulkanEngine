@@ -25,6 +25,113 @@ VkDescriptorType ResourceType2VkDescriptorType(const ResourceType type)
     }
 }
 
+PassResources PassResources::SetBufferResource(
+    int binding, int set, int resourceCount,
+    MCBV buffer, int offset, int range
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_ConstantBuffer;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_buffer = buffer.GetBuffer();
+    resource.m_offset = offset;
+    resource.m_range = range;
+
+    return resource;
+}
+
+PassResources PassResources::SetBufferResource(
+    int binding, int set, int resourceCount,
+    StorageBuffer buffer, int offset, int range
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_StorageBuffer;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_buffer = buffer.GetBuffer();
+    resource.m_offset = offset;
+    resource.m_range = range;
+
+    return resource;
+}
+
+PassResources PassResources::SetSampledImageResource(
+    int binding, int set, int resourceCount,
+    VkImageView view
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_SampledImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_view = view;
+
+    return resource;
+}
+
+
+PassResources PassResources::SetStorageImageResource(
+    int binding, int set, int resourceCount,
+    VkImageView view
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_StorageImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_view = view;
+
+    return resource;
+}
+
+
+PassResources PassResources::SetSamplerResource(
+    int binding, int set, int resourceCount,
+    VkSampler sampler
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_Sampler;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_sampler = sampler;
+
+    return resource;
+}
+
+PassResources PassResources::SetCombinedImageSamplerResource(
+    int binding, int set, int resourceCount,
+    VkAccelerationStructureKHR* accel
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_AccelerationStructure;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_acc = accel;
+
+    return resource;
+}
+
+
+PassResources PassResources::SetCombinedImageSamplerResource(
+    int binding, int set, int resourceCount,
+    VkImageView view, VkSampler sampler
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_CombinedImageSampler;
+    resource.m_binding = binding;
+    resource.m_set = set;
+    resource.m_resourceCount = resourceCount;
+    resource.m_view = view;
+    resource.m_sampler = sampler;
+
+    return resource;
+}
+
+
 MVulkanDescriptorSetAllocator::MVulkanDescriptorSetAllocator()
 {
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <variant>
 #include "Utils/VulkanUtil.hpp"
+#include "MVulkanRHI/MVulkanBuffer.hpp"
 
 enum ResourceType
 {
@@ -33,7 +34,45 @@ struct PassResources
 	VkAccelerationStructureKHR* m_acc;
 	int m_offset = 0;
 	int m_range = 0;
+
+	static PassResources SetBufferResource(
+		int binding, int set, int resourceCount,
+		MCBV buffer, int offset, int range
+	);
+
+	static PassResources SetBufferResource(
+		int binding, int set, int resourceCount,
+		StorageBuffer buffer, int offset, int range
+	);
+
+	static PassResources SetSampledImageResource(
+		int binding, int set, int resourceCount,
+		VkImageView view
+	);
+
+	static PassResources SetStorageImageResource(
+		int binding, int set, int resourceCount,
+		VkImageView view
+	);
+
+	static PassResources SetSamplerResource(
+		int binding, int set, int resourceCount,
+		VkSampler sampler
+	);
+
+	static PassResources SetCombinedImageSamplerResource(
+		int binding, int set, int resourceCount,
+		VkImageView view, VkSampler sampler
+	);
+
+	static PassResources SetCombinedImageSamplerResource(
+		int binding, int set, int resourceCount,
+		VkAccelerationStructureKHR* accel
+	);
 };
+
+
+
 
 struct MVulkanDescriptorImageInfo {
 	VkDescriptorImageInfo imageInfo;

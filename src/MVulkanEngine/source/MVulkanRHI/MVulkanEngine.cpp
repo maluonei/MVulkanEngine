@@ -192,39 +192,44 @@ MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
     return m_graphicsLists[i];
 }
 
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, 
-    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
-{
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers, accelerationStructures);
-}
+//void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, 
+//    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
+//{
+//    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, imageViews, samplers, accelerationStructures);
+//}
+//
+//
+//void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<uint32_t> storageBufferSizes,
+//    std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
+//{
+//    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBufferSizes, imageViews, storageImageViews, samplers, accelerationStructures);
+//}
+//
+//void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+//    std::shared_ptr<ShaderModule> shader,
+//    std::vector<StorageBuffer> storageBuffers,
+//    std::vector<std::vector<VkImageView>> imageViews,
+//    std::vector<std::vector<VkImageView>> storageImageViews,
+//    std::vector<VkSampler> samplers,
+//    std::vector<VkAccelerationStructureKHR> accelerationStructures)
+//{
+//    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
+//}
+//
+//void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+//    std::shared_ptr<MeshShaderModule> shader,
+//    std::vector<StorageBuffer> storageBuffers,
+//    std::vector<std::vector<VkImageView>> imageViews,
+//    std::vector<std::vector<VkImageView>> storageImageViews,
+//    std::vector<VkSampler> samplers,
+//    std::vector<VkAccelerationStructureKHR> accelerationStructures) 
+//{
+//    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
+//}
 
-
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<uint32_t> storageBufferSizes,
-    std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
+void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources)
 {
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBufferSizes, imageViews, storageImageViews, samplers, accelerationStructures);
-}
-
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    std::shared_ptr<ShaderModule> shader,
-    std::vector<StorageBuffer> storageBuffers,
-    std::vector<std::vector<VkImageView>> imageViews,
-    std::vector<std::vector<VkImageView>> storageImageViews,
-    std::vector<VkSampler> samplers,
-    std::vector<VkAccelerationStructureKHR> accelerationStructures)
-{
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
-}
-
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    std::shared_ptr<MeshShaderModule> shader,
-    std::vector<StorageBuffer> storageBuffers,
-    std::vector<std::vector<VkImageView>> imageViews,
-    std::vector<std::vector<VkImageView>> storageImageViews,
-    std::vector<VkSampler> samplers,
-    std::vector<VkAccelerationStructureKHR> accelerationStructures) 
-{
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, resources);
 }
 
 void MVulkanEngine::CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<StorageBuffer> storageBuffers, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)

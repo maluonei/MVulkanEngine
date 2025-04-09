@@ -109,6 +109,7 @@ protected:
 
 class MGraphicsCommandList :public MVulkanCommandList {
 public:
+	MGraphicsCommandList() = default;
 	MGraphicsCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	//void BindPipeline(VkPipeline pipeline);
 	void SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport);
@@ -127,6 +128,7 @@ public:
 
 class MComputeCommandList :public MVulkanCommandList {
 public:
+	MComputeCommandList() = default;
 	MComputeCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	//void BindPipeline(VkPipeline pipeline);
 	//void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
@@ -136,6 +138,7 @@ public:
 class MRaytracingCommandList:public MVulkanCommandList
 {
 public:
+	MRaytracingCommandList() = default;
 	MRaytracingCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	//void BindPipeline(VkPipeline pipeline);
 	//VkDeviceSize BuildAccelerationStructure(std::vector<AccelerationStructureBuildData>& blasBuildData,
