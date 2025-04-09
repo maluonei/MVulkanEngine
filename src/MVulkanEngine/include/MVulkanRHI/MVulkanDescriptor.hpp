@@ -3,8 +3,37 @@
 #define MVULKANDESCRIPTOR_H
 
 #include "vulkan/vulkan_core.h"
-#include "vector"
+#include <vector>
+#include <variant>
 #include "Utils/VulkanUtil.hpp"
+
+enum ResourceType
+{
+	ResourceType_ConstantBuffer,
+	ResourceType_StorageBuffer,
+	ResourceType_SampledImage,
+	ResourceType_StorageImage,
+	ResourceType_Sampler,
+	ResourceType_CombinedImageSampler,
+	ResourceType_AccelerationStructure
+};
+
+VkDescriptorType ResourceTypeVkDescriptorType(const ResourceType type);
+
+struct PassResources
+{
+	ResourceType m_type;
+	int m_binding;
+	int m_set;
+	int m_resourceCount;
+
+	VkBuffer m_buffer;
+	VkImageView m_view;
+	VkSampler m_sampler;
+	VkAccelerationStructureKHR* m_acc;
+	int m_offset = 0;
+	int m_range = 0;
+};
 
 struct MVulkanDescriptorImageInfo {
 	VkDescriptorImageInfo imageInfo;
@@ -49,6 +78,7 @@ public:
 
 	inline VkDescriptorSet Get() { return m_set; }
 private:
+	//int					m_setIndex;
 	VkDevice			m_device;
 	VkDescriptorPool	m_pool;
 	VkDescriptorSet		m_set;
@@ -75,7 +105,12 @@ public:
 		std::vector<VkDescriptorBufferInfo> bufferInfos,
 		std::vector<std::vector<VkDescriptorImageInfo>> imageInfos);
 
-private:
-	VkWriteDescriptorSet m_write;
+	void Update(
+		VkDevice device,
+		VkDescriptorSet set,
+		std::vector<PassResources> resources);
+
+//private:
+//	VkWriteDescriptorSet m_write;
 };
 #endif

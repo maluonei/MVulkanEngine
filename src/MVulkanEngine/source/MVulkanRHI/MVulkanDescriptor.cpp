@@ -2,6 +2,29 @@
 #include <stdexcept>
 #include <spdlog/spdlog.h>
 
+VkDescriptorType ResourceType2VkDescriptorType(const ResourceType type)
+{
+    switch (type)
+    {
+	    case ResourceType_ConstantBuffer:
+		   return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	    case ResourceType_StorageBuffer:
+		   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case ResourceType_SampledImage:
+            return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	    case ResourceType_StorageImage:
+		   return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; 
+	    case ResourceType_CombinedImageSampler:
+		   return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        case ResourceType_Sampler:
+            return VK_DESCRIPTOR_TYPE_SAMPLER;
+	    case ResourceType_AccelerationStructure:
+		   return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		default:
+			return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    }
+}
+
 MVulkanDescriptorSetAllocator::MVulkanDescriptorSetAllocator()
 {
 
@@ -53,34 +76,12 @@ void MVulkanDescriptorSetLayouts::Create(VkDevice device, std::vector<MVulkanDes
     for (auto i = 0; i < bindings.size(); i++) {
         bindings2.push_back(bindings[i].binding);
     }
-    
-    //VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    //layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    //layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    //layoutInfo.pBindings = bindings2.data();
-    //
-    //VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
-
-    //m_device = device;
-
-    //std::vector<VkDescriptorSetLayoutBinding> bindings2;
-    //for (auto i = 0; i < bindings.size(); i++) {
-    //    VkDescriptorSetLayoutBinding _binding = bindings[i].binding;
-    //    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    //    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    //    layoutInfo.bindingCount = static_cast<uint32_t>(1);
-    //    layoutInfo.pBindings = &_binding;
-    //    if(bindings[i].bindingType == BindingType::Bindless)
-    //        layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;  // ÔÊÐí¶¯Ì¬¸üÐÂ
-    //    
-    //    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
-    //}
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings2.data();
-    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;  // ÔÊÐí¶¯Ì¬¸üÐÂ
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½
     
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_layout));
 }
@@ -212,4 +213,80 @@ void MVulkanDescriptorSetWrite::Update(
     }
 
     vkUpdateDescriptorSets(device, constantBufferInfoCount + storageBufferInfoCount + combinedImageInfosCount + separateImageInfosCount + storageImageInfosCount + separateSamplerInfosCount + accelerationStructuresCount , descriptorWrite.data(), 0, nullptr);
+}
+
+void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std::vector<PassResources> resources)
+{
+    std::vector<VkWriteDescriptorSet> descriptorWrite(resources.size());
+
+    std::vector<VkDescriptorBufferInfo> bufferInfos;
+    std::vector<VkDescriptorImageInfo> imageInfos;
+    std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureWrites;
+
+    for (int i=0;i< resources.size();i++)
+    {
+        auto& resource = resources[i];
+
+        descriptorWrite[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[i].dstSet = set;
+        descriptorWrite[i].dstBinding = static_cast<uint32_t>(resource.m_binding);
+        descriptorWrite[i].dstArrayElement = 0;
+        descriptorWrite[i].descriptorType = ResourceType2VkDescriptorType(resource.m_type);
+        descriptorWrite[i].descriptorCount = resource.m_resourceCount;
+        //descriptorWrite[i].pImageInfo =
+
+        VkDescriptorBufferInfo bufferInfo{};
+        VkDescriptorImageInfo imageInfo{};
+        VkWriteDescriptorSetAccelerationStructureKHR acclInfo{};
+        switch (resource.m_type)
+        {
+        case ResourceType_ConstantBuffer:
+        case ResourceType_StorageBuffer:
+            bufferInfo.buffer = resource.m_buffer;
+            bufferInfo.offset = resource.m_offset;
+            bufferInfo.range = resource.m_range;
+
+            bufferInfos.emplace_back(bufferInfo);
+            descriptorWrite[i].pBufferInfo = &bufferInfos[bufferInfos.size()-1];
+            break;
+        case ResourceType_SampledImage:
+            imageInfo.imageView = resource.m_view;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            imageInfos.emplace_back(imageInfo);
+            descriptorWrite[i].pImageInfo = &imageInfos[imageInfos.size() - 1];
+            break;
+        case ResourceType_StorageImage:
+            imageInfo.imageView = resource.m_view;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+            imageInfos.emplace_back(imageInfo);
+            descriptorWrite[i].pImageInfo = &imageInfos[imageInfos.size() - 1];
+            break;
+        case ResourceType_Sampler:
+            imageInfo.sampler = resource.m_sampler;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            imageInfos.emplace_back(imageInfo);
+            descriptorWrite[i].pImageInfo = &imageInfos[imageInfos.size() - 1];
+            break;
+        case ResourceType_CombinedImageSampler:
+            imageInfo.imageView = resource.m_view;
+            imageInfo.sampler = resource.m_sampler;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            imageInfos.emplace_back(imageInfo);
+            descriptorWrite[i].pImageInfo = &imageInfos[imageInfos.size() - 1];
+            break;
+        case ResourceType_AccelerationStructure:
+            acclInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+            acclInfo.accelerationStructureCount = 1;
+            acclInfo.pAccelerationStructures = resource.m_acc;
+
+            accelerationStructureWrites.emplace_back(acclInfo);
+            descriptorWrite[i].pNext = &accelerationStructureWrites[imageInfos.size() - 1];
+        }
+        
+        vkUpdateDescriptorSets(device, descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
+    }
 }

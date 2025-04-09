@@ -4,7 +4,8 @@ MVulkanCommandList::MVulkanCommandList() {
 
 }
 
-MVulkanCommandList::MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info)
+MVulkanCommandList::MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info, VkPipelineBindPoint bindingPoint)
+	:m_bindPoint(bindingPoint)
 {
     Create(device, info);
 }
@@ -40,6 +41,11 @@ void MVulkanCommandList::BeginRenderPass(VkRenderPassBeginInfo* info)
 void MVulkanCommandList::EndRenderPass()
 {
     vkCmdEndRenderPass(m_commandBuffer);
+}
+
+void MVulkanCommandList::BindPipeline(VkPipeline pipeline)
+{
+    vkCmdBindPipeline(m_commandBuffer, m_bindPoint, pipeline);
 }
 
 void MVulkanCommandList::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -162,6 +168,35 @@ void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned 
     );
 }
 
+void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet,
+	uint32_t descriptorSetCount, VkDescriptorSet* set)
+{
+    vkCmdBindDescriptorSets(m_commandBuffer, m_bindPoint, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+}
+
+void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, std::vector<MVulkanDescriptorSet> sets)
+{
+    std::vector<VkDescriptorSet> _sets(sets.size());
+
+    for (auto i=0;i<sets.size();i++)
+    {
+        _sets[i] = sets[i].Get();
+    }
+
+    BindDescriptorSet(pipelineLayout, 0, _sets.size(), _sets.data());
+}
+
+void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout,
+	std::unordered_map<int, MVulkanDescriptorSet> sets)
+{
+    for (auto set:sets)
+    {
+        int firstSet = set.first;
+        auto _set = set.second.Get();
+        BindDescriptorSet(pipelineLayout, firstSet, 1, &_set);
+    }
+}
+
 void MVulkanCommandList::BlitImage(VkImage srcImage, VkImageLayout srcLayout, VkImage dstImage, VkImageLayout dstLayout, std::vector<VkImageBlit> blits, VkFilter filter)
 {
     vkCmdBlitImage(m_commandBuffer,
@@ -225,13 +260,11 @@ void MVulkanCommandList::EndDebugLabel()
     }
 }
 
-//void MVulkanCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
-//{
-//    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
-//}
 
-void MGraphicsCommandList::BindPipeline(VkPipeline pipeline) {
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+MGraphicsCommandList::MGraphicsCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info):
+	MVulkanCommandList(device, info, VK_PIPELINE_BIND_POINT_GRAPHICS)
+{
 }
 
 void MGraphicsCommandList::SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport)
@@ -342,29 +375,21 @@ void MGraphicsCommandList::EndRendering()
     vkCmdEndRendering(m_commandBuffer);
 }
 
-void MGraphicsCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
+MComputeCommandList::MComputeCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info)
+	:MVulkanCommandList(device, info, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_COMPUTE)
 {
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
+
 }
 
-void MComputeCommandList::BindPipeline(VkPipeline pipeline) {
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-}
-
-void MComputeCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
-{
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
-}
 
 void MComputeCommandList::Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
 {
     vkCmdDispatch(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
 }
 
-
-void MRaytracingCommandList::BindPipeline(VkPipeline pipeline)
+MRaytracingCommandList::MRaytracingCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info)
+    :MVulkanCommandList(device, info, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR)
 {
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 }
 
 void MRaytracingCommandList::BuildAccelerationStructure(
@@ -382,10 +407,6 @@ void MRaytracingCommandList::BuildAccelerationStructure(
     vkCmdBuildAccelerationStructuresKHR(m_commandBuffer, collectedBuildInfo.size(), collectedBuildInfo.data(), rangeInfos.data());
 }
 
-void MRaytracingCommandList::BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set)
-{
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, firstSet, descriptorSetCount, set, 0, nullptr);
-}
 
 //static auto vkGetAccelerationStructureBuildSizesKHR       = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkGetAccelerationStructureBuildSizesKHR"));
 //static auto vkCreateAccelerationStructureKHR              = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(m_device->GetDevice(), "vkCreateAccelerationStructureKHR"));

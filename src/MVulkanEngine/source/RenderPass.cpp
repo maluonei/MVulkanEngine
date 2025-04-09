@@ -81,9 +81,9 @@ void RenderPass::Clean()
 
     m_descriptorLayouts.Clean();
 
-    for (auto descriptorSet : m_descriptorSets) {
-        descriptorSet.Clean();
-    }
+    //for (auto descriptorSet : m_descriptorSets) {
+    //    descriptorSet.Clean();
+    //}
 
     m_pipeline.Clean();
 
@@ -231,10 +231,57 @@ void RenderPass::UpdateDescriptorSetWrite(
     }
 }
 
+void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResources> resources)
+{
+    std::sort(resources.begin(), resources.end(), [](PassResources a, PassResources b) {
+        if (a.m_set == b.m_set)
+        {
+            return a.m_binding < b.m_binding;
+        }
+    	return a.m_set < b.m_set; // ½µÐò
+        });
+
+    MVulkanDescriptorSetWrite write;
+    auto descriptorSet = GetDescriptorSets(frameIndex);
+
+    int set = resources[0].m_set;
+    std::vector<PassResources> _resources;
+    for (auto i=0;i<resources.size();i++)
+    {
+        const auto& resource = resources[i];
+        if (resource.m_set!=set)
+        {
+            //auto descriptorSet = GetDescriptorSets(frameIndex);
+            if (descriptorSet.find(set) == descriptorSet.end())
+            {
+				spdlog::error("error set");
+            }
+
+        	auto descriptorset = descriptorSet[set];
+            write.Update(m_device.GetDevice(), descriptorset.Get(), resources);
+            _resources.clear();
+            set = resource.m_set;
+        }
+
+        _resources.emplace_back(resource);
+    }
+
+    {
+        //auto descriptorSet = GetDescriptorSets(frameIndex);
+        if (descriptorSet.find(set) == descriptorSet.end())
+        {
+            spdlog::error("error set");
+        }
+        auto descriptorset = descriptorSet[set];
+        write.Update(m_device.GetDevice(), descriptorset.Get(), resources);
+        _resources.clear();
+    }
+}
+
 
 void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
-    std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
-    std::vector<VkAccelerationStructureKHR> accelerationStructure)
+                                std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, 
+                                std::vector<VkAccelerationStructureKHR> accelerationStructure)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
@@ -729,6 +776,144 @@ void RenderPass::CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocat
     }
 
     m_meshShader->Clean();
+}
+
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<PassResources> resources)
+{
+    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
+    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
+    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+
+    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
+    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
+    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindings = resourceOutVert.GetBindings2();
+    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindingsFrag = resourceOutFrag.GetBindings2();
+    //bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    //bindings = RemoveRepeatedBindings(bindings);
+    int minSet = std::min(bindings.size(), bindingsFrag.size());
+    int maxSet = std::max(bindings.size(), bindingsFrag.size());
+	for (int set = 0; set < minSet; set++) {
+        bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
+    }
+
+    m_descriptorLayouts.resize(maxSet);
+    for (int set = 0; set < maxSet; set++) {
+        m_descriptorLayouts[set].Create(m_device.GetDevice(), bindings[set]);
+    }
+    //m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
+    std::vector<VkDescriptorSetLayout> layouts(maxSet);
+    for (int set = 0; set < maxSet; set++) {
+        layouts[set] = m_descriptorLayouts[set].Get();
+    }
+    //std::vector < std::vector<VkDescriptorSetLayout>> layouts();
+
+    //m_descriptorSets.resize(layouts.size());
+    //for (auto i = 0; i < layouts.size(); i++) {
+    //    m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
+    //}
+    for (int i = 0; i < m_descriptorSets.size(); i++) {
+        auto sets = m_descriptorSets[i];
+        for (auto& set : sets) {
+            int setIndex = set.first;
+            auto& descriptorSet = set.second;
+            descriptorSet.Create(m_device.GetDevice(), allocator.Get(), layouts[setIndex]);
+        }
+    }
+
+    //m_cbvCount = 0;
+    //m_separateSamplerCount = 0;
+    //m_separateImageCount = 0;
+    //m_combinedImageCount = 0;
+    //m_asCount = 0;
+    //
+    //for (auto binding = 0; binding < bindings.size(); binding++) {
+    //    switch (bindings[binding].binding.descriptorType) {
+    //    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    //    {
+    //        m_cbvCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+    //    {
+    //        m_storageBufferCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+    //    {
+    //        m_combinedImageCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_SAMPLER:
+    //    {
+    //        m_separateSamplerCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+    //    {
+    //        m_separateImageCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+    //    {
+    //        m_storageImageCount++;
+    //        break;
+    //    }
+    //    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+    //    {
+    //        m_asCount++;
+    //        break;
+    //    }
+    //    }
+    //}
+    //
+    //m_uniformBuffers.resize(m_info.frambufferCount);
+    //m_storageBuffer.resize(m_storageBufferCount);
+    //
+    //for (auto i = 0; i < m_info.frambufferCount; i++) {
+    //    m_uniformBuffers[i].resize(m_cbvCount);
+    //    for (auto binding = 0; binding < bindings.size(); binding++) {
+    //        switch (bindings[binding].binding.descriptorType) {
+    //        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    //        {
+    //            MCBV buffer;
+    //            BufferCreateInfo info;
+    //            info.arrayLength = bindings[binding].binding.descriptorCount;
+    //            info.size = bindings[binding].size;
+    //            buffer.Create(m_device, info);
+    //
+    //            //m_uniformBuffers[i].push_back(buffer);
+    //            m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
+    //            break;
+    //        }
+    //        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+    //        {
+    //            //StorageBuffer buffer;
+    //            //BufferCreateInfo info;
+    //            //info.arrayLength = bindings[binding].binding.descriptorCount;
+    //            ////info.size = bindings[binding].size;
+    //            //info.size = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
+    //            //buffer.Create(m_device, info);
+    //
+    //            m_storageBuffer[bindings[binding].binding.binding - m_cbvCount] = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
+    //            break;
+    //        }
+    //        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+    //        {
+    //            //m_samplerTypes
+    //            break;
+    //        }
+    //        }
+    //    }
+    //}
+    //
+    //UpdateDescriptorSetWrite(imageViews, storageImageViews, samplers, accelerationStructure);
+    //
+    //m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
+    //    m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
+    //    m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
+    //    m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
+
+    m_shader->Clean();
 }
 
 void RenderPass::CreateRenderPass()

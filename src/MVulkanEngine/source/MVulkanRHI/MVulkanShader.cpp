@@ -351,6 +351,167 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
     return out;
 }
 
+ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
+{
+    ShaderStageFlagBits stage;
+    std::string entryPointName;
+
+    ShaderReflectorOut out;
+    auto shader_stage = m_compiler.get_entry_points_and_stages();
+    for (const auto& _stage : shader_stage) {
+        switch (_stage.execution_model) {
+        case spv::ExecutionModel::ExecutionModelVertex:
+            stage = ShaderStageFlagBits::VERTEX;
+            break;
+        case spv::ExecutionModelFragment:
+            stage = ShaderStageFlagBits::FRAGMENT;
+            break;
+        case spv::ExecutionModelGLCompute:
+            stage = ShaderStageFlagBits::COMPUTE;
+            break;
+        case spv::ExecutionModelGeometry:
+            stage = ShaderStageFlagBits::GEOMETRY;
+            break;
+        case spv::ExecutionModelTaskEXT:
+            stage = ShaderStageFlagBits::TASK;
+            break;
+        case spv::ExecutionModelMeshEXT:
+            stage = ShaderStageFlagBits::MESH;
+            break;
+        default:
+            stage = ShaderStageFlagBits::VERTEX;
+            break;
+        }
+        entryPointName = _stage.name;
+    }
+
+
+    for (const auto& ub : m_resources.uniform_buffers) {
+        auto& type = m_compiler.get_type(ub.type_id);
+        // 获取 Descriptor Set 和绑定点
+        uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
+        size_t size = m_compiler.get_declared_struct_size(type);
+
+        spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
+    }
+
+    for (const auto& sb : m_resources.storage_buffers) {
+        //if (sb.name.find("counter.var") != std::string::npos) {
+        //    continue;
+        //
+
+        auto& type = m_compiler.get_type(sb.type_id);
+        // 获取 Descriptor Set 和绑定点
+        uint32_t set = m_compiler.get_decoration(sb.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
+        size_t size = m_compiler.get_declared_struct_size(type);
+
+        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", sb.name, set, binding, size);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ sb.name, stage, set, binding, size, 0, arrayLength });
+    }
+
+    // 处理 sampled images (纹理) -- glsl
+    for (const auto& image : m_resources.sampled_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
+
+        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    // 处理 seperate images (纹理) -- hlsl
+    for (const auto& image : m_resources.separate_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
+
+        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    //storage Images
+    for (const auto& image : m_resources.storage_images) {
+        auto& type = m_compiler.get_type(image.type_id);
+        uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
+
+        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    // 处理 seperate samplers (采样器) -- hlsl
+    for (const auto& sampler : m_resources.separate_samplers) {
+        auto& type = m_compiler.get_type(sampler.type_id);
+        uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(sampler.id, spv::DecorationBinding);
+
+        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}", sampler.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+            //std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    for (const auto& as : m_resources.acceleration_structures) {
+        auto& type = m_compiler.get_type(as.type_id);
+        uint32_t set = m_compiler.get_decoration(as.id, spv::DecorationDescriptorSet);
+        uint32_t binding = m_compiler.get_decoration(as.id, spv::DecorationBinding);
+
+        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}", as.name, set, binding);
+
+        uint32_t arrayLength = 1;
+        if (!type.array.empty()) {
+            arrayLength = type.array[0];
+        }
+
+        out.m_resources.push_back(ShaderResourceInfo{ as.name, stage, set, binding, 0, 0, arrayLength });
+    }
+
+    return out;
+}
+
 std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
 {
     std::vector<MVulkanDescriptorSetLayoutBinding> bindings;
@@ -449,6 +610,29 @@ std::vector<MVulkanDescriptorSetLayoutBinding> ShaderReflectorOut::GetBindings()
     }
 
     return bindings;
+}
+
+std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> ShaderReflectorOut::GetBindings2()
+{
+    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> res;
+
+    for (const auto& resource:m_resources)
+    {
+        if (res.size() < resource.set)
+        {
+            res.resize(resource.set);
+        }
+
+        MVulkanDescriptorSetLayoutBinding binding{};
+        binding.binding.binding = resource.binding;
+        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        binding.binding.descriptorCount = resource.descriptorCount;
+        binding.binding.pImmutableSamplers = nullptr;
+        binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(resource.stage);
+        res[resource.set].push_back(binding);
+    }
+
+    return res;
 }
 
 std::vector<MVulkanDescriptorSetLayoutBinding> RemoveRepeatedBindings(std::vector<MVulkanDescriptorSetLayoutBinding> bindings)

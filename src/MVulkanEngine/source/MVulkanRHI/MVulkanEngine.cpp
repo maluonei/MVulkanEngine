@@ -988,8 +988,10 @@ void MVulkanEngine::recordCommandBuffer(
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
-    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
+	//commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+
 
     VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
@@ -1053,8 +1055,10 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
-    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    //auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    //commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
 
     VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
@@ -1125,8 +1129,10 @@ void MVulkanEngine::recordCommandBuffer(
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
-    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    //auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    //commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
 
     VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
@@ -1188,8 +1194,10 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
-    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    //auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    //commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
 
     VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     VkDeviceSize offsets[] = { 0 };
@@ -1363,8 +1371,10 @@ void MVulkanEngine::recordMeshShaderCommandBuffer(uint32_t imageIndex, std::shar
     renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
-    auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
-    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    //auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();
+    //commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), 0, 1, &descriptorSet);
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
 
     //VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
     //VkDeviceSize offsets[] = { 0 };

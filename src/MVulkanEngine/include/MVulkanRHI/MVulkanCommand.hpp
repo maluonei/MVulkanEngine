@@ -4,6 +4,7 @@
 
 #include "vulkan/vulkan_core.h"
 #include "MVulkanDevice.hpp"
+#include "MVulkanRHI/MVulkanDescriptor.hpp"
 //#include "MVulkanRHI/MVulkanRaytracing.hpp"
 #include "map"
 
@@ -61,7 +62,7 @@ struct MVulkanImageMemoryBarrier {
 class MVulkanCommandList {
 public:
 	MVulkanCommandList();
-	MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	MVulkanCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info, VkPipelineBindPoint bindingPoint);
 	//~MVulkanCommandList();
 
 	void Begin();
@@ -70,7 +71,7 @@ public:
 	void BeginRenderPass(VkRenderPassBeginInfo* info);
 	void EndRenderPass();
 
-	virtual void BindPipeline(VkPipeline pipeline) = 0;
+	virtual void BindPipeline(VkPipeline pipeline);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
@@ -78,7 +79,9 @@ public:
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel=0, uint32_t baseArrayLayer=0);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
-	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set) = 0;
+	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
+	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, std::vector<MVulkanDescriptorSet> sets);
+	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, std::unordered_map<int, MVulkanDescriptorSet> sets);
 
 	void BlitImage(
 		VkImage srcImage, VkImageLayout srcLayout,
@@ -96,6 +99,7 @@ public:
 	};
 
 protected:
+	VkPipelineBindPoint  m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	//void endSingleTimeCommands(VkDevice device);
 	VkDevice			 m_device;
 	VkCommandPool		 m_commandPool;
@@ -105,12 +109,13 @@ protected:
 
 class MGraphicsCommandList :public MVulkanCommandList {
 public:
-	void BindPipeline(VkPipeline pipeline);
+	MGraphicsCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	//void BindPipeline(VkPipeline pipeline);
 	void SetViewport(uint32_t firstViewport, uint32_t viewportNum, VkViewport* viewport);
 	void SetScissor(uint32_t firstScissor, uint32_t scissorNum, VkRect2D* scissor);
 	void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffer, const VkDeviceSize* offset);
 	void BindIndexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer buffer, const VkDeviceSize* offset);
-	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
+	//void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 	void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance);
 	void DrawIndexedIndirectCommand(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride);
@@ -122,15 +127,17 @@ public:
 
 class MComputeCommandList :public MVulkanCommandList {
 public:
-	void BindPipeline(VkPipeline pipeline);
-	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
+	MComputeCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	//void BindPipeline(VkPipeline pipeline);
+	//void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 };
 
 class MRaytracingCommandList:public MVulkanCommandList
 {
 public:
-	void BindPipeline(VkPipeline pipeline);
+	MRaytracingCommandList(VkDevice device, const MVulkanCommandListCreateInfo& info);
+	//void BindPipeline(VkPipeline pipeline);
 	//VkDeviceSize BuildAccelerationStructure(std::vector<AccelerationStructureBuildData>& blasBuildData,
 	//										std::vector<AccelKHR>&						 blasAccel,
 	//										const std::vector<VkDeviceAddress>&          scratchAddress,
@@ -141,7 +148,7 @@ public:
 	void BuildAccelerationStructure(std::vector<VkAccelerationStructureBuildGeometryInfoKHR> collectedBuildInfo,
 									std::vector<VkAccelerationStructureBuildRangeInfoKHR>   collectedRangeInfo);
 
-	void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
+	//void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	
 private:
 	

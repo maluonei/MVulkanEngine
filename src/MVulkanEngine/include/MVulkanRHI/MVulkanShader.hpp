@@ -43,6 +43,7 @@ struct ShaderResourceInfo {
 };
 
 struct ShaderReflectorOut {
+	std::vector<ShaderResourceInfo> m_resources;
 	std::vector<ShaderResourceInfo> uniformBuffers;
 	std::vector<ShaderResourceInfo> storageBuffers;
 
@@ -54,6 +55,7 @@ struct ShaderReflectorOut {
 	std::vector<ShaderResourceInfo> accelarationStructs;
 
 	std::vector<MVulkanDescriptorSetLayoutBinding> GetBindings();
+	std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> GetBindings2();
 };
 
 std::vector<MVulkanDescriptorSetLayoutBinding> RemoveRepeatedBindings(std::vector<MVulkanDescriptorSetLayoutBinding> bindings);
@@ -65,6 +67,7 @@ public:
 	PipelineVertexInputStateInfo GenerateVertexInputAttributes();
 	MVulkanDescriptorSet GenerateDescriptorSet();
 	ShaderReflectorOut GenerateShaderReflactorOut();
+	ShaderReflectorOut GenerateShaderReflactorOut2();
 
 	void GenerateVertexInputBindingDescription();
 private:

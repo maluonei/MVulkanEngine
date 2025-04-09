@@ -66,6 +66,19 @@ public:
 
 	void Create(VkDevice device,
 		MVulkanPilelineCreateInfo info,
+		VkShaderModule vertShaderModule,
+		VkShaderModule geomShaderModule,
+		VkShaderModule fragShaderModule,
+		VkRenderPass renderPass,
+		PipelineVertexInputStateInfo vertexStateInfo,
+		std::vector<VkDescriptorSetLayout> layout,
+		uint32_t numAttachments,
+		std::string vertEntryPoint = "main",
+		std::string geomEntryPoint = "main",
+		std::string fragEntryPoint = "main");
+
+	void Create(VkDevice device,
+		MVulkanPilelineCreateInfo info,
 		VkShaderModule taskShaderModule,
 		VkShaderModule meshShaderModule,
 		VkShaderModule fragShaderModule,

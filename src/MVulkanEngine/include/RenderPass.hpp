@@ -10,6 +10,7 @@
 #include "MVulkanRHI/MVulkanCommand.hpp"
 #include "MVulkanRHI/MVulkanSwapchain.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include <variant>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 
 class ShaderModule;
@@ -82,16 +83,6 @@ public:
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
-	//void Create(
-	//	std::shared_ptr<ShaderModule> shader,
-	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-	//	MVulkanDescriptorSetAllocator& allocator,
-	//	std::vector<StorageBuffer> storageBuffers,
-	//	std::vector<std::vector<VkImageView>> imageViews,
-	//	std::vector<std::vector<VkImageView>> storageImageViews,
-	//	std::vector<VkSampler> samplers,
-	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
-
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent);
@@ -100,6 +91,8 @@ public:
 		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 	void UpdateDescriptorSetWrite(std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews,
 		std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
+
+	void UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResources> resources);
 
 	void SetUBO(uint8_t binding, void* data);
 	void LoadCBV(uint32_t alignment);
@@ -110,8 +103,10 @@ public:
 	MVulkanPipeline GetPipeline() const { return m_pipeline; }
 	MVulkanFrameBuffer GetFrameBuffer(uint32_t index) const { return m_frameBuffers[index]; }
 	MVulkanDescriptorSetLayouts GetDescriptorSetLayouts() const { return m_descriptorLayouts; }
-	MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
-	
+	//MVulkanDescriptorSet GetDescriptorSet(int index) const { return m_descriptorSets[index]; }
+	//std::vector<MVulkanDescriptorSet> GetDescriptorSets(int frameIndex) const { return m_descriptorSets[index]; }
+	std::unordered_map<int, MVulkanDescriptorSet> GetDescriptorSets(int frameIndex) const { return m_descriptorSets[frameIndex]; }
+
 	std::shared_ptr<ShaderModule> GetShader() const { return m_shader; }
 
 	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
@@ -151,6 +146,10 @@ private:
 		std::vector<VkSampler> samplers,
 		std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
+	void CreatePipeline(
+		MVulkanDescriptorSetAllocator& allocator,
+		std::vector<PassResources> resources);
+
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList);
 	void SetShader(std::shared_ptr<ShaderModule> shader);
@@ -174,8 +173,11 @@ private:
 	MVulkanGraphicsPipeline			m_pipeline;
 	std::vector<MVulkanFrameBuffer> m_frameBuffers;
 
-	MVulkanDescriptorSetLayouts		m_descriptorLayouts;
-	std::vector<MVulkanDescriptorSet> m_descriptorSets;
+	//MVulkanDescriptorSetLayouts		m_descriptorLayouts;
+	std::vector<MVulkanDescriptorSetLayouts> m_descriptorLayouts;
+
+	//std::vector<>
+	std::vector<std::unordered_map<int, MVulkanDescriptorSet>> m_descriptorSets;
 
 	uint32_t m_cbvCount = 0;
 	uint32_t m_storageBufferCount = 0;
