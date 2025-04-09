@@ -10,6 +10,7 @@ MVulkanBuffer::MVulkanBuffer(BufferType _type):m_type(_type)
 
 void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 {
+    m_info = info;
     m_device = device.GetDevice();
     m_bufferSize = info.size;
 

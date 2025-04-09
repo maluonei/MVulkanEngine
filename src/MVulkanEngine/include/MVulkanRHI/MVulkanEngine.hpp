@@ -22,6 +22,7 @@
 #include <memory>
 #include "MVulkanSyncObject.hpp"
 #include "Managers/Singleton.hpp"
+#include "MVulkanDescriptorWrite.hpp"
 //#include "Camera.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -170,6 +171,10 @@ public:
 
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
         std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources
+    );
+
+    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+        std::shared_ptr<ShaderModule> shader
     );
 
     void CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass,

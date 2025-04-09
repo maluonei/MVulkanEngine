@@ -7,11 +7,12 @@ struct MVPBuffer
 };
 
 [[vk::binding(0, 0)]]
-cbuffer ubo0 : register(b0)
+cbuffer MVPBuffer : register(b0)
 {
     MVPBuffer mvp;
 };
 
+#define MVPBuffer ubo0
 //[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
 
 struct VSInput

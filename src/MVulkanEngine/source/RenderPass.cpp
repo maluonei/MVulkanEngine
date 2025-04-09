@@ -3,6 +3,7 @@
 #include "Shaders/ShaderModule.hpp"
 #include "Managers/GlobalConfig.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
+#include "Managers/ShaderManager.hpp"
 
 RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
     m_device(device), m_info(info)
@@ -70,6 +71,15 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& 
     CreateRenderPass();
     CreateFrameBuffers(swapChain, commandQueue, commandList);
     CreatePipeline(allocator, resources);
+}
+
+void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& swapChain,
+	MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, MVulkanDescriptorSetAllocator& allocator)
+{
+    SetShader(shader);
+    CreateRenderPass();
+    CreateFrameBuffers(swapChain, commandQueue, commandList);
+    CreatePipeline(allocator);
 }
 
 void RenderPass::Clean()
@@ -256,7 +266,7 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
     std::vector<PassResources> _resources;
     for (auto i=0;i<resources.size();i++)
     {
-        const auto& resource = resources[i];
+        const auto resource = resources[i];
         if (resource.m_set!=set)
         {
             //auto descriptorSet = GetDescriptorSets(frameIndex);
@@ -280,7 +290,7 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
         {
             spdlog::error("error set");
         }
-        auto descriptorset = descriptorSet[set];
+        auto& descriptorset = descriptorSet[set];
         write.Update(m_device.GetDevice(), descriptorset.Get(), resources);
         _resources.clear();
     }
@@ -828,103 +838,120 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
         }
     }
 
-    for (int i = 0; m_descriptorSets.size(); i++) {
+    //for (int i = 0; m_descriptorSets.size(); i++) {
+    //    UpdateDescriptorSetWrite(i, resources);
+    //}
+
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
+        //m_uniformBuffers[i].resize(m_cbvCount);
+        for (auto set = 0; set < m_descriptorSets.size(); set++)
+        {
+            auto& descriptorSetLayoutBinding = bindings[set];
+            for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
+            {
+                auto& binding = descriptorSetLayoutBinding[i];
+
+                if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                {
+                    BufferCreateInfo info;
+                    info.arrayLength = binding.binding.descriptorCount;
+                    info.size = binding.size;
+                    Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, i);
+                }
+
+            }
+        }
+    }
+
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
         UpdateDescriptorSetWrite(i, resources);
     }
-    //UpdateDescriptorSetWrites(resources);
 
-    //m_cbvCount = 0;
-    //m_separateSamplerCount = 0;
-    //m_separateImageCount = 0;
-    //m_combinedImageCount = 0;
-    //m_asCount = 0;
-    //
-    //for (auto binding = 0; binding < bindings.size(); binding++) {
-    //    switch (bindings[binding].binding.descriptorType) {
-    //    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-    //    {
-    //        m_cbvCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-    //    {
-    //        m_storageBufferCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-    //    {
-    //        m_combinedImageCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_SAMPLER:
-    //    {
-    //        m_separateSamplerCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-    //    {
-    //        m_separateImageCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-    //    {
-    //        m_storageImageCount++;
-    //        break;
-    //    }
-    //    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-    //    {
-    //        m_asCount++;
-    //        break;
-    //    }
-    //    }
+    m_shader->Clean();
+}
+
+void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
+{
+    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
+    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
+    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+
+    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut2();
+    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut2();
+    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindings = resourceOutVert.GetBindings2();
+    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindingsFrag = resourceOutFrag.GetBindings2();
+    //bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+    //bindings = RemoveRepeatedBindings(bindings);
+    int minSet = std::min(bindings.size(), bindingsFrag.size());
+    int maxSet = std::max(bindings.size(), bindingsFrag.size());
+    for (int set = 0; set < minSet; set++) {
+        bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
+    }
+
+    m_descriptorLayouts.resize(maxSet);
+    for (int set = 0; set < maxSet; set++) {
+        m_descriptorLayouts[set].Create(m_device.GetDevice(), bindings[set]);
+    }
+    //m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
+    std::vector<VkDescriptorSetLayout> layouts(maxSet);
+    for (int set = 0; set < maxSet; set++) {
+        layouts[set] = m_descriptorLayouts[set].Get();
+    }
+    //std::vector < std::vector<VkDescriptorSetLayout>> layouts();
+
+    m_descriptorSets.resize(m_info.frambufferCount);
+    for (auto i=0;i< m_info.frambufferCount;i++)
+    {
+        for (auto set = 0;set<maxSet;set++)
+        {
+            MVulkanDescriptorSet descriptorSet;
+            m_descriptorSets[i].insert({set, descriptorSet });
+        }
+    }
+
+    // m_descriptorSets.resize(layouts.size());
+
+    for (int i = 0; i < m_descriptorSets.size(); i++) {
+        auto& sets = m_descriptorSets[i];
+        for (auto& set : sets) {
+            int setIndex = set.first;
+            auto& descriptorSet = set.second;
+            descriptorSet.Create(m_device.GetDevice(), allocator.Get(), layouts[setIndex]);
+        }
+    }
+
+    //for (int i = 0; m_descriptorSets.size(); i++) {
+    //    UpdateDescriptorSetWrite(i, resources);
     //}
-    //
-    //m_uniformBuffers.resize(m_info.frambufferCount);
-    //m_storageBuffer.resize(m_storageBufferCount);
-    //
+
+    for (auto i = 0; i < m_info.frambufferCount; i++) {
+        //m_uniformBuffers[i].resize(m_cbvCount);
+        for (auto set = 0; set < m_descriptorSets.size(); set++)
+        {
+            auto& descriptorSetLayoutBinding = bindings[set];
+            for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
+            {
+                auto& binding = descriptorSetLayoutBinding[i];
+
+                if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                {
+                    BufferCreateInfo info;
+                    info.arrayLength = binding.binding.descriptorCount;
+                    info.size = binding.size;
+
+                    if (binding.name.substr(0, 5) == "type.")
+                        binding.name = binding.name.substr(5);
+
+                    Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, m_info.frambufferCount);
+                }
+
+            }
+        }
+    }
+
     //for (auto i = 0; i < m_info.frambufferCount; i++) {
-    //    m_uniformBuffers[i].resize(m_cbvCount);
-    //    for (auto binding = 0; binding < bindings.size(); binding++) {
-    //        switch (bindings[binding].binding.descriptorType) {
-    //        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-    //        {
-    //            MCBV buffer;
-    //            BufferCreateInfo info;
-    //            info.arrayLength = bindings[binding].binding.descriptorCount;
-    //            info.size = bindings[binding].size;
-    //            buffer.Create(m_device, info);
-    //
-    //            //m_uniformBuffers[i].push_back(buffer);
-    //            m_uniformBuffers[i][bindings[binding].binding.binding] = buffer;
-    //            break;
-    //        }
-    //        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-    //        {
-    //            //StorageBuffer buffer;
-    //            //BufferCreateInfo info;
-    //            //info.arrayLength = bindings[binding].binding.descriptorCount;
-    //            ////info.size = bindings[binding].size;
-    //            //info.size = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
-    //            //buffer.Create(m_device, info);
-    //
-    //            m_storageBuffer[bindings[binding].binding.binding - m_cbvCount] = storageBuffers[bindings[binding].binding.binding - m_cbvCount];
-    //            break;
-    //        }
-    //        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-    //        {
-    //            //m_samplerTypes
-    //            break;
-    //        }
-    //        }
-    //    }
+    //    UpdateDescriptorSetWrite(i, resources);
     //}
-    //
-    //UpdateDescriptorSetWrite(imageViews, storageImageViews, samplers, accelerationStructure);
-    //
-    //m_pipeline.Create(m_device.GetDevice(), m_info.pipelineCreateInfo,
-    //    m_shader->GetVertexShader().GetShaderModule(), m_shader->GetFragmentShader().GetShaderModule(),
-    //    m_renderPass.Get(), info, m_descriptorLayouts.Get(), m_info.imageAttachmentFormats.size(),
-    //    m_shader->GetVertEntryPoint(), m_shader->GetFragEntryPoint());
 
     m_shader->Clean();
 }

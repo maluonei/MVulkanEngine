@@ -73,6 +73,34 @@ struct PipelineVertexInputStateInfo {
     std::vector<VkVertexInputAttributeDescription> attribDesc;
 };
 
+enum ResourceType
+{
+    ResourceType_ConstantBuffer,
+    ResourceType_StorageBuffer,
+    ResourceType_SampledImage,
+    ResourceType_StorageImage,
+    ResourceType_Sampler,
+    ResourceType_CombinedImageSampler,
+    ResourceType_AccelerationStructure
+};
+
+VkDescriptorType ResourceType2VkDescriptorType(const ResourceType type);
+
+struct MVulkanImageMemoryBarrier {
+    VkAccessFlags              srcAccessMask = 0;
+    VkAccessFlags              dstAccessMask = 0;
+    VkImageLayout              oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout              newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    uint32_t                   srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    uint32_t                   dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    VkImage                    image;
+    VkImageAspectFlags		   aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    uint32_t				   baseMipLevel = 0;
+    uint32_t				   levelCount = 1;
+    uint32_t				   baseArrayLayer = 0;
+    uint32_t				   layerCount = 1;
+};
+
 
 struct RenderingAttachment {
     VkImageView view;
@@ -107,6 +135,7 @@ VkRenderingInfo RenderingInfo2VkRenderingInfo(CONST RenderingInfo& info);
 struct MVulkanDescriptorSetLayoutBinding {
     VkDescriptorSetLayoutBinding binding;
     uint32_t size = 0;
+    std::string name = "";
     //BindingType bindingType = BindingType::Normal;
 };
 

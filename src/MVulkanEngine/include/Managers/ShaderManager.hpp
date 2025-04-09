@@ -5,6 +5,8 @@
 #include <variant>
 #include <unordered_map>
 #include <spdlog/spdlog.h>
+
+#include "MVulkanRHI/MVulkanBuffer.hpp"
 //#include <>
 
 class ShaderModule;
@@ -72,6 +74,22 @@ private:
 private:
     virtual void InitSingleton();
     bool find_shader_num(std::initializer_list<std::string> args, int& numShaderFiles, ShaderType& type);
+};
+
+//struct ConstantBufferResource
+//{
+//    int binding;
+//};
+
+class ShaderResourceManager :public Singleton<ShaderResourceManager> {
+public:
+
+    void AddConstantBuffer(const std::string name, BufferCreateInfo info, int frameCount = 1);
+    void LoadData(const std::string name, int frameIndex, void* data, int offset);
+    MCBV GetBuffer(const std::string name, int frameIndex = 0);
+private:
+    std::unordered_map<std::string, std::vector<MCBV>> m_constantBuffers;
+    virtual void InitSingleton();
 };
 
 #endif

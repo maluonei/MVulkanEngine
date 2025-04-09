@@ -1,6 +1,7 @@
 #include "MVulkanRHI/MVulkanShader.hpp"
 #include "Scene/Scene.hpp"
 #include <spdlog/spdlog.h>
+#include "Utils/VulkanUtil.hpp"
 
 MVulkanShader::MVulkanShader(std::string entryPoint, bool compileEveryTime)
     :m_compileEveryTime(compileEveryTime), m_entryName(entryPoint)
@@ -240,7 +241,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.uniformBuffers.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
+        out.uniformBuffers.push_back(ShaderResourceInfo{ ResourceType_ConstantBuffer ,ub.name, stage, set, binding, size, 0, arrayLength });
     }
 
     for (const auto& sb : m_resources.storage_buffers) {
@@ -262,7 +263,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.storageBuffers.push_back(ShaderResourceInfo{ sb.name, stage, set, binding, size, 0, arrayLength });
+        out.storageBuffers.push_back(ShaderResourceInfo{ ResourceType_StorageBuffer, sb.name, stage, set, binding, size, 0, arrayLength });
     }
 
     // 处理 sampled images (纹理) -- glsl
@@ -279,7 +280,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.combinedImageSamplers.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.combinedImageSamplers.push_back(ShaderResourceInfo{ ResourceType_CombinedImageSampler, image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     // 处理 seperate images (纹理) -- hlsl
@@ -296,7 +297,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.seperateImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.seperateImages.push_back(ShaderResourceInfo{ ResourceType_SampledImage, image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     //storage Images
@@ -313,7 +314,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.storageImages.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.storageImages.push_back(ShaderResourceInfo{ ResourceType_StorageImage, image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     // 处理 seperate samplers (采样器) -- hlsl
@@ -330,7 +331,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             //std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.seperateSamplers.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
+        out.seperateSamplers.push_back(ShaderResourceInfo{ ResourceType_Sampler,  sampler.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     for (const auto& as : m_resources.acceleration_structures) {
@@ -345,7 +346,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
             arrayLength = type.array[0];
         }
 
-        out.accelarationStructs.push_back(ShaderResourceInfo{ as.name, stage, set, binding, 0, 0, arrayLength });
+        out.accelarationStructs.push_back(ShaderResourceInfo{ ResourceType_AccelerationStructure,  as.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     return out;
@@ -401,7 +402,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ ub.name, stage, set, binding, size, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_ConstantBuffer, ub.name, stage, set, binding, size, 0, arrayLength });
     }
 
     for (const auto& sb : m_resources.storage_buffers) {
@@ -423,7 +424,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "UBO " << ub.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ sb.name, stage, set, binding, size, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_StorageBuffer, sb.name, stage, set, binding, size, 0, arrayLength });
     }
 
     // 处理 sampled images (纹理) -- glsl
@@ -440,7 +441,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_CombinedImageSampler,  image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     // 处理 seperate images (纹理) -- hlsl
@@ -457,7 +458,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_SampledImage,  image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     //storage Images
@@ -474,7 +475,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "Image " << image.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ image.name, stage, set, binding, 0, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_StorageImage,  image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     // 处理 seperate samplers (采样器) -- hlsl
@@ -491,7 +492,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             //std::cout << "Sampler " << sampler.name << " has array size: " << arrayLength << std::endl;
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ sampler.name, stage, set, binding, 0, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_Sampler,  sampler.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     for (const auto& as : m_resources.acceleration_structures) {
@@ -506,7 +507,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
             arrayLength = type.array[0];
         }
 
-        out.m_resources.push_back(ShaderResourceInfo{ as.name, stage, set, binding, 0, 0, arrayLength });
+        out.m_resources.push_back(ShaderResourceInfo{ ResourceType_AccelerationStructure, as.name, stage, set, binding, 0, 0, arrayLength });
     }
 
     return out;
@@ -618,14 +619,16 @@ std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> ShaderReflectorOut::
 
     for (const auto& resource:m_resources)
     {
-        if (res.size() < resource.set)
+        if (res.size() < (resource.set + 1))
         {
-            res.resize(resource.set);
+            res.resize(resource.set + 1);
         }
 
         MVulkanDescriptorSetLayoutBinding binding{};
+        binding.name = resource.name;
+        binding.size = resource.size;
         binding.binding.binding = resource.binding;
-        binding.binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        binding.binding.descriptorType = ResourceType2VkDescriptorType(resource.type);
         binding.binding.descriptorCount = resource.descriptorCount;
         binding.binding.pImmutableSamplers = nullptr;
         binding.binding.stageFlags = ShaderStageFlagBits2VkShaderStageFlagBits(resource.stage);

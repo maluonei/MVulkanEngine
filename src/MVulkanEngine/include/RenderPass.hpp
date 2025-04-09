@@ -11,7 +11,7 @@
 #include "MVulkanRHI/MVulkanSwapchain.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include <variant>
-#include "MVulkanRHI/MVulkanSampler.hpp"
+#include "MVulkanRHI/MVulkanDescriptorWrite.hpp"
 
 class ShaderModule;
 class MeshShaderModule;
@@ -90,6 +90,12 @@ public:
 		std::vector<PassResources> resources
 		);
 
+	void Create(
+		std::shared_ptr<ShaderModule> shader,
+		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+		MVulkanDescriptorSetAllocator& allocator
+	);
+
 	void Clean();
 
 	void RecreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, VkExtent2D extent);
@@ -156,6 +162,9 @@ private:
 	void CreatePipeline(
 		MVulkanDescriptorSetAllocator& allocator,
 		std::vector<PassResources> resources);
+
+	void CreatePipeline(
+		MVulkanDescriptorSetAllocator& allocator);
 
 	void CreateRenderPass();
 	void CreateFrameBuffers(MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList);

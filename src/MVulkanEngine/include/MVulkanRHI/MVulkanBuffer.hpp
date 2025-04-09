@@ -4,8 +4,11 @@
 
 #include "vulkan/vulkan_core.h"
 #include "MVulkanDevice.hpp"
-#include "MVulkanCommand.hpp"
 #include "Utils/MImage.hpp"
+#include "MVulkanCommand.hpp"
+
+//class MVulkanCommandList;
+
 
 struct BufferCreateInfo {
 	VkBufferUsageFlagBits usage;
@@ -51,8 +54,9 @@ public:
 	inline const VkDeviceAddress& GetBufferAddress() const {return m_deviceAddress;}
 
 	inline void* GetData()const { return m_mappedData; }
-protected:
 
+protected:
+	BufferCreateInfo	m_info;
 	VkDevice			m_device;
 	void*				m_mappedData;
 	BufferType			m_type;
@@ -258,32 +262,6 @@ private:
 	MVulkanBuffer		m_stagingBuffer;
 };
 
-//class IndirectBuffer {
-//public:
-//	IndirectBuffer() = default;
-//
-//	void Create(MVulkanDevice device, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,int32_t  vertexOffset, uint32_t firstInstance);
-//	void Clean();
-//private:
-//	VkDrawIndexedIndirectCommand	m_drawCommand;
-//	MVulkanBuffer					m_indirectBuffer;
-//};
-
-//class StorageBuffer
-//{
-//public:
-//	StorageBuffer() = default;
-//
-//	void Create(MVulkanDevice device, uint32_t size);
-//	void LoadData(void* data, uint32_t size, uint32_t offset=0);
-//	void Clean();
-//
-//	inline const VkDeviceAddress& GetAddress(){return m_storageBuffer.GetBufferAddress();}
-//
-//private:
-//	MVulkanBuffer					m_storageBuffer;
-//	MVulkanBuffer					m_stagingBuffer;
-//};
 
 
 #endif

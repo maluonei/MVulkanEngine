@@ -232,6 +232,11 @@ void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std
     renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, resources);
 }
 
+void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader)
+{
+    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator);
+}
+
 void MVulkanEngine::CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<StorageBuffer> storageBuffers, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
 {
     renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
@@ -1373,7 +1378,7 @@ void MVulkanEngine::recordMeshShaderCommandBuffer(uint32_t imageIndex, std::shar
     scissor.extent = extent;
     commandList.SetScissor(0, 1, &scissor);
 
-    renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+    //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
     //renderPass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
 
     //auto descriptorSet = renderPass->GetDescriptorSet(imageIndex).Get();

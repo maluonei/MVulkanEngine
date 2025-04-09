@@ -32,6 +32,7 @@ private:
 };
 
 struct ShaderResourceInfo {
+	ResourceType type;
 	std::string name;
 	ShaderStageFlagBits stage;
 	uint32_t set;
@@ -40,6 +41,7 @@ struct ShaderResourceInfo {
 	uint32_t offset;
 
 	uint32_t descriptorCount;
+
 };
 
 struct ShaderReflectorOut {

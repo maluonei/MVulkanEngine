@@ -149,33 +149,20 @@ void PBR::createGbufferPass() {
         info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
-
-        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader2>();
-        std::vector<std::vector<VkImageView>> bufferTextureViews(1);
-        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-        auto wholeTextureSize = wholeTextures.size();
-        for (auto i = 0; i < bufferTextureViews.size(); i++) {
-            if (wholeTextureSize == 0) {
-                bufferTextureViews[i].resize(1);
-                bufferTextureViews[i][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
-            }
-            else {
-                bufferTextureViews[i].resize(wholeTextureSize);
-                for (auto j = 0; j < wholeTextureSize; j++) {
-                    bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
-                }
-            }
-        }
-
-        std::vector<VkSampler> samplers(1, m_linearSampler.GetSampler());
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("GBuffer Shader");
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
+            m_gbufferPass, shader);
 
         std::vector<PassResources> resources;
-        resources.push_back(PassResources{
+        resources.push_back(
+            PassResources::SetBufferResource(
+				"MVPBuffer", 0, 0) );
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "TexBuffer", 1, 0));
 
-            });
+        m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -200,14 +187,25 @@ void PBR::createShadowPass() {
 
         m_shadowPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
-        std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
-        shadowShaderTextures[0].resize(0);
+        //std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
+        //std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
+        //shadowShaderTextures[0].resize(0);
+        //
+        //std::vector<VkSampler> samplers(0);
 
-        std::vector<VkSampler> samplers(0);
+        //Singleton<MVulkanEngine>::instance().CreateRenderPass(
+        //    m_shadowPass, shadowShader, shadowShaderTextures, samplers);
+        auto shadowShader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shadow Shader");
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_shadowPass, shadowShader, shadowShaderTextures, samplers);
+            m_shadowPass, shadowShader);
+
+        std::vector<PassResources> resources;
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "ShadowMVPBuffer", 0, 0));
+
+        m_shadowPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -235,21 +233,51 @@ void PBR::createShadingPass() {
 
         m_lightingPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader2>();
-        std::vector<std::vector<VkImageView>> gbufferViews(3);
-        for (auto i = 0; i < 2; i++) {
-            gbufferViews[i].resize(1);
-            gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
-        }
-        gbufferViews[2] = std::vector<VkImageView>(2);
-        gbufferViews[2][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        gbufferViews[2][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader2>();
+        //std::vector<std::vector<VkImageView>> gbufferViews(3);
+        //for (auto i = 0; i < 2; i++) {
+        //    gbufferViews[i].resize(1);
+        //    gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
+        //}
+        //gbufferViews[2] = std::vector<VkImageView>(2);
+        //gbufferViews[2][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        //gbufferViews[2][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
+        //
+        //std::vector<VkSampler> samplers(1);
+        //samplers[0] = m_linearSampler.GetSampler();
 
-        std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSampler.GetSampler();
+        //Singleton<MVulkanEngine>::instance().CreateRenderPass(
+        //    m_lightingPass, lightingShader, gbufferViews, samplers);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shading Shader");
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_lightingPass, lightingShader, gbufferViews, samplers);
+            m_lightingPass, shader);
+
+        std::vector<PassResources> resources;
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "ShadingShaderConstantBuffer", 0, 0));
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+				1, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                2, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
+
+        std::vector<VkImageView> shadowViews{
+            m_shadowPass->GetFrameBuffer(0).GetDepthImageView(),
+            m_shadowPass->GetFrameBuffer(0).GetDepthImageView()
+        };
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                3, 0, shadowViews));
+
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                4, 0, m_linearSampler.GetSampler()));
+
+        m_shadowPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -383,6 +411,16 @@ void PBR::createSamplers()
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
+    }
+}
+
+void PBR::createConstantBuffers()
+{
+    {
+        BufferCreateInfo info{};
+        //info.arrayLength
+        //m_MVPBuffer.Create();
+        //m_MVPBuffer.UpdateData();
     }
 }
 

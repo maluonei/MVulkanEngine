@@ -29,10 +29,12 @@ struct UnifomBuffer0
 
 
 [[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
+cbuffer ShadingShaderConstantBuffer : register(b0)
 {
     UnifomBuffer0 ubo0;
 }
+
+#define ShadingShaderConstantBuffer ubo0;
 
 [[vk::binding(1, 0)]]Texture2D<uint4> gBuffer0 : register(t0);
 [[vk::binding(2, 0)]]Texture2D<uint4> gBuffer1 : register(t1);

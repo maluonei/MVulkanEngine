@@ -1,4 +1,6 @@
 #include "Managers/ShaderManager.hpp"
+
+#include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Shaders/ShaderModule.hpp"
 
 void ShaderManager::AddShader(const std::string& name, std::initializer_list<std::string> args)
@@ -194,4 +196,63 @@ bool ShaderManager::find_shader_num(std::initializer_list<std::string> args, int
     }
 
     return valid;
+}
+
+void ShaderResourceManager::AddConstantBuffer(const std::string name, BufferCreateInfo info, int frameCount)
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    if (m_constantBuffers.find(name) == m_constantBuffers.end())
+    {
+        for (int i = 0; i < frameCount; i++) {
+			MCBV mcbv;
+			mcbv.Create(device, info);
+            m_constantBuffers[name].emplace_back(mcbv);
+        }
+    }
+    else
+    {
+        spdlog::error("Constant Buffer Rename: {0}", name);
+    }
+}
+
+void ShaderResourceManager::LoadData(const std::string name, int frameIndex, void* data, int offset)
+{
+    if (m_constantBuffers.find(name) == m_constantBuffers.end())
+    {
+        spdlog::error("Constant Buffer:{0} not found", name);
+    }
+    else
+    {
+        auto buffers = m_constantBuffers[name];
+        if (frameIndex > buffers.size())
+        {
+            spdlog::error("invalid index: {0}", frameIndex);
+        }
+
+        buffers[frameIndex].UpdateData(offset, data);
+    }
+}
+
+MCBV ShaderResourceManager::GetBuffer(const std::string name, int frameIndex)
+{
+    if (m_constantBuffers.find(name) == m_constantBuffers.end())
+    {
+        spdlog::error("Constant Buffer:{0} not found", name);
+    }
+    else
+    {
+        auto& buffers = m_constantBuffers[name];
+        if (frameIndex > buffers.size())
+        {
+            spdlog::error("invalid index: {0}", frameIndex);
+        }
+
+        return buffers[frameIndex];
+    }
+}
+
+void ShaderResourceManager::InitSingleton()
+{
+	//Singleton<ShaderResourceManager>::InitSingleton();
 }

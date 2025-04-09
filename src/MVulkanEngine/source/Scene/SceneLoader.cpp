@@ -306,7 +306,7 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             spdlog::info("Diffuse texture:{0}", texturePath.C_Str());
 
             MImage<unsigned char> diffuseImage;
-            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+            std::shared_ptr<MVulkanTexture> texture = nullptr; //std::make_shared<MVulkanTexture>();
 
             std::string diffusePath = (currentSceneRootPath / texturePath.C_Str()).string();
 
@@ -314,8 +314,13 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
                 if (diffuseImage.Load(diffusePath)) {
                     std::vector<MImage<unsigned char>*> images(1);
                     images[0] = &diffuseImage;
+                    texture = std::make_shared<MVulkanTexture>();
                     //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
                     Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
+                else
+                {
+	                spdlog::error("fail to load diffuse texture: {0}", diffusePath);
                 }
 
                 Singleton<TextureManager>::instance().Put(diffusePath, texture);
@@ -346,7 +351,7 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             spdlog::info("Normal texture:{0}", texturePath.C_Str());
 
             MImage<unsigned char> normalImage;
-            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+            std::shared_ptr<MVulkanTexture> texture = nullptr;// std::make_shared<MVulkanTexture>();
 
             std::string normalPath = (currentSceneRootPath / texturePath.C_Str()).string();
 
@@ -354,8 +359,13 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
                 if (normalImage.Load(normalPath)) {
                     std::vector<MImage<unsigned char>*> images(1);
                     images[0] = &normalImage;
+                    texture = std::make_shared<MVulkanTexture>();
                     //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
                     Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
+                else
+                {
+                    spdlog::error("fail to load normal texture: {0}", normalPath);
                 }
 
                 Singleton<TextureManager>::instance().Put(normalPath, texture);
@@ -367,16 +377,21 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             spdlog::info("roughness texture:{0}", texturePath.C_Str());
 
             MImage<unsigned char> roughnessImage;
-            std::shared_ptr<MVulkanTexture> texture = std::make_shared<MVulkanTexture>();
+            std::shared_ptr<MVulkanTexture> texture = nullptr; //= std::make_shared<MVulkanTexture>();
 
             std::string roughnessPath = (currentSceneRootPath / texturePath.C_Str()).string();
 
             if (!Singleton<TextureManager>::instance().ExistTexture(roughnessPath)) {
                 if (roughnessImage.Load(roughnessPath)) {
+                    texture = std::make_shared<MVulkanTexture>();
                     std::vector<MImage<unsigned char>*> images(1);
                     images[0] = &roughnessImage;
                     //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
                     Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
+                }
+                else
+                {
+                    spdlog::error("fail to load roughness texture: {0}", roughnessPath);
                 }
 
                 Singleton<TextureManager>::instance().Put(roughnessPath, texture);

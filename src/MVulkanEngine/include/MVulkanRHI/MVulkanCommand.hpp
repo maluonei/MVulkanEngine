@@ -3,9 +3,10 @@
 #define MVULKANCOMMAND_H
 
 #include "vulkan/vulkan_core.h"
+#include <vector>
 #include "MVulkanDevice.hpp"
-#include "MVulkanRHI/MVulkanDescriptor.hpp"
-//#include "MVulkanRHI/MVulkanRaytracing.hpp"
+#include "MVulkanDescriptor.hpp"
+
 #include "map"
 
 struct MVulkanCommandListCreateInfo {
@@ -42,21 +43,6 @@ struct MVulkanImageCopyInfo {
 	uint32_t layerCount = 1;
 
 	uint32_t dstArrayLayer = 0;
-};
-
-struct MVulkanImageMemoryBarrier {
-	VkAccessFlags              srcAccessMask = 0;
-	VkAccessFlags              dstAccessMask = 0;
-	VkImageLayout              oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VkImageLayout              newLayout = VK_IMAGE_LAYOUT_GENERAL;
-	uint32_t                   srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	uint32_t                   dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	VkImage                    image;
-	VkImageAspectFlags		   aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	uint32_t				   baseMipLevel = 0;
-	uint32_t				   levelCount = 1;
-	uint32_t				   baseArrayLayer = 0;
-	uint32_t				   layerCount = 1;
 };
 
 class MVulkanCommandList {

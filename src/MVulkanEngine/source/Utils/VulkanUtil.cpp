@@ -1,5 +1,28 @@
 #include "Utils/VulkanUtil.hpp"
 
+VkDescriptorType ResourceType2VkDescriptorType(const ResourceType type)
+{
+    switch (type)
+    {
+    case ResourceType_ConstantBuffer:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case ResourceType_StorageBuffer:
+        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ResourceType_SampledImage:
+        return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case ResourceType_StorageImage:
+        return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case ResourceType_CombinedImageSampler:
+        return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case ResourceType_Sampler:
+        return VK_DESCRIPTOR_TYPE_SAMPLER;
+    case ResourceType_AccelerationStructure:
+        return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    default:
+        return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    }
+}
+
 VkRenderingInfo RenderingInfo2VkRenderingInfo(CONST RenderingInfo& info) {
     std::vector<VkRenderingAttachmentInfo> colorAttachments;
     VkRenderingAttachmentInfo depthAttachments;

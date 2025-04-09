@@ -4,6 +4,7 @@
 
 #include "MVulkanRHI/MVulkanPipeline.hpp"
 #include "Shaders/ShaderModule.hpp"
+#include "MVulkanRHI/MVulkanDescriptorWrite.hpp"
 
 struct StorageBufferCreateInfo {
 

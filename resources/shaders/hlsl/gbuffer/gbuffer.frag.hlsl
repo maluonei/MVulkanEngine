@@ -11,7 +11,7 @@ struct TexBuffer
 };
     
 [[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+cbuffer TexBuffer : register(b1)
 {
     TexBuffer ubo1[512];
 };
