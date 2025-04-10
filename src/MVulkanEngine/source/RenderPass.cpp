@@ -276,7 +276,7 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
             }
 
         	auto descriptorset = descriptorSet[set];
-            write.Update(m_device.GetDevice(), descriptorset.Get(), resources);
+            write.Update(m_device.GetDevice(), descriptorset.Get(), _resources);
             _resources.clear();
             set = resource.m_set;
         }
@@ -291,7 +291,7 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
             spdlog::error("error set");
         }
         auto& descriptorset = descriptorSet[set];
-        write.Update(m_device.GetDevice(), descriptorset.Get(), resources);
+        write.Update(m_device.GetDevice(), descriptorset.Get(), _resources);
         _resources.clear();
     }
 }
@@ -842,7 +842,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
     //    UpdateDescriptorSetWrite(i, resources);
     //}
 
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
+    //for (auto i = 0; i < m_info.frambufferCount; i++) {
         //m_uniformBuffers[i].resize(m_cbvCount);
         for (auto set = 0; set < m_descriptorSets.size(); set++)
         {
@@ -861,7 +861,7 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::v
 
             }
         }
-    }
+    //}
 
     for (auto i = 0; i < m_info.frambufferCount; i++) {
         UpdateDescriptorSetWrite(i, resources);
@@ -886,6 +886,14 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
     int maxSet = std::max(bindings.size(), bindingsFrag.size());
     for (int set = 0; set < minSet; set++) {
         bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
+    }
+
+    if (minSet == bindings.size()) {
+        for (int set = minSet; set < maxSet; set++)
+        {
+            bindings.push_back(std::vector<MVulkanDescriptorSetLayoutBinding>());
+            bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
+        }
     }
 
     m_descriptorLayouts.resize(maxSet);
@@ -924,34 +932,43 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
     //    UpdateDescriptorSetWrite(i, resources);
     //}
 
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
+    //for (auto i = 0; i < m_info.frambufferCount; i++) {
         //m_uniformBuffers[i].resize(m_cbvCount);
-        for (auto set = 0; set < m_descriptorSets.size(); set++)
+    for (auto set = 0; set < maxSet; set++)
+    {
+        auto& descriptorSetLayoutBinding = bindings[set];
+        for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
         {
-            auto& descriptorSetLayoutBinding = bindings[set];
-            for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
+            auto& binding = descriptorSetLayoutBinding[i];
+
+            if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             {
-                auto& binding = descriptorSetLayoutBinding[i];
+                BufferCreateInfo info;
+                info.arrayLength = binding.binding.descriptorCount;
+                info.size = binding.size;
 
-                if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                {
-                    BufferCreateInfo info;
-                    info.arrayLength = binding.binding.descriptorCount;
-                    info.size = binding.size;
+                if (binding.name.substr(0, 5) == "type.")
+                    binding.name = binding.name.substr(5);
 
-                    if (binding.name.substr(0, 5) == "type.")
-                        binding.name = binding.name.substr(5);
-
-                    Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, m_info.frambufferCount);
-                }
-
+                Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, m_info.frambufferCount);
             }
+
         }
     }
 
-    //for (auto i = 0; i < m_info.frambufferCount; i++) {
-    //    UpdateDescriptorSetWrite(i, resources);
-    //}
+    m_pipeline.Create(
+        m_device.GetDevice(), 
+        m_info.pipelineCreateInfo,
+        m_shader->GetVertexShader().GetShaderModule(),
+        nullptr,
+        m_shader->GetFragmentShader().GetShaderModule(),
+        m_renderPass.Get(), 
+        info,
+        layouts,
+        m_info.imageAttachmentFormats.size(),
+        m_shader->GetVertEntryPoint(),
+		"",
+        m_shader->GetFragEntryPoint());
 
     m_shader->Clean();
 }

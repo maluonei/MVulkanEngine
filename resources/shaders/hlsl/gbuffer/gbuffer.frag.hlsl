@@ -17,7 +17,7 @@ cbuffer TexBuffer : register(b1)
 };
 
 [[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
-[[vk::binding(3, 0)]] SamplerState linearSampler : register(s2);
+[[vk::binding(0, 1)]] SamplerState linearSampler : register(s2);
 
 struct PSInput
 {

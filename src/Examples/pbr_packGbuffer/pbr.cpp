@@ -43,17 +43,20 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Model = glm::mat4(1.f);
         ubo0.View = m_camera->GetViewMatrix();
         ubo0.Projection = m_camera->GetProjMatrix();
-        m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("MVPBuffer", 0, &ubo0, 0);
+        //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         GbufferShader2::UniformBufferObject1 ubo1 = GbufferShader2::GetFromScene(m_scene);
-        m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+        Singleton<ShaderResourceManager>::instance().LoadData("TexBuffer", 0, &ubo1, 0);
+        //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
     //prepare shadowPass ubo
     {
         ShadowShader::ShadowUniformBuffer ubo0{};
         ubo0.shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        m_shadowPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("ShadowMVPBuffer", 0, &ubo0, 0);
+    	//m_shadowPass->GetShader()->SetUBO(0, &ubo0);
     }
 
     //prepare lightingPass ubo
@@ -74,7 +77,8 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.WindowResWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
         ubo0.WindowResHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
 
-        m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("ShadingShaderConstantBuffer", imageIndex, &ubo0, 0);
+        //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size());
@@ -154,6 +158,8 @@ void PBR::createGbufferPass() {
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_gbufferPass, shader);
 
+        std::vector<VkImageView> bufferTextureViews = Singleton<TextureManager>::instance().GenerateTextureViews();
+
         std::vector<PassResources> resources;
         resources.push_back(
             PassResources::SetBufferResource(
@@ -161,6 +167,13 @@ void PBR::createGbufferPass() {
         resources.push_back(
             PassResources::SetBufferResource(
                 "TexBuffer", 1, 0));
+
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                2, 0, bufferTextureViews));
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                0, 1, m_linearSampler.GetSampler()));
 
         m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
@@ -187,14 +200,6 @@ void PBR::createShadowPass() {
 
         m_shadowPass = std::make_shared<RenderPass>(device, info);
 
-        //std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
-        //std::vector<std::vector<VkImageView>> shadowShaderTextures(1);
-        //shadowShaderTextures[0].resize(0);
-        //
-        //std::vector<VkSampler> samplers(0);
-
-        //Singleton<MVulkanEngine>::instance().CreateRenderPass(
-        //    m_shadowPass, shadowShader, shadowShaderTextures, samplers);
         auto shadowShader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shadow Shader");
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
@@ -233,51 +238,41 @@ void PBR::createShadingPass() {
 
         m_lightingPass = std::make_shared<RenderPass>(device, info);
 
-        //std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader2>();
-        //std::vector<std::vector<VkImageView>> gbufferViews(3);
-        //for (auto i = 0; i < 2; i++) {
-        //    gbufferViews[i].resize(1);
-        //    gbufferViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
-        //}
-        //gbufferViews[2] = std::vector<VkImageView>(2);
-        //gbufferViews[2][0] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        //gbufferViews[2][1] = m_shadowPass->GetFrameBuffer(0).GetDepthImageView();
-        //
-        //std::vector<VkSampler> samplers(1);
-        //samplers[0] = m_linearSampler.GetSampler();
-
-        //Singleton<MVulkanEngine>::instance().CreateRenderPass(
-        //    m_lightingPass, lightingShader, gbufferViews, samplers);
-
         auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shading Shader");
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_lightingPass, shader);
 
-        std::vector<PassResources> resources;
-        resources.push_back(
-            PassResources::SetBufferResource(
-                "ShadingShaderConstantBuffer", 0, 0));
-        resources.push_back(
-            PassResources::SetSampledImageResource(
-				1, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
-        resources.push_back(
-            PassResources::SetSampledImageResource(
-                2, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
 
         std::vector<VkImageView> shadowViews{
             m_shadowPass->GetFrameBuffer(0).GetDepthImageView(),
             m_shadowPass->GetFrameBuffer(0).GetDepthImageView()
         };
-        resources.push_back(
-            PassResources::SetSampledImageResource(
-                3, 0, shadowViews));
 
-        resources.push_back(
-            PassResources::SetSamplerResource(
-                4, 0, m_linearSampler.GetSampler()));
+        for (int i = 0; i < info.frambufferCount; i++) {
+            std::vector<PassResources> resources;
 
-        m_shadowPass->UpdateDescriptorSetWrite(0, resources);
+        	resources.push_back(
+                PassResources::SetBufferResource(
+                    "ShadingShaderConstantBuffer", 0, 0, i));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    1, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    2, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
+
+            resources.push_back(
+                PassResources::SetSamplerResource(
+                    4, 0, m_linearSampler.GetSampler()));
+
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    3, 0, shadowViews));
+
+
+            m_lightingPass->UpdateDescriptorSetWrite(i, resources);
+        }
     }
 }
 
@@ -303,7 +298,7 @@ void PBR::Clean()
 void PBR::loadShaders()
 {
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
-    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl / shadow.vert.glsl", "glsl / shadow.frag.glsl" });
+    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
 
     int shaderNum = Singleton<ShaderManager>::instance().GetNumShaders();
@@ -414,15 +409,15 @@ void PBR::createSamplers()
     }
 }
 
-void PBR::createConstantBuffers()
-{
-    {
-        BufferCreateInfo info{};
-        //info.arrayLength
-        //m_MVPBuffer.Create();
-        //m_MVPBuffer.UpdateData();
-    }
-}
+//void PBR::createConstantBuffers()
+//{
+//    {
+//        BufferCreateInfo info{};
+//        //info.arrayLength
+//        //m_MVPBuffer.Create();
+//        //m_MVPBuffer.UpdateData();
+//    }
+//}
 
 void PBR::createLightCamera()
 {

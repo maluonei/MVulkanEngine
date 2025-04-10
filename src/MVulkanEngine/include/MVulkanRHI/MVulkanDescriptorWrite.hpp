@@ -35,6 +35,10 @@ struct PassResources
 	);
 
 	static PassResources SetBufferResource(
+		std::string name, int binding, int set, int frameIndex
+	);
+
+	static PassResources SetBufferResource(
 		int binding, int set, 
 		StorageBuffer buffer, int offset, int range
 	);

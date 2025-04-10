@@ -367,10 +367,19 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
 
 }
 
-void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule,
-	VkShaderModule geomShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass,
-	PipelineVertexInputStateInfo vertexStateInfo, std::vector<VkDescriptorSetLayout> layout, uint32_t numAttachments,
-	std::string vertEntryPoint, std::string geomEntryPoint, std::string fragEntryPoint)
+void MVulkanGraphicsPipeline::Create(
+    VkDevice device,
+    MVulkanPilelineCreateInfo info, 
+    VkShaderModule vertShaderModule,
+	VkShaderModule geomShaderModule,
+    VkShaderModule fragShaderModule,
+    VkRenderPass renderPass,
+	PipelineVertexInputStateInfo vertexStateInfo,
+    std::vector<VkDescriptorSetLayout> layout,
+    uint32_t numAttachments,
+	std::string vertEntryPoint,
+    std::string geomEntryPoint, 
+    std::string fragEntryPoint)
 {
     m_device = device;
     m_info = info;
@@ -393,8 +402,18 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = fragEntryPoint.c_str();
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {
-        vertShaderStageInfo, geomShaderStageInfo, fragShaderStageInfo };
+    //VkPipelineShaderStageCreateInfo shaderStages[] = {
+    //    vertShaderStageInfo, geomShaderStageInfo, fragShaderStageInfo };
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+    if (geomShaderModule == nullptr || geomEntryPoint == "")
+    {
+        shaderStages = { vertShaderStageInfo, fragShaderStageInfo };
+    }
+    else
+    {
+        shaderStages = { vertShaderStageInfo, geomShaderStageInfo, fragShaderStageInfo };
+    }
+
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -485,8 +504,8 @@ void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo 
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 3;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.stageCount = shaderStages.size();
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;

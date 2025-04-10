@@ -35,6 +35,23 @@ PassResources PassResources::SetBufferResource(std::string name, int binding, in
     return resource;
 }
 
+PassResources PassResources::SetBufferResource(std::string name, int binding, int set, int frameIndex)
+{
+    PassResources resource;
+
+    auto buffer = Singleton<ShaderResourceManager>::instance().GetBuffer(name, frameIndex);
+
+    resource.m_type = ResourceType_ConstantBuffer;
+    resource.m_binding = binding;
+    resource.m_set = set;
+
+    resource.m_buffers = { buffer.GetBuffer() };
+    resource.m_offset = 0;
+    resource.m_range = buffer.GetBufferSize();
+
+    return resource;
+}
+
 PassResources PassResources::SetBufferResource(
     int binding, int set, 
     StorageBuffer buffer, int offset, int range

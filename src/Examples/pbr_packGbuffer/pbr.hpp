@@ -35,7 +35,7 @@ private:
 	void createLight();
 	void createCamera();
 	void createSamplers();
-	void createConstantBuffers();
+	//void createConstantBuffers();
 
 	void createLightCamera();
 	void loadShaders();
@@ -55,10 +55,10 @@ private:
 	std::shared_ptr<Camera>		m_directionalLightCamera;
 	std::shared_ptr<Camera>		m_camera;
 
-	MCBV m_MVPBuffer;
-	MCBV m_TexBuffer;
-	MCBV m_ShadowMVPBuffer;
-	MCBV m_ShadingConstantBuffer;
+	//MCBV m_MVPBuffer;
+	//MCBV m_TexBuffer;
+	//MCBV m_ShadowMVPBuffer;
+	//MCBV m_ShadingConstantBuffer;
 };
 
 
