@@ -16,6 +16,7 @@
 
 #include "Managers/ShaderManager.hpp"
 
+#include "Shaders/share/Light.h"
 
 void PBR::SetUp()
 {
@@ -61,23 +62,27 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare lightingPass ubo
     {
-        LightingPbrShader2::UniformBuffer0 ubo0{};
-        ubo0.lightNum = 1;
-        ubo0.lights[0].direction = m_directionalLightCamera->GetDirection();
-        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
-        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
-        ubo0.lights[0].shadowMapIndex = 0;
-        ubo0.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        ubo0.lights[0].cameraZnear = m_directionalLightCamera->GetZnear();
-        ubo0.lights[0].cameraZfar = m_directionalLightCamera->GetZfar();
-        ubo0.cameraPos = m_camera->GetPosition();
 
-        ubo0.ResolusionWidth = m_shadowPass->GetFrameBuffer(0).GetExtent2D().width;
-        ubo0.ResolusionHeight = m_shadowPass->GetFrameBuffer(0).GetExtent2D().height;
-        ubo0.WindowResWidth = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width;
-        ubo0.WindowResHeight = m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height;
+        LightBuffer lightBuffer{};
+        lightBuffer.lightNum = 1;
+        lightBuffer.lights[0].direction = m_directionalLightCamera->GetDirection();
+        lightBuffer.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
+        lightBuffer.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
+        lightBuffer.lights[0].shadowMapIndex = 0;
+        lightBuffer.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        lightBuffer.lights[0].shadowCameraZnear = m_directionalLightCamera->GetZnear();
+        lightBuffer.lights[0].shadowCameraZfar = m_directionalLightCamera->GetZfar();
+        lightBuffer.lights[0].shadowmapResolution = int2(m_shadowPass->GetFrameBuffer(0).GetExtent2D().width, m_shadowPass->GetFrameBuffer(0).GetExtent2D().height);
+        
+        MCameraBuffer cameraBuffer{};
+        cameraBuffer.cameraPos = m_camera->GetPosition();
 
-        Singleton<ShaderResourceManager>::instance().LoadData("ShadingShaderConstantBuffer", imageIndex, &ubo0, 0);
+        MScreenBuffer screenBuffer{};
+        screenBuffer.WindowRes = int2(m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width,  m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height );
+
+        Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -115,6 +120,7 @@ void PBR::RecreateSwapchainAndRenderPasses()
         //m_lightingPass->UpdateDescriptorSetWrite(gbufferViews, samplers);
     }
 }
+
 
 void PBR::CreateRenderPass()
 {
@@ -173,7 +179,7 @@ void PBR::createGbufferPass() {
                 2, 0, bufferTextureViews));
         resources.push_back(
             PassResources::SetSamplerResource(
-                0, 1, m_linearSampler.GetSampler()));
+                3, 0, m_linearSampler.GetSampler()));
 
         m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
@@ -254,21 +260,27 @@ void PBR::createShadingPass() {
 
         	resources.push_back(
                 PassResources::SetBufferResource(
-                    "ShadingShaderConstantBuffer", 0, 0, i));
+                    "lightBuffer", 0, 0, i));
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "cameraBuffer", 1, 0, i));
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "screenBuffer", 2, 0, i));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    1, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
+                    3, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    2, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
+                    4, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
 
             resources.push_back(
                 PassResources::SetSamplerResource(
-                    4, 0, m_linearSampler.GetSampler()));
+                    6, 0, m_linearSampler.GetSampler()));
 
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, shadowViews));
+                    5, 0, shadowViews));
 
 
             m_lightingPass->UpdateDescriptorSetWrite(i, resources);
@@ -300,6 +312,7 @@ void PBR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
+    //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/test/test.frag.hlsl" });
 
     int shaderNum = Singleton<ShaderManager>::instance().GetNumShaders();
 	//Singleton<ShaderManager>::instance().AddShader();
