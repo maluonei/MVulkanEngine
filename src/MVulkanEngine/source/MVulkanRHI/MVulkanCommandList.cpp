@@ -1,4 +1,5 @@
 #include "MVulkanRHI/MVulkanCommand.hpp"
+#include "MVulkanRHI/MVulkanBuffer.hpp"
 
 MVulkanCommandList::MVulkanCommandList() {
 
@@ -326,7 +327,10 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
 
         VkRenderingAttachmentInfo ainfo = {};
         ainfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        ainfo.imageView = attachment.view;
+        if(attachment.texture != nullptr)
+            ainfo.imageView = attachment.texture->GetImageView();
+        else
+            ainfo.imageView = attachment.view;
         ainfo.imageLayout = attachment.layout;
         ainfo.loadOp = attachment.loadOp;
         ainfo.storeOp = attachment.storeOp;
@@ -339,23 +343,12 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
         auto depthAttachment = renderingInfo.depthAttachment;
 
         depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        depthAttachments.imageView = depthAttachment.view;
+        depthAttachments.imageView = depthAttachment.texture->GetImageView();
         depthAttachments.imageLayout = depthAttachment.layout;
         depthAttachments.loadOp = depthAttachment.loadOp;
         depthAttachments.storeOp = depthAttachment.storeOp;
         depthAttachments.clearValue.depthStencil = depthAttachment.depthStencil;
     }
-
-    //{
-    //    auto depthAttachment = renderingInfo.stencilAttachment;
-    //
-    //    depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    //    depthAttachments.imageView = depthAttachment.view;
-    //    depthAttachments.imageLayout = depthAttachment.layout;
-    //    depthAttachments.loadOp = depthAttachment.loadOp;
-    //    depthAttachments.storeOp = depthAttachment.storeOp;
-    //    depthAttachments.clearValue.color = { {depthAttachment.clearColor.x, depthAttachment.clearColor.y, depthAttachment.clearColor.z, depthAttachment.clearColor.w} };
-    //}
 
     VkRenderingInfo vrenderingInfo = {};
     vrenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;

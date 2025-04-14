@@ -65,13 +65,13 @@ RenderPass::RenderPass(MVulkanDevice device, RenderPassCreateInfo info):
 //    CreateMeshShaderPipeline(allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructure);
 //}
 
-void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, MVulkanDescriptorSetAllocator& allocator, std::vector<PassResources> resources)
-{
-    SetShader(shader);
-    CreateRenderPass();
-    CreateFrameBuffers(swapChain, commandQueue, commandList);
-    CreatePipeline(allocator, resources);
-}
+//void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, MVulkanDescriptorSetAllocator& allocator, std::vector<PassResources> resources)
+//{
+//    SetShader(shader);
+//    CreateRenderPass();
+//    CreateFrameBuffers(swapChain, commandQueue, commandList);
+//    CreatePipeline(allocator, resources);
+//}
 
 void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& swapChain,
 	MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, MVulkanDescriptorSetAllocator& allocator)
@@ -79,6 +79,15 @@ void RenderPass::Create(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& 
     SetShader(shader);
     CreateRenderPass();
     CreateFrameBuffers(swapChain, commandQueue, commandList);
+    CreatePipeline(allocator);
+}
+
+void RenderPass::CreateDynamic(std::shared_ptr<ShaderModule> shader, MVulkanSwapchain& swapChain,
+    MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList, MVulkanDescriptorSetAllocator& allocator)
+{
+    SetShader(shader);
+    //CreateRenderPass();
+    //CreateFrameBuffers(swapChain, commandQueue, commandList);
     CreatePipeline(allocator);
 }
 
@@ -267,6 +276,12 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
     for (auto i=0;i<resources.size();i++)
     {
         const auto resource = resources[i];
+        ShaderResourceKey key{
+            .set = resource.m_set,
+            .binding = resource.m_binding
+        };
+        updateResourceCache(key, resource);
+
         if (resource.m_set!=set)
         {
             //auto descriptorSet = GetDescriptorSets(frameIndex);
@@ -796,85 +811,85 @@ void RenderPass::UpdateDescriptorSetWrite(int frameIndex, std::vector<PassResour
 //    m_meshShader->Clean();
 //}
 
-void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<PassResources> resources)
-{
-    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
-    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
-    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
-
-    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
-    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
-    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindings = resourceOutVert.GetBindings2();
-    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindingsFrag = resourceOutFrag.GetBindings2();
-    //bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
-    //bindings = RemoveRepeatedBindings(bindings);
-    int minSet = std::min(bindings.size(), bindingsFrag.size());
-    int maxSet = std::max(bindings.size(), bindingsFrag.size());
-	for (int set = 0; set < minSet; set++) {
-        bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
-    }
-
-    m_descriptorLayouts.resize(maxSet);
-    for (int set = 0; set < maxSet; set++) {
-        m_descriptorLayouts[set].Create(m_device.GetDevice(), bindings[set]);
-    }
-    //m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
-    std::vector<VkDescriptorSetLayout> layouts(maxSet);
-    for (int set = 0; set < maxSet; set++) {
-        layouts[set] = m_descriptorLayouts[set].Get();
-    }
-    //std::vector < std::vector<VkDescriptorSetLayout>> layouts();
-
-    //m_descriptorSets.resize(layouts.size());
-    //for (auto i = 0; i < layouts.size(); i++) {
-    //    m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
-    //}
-    for (int i = 0; i < m_descriptorSets.size(); i++) {
-        auto sets = m_descriptorSets[i];
-        for (auto& set : sets) {
-            int setIndex = set.first;
-            auto& descriptorSet = set.second;
-            descriptorSet.Create(m_device.GetDevice(), allocator.Get(), layouts[setIndex]);
-        }
-    }
-
-    //for (int i = 0; m_descriptorSets.size(); i++) {
-    //    UpdateDescriptorSetWrite(i, resources);
-    //}
-
-    //for (auto i = 0; i < m_info.frambufferCount; i++) {
-        //m_uniformBuffers[i].resize(m_cbvCount);
-        for (auto set = 0; set < m_descriptorSets.size(); set++)
-        {
-            auto& descriptorSetLayoutBinding = bindings[set];
-            for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
-            {
-                auto& binding = descriptorSetLayoutBinding[i];
-
-                if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                {
-                    BufferCreateInfo info;
-                    info.arrayLength = binding.binding.descriptorCount;
-                    info.size = binding.size;
-                    Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, i);
-                }
-
-            }
-        }
-    //}
-
-    for (auto i = 0; i < m_info.frambufferCount; i++) {
-        UpdateDescriptorSetWrite(i, resources);
-    }
-
-    m_shader->Clean();
-}
+//void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator, std::vector<PassResources> resources)
+//{
+//    MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
+//    MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
+//    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+//
+//    ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut();
+//    ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut();
+//    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindings = resourceOutVert.GetBindings2();
+//    std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> bindingsFrag = resourceOutFrag.GetBindings2();
+//    //bindings.insert(bindings.end(), bindingsFrag.begin(), bindingsFrag.end());
+//    //bindings = RemoveRepeatedBindings(bindings);
+//    int minSet = std::min(bindings.size(), bindingsFrag.size());
+//    int maxSet = std::max(bindings.size(), bindingsFrag.size());
+//	for (int set = 0; set < minSet; set++) {
+//        bindings[set].insert(bindings[set].end(), bindingsFrag[set].begin(), bindingsFrag[set].end());
+//    }
+//
+//    m_descriptorLayouts.resize(maxSet);
+//    for (int set = 0; set < maxSet; set++) {
+//        m_descriptorLayouts[set].Create(m_device.GetDevice(), bindings[set]);
+//    }
+//    //m_descriptorLayouts.Create(m_device.GetDevice(), bindings);
+//    std::vector<VkDescriptorSetLayout> layouts(maxSet);
+//    for (int set = 0; set < maxSet; set++) {
+//        layouts[set] = m_descriptorLayouts[set].Get();
+//    }
+//    //std::vector < std::vector<VkDescriptorSetLayout>> layouts();
+//
+//    //m_descriptorSets.resize(layouts.size());
+//    //for (auto i = 0; i < layouts.size(); i++) {
+//    //    m_descriptorSets[i].Create(m_device.GetDevice(), allocator.Get(), layouts[i]);
+//    //}
+//    for (int i = 0; i < m_descriptorSets.size(); i++) {
+//        auto sets = m_descriptorSets[i];
+//        for (auto& set : sets) {
+//            int setIndex = set.first;
+//            auto& descriptorSet = set.second;
+//            descriptorSet.Create(m_device.GetDevice(), allocator.Get(), layouts[setIndex]);
+//        }
+//    }
+//
+//    //for (int i = 0; m_descriptorSets.size(); i++) {
+//    //    UpdateDescriptorSetWrite(i, resources);
+//    //}
+//
+//    //for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        //m_uniformBuffers[i].resize(m_cbvCount);
+//        for (auto set = 0; set < m_descriptorSets.size(); set++)
+//        {
+//            auto& descriptorSetLayoutBinding = bindings[set];
+//            for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
+//            {
+//                auto& binding = descriptorSetLayoutBinding[i];
+//
+//                if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+//                {
+//                    BufferCreateInfo info;
+//                    info.arrayLength = binding.binding.descriptorCount;
+//                    info.size = binding.size;
+//                    Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, i);
+//                }
+//
+//            }
+//        }
+//    //}
+//
+//    for (auto i = 0; i < m_info.frambufferCount; i++) {
+//        UpdateDescriptorSetWrite(i, resources);
+//    }
+//
+//    m_shader->Clean();
+//}
 
 void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
 {
     MVulkanShaderReflector vertReflector(m_shader->GetVertexShader().GetShader());
     MVulkanShaderReflector fragReflector(m_shader->GetFragmentShader().GetShader());
-    PipelineVertexInputStateInfo info = vertReflector.GenerateVertexInputAttributes();
+    PipelineVertexInputStateInfo vertexInputStateInfo = vertReflector.GenerateVertexInputAttributes();
 
     ShaderReflectorOut resourceOutVert = vertReflector.GenerateShaderReflactorOut2();
     ShaderReflectorOut resourceOutFrag = fragReflector.GenerateShaderReflactorOut2();
@@ -928,12 +943,6 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
         }
     }
 
-    //for (int i = 0; m_descriptorSets.size(); i++) {
-    //    UpdateDescriptorSetWrite(i, resources);
-    //}
-
-    //for (auto i = 0; i < m_info.frambufferCount; i++) {
-        //m_uniformBuffers[i].resize(m_cbvCount);
     for (auto set = 0; set < maxSet; set++)
     {
         auto& descriptorSetLayoutBinding = bindings[set];
@@ -956,21 +965,51 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
         }
     }
 
-    m_pipeline.Create(
-        m_device.GetDevice(), 
-        m_info.pipelineCreateInfo,
-        m_shader->GetVertexShader().GetShaderModule(),
-        nullptr,
-        m_shader->GetFragmentShader().GetShaderModule(),
-        m_renderPass.Get(), 
-        info,
-        layouts,
-        m_info.imageAttachmentFormats.size(),
-        m_shader->GetVertEntryPoint(),
-		"",
-        m_shader->GetFragEntryPoint());
+    if (m_info.dynamicRender) {
+        m_pipeline.Create(
+            m_device.GetDevice(),
+            m_info.pipelineCreateInfo,
+            m_shader->GetVertexShader().GetShaderModule(),
+            nullptr,
+            m_shader->GetFragmentShader().GetShaderModule(),
+            //m_renderPass.Get(),
+            vertexInputStateInfo,
+            layouts,
+            //m_info.imageAttachmentFormats.size(),
+            m_shader->GetVertEntryPoint(),
+            "",
+            m_shader->GetFragEntryPoint());
+    }
+    else {
+        m_pipeline.Create(
+            m_device.GetDevice(),
+            m_info.pipelineCreateInfo,
+            m_shader->GetVertexShader().GetShaderModule(),
+            nullptr,
+            m_shader->GetFragmentShader().GetShaderModule(),
+            m_renderPass.Get(),
+            vertexInputStateInfo,
+            layouts,
+            m_info.imageAttachmentFormats.size(),
+            m_shader->GetVertEntryPoint(),
+            "",
+            m_shader->GetFragEntryPoint());
+    }
 
     m_shader->Clean();
+
+    for (int set = 0; set < bindings.size(); set++) {
+        for (int i = 0; i < bindings[set].size(); i++) {
+            auto& binding = bindings[set][i];
+
+            ShaderResourceKey key{
+                .set = set,
+                .binding = int(binding.binding.binding)
+            };
+
+            m_bindings[key] = binding;
+        }
+    }
 }
 
 void RenderPass::CreateRenderPass()
@@ -1043,6 +1082,31 @@ void RenderPass::SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader)
 {
     m_meshShader = meshShader;
     m_meshShader->Create(m_device.GetDevice());
+}
+
+void RenderPass::PrepareResourcesForShaderRead(int imageIndex)
+{
+    TextureState state;
+    state.m_stage = ShaderStageFlagBits::FRAGMENT;
+    
+    for (auto& it : m_cachedResources) {
+        auto resource = it.second;
+        auto key = it.first;
+        if (resource.m_textures.size() != 0) {
+            for (auto& texture : resource.m_textures) {
+                //if()
+                auto binding = m_bindings[key];
+                auto shaderStage = binding.binding.stageFlags;
+                state.m_stage = VkShaderStage2ShaderStage(shaderStage);
+                texture->TransferTextureState(imageIndex, state);
+            }
+        }
+    }
+}
+
+void RenderPass::updateResourceCache(ShaderResourceKey key, const PassResources& resources)
+{
+    m_cachedResources[key] = resources;
 }
 
 void RenderPass::SetUBO(uint8_t binding, void* data) {

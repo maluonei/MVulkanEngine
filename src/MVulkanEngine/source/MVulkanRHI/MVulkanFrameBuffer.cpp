@@ -6,6 +6,14 @@ MVulkanFrameBuffer::MVulkanFrameBuffer()
 {
 }
 
+std::shared_ptr<MVulkanTexture> MVulkanFrameBuffer::GetDepthTexture() const {
+    return m_depthBuffer.GetTexture();
+}
+
+std::shared_ptr<MVulkanTexture> MVulkanFrameBuffer::GetTexture(int i) const {
+    return m_colorBuffers[i].GetTexture();
+}
+
 VkImageView MVulkanFrameBuffer::GetDepthImageView() const {
     if (m_info.depthView) return m_info.depthView;
     else return m_depthBuffer.GetImageView();

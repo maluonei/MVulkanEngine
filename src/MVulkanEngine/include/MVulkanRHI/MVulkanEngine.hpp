@@ -169,9 +169,9 @@ public:
     //    std::vector<VkSampler> samplers,
     //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
 
-    void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources
-    );
+    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
+    //    std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources
+    //);
 
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
         std::shared_ptr<ShaderModule> shader
@@ -252,6 +252,17 @@ public:
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount,
         bool flipY = true);
 
+    void RecordCommandBuffer(
+        uint32_t frameIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
     void RecordCommandBuffer2(
         uint32_t frameIndex, 
         std::shared_ptr<DynamicRenderPass> renderPass,
@@ -284,7 +295,7 @@ public:
 
     void RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> renderPass);
 
-    MVulkanTexture GetPlaceHolderTexture();
+    std::shared_ptr<MVulkanTexture> GetPlaceHolderTexture();
     std::shared_ptr<StorageBuffer> CreateStorageBuffer(BufferCreateInfo info, void* data = nullptr);
 
     void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
@@ -334,6 +345,20 @@ private:
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
         std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectBufferOffset, uint32_t indirectCount,
         std::string eventName, bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        MGraphicsCommandList commandList,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName,
+        bool flipY = true);
+
+    void prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo);
 
     void recordCommandBuffer2(
         uint32_t imageIndex, 
@@ -418,7 +443,7 @@ private:
 
     std::shared_ptr<Camera> m_camera = nullptr;
 
-    MVulkanTexture m_placeHolderTexture;
+    std::shared_ptr<MVulkanTexture> m_placeHolderTexture;
 };
 
 

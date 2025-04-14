@@ -4,6 +4,7 @@
 #include "Scene/SceneLoader.hpp"
 #include "Scene/Scene.hpp"
 #include "Managers/TextureManager.hpp"
+#include "Managers/ShaderManager.hpp"
 #include "RenderPass.hpp"
 #include "Camera.hpp"
 #include "Scene/Light/DirectionalLight.hpp"
@@ -14,6 +15,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Shaders/share/Light.h"
 
 void PBR::SetUp()
 {
@@ -21,6 +23,7 @@ void PBR::SetUp()
     createLight();
     createCamera();
     createTextures();
+    loadShaders();
 
     loadScene();
 }
@@ -35,7 +38,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     graphicsList.Reset();
     graphicsList.Begin();
 
-    //auto shadowmapExtent = shadowmapExtent
 
     //prepare gbufferPass ubo
     {
@@ -43,58 +45,64 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         ubo0.Model = glm::mat4(1.f);
         ubo0.View = m_camera->GetViewMatrix();
         ubo0.Projection = m_camera->GetProjMatrix();
-        m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("MVPBuffer", 0, &ubo0, 0);
+        //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         GbufferShader2::UniformBufferObject1 ubo1 = GbufferShader2::GetFromScene(m_scene);
-        m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+        Singleton<ShaderResourceManager>::instance().LoadData("TexBuffer", 0, &ubo1, 0);
+        //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
     //prepare shadowPass ubo
     {
         ShadowShader::ShadowUniformBuffer ubo0{};
         ubo0.shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        m_shadowPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("ShadowMVPBuffer", 0, &ubo0, 0);
+        //m_shadowPass->GetShader()->SetUBO(0, &ubo0);
     }
 
     //prepare lightingPass ubo
     {
-        LightingPbrShader2::UniformBuffer0 ubo0{};
-        ubo0.lightNum = 1;
-        ubo0.lights[0].direction = m_directionalLightCamera->GetDirection();
-        ubo0.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
-        ubo0.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
-        ubo0.lights[0].shadowMapIndex = 0;
-        ubo0.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        ubo0.lights[0].cameraZnear = m_directionalLightCamera->GetZnear();
-        ubo0.lights[0].cameraZfar = m_directionalLightCamera->GetZfar();
-        ubo0.cameraPos = m_camera->GetPosition();
 
-        auto swapChainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+        LightBuffer lightBuffer{};
+        lightBuffer.lightNum = 1;
+        lightBuffer.lights[0].direction = m_directionalLightCamera->GetDirection();
+        lightBuffer.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
+        lightBuffer.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
+        lightBuffer.lights[0].shadowMapIndex = 0;
+        lightBuffer.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        lightBuffer.lights[0].shadowCameraZnear = m_directionalLightCamera->GetZnear();
+        lightBuffer.lights[0].shadowCameraZfar = m_directionalLightCamera->GetZfar();
+        lightBuffer.lights[0].shadowmapResolution = int2(m_shadowPass->GetFrameBuffer(0).GetExtent2D().width, m_shadowPass->GetFrameBuffer(0).GetExtent2D().height);
 
-        ubo0.ResolusionWidth = shadowmapExtent.width;
-        ubo0.ResolusionHeight = shadowmapExtent.height;
-        ubo0.WindowResWidth = swapChainExtent.width;
-        ubo0.WindowResHeight = swapChainExtent.height;
+        MCameraBuffer cameraBuffer{};
+        cameraBuffer.cameraPos = m_camera->GetPosition();
 
-        m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+        MScreenBuffer screenBuffer{};
+        screenBuffer.WindowRes = int2(m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width, m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height);
+
+        Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
+        //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
     RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo; 
     {
         gbufferRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
-                .view = gBuffer0->GetImageView(),
+                .texture = gBuffer0,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
         gbufferRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
-                .view = gBuffer1->GetImageView(),
+                .texture = gBuffer1,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
         gbufferRenderInfo.depthAttachment = RenderingAttachment{
-                .view = gBufferDepth->GetImageView(),
+                .texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
     }
@@ -102,12 +110,12 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     {
         shadowmapRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
-                .view = shadowMap->GetImageView(),
+                .texture = shadowMap,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
         shadowmapRenderInfo.depthAttachment = RenderingAttachment{
-                .view = shadowMapDepth->GetImageView(),
+                .texture = shadowMapDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
     }
@@ -118,13 +126,15 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
         shadingRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
-                .view = swapChain.GetImageView(imageIndex),
+                .texture = nullptr,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .view = swapChain.GetImageView(imageIndex),
             }
         );
         shadingRenderInfo.depthAttachment = RenderingAttachment{
+                .texture = nullptr,
+                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 .view = swapchainDepthViews[imageIndex]->GetImageView(),
-                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
         };
     }
     gbufferRenderInfo.offset = { 0, 0 };
@@ -138,35 +148,18 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
 
     //todo:  ÷∂Ø±‰ªªimage layout
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer2(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer2(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
     
-    //graphicsList.End();
-    //
-    //VkSubmitInfo submitInfo{};
-    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //submitInfo.commandBufferCount = 1;
-    //submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-    //
-    //graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    //graphicsQueue.WaitForQueueComplete();
-    
-    ImageLayoutToShaderRead(m_currentFrame);
+    //ImageLayoutToShaderRead(m_currentFrame);
    
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
 
-    //graphicsList.Reset();
-    //graphicsList.Begin();
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer2(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
-
-    ImageLayoutToAttachment(imageIndex, m_currentFrame);
-    ImageLayoutToPresent(imageIndex, m_currentFrame);
+    //ImageLayoutToAttachment(imageIndex, m_currentFrame);
+    //ImageLayoutToPresent(imageIndex, m_currentFrame);
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
-
-    //ImageLayoutToAttachment(imageIndex);
-    //ImageLayoutToPresent(imageIndex);
-    //spdlog::info("camera.pos: {0}, {1}, {2}", m_camera->GetPosition().x, m_camera->GetPosition().y, m_camera->GetPosition().z);
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()
@@ -399,51 +392,51 @@ void PBR::createTextures()
 
 }
 
+void PBR::loadShaders() 
+{
+    Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
+
+}
+
 void PBR::createGbufferPass()
 {
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        //std::vector<VkFormat> gbufferFormats;
-        //gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
-        //gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
-
-        DynamicRenderPassCreateInfo info{};
-        //info.depthFormat = device.FindDepthFormat();
-        //info.frambufferCount = 1;
-        //info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-        //info.useAttachmentResolve = false;
-        //info.useSwapchainImages = false;
-        //info.imageAttachmentFormats = gbufferFormats;
-        //info.colorAttachmentResolvedViews = nullptr;
-        //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        //info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        //info.numAttachments = 2;
+        RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
+        info.frambufferCount = 1;
+        info.dynamicRender = 1;
 
-        info.numFrameBuffers = 1;
-        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+        m_gbufferPass = std::make_shared<RenderPass>(device, info);
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("GBuffer Shader");
 
-        m_gbufferPass = std::make_shared<DynamicRenderPass>(device, info);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_gbufferPass, shader);
 
-        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader2>();
-        
-        std::vector<StorageBuffer> storageBuffers(0);
-        std::vector<std::vector<VkImageView>> seperateImageViews(1);
-        std::vector<std::vector<VkImageView>> storageImageViews(0);
-        std::vector<VkSampler> samplers(1);
-        
-        seperateImageViews[0] = Singleton<TextureManager>::instance().GenerateTextureViews();
-        samplers[0] = m_linearSampler.GetSampler();
+        //std::vector<VkImageView> bufferTextureViews = Singleton<TextureManager>::instance().GenerateTextureViews();
+        std::vector<std::shared_ptr<MVulkanTexture>> bufferTextures = Singleton<TextureManager>::instance().GenerateTextures();
 
-        Singleton<MVulkanEngine>::instance().CreateDynamicRenderPass(
-            m_gbufferPass, gbufferShader, storageBuffers, seperateImageViews, storageImageViews, samplers);
+        std::vector<PassResources> resources;
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "MVPBuffer", 0, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "TexBuffer", 1, 0));
+
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                2, 0, bufferTextures));
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                3, 0, m_linearSampler.GetSampler()));
+
+        m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -452,36 +445,25 @@ void PBR::createShadowPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        //std::vector<VkFormat> shadowFormats(0);
-        //shadowFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-
-        DynamicRenderPassCreateInfo info{};
-        //info.depthFormat = VK_FORMAT_D32_SFLOAT;
-        //info.frambufferCount = 1;
-        //info.extent = VkExtent2D(4096, 4096);
-        //info.useAttachmentResolve = false;
-        //info.useSwapchainImages = false;
-        //info.imageAttachmentFormats = shadowFormats;
-        //info.colorAttachmentResolvedViews = nullptr;
-        //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        //info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
-        info.numFrameBuffers = 1;
+        info.frambufferCount = 1;
+        info.dynamicRender = 1;
 
-        m_shadowPass = std::make_shared<DynamicRenderPass>(device, info);
+        m_shadowPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> shadowShader = std::make_shared<ShadowShader>();
+        auto shadowShader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shadow Shader");
 
-        std::vector<StorageBuffer> storageBuffers(0);
-        std::vector<std::vector<VkImageView>> seperateImageViews(0);
-        std::vector<std::vector<VkImageView>> storageImageViews(0);
-        std::vector<VkSampler> samplers(0);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_shadowPass, shadowShader);
 
-        Singleton<MVulkanEngine>::instance().CreateDynamicRenderPass(
-            m_shadowPass, shadowShader, storageBuffers, seperateImageViews, storageImageViews, samplers);
+        std::vector<PassResources> resources;
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "ShadowMVPBuffer", 0, 0));
+
+        m_shadowPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -493,48 +475,60 @@ void PBR::createShadingPass()
         std::vector<VkFormat> lightingPassFormats;
         lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
-        DynamicRenderPassCreateInfo info{};
-        //info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-        //info.depthFormat = device.FindDepthFormat();
-        //info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
-        //info.useSwapchainImages = true;
-        //info.imageAttachmentFormats = lightingPassFormats;
-        //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        //info.initialDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        //info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        //info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        //RenderPassCreateInfo info{};
+        RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
-        info.numFrameBuffers = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
         info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        info.dynamicRender = 1;
         //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
 
-        m_lightingPass = std::make_shared<DynamicRenderPass>(device, info);
+        m_lightingPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> lightingShader = std::make_shared<LightingPbrShader2>();
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Shading Shader");
 
-        std::vector<StorageBuffer> storageBuffers(0);
-        std::vector<std::vector<VkImageView>> seperateImageViews(3);
-        std::vector<std::vector<VkImageView>> storageImageViews(0);
-        std::vector<VkSampler> samplers(1);
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_lightingPass, shader);
 
-        //std::vector<std::vector<VkImageView>> gbufferViews(3);
-        //for (auto i = 0; i < 2; i++) {
-            seperateImageViews[0].resize(1);
-            seperateImageViews[0][0] = gBuffer0->GetImageView();
-            seperateImageViews[1].resize(1);
-            seperateImageViews[1][0] = gBuffer1->GetImageView();
-        //}
-        seperateImageViews[2] = std::vector<VkImageView>(2);
-        seperateImageViews[2][0] = shadowMapDepth->GetImageView();
-        seperateImageViews[2][1] = shadowMapDepth->GetImageView();
-        samplers[0] = m_linearSampler.GetSampler();
 
-        Singleton<MVulkanEngine>::instance().CreateDynamicRenderPass(
-            m_lightingPass, lightingShader, storageBuffers, seperateImageViews, storageImageViews, samplers);
+        std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
+            m_shadowPass->GetFrameBuffer(0).GetDepthTexture(),
+            m_shadowPass->GetFrameBuffer(0).GetDepthTexture()
+        };
+
+        for (int i = 0; i < info.frambufferCount; i++) {
+            std::vector<PassResources> resources;
+
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "lightBuffer", 0, 0, i));
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "cameraBuffer", 1, 0, i));
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "screenBuffer", 2, 0, i));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    3, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(0)));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    4, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(1)));
+
+            resources.push_back(
+                PassResources::SetSamplerResource(
+                    6, 0, m_linearSampler.GetSampler()));
+
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    5, 0, shadowViews));
+
+
+            m_lightingPass->UpdateDescriptorSetWrite(i, resources);
+        }
     }
 }
 

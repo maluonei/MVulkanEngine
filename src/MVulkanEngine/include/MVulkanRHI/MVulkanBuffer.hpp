@@ -6,6 +6,7 @@
 #include "MVulkanDevice.hpp"
 #include "Utils/MImage.hpp"
 #include "MVulkanCommand.hpp"
+#include "Utils/VulkanUtil.hpp"
 
 //class MVulkanCommandList;
 
@@ -193,6 +194,7 @@ private:
 class MVulkanTexture {
 public:
 	MVulkanTexture();
+	//MVulkanTexture(VkImageView view);
 	void Clean();
 
 	template<typename T>
@@ -243,13 +245,19 @@ public:
 	}
 
 	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
-	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
+	void Create(MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
 	inline VkImage GetImage() const { return m_image.GetImage(); }
 	inline VkImageView GetImageView() const { return m_image.GetImageView(); }
 	inline VkDeviceMemory GetImageMemory() const { return m_image.GetImageMemory(); }
 
 	inline VkFormat GetFormat() const { return m_imageInfo.format; }
 	inline ImageCreateInfo GetImageInfo() const { return m_imageInfo; }
+
+	void TransferTextureState(int imageIndex, TextureState newState);
+
+private:
+	void ChangeImageLayout(int imageIndex, TextureState oldState, TextureState newState);
+
 private:
 	ImageCreateInfo		m_imageInfo;
 	ImageViewCreateInfo m_viewInfo;
@@ -260,6 +268,8 @@ private:
 	MVulkanImage		m_image;
 	bool				m_stagingBufferUsed = false;
 	MVulkanBuffer		m_stagingBuffer;
+
+	TextureState		m_state;
 };
 
 

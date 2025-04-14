@@ -19,7 +19,8 @@ struct PassResources
 	//int m_resourceCount;
 
 	std::vector<VkBuffer> m_buffers;
-	std::vector<VkImageView> m_views;
+	//std::vector<VkImageView> m_views;
+	std::vector<std::shared_ptr<MVulkanTexture>> m_textures;
 	std::vector<VkSampler> m_samplers;
 	std::vector<VkAccelerationStructureKHR*> m_accs;
 	int m_offset = 0;
@@ -45,16 +46,16 @@ struct PassResources
 
 	static PassResources SetSampledImageResource(
 		int binding, int set,
-		VkImageView view
+		std::shared_ptr<MVulkanTexture> view
 	);
 
 	static PassResources SetSampledImageResource(
-		int binding, int set, std::vector<VkImageView>& views
+		int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views
 	);
 
 	static PassResources SetStorageImageResource(
 		int binding, int set,
-		VkImageView view
+		std::shared_ptr<MVulkanTexture> view
 	);
 
 	static PassResources SetSamplerResource(
@@ -64,7 +65,7 @@ struct PassResources
 
 	static PassResources SetCombinedImageSamplerResource(
 		int binding, int set,
-		VkImageView view, VkSampler sampler
+		std::shared_ptr<MVulkanTexture> view, VkSampler sampler
 	);
 
 	static PassResources SetCombinedImageSamplerResource(

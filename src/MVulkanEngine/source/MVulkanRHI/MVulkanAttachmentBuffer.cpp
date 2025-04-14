@@ -1,4 +1,5 @@
 #include "MVulkanRHI/MVulkanAttachmentBuffer.hpp"
+#include "MVulkanRHI/MVulkanBuffer.hpp"
 
 void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format)
 {
@@ -44,8 +45,10 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 		break;
 	}
 
-	m_image.CreateImage(device, imageInfo);
-	m_image.CreateImageView(viewInfo);
+	m_texture = std::make_shared<MVulkanTexture>();
+	m_texture->Create(device, imageInfo, viewInfo);
+	//m_texture->CreateImage(device, imageInfo);
+	//m_texture->CreateImageView(viewInfo);
 
 	isActive = true;
 }
@@ -53,7 +56,18 @@ void MVulkanAttachmentBuffer::Create(MVulkanDevice device, VkExtent2D extent, At
 void MVulkanAttachmentBuffer::Clean()
 {
 	if(isActive)
-		m_image.Clean();
+		m_texture->Clean();
 
 	isActive = false;
+}
+
+VkImage MVulkanAttachmentBuffer::GetImage()const { return m_texture->GetImage(); }
+
+VkImageView MVulkanAttachmentBuffer::GetImageView()const { return m_texture->GetImageView(); }
+
+VkFormat MVulkanAttachmentBuffer::GetFormat() const { return m_format; }
+
+std::shared_ptr<MVulkanTexture> MVulkanAttachmentBuffer::GetTexture() const
+{
+	return m_texture;
 }

@@ -101,10 +101,13 @@ struct MVulkanImageMemoryBarrier {
     uint32_t				   layerCount = 1;
 };
 
-
+class MVulkanTexture;
 struct RenderingAttachment {
-    VkImageView view;
+    std::shared_ptr<MVulkanTexture> texture = nullptr;
     VkImageLayout layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+    //for swapchain image
+    VkImageView view;
+
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     glm::vec4 clearColor = glm::vec4(0.f, 0.f, 0.f, 1.f);
@@ -166,7 +169,7 @@ enum BufferType {
     NONE
 };
 
-enum ShaderStageFlagBits {
+enum class ShaderStageFlagBits {
     VERTEX = 0x01,
     FRAGMENT = 0x02,
     GEOMETRY = 0x04,
@@ -190,73 +193,38 @@ enum AttachmentType {
     DEPTH_STENCIL_ATTACHMENT = 1
 };
 
-inline VkBufferUsageFlagBits BufferType2VkBufferUsageFlagBits(BufferType type) {
-    switch (type) {
-    case VERTEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
-    case INDEX_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
-    case INDIRECT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    case STAGING_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    case STORAGE_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
-    case CBV: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    case ACCELERATION_STRUCTURE_STORAGE_BUFFER: return VkBufferUsageFlagBits(
-        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
-    case ACCELERATION_STRUCTURE_BUILD_INPUT_BUFFER: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
-    case NONE: spdlog::error("BufferType2VkBufferUsageFlagBits: NONE buffer type is not supported!"); return VkBufferUsageFlagBits(0);
-    default: spdlog::error("BufferType2VkBufferUsageFlagBits: unknown buffer type!"); return VkBufferUsageFlagBits(0);
-    }
-}
+enum class ETextureState : uint32_t {
+    Undefined = 1 << 0,
+    ColorAttachment = 1 << 1,
+    DepthAttachment = 1 << 2,
+    SRV = 1 << 3,
+    UAV = 1 << 4,
+    PRESENT = 1 << 5
+};
 
-inline VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit) {
-    switch (bit) {
-    case VERTEX: return VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-    case FRAGMENT: return VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-    case GEOMETRY: return VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT;
-    case COMPUTE: return VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
-    case RAYGEN: return VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-    case MISS: return VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR;
-    case ANYHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-    case CLOESTHIT: return VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-    case TASK: return VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_EXT;
-    case MESH: return VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT;
-    default: return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
-    }
-}
+struct TextureState {
+    ETextureState m_state = ETextureState::Undefined;
+    ShaderStageFlagBits m_stage = ShaderStageFlagBits::VERTEX;
+};
 
-inline VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type) {
-    switch (type) {
-    case GRAPHICS_QUEUE: return VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
-    case COMPUTE_QUEUE: return VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT;
-    case TRANSFER_QUEUE: return VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT;
-    case PRESENT_QUEUE:return VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
-    default: return VK_QUEUE_FLAG_BITS_MAX_ENUM;
-    }
-}
+VkImageLayout TextureState2ImageLayout(const ETextureState state);
 
-inline VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type){
-    switch (type) {
-    case SHADER_INPUT:
-        return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    case STAGING_BUFFER:
-        return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    //case UNIFORM_BUFFER:
-    //    return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    default:
-        return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    }
-}
+VkAccessFlagBits TextureState2AccessFlag(const ETextureState state);
 
-inline VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type) {
-    switch (type) {
-    case UNIFORM_BUFFER:
-        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    case COMBINED_IMAGE_SAMPLER:
-        return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    default:
-        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    }
-}
+ShaderStageFlagBits VkShaderStage2ShaderStage(const VkShaderStageFlags stage);
+//ETextureState ImageLayout2TextureState(const VkImageLayout layout);
+
+VkPipelineStageFlags TextureState2PipelineStage(const TextureState state);
+
+VkBufferUsageFlagBits BufferType2VkBufferUsageFlagBits(BufferType type);
+
+VkShaderStageFlagBits ShaderStageFlagBits2VkShaderStageFlagBits(ShaderStageFlagBits bit);
+
+VkQueueFlagBits QueueType2VkQueueFlagBits(QueueType type);
+
+VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type);
+
+VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type);
 
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);

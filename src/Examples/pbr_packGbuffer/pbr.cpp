@@ -164,7 +164,7 @@ void PBR::createGbufferPass() {
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
             m_gbufferPass, shader);
 
-        std::vector<VkImageView> bufferTextureViews = Singleton<TextureManager>::instance().GenerateTextureViews();
+        std::vector<std::shared_ptr<MVulkanTexture>> bufferTextureViews = Singleton<TextureManager>::instance().GenerateTextures();
 
         std::vector<PassResources> resources;
         resources.push_back(
@@ -250,10 +250,14 @@ void PBR::createShadingPass() {
             m_lightingPass, shader);
 
 
-        std::vector<VkImageView> shadowViews{
-            m_shadowPass->GetFrameBuffer(0).GetDepthImageView(),
-            m_shadowPass->GetFrameBuffer(0).GetDepthImageView()
-        };
+        std::vector<std::shared_ptr<MVulkanTexture>> shadowViews;
+
+        shadowViews.push_back(m_shadowPass->GetFrameBuffer(0).GetDepthTexture());
+        shadowViews.push_back(m_shadowPass->GetFrameBuffer(0).GetDepthTexture());
+        //{
+        //    m_shadowPass->GetFrameBuffer(0).GetDepthImageView(),
+        //    m_shadowPass->GetFrameBuffer(0).GetDepthImageView()
+        //};
 
         for (int i = 0; i < info.frambufferCount; i++) {
             std::vector<PassResources> resources;
@@ -269,10 +273,10 @@ void PBR::createShadingPass() {
                     "screenBuffer", 2, 0, i));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(0)));
+                    3, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(0)));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    4, 0, m_gbufferPass->GetFrameBuffer(0).GetImageView(1)));
+                    4, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(1)));
 
             resources.push_back(
                 PassResources::SetSamplerResource(
@@ -314,7 +318,7 @@ void PBR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/test/test.frag.hlsl" });
 
-    int shaderNum = Singleton<ShaderManager>::instance().GetNumShaders();
+    //int shaderNum = Singleton<ShaderManager>::instance().GetNumShaders();
 	//Singleton<ShaderManager>::instance().AddShader();
 }
 

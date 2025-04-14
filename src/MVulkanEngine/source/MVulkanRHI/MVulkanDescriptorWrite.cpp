@@ -70,26 +70,26 @@ PassResources PassResources::SetBufferResource(
 
 PassResources PassResources::SetSampledImageResource(
     int binding, int set,
-    VkImageView view
+    std::shared_ptr<MVulkanTexture> view
 ) {
     PassResources resource;
     resource.m_type = ResourceType_SampledImage;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_views = { view };
+    resource.m_textures = { view };
 
     return resource;
 }
 
-PassResources PassResources::SetSampledImageResource(int binding, int set, std::vector<VkImageView>& views)
+PassResources PassResources::SetSampledImageResource(int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views)
 {
     PassResources resource;
     resource.m_type = ResourceType_SampledImage;
     resource.m_binding = binding;
     resource.m_set = set;
 
-    resource.m_views = views;
+    resource.m_textures = views;
 
     return resource;
 }
@@ -97,14 +97,14 @@ PassResources PassResources::SetSampledImageResource(int binding, int set, std::
 
 PassResources PassResources::SetStorageImageResource(
     int binding, int set, 
-    VkImageView view
+    std::shared_ptr<MVulkanTexture> view
 ) {
     PassResources resource;
     resource.m_type = ResourceType_StorageImage;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_views = { view };
+    resource.m_textures = { view };
 
     return resource;
 }
@@ -141,14 +141,14 @@ PassResources PassResources::SetCombinedImageSamplerResource(
 
 PassResources PassResources::SetCombinedImageSamplerResource(
     int binding, int set, 
-    VkImageView view, VkSampler sampler
+    std::shared_ptr<MVulkanTexture> view, VkSampler sampler
 ) {
     PassResources resource;
     resource.m_type = ResourceType_CombinedImageSampler;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_views = { view };
+    resource.m_textures = { view };
     resource.m_samplers = { sampler };
 
     return resource;
@@ -305,10 +305,10 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             descriptorWrite[i].pBufferInfo = &r_bufferInfos[r_bufferInfos.size()-1][0];
             break;
         case ResourceType_SampledImage:
-            descriptorWrite[i].descriptorCount = resource.m_views.size();
+            descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_views[j];
+                imageInfo.imageView = resource.m_textures[j]->GetImageView();
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfos.emplace_back(imageInfo);
             }
@@ -317,10 +317,10 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             descriptorWrite[i].pImageInfo = &r_imageInfos[r_imageInfos.size()-1][0];
             break;
         case ResourceType_StorageImage:
-            descriptorWrite[i].descriptorCount = resource.m_views.size();
+            descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_views[j];
+                imageInfo.imageView = resource.m_textures[j]->GetImageView();
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
                 imageInfos.emplace_back(imageInfo);
             }
@@ -343,10 +343,10 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             //descriptorWrite[i].pImageInfo = &imageInfos[0];
             break;
         case ResourceType_CombinedImageSampler:
-            descriptorWrite[i].descriptorCount = resource.m_views.size();
+            descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_views[j];
+                imageInfo.imageView = resource.m_textures[j]->GetImageView();
                 imageInfo.sampler = resource.m_samplers[j];
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfos.emplace_back(imageInfo);

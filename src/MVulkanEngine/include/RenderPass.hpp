@@ -43,7 +43,32 @@ struct RenderPassCreateInfo {
 	VkAttachmentStoreOp stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	MVulkanPilelineCreateInfo pipelineCreateInfo;
+	bool dynamicRender = false;
 };
+
+struct ShaderResourceKey {
+	int set;
+	int binding;
+	bool operator<(const ShaderResourceKey& other) const {
+		if (this->set == other.set) {
+			return this->binding < other.binding;
+		}
+		return this->set < other.set;
+	}
+
+	bool operator==(const ShaderResourceKey& other) const {
+		return set == other.set && binding == other.binding;
+	}
+};
+
+namespace std {
+	template <>
+	struct hash<ShaderResourceKey> {
+		std::size_t operator()(const ShaderResourceKey& k) const {
+			return std::hash<int>()(k.set) ^ (std::hash<int>()(k.binding) << 1);
+		}
+	};
+}
 
 class RenderPass {
 public:
@@ -83,14 +108,20 @@ public:
 	//	std::vector<VkSampler> samplers,
 	//	std::vector<VkAccelerationStructureKHR> accelerationStructure = {});
 
+	//void Create(
+	//	std::shared_ptr<ShaderModule> shader,
+	//	MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
+	//	MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<PassResources> resources
+	//	);
+
 	void Create(
 		std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
-		MVulkanDescriptorSetAllocator& allocator,
-		std::vector<PassResources> resources
-		);
+		MVulkanDescriptorSetAllocator& allocator
+	);
 
-	void Create(
+	void CreateDynamic(
 		std::shared_ptr<ShaderModule> shader,
 		MVulkanSwapchain& swapChain, MVulkanCommandQueue& commandQueue, MGraphicsCommandList& commandList,
 		MVulkanDescriptorSetAllocator& allocator
@@ -132,6 +163,8 @@ public:
 	inline uint32_t GetAttachmentCount() { return m_frameBuffers[0].ColorAttachmentsCount(); }
 
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
+
+	void PrepareResourcesForShaderRead(int imageIndex);
 private:
 	//void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
 	//	std::vector<std::vector<VkImageView>> imageViews, 
@@ -152,16 +185,16 @@ private:
 	//	std::vector<VkSampler> samplers,
 	//	std::vector<VkAccelerationStructureKHR> accelerationStructure);
 
-	void CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocator,
-		std::vector<StorageBuffer> storageBuffers,
-		std::vector<std::vector<VkImageView>> imageViews,
-		std::vector<std::vector<VkImageView>> storageImageViews,
-		std::vector<VkSampler> samplers,
-		std::vector<VkAccelerationStructureKHR> accelerationStructure);
-
-	void CreatePipeline(
-		MVulkanDescriptorSetAllocator& allocator,
-		std::vector<PassResources> resources);
+	//void CreateMeshShaderPipeline(MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<StorageBuffer> storageBuffers,
+	//	std::vector<std::vector<VkImageView>> imageViews,
+	//	std::vector<std::vector<VkImageView>> storageImageViews,
+	//	std::vector<VkSampler> samplers,
+	//	std::vector<VkAccelerationStructureKHR> accelerationStructure);
+	//
+	//void CreatePipeline(
+	//	MVulkanDescriptorSetAllocator& allocator,
+	//	std::vector<PassResources> resources);
 
 	void CreatePipeline(
 		MVulkanDescriptorSetAllocator& allocator);
@@ -171,6 +204,8 @@ private:
 	void SetShader(std::shared_ptr<ShaderModule> shader);
 	void SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader);
 
+	
+	//void PrepareResourcesForPresent();
 private:
 	MVulkanDevice			m_device;
 	RenderPassCreateInfo	m_info;
@@ -203,8 +238,25 @@ private:
 	uint32_t m_combinedImageCount = 0;
 
 	uint32_t m_asCount = 0;
+
+	void updateResourceCache(ShaderResourceKey key, const PassResources& resources);
+	//void mergeBindings(
+	//std::unordered_map<ShaderResourceKey, PassResources> m_cachedResources;
+	//std::vector<std::vector<MVulkanDescriptorSetLayoutBinding>> m_bindings;
+	std::unordered_map<ShaderResourceKey, MVulkanDescriptorSetLayoutBinding> m_bindings;
+	std::unordered_map<ShaderResourceKey, PassResources> m_cachedResources;
+	//std::vector<>
 };
 
+//namespace std {
+//	template <>
+//	struct hash<ShaderResourceKey> {
+//		std::size_t operator()(const ShaderResourceKey& k) const {
+//			return std::hash<int>()(k.set) ^ (std::hash<int>()(k.binding) << 1);
+//		}
+//	};
+//}
+//
 struct DynamicRenderPassCreateInfo {
 	MVulkanPilelineCreateInfo pipelineCreateInfo;
 	//std::vector<VkFormat> colorAttachmentFormats;

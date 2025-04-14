@@ -245,6 +245,7 @@ MVulkanTexture::MVulkanTexture():m_image(), m_stagingBuffer(BufferType::STAGING_
 {
 }
 
+
 void MVulkanTexture::Clean()
 {
     if (m_stagingBufferUsed)
@@ -283,9 +284,11 @@ void MVulkanTexture::Create(
     //if(imageInfo.format == )
 
     commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    //m_state.m_state = ImageLayout2TextureState(layout);
 }
 
-void MVulkanTexture::Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
+void MVulkanTexture::Create(MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo)
 {
     m_imageInfo = imageInfo;
     m_viewInfo = viewInfo;
@@ -293,5 +296,41 @@ void MVulkanTexture::Create(MVulkanCommandList* commandList, MVulkanDevice devic
 
     m_image.CreateImage(device, m_imageInfo);
     m_image.CreateImageView(m_viewInfo);
+
+    m_state.m_state = ETextureState::Undefined;
+}
+
+void MVulkanTexture::TransferTextureState(int imageIndex, TextureState newState)
+{
+    if (m_state.m_state == newState.m_state && m_state.m_stage == newState.m_stage)
+        return;
+
+    ChangeImageLayout(imageIndex, m_state, newState);
+    m_state = newState;
+}
+
+void MVulkanTexture::ChangeImageLayout(int imageIndex, TextureState oldState, TextureState newState)
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    MVulkanImageMemoryBarrier _barrier{};
+    VkPipelineStageFlags srcStage, dstStage;
+
+    srcStage = TextureState2PipelineStage(oldState);
+    dstStage = TextureState2PipelineStage(newState);
+
+    _barrier.image = m_image.GetImage();
+    _barrier.srcAccessMask = TextureState2AccessFlag(oldState.m_state);
+    _barrier.dstAccessMask = TextureState2AccessFlag(newState.m_state);
+    _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
+    _barrier.newLayout = TextureState2ImageLayout(newState.m_state);    
+    _barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
+    barriers.push_back(_barrier);
+
+    if (imageIndex < 0) {
+        Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, srcStage, dstStage);
+    }
+    else {
+        Singleton<MVulkanEngine>::instance().TransitionImageLayout2(imageIndex, barriers, srcStage, dstStage);
+    }
 }
 

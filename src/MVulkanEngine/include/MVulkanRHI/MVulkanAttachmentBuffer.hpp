@@ -5,7 +5,9 @@
 #include <vulkan/vulkan_core.h>
 #include <vector>
 #include <MVulkanRHI/MVulkanDevice.hpp>
-#include <MVulkanRHI/MVulkanBuffer.hpp>
+
+
+class MVulkanTexture;
 
 class MVulkanAttachmentBuffer {
 public:
@@ -13,13 +15,15 @@ public:
 	void Create(MVulkanDevice device, VkExtent2D extent, AttachmentType type, VkFormat format);
 	void Clean();
 
-	inline VkImage GetImage()const { return m_image.GetImage(); }
-	inline VkImageView GetImageView()const { return m_image.GetImageView(); }
-	inline VkFormat GetFormat() const { return m_format; }
+	VkImage GetImage()const;
+	VkImageView GetImageView()const;
+	VkFormat GetFormat() const;
+	std::shared_ptr<MVulkanTexture> GetTexture() const;
 private:
 
 	AttachmentType		m_attachmentType;
-	MVulkanImage		m_image;
+	//MVulkanImage		m_image;
+	std::shared_ptr<MVulkanTexture> m_texture;
 	VkFormat			m_format;
 
 	bool				isActive = false;

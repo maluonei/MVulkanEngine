@@ -40,6 +40,8 @@ private:
 	void createShadowPass();
 	void createShadingPass();
 
+	void loadShaders();
+
 	void ImageLayoutToShaderRead(int currentFrame);
 	void ImageLayoutToAttachment(int imageIndex, int currentFrame);
 	void ImageLayoutToPresent(int imageIndex, int currentFrame);
@@ -47,9 +49,9 @@ private:
 	//std::shared_ptr<RenderPass> m_gbufferPass;
 	//std::shared_ptr<RenderPass> m_shadowPass;
 	//std::shared_ptr<RenderPass> m_lightingPass;
-	std::shared_ptr<DynamicRenderPass> m_gbufferPass;
-	std::shared_ptr<DynamicRenderPass> m_shadowPass;
-	std::shared_ptr<DynamicRenderPass> m_lightingPass;
+	std::shared_ptr<RenderPass> m_gbufferPass;
+	std::shared_ptr<RenderPass> m_shadowPass;
+	std::shared_ptr<RenderPass> m_lightingPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;

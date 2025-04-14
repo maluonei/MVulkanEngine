@@ -44,7 +44,7 @@ std::vector<VkImageView> TextureManager::GenerateTextureViews() {
     
     if (wholeTextureSize == 0) {
         views.resize(1);
-        views[0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+        views[0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture()->GetImageView();
     }
     else {
         views.resize(wholeTextureSize);
@@ -54,4 +54,24 @@ std::vector<VkImageView> TextureManager::GenerateTextureViews() {
     }
 
     return views;
+}
+
+std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateTextures() {
+    std::vector<std::shared_ptr<MVulkanTexture>> textures;
+
+    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    auto wholeTextureSize = wholeTextures.size();
+
+    if (wholeTextureSize == 0) {
+        textures.resize(1);
+        textures[0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture();
+    }
+    else {
+        textures.resize(wholeTextureSize);
+        for (auto j = 0; j < wholeTextureSize; j++) {
+            textures[j] = wholeTextures[j];
+        }
+    }
+
+    return textures;
 }

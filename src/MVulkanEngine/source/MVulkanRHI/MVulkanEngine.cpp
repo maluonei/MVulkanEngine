@@ -39,7 +39,7 @@ void MVulkanEngine::Clean()
 {
     Singleton<TextureManager>::instance().Clean();
 
-    m_placeHolderTexture.Clean();
+    m_placeHolderTexture->Clean();
 
     m_allocator.Clean();
     
@@ -227,10 +227,10 @@ MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
 //    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, storageBuffers, imageViews, storageImageViews, samplers, accelerationStructures);
 //}
 
-void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources)
-{
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, resources);
-}
+//void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources)
+//{
+//    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator, resources);
+//}
 
 void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader)
 {
@@ -354,6 +354,19 @@ void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<Ren
     recordCommandBuffer(frameIndex, renderPass, m_generalGraphicList, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, flipY);
 }
 
+void MVulkanEngine::RecordCommandBuffer(
+    uint32_t frameIndex,
+    std::shared_ptr<RenderPass> renderPass,
+    uint32_t currentFrame,
+    RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer,
+    std::shared_ptr<Buffer> indexBuffer,
+    std::shared_ptr<Buffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName, bool flipY) {
+    recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+}
+
 void MVulkanEngine::RecordCommandBuffer2(
     uint32_t frameIndex, 
     std::shared_ptr<DynamicRenderPass> renderPass, 
@@ -403,7 +416,7 @@ void MVulkanEngine::RecreateRenderPassFrameBuffer(std::shared_ptr<RenderPass> re
     renderPass->RecreateFrameBuffers(m_swapChain, m_transferQueue, m_transferList, m_swapChain.GetSwapChainExtent());
 }
 
-MVulkanTexture MVulkanEngine::GetPlaceHolderTexture()
+std::shared_ptr<MVulkanTexture> MVulkanEngine::GetPlaceHolderTexture()
 {
     return m_placeHolderTexture;
 }
@@ -867,20 +880,20 @@ void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCr
 {
     //texture = std::make_shared<MVulkanTexture>();
 
-    m_generalGraphicList.Reset();
-    m_generalGraphicList.Begin();
+    //m_generalGraphicList.Reset();
+    //m_generalGraphicList.Begin();
 
-    texture->Create(&m_generalGraphicList, m_device, imageInfo, viewInfo);
+    texture->Create(m_device, imageInfo, viewInfo);
 
-    m_generalGraphicList.End();
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
-
-    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    m_graphicsQueue.WaitForQueueComplete();
+    //m_generalGraphicList.End();
+    //
+    //VkSubmitInfo submitInfo{};
+    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //submitInfo.commandBufferCount = 1;
+    //submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
+    //
+    //m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //m_graphicsQueue.WaitForQueueComplete();
 }
 
 //void MVulkanEngine::present(
@@ -932,7 +945,8 @@ void MVulkanEngine::createPlaceHolderTexture()
     m_generalGraphicList.Reset();
     m_generalGraphicList.Begin();
 
-    m_placeHolderTexture.Create(&m_generalGraphicList, m_device, imageinfo, viewInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_placeHolderTexture = std::make_shared<MVulkanTexture>();
+    m_placeHolderTexture->Create(&m_generalGraphicList, m_device, imageinfo, viewInfo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     m_generalGraphicList.End();
 
@@ -1222,6 +1236,81 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.EndDebugLabel();
 }
 
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, bool flipY)
+{
+    commandList.BeginDebugLabel(eventName);
+
+    auto extent = renderingInfo.extent;
+    auto offset = renderingInfo.offset;
+
+    commandList.BeginRendering(renderingInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+    renderPass->PrepareResourcesForShaderRead(imageIndex);
+
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+
+    commandList.EndRendering();
+
+    commandList.EndDebugLabel();
+}
+
+void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo)
+{
+    TextureState state;
+    state.m_stage = ShaderStageFlagBits::FRAGMENT;
+
+    for (auto& attachment : renderingInfo.colorAttachments) {
+        if (attachment.texture != nullptr) {
+            auto& texture = attachment.texture;
+            state.m_state = ETextureState::ColorAttachment;
+            texture->TransferTextureState(imageIndex, state);
+        }
+        else {
+
+        }
+    }
+
+    {
+        if (renderingInfo.depthAttachment.texture != nullptr) {
+            auto& texture = renderingInfo.depthAttachment.texture;
+            state.m_state = ETextureState::DepthAttachment;
+            texture->TransferTextureState(imageIndex, state);
+        }
+    }
+}
+
 void MVulkanEngine::recordCommandBuffer2(
     uint32_t imageIndex, 
     std::shared_ptr<DynamicRenderPass> renderPass, 
@@ -1233,25 +1322,6 @@ void MVulkanEngine::recordCommandBuffer2(
     uint32_t indirectCount,
     std::string eventName, bool flipY)
 {
-    //VkExtent2D extent = renderPass->GetFrameBuffer(imageIndex).GetExtent2D();
-    //
-    //VkRenderPassBeginInfo renderPassInfo{};
-    //renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    //renderPassInfo.renderPass = renderPass->GetRenderPass().Get();
-    //renderPassInfo.framebuffer = renderPass->GetFrameBuffer(imageIndex).Get();
-    //renderPassInfo.renderArea.offset = { 0, 0 };
-    //renderPassInfo.renderArea.extent = extent;
-    //
-    //uint32_t attachmentCount = renderPass->GetAttachmentCount();
-    //std::vector<VkClearValue> clearValues(attachmentCount + 1);
-    //for (auto i = 0; i < attachmentCount; i++) {
-    //    clearValues[i].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-    //}
-    //clearValues[attachmentCount].depthStencil = { 1.0f, 0 };
-    //
-    //renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    //renderPassInfo.pClearValues = clearValues.data();
-    //commandList.BeginRenderPass(&renderPassInfo);
     commandList.BeginDebugLabel(eventName);
 
     auto extent = renderingInfo.extent;

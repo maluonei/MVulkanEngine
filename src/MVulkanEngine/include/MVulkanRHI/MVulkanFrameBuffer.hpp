@@ -59,6 +59,8 @@ public:
 
 	inline VkFormat GetDepthFormat() const { return m_depthBuffer.GetFormat(); }
 
+	std::shared_ptr<MVulkanTexture> GetDepthTexture() const;
+	std::shared_ptr<MVulkanTexture> GetTexture(int i) const;
 	VkImageView GetDepthImageView() const;
 
 	inline VkFramebuffer Get() const { return m_frameBuffer; }
