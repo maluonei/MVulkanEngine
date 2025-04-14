@@ -253,10 +253,10 @@ public:
 	inline VkFormat GetFormat() const { return m_imageInfo.format; }
 	inline ImageCreateInfo GetImageInfo() const { return m_imageInfo; }
 
-	void TransferTextureState(int imageIndex, TextureState newState);
+	void TransferTextureState(int currentFrame, TextureState newState);
 
 private:
-	void ChangeImageLayout(int imageIndex, TextureState oldState, TextureState newState);
+	void ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState);
 
 private:
 	ImageCreateInfo		m_imageInfo;

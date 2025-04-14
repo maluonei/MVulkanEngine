@@ -302,6 +302,7 @@ public:
     void TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
     void TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+    void TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
     void Present(
         uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
@@ -349,7 +350,8 @@ private:
     void recordCommandBuffer(
         uint32_t imageIndex,
         std::shared_ptr<RenderPass> renderPass,
-        MGraphicsCommandList commandList,
+        //MGraphicsCommandList commandList,
+        uint32_t currentFrame,
         RenderingInfo& renderingInfo,
         std::shared_ptr<Buffer> vertexBuffer,
         std::shared_ptr<Buffer> indexBuffer,
@@ -358,8 +360,9 @@ private:
         std::string eventName,
         bool flipY = true);
 
-    void prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo);
-
+    void prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo, uint32_t currentFrame);
+    void swapchainImage2Present(uint32_t imageIndex, uint32_t currentFrame);
+    
     void recordCommandBuffer2(
         uint32_t imageIndex, 
         std::shared_ptr<DynamicRenderPass> renderPass, 

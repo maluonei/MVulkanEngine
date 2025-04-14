@@ -226,6 +226,10 @@ VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type);
 
 VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type);
 
+VkImageAspectFlagBits ETextureState2VkImageAspectFlag(ETextureState state);
+
+ETextureState VkDescriptorType2ETextureState(VkDescriptorType type);
+
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 

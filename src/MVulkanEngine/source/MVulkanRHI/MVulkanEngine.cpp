@@ -234,7 +234,12 @@ MGraphicsCommandList& MVulkanEngine::GetGraphicsList(int i)
 
 void MVulkanEngine::CreateRenderPass(std::shared_ptr<RenderPass> renderPass, std::shared_ptr<ShaderModule> shader)
 {
-    renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator);
+    if (renderPass->GetRenderPassCreateInfo().dynamicRender) {
+        renderPass->CreateDynamic(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator);
+    }
+    else {
+        renderPass->Create(shader, m_swapChain, m_graphicsQueue, m_generalGraphicList, m_allocator);
+    }
 }
 
 void MVulkanEngine::CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass, std::shared_ptr<ShaderModule> shader, std::vector<StorageBuffer> storageBuffers, std::vector<std::vector<VkImageView>> imageViews, std::vector<std::vector<VkImageView>> storageImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures)
@@ -364,7 +369,7 @@ void MVulkanEngine::RecordCommandBuffer(
     std::shared_ptr<Buffer> indirectBuffer,
     uint32_t indirectCount,
     std::string eventName, bool flipY) {
-    recordCommandBuffer(frameIndex, renderPass, m_graphicsLists[currentFrame], renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+    recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
 }
 
 void MVulkanEngine::RecordCommandBuffer2(
@@ -485,20 +490,13 @@ void MVulkanEngine::TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkP
 
 void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
-    //m_generalGraphicList.Reset();
-    //m_generalGraphicList.Begin();
-
     auto graphicsList = m_graphicsLists[commandListId];
     graphicsList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    //m_generalGraphicList.End();
-    //
-    //VkSubmitInfo submitInfo{};
-    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //submitInfo.commandBufferCount = 1;
-    //submitInfo.pCommandBuffers = &m_generalGraphicList.GetBuffer();
-    //
-    //m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    //m_graphicsQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    list.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
 
 void MVulkanEngine::initVulkan()
@@ -1236,12 +1234,17 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.EndDebugLabel();
 }
 
-void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, bool flipY)
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, uint32_t _currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, bool flipY)
 {
+    auto& commandList = m_graphicsLists[_currentFrame];
+
     commandList.BeginDebugLabel(eventName);
 
     auto extent = renderingInfo.extent;
     auto offset = renderingInfo.offset;
+
+    prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
+    renderPass->PrepareResourcesForShaderRead(_currentFrame);
 
     commandList.BeginRendering(renderingInfo);
 
@@ -1268,7 +1271,6 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.SetScissor(0, 1, &scissor);
 
     //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
-    renderPass->PrepareResourcesForShaderRead(imageIndex);
 
     auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
     commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
@@ -1284,9 +1286,14 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.EndRendering();
 
     commandList.EndDebugLabel();
+
+    //use swapchain Image
+    if (renderingInfo.colorAttachments[0].texture == nullptr) {
+        swapchainImage2Present(imageIndex, _currentFrame);
+    }
 }
 
-void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo)
+void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo, uint32_t currentFrame)
 {
     TextureState state;
     state.m_stage = ShaderStageFlagBits::FRAGMENT;
@@ -1295,10 +1302,24 @@ void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& ren
         if (attachment.texture != nullptr) {
             auto& texture = attachment.texture;
             state.m_state = ETextureState::ColorAttachment;
-            texture->TransferTextureState(imageIndex, state);
+            texture->TransferTextureState(currentFrame, state);
         }
         else {
-
+            std::vector<MVulkanImageMemoryBarrier> barriers;
+            {
+                MVulkanImageMemoryBarrier barrier{};
+                barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
+                barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.baseArrayLayer = 0;
+                barrier.layerCount = 1;
+                barrier.levelCount = 1;
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = 0;
+                barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+                barriers.push_back(barrier);
+            }
+            Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
     }
 
@@ -1306,9 +1327,29 @@ void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& ren
         if (renderingInfo.depthAttachment.texture != nullptr) {
             auto& texture = renderingInfo.depthAttachment.texture;
             state.m_state = ETextureState::DepthAttachment;
-            texture->TransferTextureState(imageIndex, state);
+            texture->TransferTextureState(currentFrame, state);
         }
     }
+}
+
+void MVulkanEngine::swapchainImage2Present(uint32_t imageIndex, uint32_t currentFrame)
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = 0;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barriers.push_back(barrier);
+    }
+
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
 }
 
 void MVulkanEngine::recordCommandBuffer2(

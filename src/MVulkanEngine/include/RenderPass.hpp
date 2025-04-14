@@ -164,7 +164,7 @@ public:
 
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 
-	void PrepareResourcesForShaderRead(int imageIndex);
+	void PrepareResourcesForShaderRead(int currentFrame);
 private:
 	//void CreatePipeline(MVulkanDescriptorSetAllocator& allocator, 
 	//	std::vector<std::vector<VkImageView>> imageViews, 

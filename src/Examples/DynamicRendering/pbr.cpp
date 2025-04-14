@@ -30,14 +30,11 @@ void PBR::SetUp()
 
 void PBR::ComputeAndDraw(uint32_t imageIndex)
 {
-    auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-    auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+    auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
 
     //ImageLayoutToAttachment(imageIndex);
-
-    graphicsList.Reset();
-    graphicsList.Begin();
-
+    auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
 
     //prepare gbufferPass ubo
     {
@@ -73,13 +70,13 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         lightBuffer.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
         lightBuffer.lights[0].shadowCameraZnear = m_directionalLightCamera->GetZnear();
         lightBuffer.lights[0].shadowCameraZfar = m_directionalLightCamera->GetZfar();
-        lightBuffer.lights[0].shadowmapResolution = int2(m_shadowPass->GetFrameBuffer(0).GetExtent2D().width, m_shadowPass->GetFrameBuffer(0).GetExtent2D().height);
+        lightBuffer.lights[0].shadowmapResolution = int2(shadowmapExtent.width, shadowmapExtent.height);
 
         MCameraBuffer cameraBuffer{};
         cameraBuffer.cameraPos = m_camera->GetPosition();
 
         MScreenBuffer screenBuffer{};
-        screenBuffer.WindowRes = int2(m_gbufferPass->GetFrameBuffer(0).GetExtent2D().width, m_gbufferPass->GetFrameBuffer(0).GetExtent2D().height);
+        screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
 
         Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
@@ -132,31 +129,27 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             }
         );
         shadingRenderInfo.depthAttachment = RenderingAttachment{
-                .texture = nullptr,
+                .texture = swapchainDepthViews[imageIndex],
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                .view = swapchainDepthViews[imageIndex]->GetImageView(),
+                //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
     }
     gbufferRenderInfo.offset = { 0, 0 };
-    gbufferRenderInfo.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+    gbufferRenderInfo.extent = swapchainExtent;
 
     shadowmapRenderInfo.offset = { 0, 0 };
     shadowmapRenderInfo.extent = shadowmapExtent;
 
     shadingRenderInfo.offset = { 0, 0 };
-    shadingRenderInfo.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+    shadingRenderInfo.extent = swapchainExtent;
 
+    graphicsList.Reset();
+    graphicsList.Begin();
 
     //todo:  ÷∂Ø±‰ªªimage layout
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
-    
-    //ImageLayoutToShaderRead(m_currentFrame);
-   
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
-
-    //ImageLayoutToAttachment(imageIndex, m_currentFrame);
-    //ImageLayoutToPresent(imageIndex, m_currentFrame);
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
@@ -494,9 +487,13 @@ void PBR::createShadingPass()
             m_lightingPass, shader);
 
 
+        //std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
+        //    m_shadowPass->GetFrameBuffer(0).GetDepthTexture(),
+        //    m_shadowPass->GetFrameBuffer(0).GetDepthTexture()
+        //};
         std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
-            m_shadowPass->GetFrameBuffer(0).GetDepthTexture(),
-            m_shadowPass->GetFrameBuffer(0).GetDepthTexture()
+            shadowMapDepth,
+            shadowMapDepth
         };
 
         for (int i = 0; i < info.frambufferCount; i++) {
@@ -513,10 +510,10 @@ void PBR::createShadingPass()
                     "screenBuffer", 2, 0, i));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(0)));
+                    3, 0, gBuffer0));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    4, 0, m_gbufferPass->GetFrameBuffer(0).GetTexture(1)));
+                    4, 0, gBuffer1));
 
             resources.push_back(
                 PassResources::SetSamplerResource(

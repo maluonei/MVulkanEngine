@@ -1084,7 +1084,7 @@ void RenderPass::SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader)
     m_meshShader->Create(m_device.GetDevice());
 }
 
-void RenderPass::PrepareResourcesForShaderRead(int imageIndex)
+void RenderPass::PrepareResourcesForShaderRead(int currentFrame)
 {
     TextureState state;
     state.m_stage = ShaderStageFlagBits::FRAGMENT;
@@ -1098,7 +1098,11 @@ void RenderPass::PrepareResourcesForShaderRead(int imageIndex)
                 auto binding = m_bindings[key];
                 auto shaderStage = binding.binding.stageFlags;
                 state.m_stage = VkShaderStage2ShaderStage(shaderStage);
-                texture->TransferTextureState(imageIndex, state);
+                //binding.binding.descriptorType;
+                state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
+                //state.m_state = ET
+                //auto t = m_bindings[]
+                texture->TransferTextureState(currentFrame, state);
             }
         }
     }

@@ -300,16 +300,16 @@ void MVulkanTexture::Create(MVulkanDevice device, ImageCreateInfo imageInfo, Ima
     m_state.m_state = ETextureState::Undefined;
 }
 
-void MVulkanTexture::TransferTextureState(int imageIndex, TextureState newState)
+void MVulkanTexture::TransferTextureState(int currentFrame, TextureState newState)
 {
     if (m_state.m_state == newState.m_state && m_state.m_stage == newState.m_stage)
         return;
 
-    ChangeImageLayout(imageIndex, m_state, newState);
+    ChangeImageLayout(currentFrame, m_state, newState);
     m_state = newState;
 }
 
-void MVulkanTexture::ChangeImageLayout(int imageIndex, TextureState oldState, TextureState newState)
+void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState)
 {
     std::vector<MVulkanImageMemoryBarrier> barriers;
     MVulkanImageMemoryBarrier _barrier{};
@@ -324,13 +324,17 @@ void MVulkanTexture::ChangeImageLayout(int imageIndex, TextureState oldState, Te
     _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
     _barrier.newLayout = TextureState2ImageLayout(newState.m_state);    
     _barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
+    //if()
+    if(newState.m_state==ETextureState::DepthAttachment || oldState.m_state==ETextureState::DepthAttachment)
+        _barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //_barrier.aspectMask = ETextureState2VkImageAspectFlag(newState.m_state);
     barriers.push_back(_barrier);
 
-    if (imageIndex < 0) {
+    if (currentFrame < 0) {
         Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, srcStage, dstStage);
     }
     else {
-        Singleton<MVulkanEngine>::instance().TransitionImageLayout2(imageIndex, barriers, srcStage, dstStage);
+        Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, srcStage, dstStage);
     }
 }
 

@@ -258,3 +258,27 @@ VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type) {
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }
 }
+
+VkImageAspectFlagBits ETextureState2VkImageAspectFlag(ETextureState state)
+{
+    switch (state) {
+    case ETextureState::DepthAttachment:
+        return VK_IMAGE_ASPECT_DEPTH_BIT;
+    default:
+        return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+}
+
+ETextureState VkDescriptorType2ETextureState(VkDescriptorType type)
+{
+    switch (type) {
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        return ETextureState::SRV;
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        return ETextureState::UAV;
+    default:
+        spdlog::error("unknown VkDescriptorType:{0}", int(type));
+        return ETextureState::Undefined;
+    }
+}

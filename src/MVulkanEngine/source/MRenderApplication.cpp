@@ -25,22 +25,27 @@ void MRenderApplication::Run()
 
 void MRenderApplication::SetUp()
 {
+
 }
 
 void MRenderApplication::ComputeAndDraw(uint32_t imageInde)
 {
+
 }
 
 void MRenderApplication::RecreateSwapchainAndRenderPasses()
 {
+
 }
 
 void MRenderApplication::CreateRenderPass()
 {
+
 }
 
 void MRenderApplication::PreComputes()
 {
+
 }
 
 void MRenderApplication::Clean()

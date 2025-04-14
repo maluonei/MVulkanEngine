@@ -343,7 +343,10 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
         auto depthAttachment = renderingInfo.depthAttachment;
 
         depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        depthAttachments.imageView = depthAttachment.texture->GetImageView();
+        if(depthAttachment.texture!=nullptr)
+            depthAttachments.imageView = depthAttachment.texture->GetImageView();
+        else
+            depthAttachments.imageView = depthAttachment.view;
         depthAttachments.imageLayout = depthAttachment.layout;
         depthAttachments.loadOp = depthAttachment.loadOp;
         depthAttachments.storeOp = depthAttachment.storeOp;
