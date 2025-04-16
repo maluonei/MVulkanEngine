@@ -15,7 +15,7 @@
 struct BoundingBox {
     glm::vec3 pMin;
     glm::vec3 pMax;
-    
+    BoundingBox() = default;
     BoundingBox(glm::vec3 inPmin, glm::vec3 inPmax);
     BoundingBox(const BoundingBox& bbx) = default;
 
@@ -33,6 +33,7 @@ std::ostream& operator<<(std::ostream& os, const glm::mat4& mat);
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec);
 
 glm::vec4 RotationMatrixToQuaternion(glm::mat3 R);
+
 
 
 #endif

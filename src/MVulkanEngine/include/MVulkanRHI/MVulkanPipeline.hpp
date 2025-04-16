@@ -134,6 +134,10 @@ public:
 		VkShaderModule compShaderModule, 
 		VkDescriptorSetLayout layout,
 		std::string entryPoint = "");
+	void Create(VkDevice device,
+		VkShaderModule compShaderModule,
+		std::vector<VkDescriptorSetLayout> layouts,
+		std::string entryPoint = "");
 private:
 	//std::string m_entryPoint;
 };

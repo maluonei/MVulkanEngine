@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 #include <MVulkanRHI/MVulkanEngine.hpp>
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include <Managers/TextureManager.hpp>
 
 Scene::~Scene() {
 
@@ -222,4 +223,49 @@ void Scene::GenerateMeshBuffers()
         Singleton<MVulkanEngine>::instance().CreateBuffer(mesh->m_vertexBuffer, (const void*)(mesh->vertices.data()), sizeof(Vertex) * mesh->vertices.size());
         Singleton<MVulkanEngine>::instance().CreateBuffer(mesh->m_indexBuffer, (const void*)(mesh->indices.data()), sizeof(unsigned int) * mesh->indices.size());
     }
+}
+
+TexBuffer Scene::GenerateTexBuffer()
+{
+    TexBuffer texBuffer;
+
+    //auto meshNames = this->GetMeshNames();
+    auto numPrims = this->GetNumPrimInfos();
+    auto drawIndexedIndirectCommands = this->GetIndirectDrawCommands();
+
+    for (auto i = 0; i < numPrims; i++) {
+        //auto name = meshNames[i];
+        //auto mesh = this->GetMesh(i);
+        auto primInfo = this->m_primInfos[i];
+        auto mat = this->GetMaterial(primInfo.material_id);
+
+        auto indirectCommand = drawIndexedIndirectCommands[i];
+        if (mat->diffuseTexture != "") {
+            auto diffuseTexId = Singleton<TextureManager>::instance().GetTextureId(mat->diffuseTexture);
+            texBuffer.tex[indirectCommand.firstInstance].diffuseTextureIdx = diffuseTexId;
+        }
+        else {
+            texBuffer.tex[indirectCommand.firstInstance].diffuseTextureIdx = -1;
+            texBuffer.tex[indirectCommand.firstInstance].diffuseColor = glm::vec3(mat->diffuseColor.r, mat->diffuseColor.g, mat->diffuseColor.b);
+        }
+
+        if (mat->metallicAndRoughnessTexture != "") {
+            auto metallicAndRoughnessTexId = Singleton<TextureManager>::instance().GetTextureId(mat->metallicAndRoughnessTexture);
+            texBuffer.tex[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = metallicAndRoughnessTexId;
+        }
+        else {
+            texBuffer.tex[indirectCommand.firstInstance].metallicAndRoughnessTextureIdx = -1;
+        }
+
+
+        if (mat->normalMap != "") {
+            auto normalmapIdx = Singleton<TextureManager>::instance().GetTextureId(mat->normalMap);
+            texBuffer.tex[indirectCommand.firstInstance].normalTextureIdx = normalmapIdx;
+        }
+        else {
+            texBuffer.tex[indirectCommand.firstInstance].normalTextureIdx = -1;
+        }
+    }
+
+    return texBuffer;
 }

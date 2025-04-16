@@ -1,18 +1,22 @@
 // HLSL Shader
-struct MVPBuffer
-{
-    float4x4 Model;
-    float4x4 View;
-    float4x4 Projection;
-};
+#define SHARED_CODE_HLSL
+
+#include "Common.h"
+
+//struct MVPBuffer
+//{
+//    float4x4 Model;
+//    float4x4 View;
+//    float4x4 Projection;
+//};
 
 [[vk::binding(0, 0)]]
-cbuffer MVPBuffer : register(b0)
+cbuffer mvpBuffer : register(b0)
 {
     MVPBuffer mvp;
 };
 
-#define MVPBuffer ubo0
+//#define MVPBuffer ubo0
 //[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
 
 struct VSInput

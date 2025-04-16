@@ -1,22 +1,25 @@
 // HLSL Shader
-struct TexBuffer
-{
-    int diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx;
-    int matId;
-    int normalTextureIdx;
+//struct TexBuffer
+//{
+//    int diffuseTextureIdx;
+//    int metallicAndRoughnessTextureIdx;
+//    int matId;
+//    int normalTextureIdx;
+//
+//    float3 diffuseColor;
+//    int padding0;
+//};
+#define SHARED_CODE_HLSL
 
-    float3 diffuseColor;
-    int padding0;
-};
-    
+#include "Common.h"
+
 [[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+cbuffer texBuffer : register(b1)
 {
-    TexBuffer ubo1[512];
+    TexBuffer ubo1;
 };
 
-[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
+[[vk::binding(2, 0)]] Texture2D textures[MAX_TEXTURES] : register(t2);
 [[vk::binding(3, 0)]] SamplerState linearSampler : register(s2);
 
 

@@ -4,6 +4,7 @@
 #include "Scene/SceneLoader.hpp"
 #include "Scene/Scene.hpp"
 #include "Managers/TextureManager.hpp"
+#include "Managers/ShaderManager.hpp"
 //#include "Managers/InputManager.hpp"
 #include "RenderPass.hpp"
 #include "ComputePass.hpp"
@@ -38,6 +39,8 @@ void DDGIApplication::SetUp()
 
     createStorageBuffers();
     createAS();
+
+    loadShaders();
 
     auto now = std::chrono::system_clock::now();
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -816,51 +819,42 @@ void DDGIApplication::createGbufferPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        std::vector<VkFormat> gbufferFormats;
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        //gbufferFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
-
         RenderPassCreateInfo info{};
-        info.depthFormat = device.FindDepthFormat();
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         info.frambufferCount = 1;
-        info.extent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-        info.useAttachmentResolve = false;
-        info.useSwapchainImages = false;
-        info.imageAttachmentFormats = gbufferFormats;
-        info.colorAttachmentResolvedViews = nullptr;
-        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+        info.dynamicRender = 1;
 
         m_gbufferPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> gbufferShader = std::make_shared<GbufferShader>();
-        std::vector<std::vector<VkImageView>> bufferTextureViews(1);
-        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-        auto wholeTextureSize = wholeTextures.size();
-        for (auto i = 0; i < bufferTextureViews.size(); i++) {
-            if (wholeTextureSize == 0) {
-                bufferTextureViews[i].resize(1);
-                bufferTextureViews[i][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
-            }
-            else {
-                bufferTextureViews[i].resize(wholeTextureSize);
-                for (auto j = 0; j < wholeTextureSize; j++) {
-                    bufferTextureViews[i][j] = wholeTextures[j]->GetImageView();
-                }
-            }
-        }
-        std::vector<VkSampler> samplers(1, m_linearSamplerWithAnisotropy.GetSampler());
-
+        auto gbufferShader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("GBuffer Shader");
+        
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_gbufferPass, gbufferShader, bufferTextureViews, samplers);
+            m_gbufferPass, gbufferShader);
+
+        std::vector<PassResources> resources;
+        std::vector<std::shared_ptr<MVulkanTexture>> bufferTextures = Singleton<TextureManager>::instance().GenerateTextures();
+        
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "MVPBuffer", 0, 0));
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "TexBuffer", 1, 0));
+
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                2, 0, bufferTextures));
+
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                3, 0, m_linearSamplerWithAnisotropy.GetSampler()));
+
+        m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
 }
 
@@ -869,79 +863,111 @@ void DDGIApplication::createProbeTracingPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        std::vector<VkFormat> probeTracingPassFormats;
-        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-
-        VkExtent2D extent2D = { m_raysPerProbe, m_volume->GetNumProbes()};
-
         RenderPassCreateInfo info{};
-        info.depthFormat = device.FindDepthFormat();
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         info.frambufferCount = 1;
-        info.extent = extent2D;
-        info.useAttachmentResolve = false;
-        info.useSwapchainImages = false;
-        info.imageAttachmentFormats = probeTracingPassFormats;
-        info.colorAttachmentResolvedViews = nullptr;
-        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
-        info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+        info.dynamicRender = 1;
+
+        //std::vector<VkFormat> probeTracingPassFormats;
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        ////probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        ////probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        ////probeTracingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //
+        //VkExtent2D extent2D = { m_raysPerProbe, m_volume->GetNumProbes()};
+        //
+        //RenderPassCreateInfo info{};
+        //info.depthFormat = device.FindDepthFormat();
+        //info.frambufferCount = 1;
+        //info.extent = extent2D;
+        //info.useAttachmentResolve = false;
+        //info.useSwapchainImages = false;
+        //info.imageAttachmentFormats = probeTracingPassFormats;
+        //info.colorAttachmentResolvedViews = nullptr;
+        //info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        //info.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        //info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        //info.finalDepthLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        //info.pipelineCreateInfo.depthTestEnable = VK_TRUE;
+        //info.pipelineCreateInfo.depthWriteEnable = VK_TRUE;
 
         m_probeTracingPass = std::make_shared<RenderPass>(device, info);
 
-        std::shared_ptr<ShaderModule> probeTracingShader = std::make_shared<ProbeTracingShader>();
-        std::vector<std::vector<VkImageView>> bufferTextureViews(3);
-        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-        auto wholeTextureSize = wholeTextures.size();
+        auto probeTracingShader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("ProbeTracing Shader");
+        //std::vector<std::vector<VkImageView>> bufferTextureViews(3);
+        //auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+        //auto wholeTextureSize = wholeTextures.size();
+        //
+        //if (wholeTextureSize == 0) {
+        //    bufferTextureViews[0].resize(1);
+        //    bufferTextureViews[0][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
+        //}
+        //else {
+        //    bufferTextureViews[0].resize(wholeTextureSize);
+        //    for (auto j = 0; j < wholeTextureSize; j++) {
+        //        bufferTextureViews[0][j] = wholeTextures[j]->GetImageView();
+        //    }
+        //}
+        //
+        //bufferTextureViews[1] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
+        //bufferTextureViews[2] = std::vector<VkImageView>(1, m_volumeProbeDatasDepth->GetImageView());
 
-        if (wholeTextureSize == 0) {
-            bufferTextureViews[0].resize(1);
-            bufferTextureViews[0][0] = Singleton<MVulkanEngine>::instance().GetPlaceHolderTexture().GetImageView();
-        }
-        else {
-            bufferTextureViews[0].resize(wholeTextureSize);
-            for (auto j = 0; j < wholeTextureSize; j++) {
-                bufferTextureViews[0][j] = wholeTextures[j]->GetImageView();
-            }
-        }
 
-        bufferTextureViews[1] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
-        bufferTextureViews[2] = std::vector<VkImageView>(1, m_volumeProbeDatasDepth->GetImageView());
-
-
-        std::vector<std::vector<VkImageView>> storageTextureViews(0);
-        //storageTextureViews[0].resize(1, m_volumeProbeDatasRadiance->GetImageView());
-        //storageTextureViews[1].resize(1, m_volumeProbeDatasDepth->GetImageView());
-
-        std::vector<VkSampler> samplers(1);
-        samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
-
-        auto tlas = m_rayTracing.GetTLAS();
-        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
-
-        std::vector<StorageBuffer> storageBuffers(0);
-        storageBuffers.push_back(*m_tlasVertexBuffer);
-        storageBuffers.push_back(*m_tlasIndexBuffer);
-        storageBuffers.push_back(*m_tlasNormalBuffer);
-        storageBuffers.push_back(*m_tlasUVBuffer);
-        storageBuffers.push_back(*m_geometryInfo);
-        storageBuffers.push_back(*m_probesDataBuffer);
+        //std::vector<std::vector<VkImageView>> storageTextureViews(0);
+        ////storageTextureViews[0].resize(1, m_volumeProbeDatasRadiance->GetImageView());
+        ////storageTextureViews[1].resize(1, m_volumeProbeDatasDepth->GetImageView());
+        //
+        //std::vector<VkSampler> samplers(1);
+        //samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
+        //
+        //auto tlas = m_rayTracing.GetTLAS();
+        //std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
+        //
+        //std::vector<StorageBuffer> storageBuffers(0);
+        //storageBuffers.push_back(*m_tlasVertexBuffer);
+        //storageBuffers.push_back(*m_tlasIndexBuffer);
+        //storageBuffers.push_back(*m_tlasNormalBuffer);
+        //storageBuffers.push_back(*m_tlasUVBuffer);
+        //storageBuffers.push_back(*m_geometryInfo);
+        //storageBuffers.push_back(*m_probesDataBuffer);
 
         Singleton<MVulkanEngine>::instance().CreateRenderPass(
-            m_probeTracingPass, probeTracingShader,
-            storageBuffers, bufferTextureViews, storageTextureViews, samplers, accelerationStructures);
+            m_probeTracingPass, probeTracingShader);
     
-        {
-            probeTracingShader->SetUBO(1, &m_uniformBuffer1);
-        }
+        std::vector<PassResources> resources;
+        std::vector<std::shared_ptr<MVulkanTexture>> bufferTextures = Singleton<TextureManager>::instance().GenerateTextures();
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "TexBuffer", 0, 0));
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "ProbeBuffer", 1, 0));
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "LightBuffer", 2, 0));
+
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                2, 0, bufferTextures));
+
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                3, 0, m_linearSamplerWithAnisotropy.GetSampler())
+
+
+        //{
+        //    probeTracingShader->SetUBO(1, &m_uniformBuffer1);
+        //}
     }
 }
 
@@ -1395,4 +1421,19 @@ void DDGIApplication::transitionProbeVisulizeTextureLayoutToUndifined()
         //barriers.push_back(barrier);
     }
     Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+}
+
+void DDGIApplication::loadShaders()
+{
+    Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeTracing Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/probeTrace.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("RTAO Shader", { "hlsl/ddgi/fullscreen.vert.hlsl", "hlsl/ddgi/rtao.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeRelocation Shader", { "hlsl/ddgi/probeRelocation.comp.hlsl", "main" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeBlendingRadiance Shader", { "hlsl/ddgi/probeBlend.comp.hlsl", "main_radiance" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeBlendingDepth Shader", { "hlsl/ddgi/probeBlend.comp.hlsl", "main_depth" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeClassfication Shader", { "hlsl/ddgi/probeClassfication.comp.hlsl", "main" });
+    Singleton<ShaderManager>::instance().AddShader("ProbeVisulize Shader", { "hlsl/ddgi/probeVisulize.vert.hlsl", "hlsl/ddgi/probeVisulize.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("Composite Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/composite.frag.hlsl", "main", "main" });
+
 }

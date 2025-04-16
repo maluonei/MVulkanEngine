@@ -1,18 +1,18 @@
 #include "indirectLight.hlsli"
 #include "shading.hlsli"
 
-struct TexBuffer
-{
+struct Tex{
     int diffuseTextureIdx;
     int metallicAndRoughnessTextureIdx;
     int matId;
     int padding2;
+}
+
+struct TexBuffer
+{
+    Tex tex[512];
 };
     
-struct UniformBuffer0
-{
-    TexBuffer texBuffer[512];
-};
 
 struct GeometryInfo {
   int vertexOffset;
@@ -35,19 +35,19 @@ struct UniformBuffer2
 };
 
 [[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
+cbuffer texBuffer : register(b0)
 {
-    UniformBuffer0 ubo0;
+    TexBuffer texBuffer;
 };
 
 [[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+cbuffer ProbeBuffer : register(b1)
 {
     UniformBuffer1 ubo1;
 };
 
 [[vk::binding(2, 0)]]
-cbuffer ubo2 : register(b2)
+cbuffer LightBuffer : register(b2)
 {
     UniformBuffer2 ubo2;
 };
@@ -242,7 +242,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
      
     //int matId = instanceOffset[instanceIndex].materialIdx;
 
-    int diffuseTextureIdx = ubo0.texBuffer[instanceIndex].diffuseTextureIdx;
+    int diffuseTextureIdx = texBuffer.texBuffer[instanceIndex].diffuseTextureIdx;
     if(diffuseTextureIdx != -1){
         pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
     }
@@ -250,7 +250,7 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
         pathState.albedo = float3(0.f, 0.f, 0.f);
     }
 
-    int metallicAndRoughnessTextureIdx = ubo0.texBuffer[instanceIndex].metallicAndRoughnessTextureIdx;
+    int metallicAndRoughnessTextureIdx = texBuffer.texBuffer[instanceIndex].metallicAndRoughnessTextureIdx;
     if(metallicAndRoughnessTextureIdx != -1){
         pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
     }

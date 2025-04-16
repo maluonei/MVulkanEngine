@@ -1094,14 +1094,10 @@ void RenderPass::PrepareResourcesForShaderRead(int currentFrame)
         auto key = it.first;
         if (resource.m_textures.size() != 0) {
             for (auto& texture : resource.m_textures) {
-                //if()
                 auto binding = m_bindings[key];
                 auto shaderStage = binding.binding.stageFlags;
                 state.m_stage = VkShaderStage2ShaderStage(shaderStage);
-                //binding.binding.descriptorType;
                 state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
-                //state.m_state = ET
-                //auto t = m_bindings[]
                 texture->TransferTextureState(currentFrame, state);
             }
         }

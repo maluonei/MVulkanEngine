@@ -16,7 +16,7 @@
 
 #include "Managers/ShaderManager.hpp"
 
-#include "Shaders/share/Light.h"
+#include "Shaders/share/Common.h"
 
 void PBR::SetUp()
 {

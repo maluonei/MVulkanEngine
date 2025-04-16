@@ -1,6 +1,6 @@
 #define SHARED_CODE_HLSL
 
-#include "Light.h"
+#include "Common.h"
 //struct Light
 //{
 //    float4x4 shadowViewProj;

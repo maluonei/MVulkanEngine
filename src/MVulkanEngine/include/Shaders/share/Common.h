@@ -1,15 +1,12 @@
-//#ifdef SHADER_CODE_CPP
-//#include "Shaders/share/HLSLTypeAlise.h"
-//#elif defined(SHARED_CODE_HLSL)
-//#include "HLSLTypeAlise.h"
-//#endif
 #ifdef SHARED_CODE_HLSL
 #include "HLSLTypeAlise.h"
 #else
+#pragma once
 #include "Shaders/share/HLSLTypeAlise.h"
 #endif
 
 #define MAX_LIGHTS 4
+#define MAX_TEXTURES 1024
 
 struct MLight{
     float4x4 shadowViewProj;
@@ -23,13 +20,7 @@ struct MLight{
     int2 shadowmapResolution;
     float shadowCameraZnear;
     float shadowCameraZfar;
-    //float padding6;
-    //float padding7;
 };
-
-//struct MLightBuffer{
-//    MLight lights[MAX_LIGHTS];
-//};
 
 struct LightBuffer{
     MLight lights[MAX_LIGHTS];
@@ -39,11 +30,6 @@ struct LightBuffer{
     int padding0;
     int padding1;
     int padding2;
-    
-    //int ResolutionWidth;
-    //int ResolutionHeight;
-    //int WindowResWidth;
-    //int WindowResHeight;
 };
 
 struct MCameraBuffer {
@@ -57,3 +43,24 @@ struct MScreenBuffer {
     int2 WindowRes;
 };
 
+struct Tex
+{
+    int diffuseTextureIdx;
+    int metallicAndRoughnessTextureIdx;
+    int matId;
+    int normalTextureIdx;
+
+    float3 diffuseColor;
+    int padding0;
+};
+
+struct TexBuffer{
+    Tex tex[MAX_TEXTURES];
+};
+
+struct MVPBuffer
+{
+    float4x4 Model;
+    float4x4 View;
+    float4x4 Projection;
+};

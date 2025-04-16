@@ -230,6 +230,23 @@ VkImageAspectFlagBits ETextureState2VkImageAspectFlag(ETextureState state);
 
 ETextureState VkDescriptorType2ETextureState(VkDescriptorType type);
 
+struct ShaderResourceKey {
+    int set;
+    int binding;
+    bool operator<(const ShaderResourceKey& other) const;
+
+    bool operator==(const ShaderResourceKey& other) const;
+};
+
+namespace std {
+    template <>
+    struct hash<ShaderResourceKey> {
+        std::size_t operator()(const ShaderResourceKey& k) const {
+            return std::hash<int>()(k.set) ^ (std::hash<int>()(k.binding) << 1);
+        }
+    };
+}
+
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 

@@ -61,6 +61,7 @@ private:
 	void transitionProbeVisulizeTextureLayoutToShaderRead();
     void transitionProbeVisulizeTextureLayoutToUndifined();
 
+	void loadShaders();
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_probeTracingPass;
@@ -78,6 +79,13 @@ private:
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
 	std::shared_ptr<MVulkanTexture> m_testTexture = nullptr;
+
+	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
+	std::shared_ptr<MVulkanTexture> gBuffer0 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBuffer1 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBuffer2 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBuffer3 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBufferDepth = nullptr;
 
 	std::shared_ptr<StorageBuffer> m_probesDataBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;

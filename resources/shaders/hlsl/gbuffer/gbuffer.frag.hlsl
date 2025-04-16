@@ -1,22 +1,24 @@
 // HLSL Shader
-struct TexBuffer
-{
-    int diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx;
-    int matId;
-    int normalTextureIdx;
+//struct TexBuffer
+//{
+//    int diffuseTextureIdx;
+//    int metallicAndRoughnessTextureIdx;
+//    int matId;
+//    int normalTextureIdx;
+//
+//    float3 diffuseColor;
+//    int padding0;
+//};
+#define SHARED_CODE_HLSL
+#include "Common.h"
 
-    float3 diffuseColor;
-    int padding0;
-};
-    
 [[vk::binding(1, 0)]]
-cbuffer TexBuffer : register(b1)
+cbuffer texBuffer : register(b1)
 {
-    TexBuffer ubo1[512];
-};
+    TexBuffer texbuffer;
+}; 
 
-[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
+[[vk::binding(2, 0)]] Texture2D textures[MAX_TEXTURES] : register(t2);
 [[vk::binding(3, 0)]] SamplerState linearSampler : register(s2);
 
 struct PSInput
@@ -80,9 +82,9 @@ PSOutput main(PSInput input)
 
     float3x3 TBN = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
 
-    int diffuseTextureIdx = ubo1[input.instanceID].diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx = ubo1[input.instanceID].metallicAndRoughnessTextureIdx;
-    int normalTextureIdx = ubo1[input.instanceID].normalTextureIdx;
+    int diffuseTextureIdx = texbuffer.tex[input.instanceID].diffuseTextureIdx;
+    int metallicAndRoughnessTextureIdx = texbuffer.tex[input.instanceID].metallicAndRoughnessTextureIdx;
+    int normalTextureIdx = texbuffer.tex[input.instanceID].normalTextureIdx;
 
     float3 normal = normalize(input.normal);
     float3 position = input.worldPos;
@@ -98,7 +100,7 @@ PSOutput main(PSInput input)
     else
     {
         //output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-        albedo = ubo1[input.instanceID].diffuseColor; // Use diffuse color from UBO
+        albedo = texbuffer.tex[input.instanceID].diffuseColor; // Use diffuse color from UBO
     }
     // Sample metallic and roughness texture if valid, otherwise default values
     if (metallicAndRoughnessTextureIdx != -1)
@@ -134,7 +136,7 @@ PSOutput main(PSInput input)
     //else
     //{
     //    //output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-    //    output.Albedo = float4(ubo1[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
+    //    output.Albedo = float4(texbuffer.tex[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
     //}
 //
     //// Sample metallic and roughness texture if valid, otherwise default values
@@ -149,7 +151,7 @@ PSOutput main(PSInput input)
     //output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
 //
     //// Output material ID
-    //output.MatId = uint4(ubo1[input.instanceID].matId, input.instanceID, 0, 0);
+    //output.MatId = uint4(texbuffer.tex[input.instanceID].matId, input.instanceID, 0, 0);
 
     return output;
 }

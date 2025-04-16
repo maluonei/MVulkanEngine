@@ -42,9 +42,9 @@ private:
 
 	void loadShaders();
 
-	void ImageLayoutToShaderRead(int currentFrame);
-	void ImageLayoutToAttachment(int imageIndex, int currentFrame);
-	void ImageLayoutToPresent(int imageIndex, int currentFrame);
+	//void ImageLayoutToShaderRead(int currentFrame);
+	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
+	//void ImageLayoutToPresent(int imageIndex, int currentFrame);
 private:
 	//std::shared_ptr<RenderPass> m_gbufferPass;
 	//std::shared_ptr<RenderPass> m_shadowPass;

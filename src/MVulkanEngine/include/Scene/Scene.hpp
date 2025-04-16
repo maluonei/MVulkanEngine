@@ -13,6 +13,7 @@
 #include "Material.hpp"
 #include <spdlog/spdlog.h>
 #include "Util.hpp"
+#include "Shaders/share/Common.h"
 
 struct Vertex {
     glm::vec3 position;
@@ -154,6 +155,8 @@ public:
     inline auto GetNumPrimInfos() const { return m_primInfos.size(); }
 
     std::vector<PrimInfo>   m_primInfos;
+
+    TexBuffer GenerateTexBuffer();
 private:
     BoundingBox m_bbx;
 

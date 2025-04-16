@@ -282,3 +282,14 @@ ETextureState VkDescriptorType2ETextureState(VkDescriptorType type)
         return ETextureState::Undefined;
     }
 }
+
+bool ShaderResourceKey::operator<(const ShaderResourceKey& other) const {
+    if (this->set == other.set) {
+        return this->binding < other.binding;
+    }
+    return this->set < other.set;
+}
+
+bool ShaderResourceKey::operator==(const ShaderResourceKey& other) const {
+    return set == other.set && binding == other.binding;
+}

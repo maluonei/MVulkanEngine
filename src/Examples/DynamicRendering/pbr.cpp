@@ -15,7 +15,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Shaders/share/Light.h"
+#include "Shaders/share/Common.h"
 
 void PBR::SetUp()
 {
@@ -38,23 +38,23 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare gbufferPass ubo
     {
-        GbufferShader2::UniformBufferObject0 ubo0{};
-        ubo0.Model = glm::mat4(1.f);
-        ubo0.View = m_camera->GetViewMatrix();
-        ubo0.Projection = m_camera->GetProjMatrix();
-        Singleton<ShaderResourceManager>::instance().LoadData("MVPBuffer", 0, &ubo0, 0);
+        MVPBuffer mvpBuffer{};
+        mvpBuffer.Model = glm::mat4(1.f);
+        mvpBuffer.View = m_camera->GetViewMatrix();
+        mvpBuffer.Projection = m_camera->GetProjMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("mvpBuffer", 0, &mvpBuffer, 0);
         //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
-        GbufferShader2::UniformBufferObject1 ubo1 = GbufferShader2::GetFromScene(m_scene);
-        Singleton<ShaderResourceManager>::instance().LoadData("TexBuffer", 0, &ubo1, 0);
+        TexBuffer texBuffer = m_scene->GenerateTexBuffer();
+        Singleton<ShaderResourceManager>::instance().LoadData("texBuffer", 0, &texBuffer, 0);
         //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
     }
 
     //prepare shadowPass ubo
     {
-        ShadowShader::ShadowUniformBuffer ubo0{};
-        ubo0.shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        Singleton<ShaderResourceManager>::instance().LoadData("ShadowMVPBuffer", 0, &ubo0, 0);
+        glm::mat4 shadowMVP{};
+        shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("ShadowMVPBuffer", 0, &shadowMVP, 0);
         //m_shadowPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -417,10 +417,10 @@ void PBR::createGbufferPass()
         std::vector<PassResources> resources;
         resources.push_back(
             PassResources::SetBufferResource(
-                "MVPBuffer", 0, 0));
+                "mvpBuffer", 0, 0));
         resources.push_back(
             PassResources::SetBufferResource(
-                "TexBuffer", 1, 0));
+                "texBuffer", 1, 0));
 
         resources.push_back(
             PassResources::SetSampledImageResource(
@@ -529,84 +529,85 @@ void PBR::createShadingPass()
     }
 }
 
-void PBR::ImageLayoutToShaderRead(int currentFrame)
-{
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    {
-        MVulkanImageMemoryBarrier barrier{};
-        barrier.image = gBuffer0->GetImage();
-        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.baseArrayLayer = 0;
-        barrier.layerCount = 1;
-        barrier.levelCount = 1;
-        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barriers.push_back(barrier);
-
-        barrier.image = gBuffer1->GetImage();
-        barriers.push_back(barrier);
-
-        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        barrier.image = shadowMapDepth->GetImage();
-        barriers.push_back(barrier);
-    }
-    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-}
-
-void PBR::ImageLayoutToAttachment(int imageIndex, int currentFrame)
-{
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    {
-        MVulkanImageMemoryBarrier barrier{};
-        barrier.image = gBuffer0->GetImage();
-        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.baseArrayLayer = 0;
-        barrier.layerCount = 1;
-        barrier.levelCount = 1;
-        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        barrier.dstAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-        barriers.push_back(barrier);
-
-        barrier.image = gBuffer1->GetImage();
-        barriers.push_back(barrier);
-
-        barrier.image = shadowMap->GetImage();
-        barriers.push_back(barrier);
-
-        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-        barriers.push_back(barrier);
-
-        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        barrier.image = shadowMapDepth->GetImage();
-        barrier.srcAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        barrier.dstAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        //barrier.dst
-        barriers.push_back(barrier);
-    }
-    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-}
-
-void PBR::ImageLayoutToPresent(int imageIndex, int currentFrame)
-{
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-    {
-        MVulkanImageMemoryBarrier barrier{};
-        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.baseArrayLayer = 0;
-        barrier.layerCount = 1;
-        barrier.levelCount = 1;
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = 0;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        barriers.push_back(barrier);
-    }
-    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
-}
+//void PBR::ImageLayoutToShaderRead(int currentFrame)
+//{
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//    {
+//        MVulkanImageMemoryBarrier barrier{};
+//        barrier.image = gBuffer0->GetImage();
+//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        barrier.baseArrayLayer = 0;
+//        barrier.layerCount = 1;
+//        barrier.levelCount = 1;
+//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//        barriers.push_back(barrier);
+//
+//        barrier.image = gBuffer1->GetImage();
+//        barriers.push_back(barrier);
+//
+//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//        barrier.image = shadowMapDepth->GetImage();
+//        barriers.push_back(barrier);
+//    }
+//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+//}
+//
+//void PBR::ImageLayoutToAttachment(int imageIndex, int currentFrame)
+//{
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//    {
+//        MVulkanImageMemoryBarrier barrier{};
+//        barrier.image = gBuffer0->GetImage();
+//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        barrier.baseArrayLayer = 0;
+//        barrier.layerCount = 1;
+//        barrier.levelCount = 1;
+//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//        barrier.dstAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+//        barriers.push_back(barrier);
+//
+//        barrier.image = gBuffer1->GetImage();
+//        barriers.push_back(barrier);
+//
+//        barrier.image = shadowMap->GetImage();
+//        barriers.push_back(barrier);
+//
+//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
+//        barriers.push_back(barrier);
+//
+//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//        barrier.image = shadowMapDepth->GetImage();
+//        barrier.srcAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+//        barrier.dstAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+//        //barrier.dst
+//        barriers.push_back(barrier);
+//    }
+//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+//}
+//
+//void PBR::ImageLayoutToPresent(int imageIndex, int currentFrame)
+//{
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//    {
+//        MVulkanImageMemoryBarrier barrier{};
+//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
+//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        barrier.baseArrayLayer = 0;
+//        barrier.layerCount = 1;
+//        barrier.levelCount = 1;
+//        barrier.srcAccessMask = 0;
+//        barrier.dstAccessMask = 0;
+//        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+//        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//        barriers.push_back(barrier);
+//    }
+//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
+//}
+//
