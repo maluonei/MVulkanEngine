@@ -41,6 +41,7 @@ struct Mesh {
     std::shared_ptr<Buffer> m_vertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indexBuffer = nullptr;
 
+    BoundingBox             m_box;
     //void SetPositions(size_t count, const glm::vec3* pPositions);
     //void SetPositions(size_t count, const glm::vec3* pPositions);
     //void SetPositions(size_t count, const glm::vec3* pPositions);

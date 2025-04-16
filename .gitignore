@@ -17,6 +17,7 @@ Makefile
 !3rdParty/dxc/dxc.exe
 !3rdParty/dxc/dxcompiler.dll
 !3rdParty/dxc/dxil.dll
+3rdParty/embree
 
 # Ignore executables and libraries
 *.exe

@@ -73,3 +73,28 @@ glm::vec4 RotationMatrixToQuaternion(glm::mat3 R)
     }
     return q;
 }
+
+BoundingBox::BoundingBox(glm::vec3 inPmin, glm::vec3 inPmax):
+    pMin(inPmin), pMax(inPmax)
+{
+}
+
+const glm::vec3 BoundingBox::GetCenter() const
+{
+    return (pMin + pMax) / 2.f;
+}
+
+const glm::vec3 BoundingBox::GetExtent() const
+{
+    return (pMax - pMin) / 2.f;
+}
+
+const glm::vec3 BoundingBox::GetSize() const
+{
+    return pMax - pMin;
+}
+
+const BoundingBox BoundingBox::ExpandBy(const glm::vec3 scale) const
+{
+    return BoundingBox(pMin-scale, pMax+scale);
+}
