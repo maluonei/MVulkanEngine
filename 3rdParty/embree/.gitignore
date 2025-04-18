@@ -14,3 +14,4 @@ out
 
 !kernels/builders/
 !kernels/builders/**
+!kernels/common/builder.h
