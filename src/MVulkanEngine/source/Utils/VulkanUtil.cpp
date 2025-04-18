@@ -82,6 +82,7 @@ bool IsDepthFormat(VkFormat format)
 VkImageLayout TextureState2ImageLayout(const ETextureState state)
 {
     switch (state) {
+
         case ETextureState::ColorAttachment:
             return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         case ETextureState::DepthAttachment:
@@ -89,6 +90,7 @@ VkImageLayout TextureState2ImageLayout(const ETextureState state)
         case ETextureState::SRV:
             return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case ETextureState::UAV:
+        case ETextureState::GENERAL:
             return VK_IMAGE_LAYOUT_GENERAL;
         case ETextureState::PRESENT:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -100,6 +102,8 @@ VkImageLayout TextureState2ImageLayout(const ETextureState state)
 VkAccessFlagBits TextureState2AccessFlag(const ETextureState state)
 {
     VkAccessFlagBits flag = VkAccessFlagBits(0);
+    //if (uint32_t(state) & uint32_t(ETextureState::GENERAL))
+    //    flag = VkAccessFlagBits(flag | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
     if(uint32_t(state) & uint32_t(ETextureState::ColorAttachment))
         flag = VkAccessFlagBits(flag | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
     if(uint32_t(state) & uint32_t(ETextureState::DepthAttachment))

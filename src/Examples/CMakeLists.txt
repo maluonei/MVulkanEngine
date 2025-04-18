@@ -1,5 +1,7 @@
+
+
 #add_subdirectory(pbr)
-add_subdirectory(pbr_packGbuffer)
+#add_subdirectory(pbr_packGbuffer)
 #add_subdirectory(ddgi)
 #add_subdirectory(ibl)
 #add_subdirectory(ssr)
@@ -16,3 +18,4 @@ add_subdirectory(pbr_packGbuffer)
 ##add_subdirectory(RayTracingPipelineTest)
 ##add_subdirectory(bindless)
 add_subdirectory(DynamicRendering)
+add_subdirectory(MDF)

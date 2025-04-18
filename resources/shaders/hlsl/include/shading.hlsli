@@ -1,3 +1,4 @@
+#pragma once
 struct Light
 {
     float4x4 shadowViewProj;

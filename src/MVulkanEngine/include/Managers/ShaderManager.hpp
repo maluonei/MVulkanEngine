@@ -48,7 +48,7 @@ public:
         }
     }
 
-    void AddShader(const std::string& name, std::initializer_list<std::string> args);
+    void AddShader(const std::string& name, std::initializer_list<std::string> args, bool compileEveryTime = false);
 
     template<typename T>
     std::shared_ptr<T> GetShader(const std::string& name) const {

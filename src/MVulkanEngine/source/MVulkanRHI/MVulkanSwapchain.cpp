@@ -59,8 +59,8 @@ VkResult MVulkanSwapchain::AcquireNextImage(VkSemaphore semephore, VkFence fence
 void MVulkanSwapchain::create()
 {
     m_swapChainSupport = querySwapChainSupport(m_device.GetPhysicalDevice(), m_surface);
-    m_surfaceFormatSRGB = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
-    //m_surfaceFormatSRGB = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_UNORM);
+    //m_surfaceFormatSRGB = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
+    m_surfaceFormatSRGB = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_UNORM);
     m_surfaceFormatUNORM = chooseSwapSurfaceFormat(m_swapChainSupport.formats, VK_FORMAT_B8G8R8A8_UNORM);
     m_presentMode = chooseSwapPresentMode(m_swapChainSupport.presentModes);
     m_swapChainExtent = chooseSwapExtent(m_swapChainSupport.capabilities);

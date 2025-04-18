@@ -899,6 +899,38 @@ void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCr
     //m_graphicsQueue.WaitForQueueComplete();
 }
 
+void MVulkanEngine::LoadTextureData(std::shared_ptr<MVulkanTexture> texture, void* data, size_t size, uint32_t offset)
+{
+    m_transferList.Reset();
+    m_transferList.Begin();
+    texture->LoadData(&m_transferList, m_device, data, size, offset);
+    m_transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
+
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::LoadTextureData(std::shared_ptr<MVulkanTexture> texture, void* data, size_t size, uint32_t offset, VkOffset3D origin, VkExtent3D extent)
+{
+    m_transferList.Reset();
+    m_transferList.Begin();
+    texture->LoadData(&m_transferList, m_device, data, size, offset, origin, extent);
+    m_transferList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_transferList.GetBuffer();
+
+    m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_transferQueue.WaitForQueueComplete();
+}
+
 //void MVulkanEngine::present(
 //    VkSwapchainKHR* swapChains, VkSemaphore* waitSemaphore, 
 //    const uint32_t* imageIndex, std::function<void()> recreateSwapchain)

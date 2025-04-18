@@ -1,3 +1,4 @@
+#pragma once
 struct MDFStruct{
     RWTexture3D<float> SDFTexture;
     RWTexture3D<float4> albedoTexture;
@@ -90,7 +91,8 @@ float2 GetNearestDistance(
     }
 
     hit = true;
-    if(tMin < 0 && tMax > 0) float2(0.f, tMax);
+    if(tMin < 0 && tMax > 0) 
+        return float2(0.f, tMax);
 
     return float2(tMin, tMax);
 } 

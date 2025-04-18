@@ -1,3 +1,4 @@
+#pragma once
 #include "Octahedral.hlsli"
 
 #define PROBE_STATE_ACTIVE 0

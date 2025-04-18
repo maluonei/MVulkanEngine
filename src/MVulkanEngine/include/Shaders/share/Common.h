@@ -34,16 +34,21 @@ struct LightBuffer{
 
 struct MCameraBuffer {
     float3 cameraPos;
-    float padding0;
+    float zNear;
     float3 cameraDir;
+    float zFar;
+
+    float fovY;
+    float padding0;
     float padding1;
+    float padding2;
 };
 
 struct MScreenBuffer {
     int2 WindowRes;
 };
 
-struct Tex
+struct TexBuf
 {
     int diffuseTextureIdx;
     int metallicAndRoughnessTextureIdx;
@@ -55,7 +60,7 @@ struct Tex
 };
 
 struct TexBuffer{
-    Tex tex[MAX_TEXTURES];
+    TexBuf tex[MAX_TEXTURES];
 };
 
 struct MVPBuffer

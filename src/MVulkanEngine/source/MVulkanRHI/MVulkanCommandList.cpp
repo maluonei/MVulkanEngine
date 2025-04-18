@@ -119,8 +119,29 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
     );
 }
 
-void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
-//void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel, uint32_t baseArrayLayer)
+//void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
+////void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel, uint32_t baseArrayLayer)
+//{
+//    VkBufferImageCopy region{};
+//    region.bufferOffset = bufferOffset;
+//    //region.bufferOffset = 0;
+//    region.bufferRowLength = 0;
+//    region.bufferImageHeight = 0;
+//    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//    region.imageSubresource.mipLevel = mipLevel;
+//    region.imageSubresource.baseArrayLayer = baseArrayLayer;
+//    region.imageSubresource.layerCount = 1;
+//    region.imageOffset = { 0, 0, 0 };
+//    region.imageExtent = {
+//        width,
+//        height,
+//        1
+//    };
+//
+//    vkCmdCopyBufferToImage(m_commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+//}
+
+void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, unsigned int depth, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
 {
     VkBufferImageCopy region{};
     region.bufferOffset = bufferOffset;
@@ -135,8 +156,25 @@ void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage,
     region.imageExtent = {
         width,
         height,
-        1
+        depth
     };
+
+    vkCmdCopyBufferToImage(m_commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+}
+
+void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkOffset3D origin, VkExtent3D extent, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
+{
+    VkBufferImageCopy region{};
+    region.bufferOffset = bufferOffset;
+    //region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = mipLevel;
+    region.imageSubresource.baseArrayLayer = baseArrayLayer;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = origin;
+    region.imageExtent = extent;
 
     vkCmdCopyBufferToImage(m_commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }

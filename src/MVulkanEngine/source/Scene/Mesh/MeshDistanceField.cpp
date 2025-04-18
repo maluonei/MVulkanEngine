@@ -4,16 +4,29 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/gtx/component_wise.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
 
-void MeshUtilities::GenerateMeshDistanceField(std::shared_ptr<Mesh> mesh)
+#include "Managers/RandomGenerator.hpp"
+#include "Scene/EmbreeScene.hpp"
+#include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "MVulkanRHI/MVulkanEngine.hpp"
+
+void MeshUtilities::GenerateMeshDistanceField(
+	std::shared_ptr<Mesh> mesh,
+	float distanceFieldResolutionScale,
+	SparseMeshDistanceField& mdf)
 {
-	const float numVoxelsPerLocalSpaceUnit = MeshDistanceField::VoxelDensity * MeshDistanceField::DistanceFieldResolutionScale;
+	const float numVoxelsPerLocalSpaceUnit = MeshDistanceField::VoxelDensity * distanceFieldResolutionScale;
 	const int maxNumBlocksOneDim = 8;
 
 	//todo: generate sample directions
-	std::vector<glm::vec3> sampleDirections;
+	const int numSamples = 256;
+	std::vector<glm::vec3> sampleDirections(numSamples);
 	{
-
+		for (auto i = 0; i < numSamples; i++) {
+			sampleDirections[i] = Singleton<RandomGenerator>::instance().GetRandomUnitVector();
+		}
 	}
 
 	BoundingBox localSpaceMeshBounds(mesh->m_box);
@@ -34,6 +47,9 @@ void MeshUtilities::GenerateMeshDistanceField(std::shared_ptr<Mesh> mesh)
 		std::clamp((int)std::ceil(desiredDimensions.x), 1, maxNumBlocksOneDim)
 	);
 
+	std::shared_ptr<EmbreeScene> embreeScene = std::make_shared<EmbreeScene>();
+	embreeScene->Build(mesh);
+
 	for (int mipIndex = 0; mipIndex < MeshDistanceField::NumMips; mipIndex++) {
 		const glm::ivec3 indirectionDimensions = glm::ivec3(
 			(mip0IndirectionDimensions.x + (1 << mipIndex) - 1) / (1 << mipIndex),
@@ -52,14 +68,187 @@ void MeshUtilities::GenerateMeshDistanceField(std::shared_ptr<Mesh> mesh)
 		const float localSpaceTraceDistance = maxDistanceForEncoding / localToVolumnScale;
 		const glm::vec2 distanceFieldToVolumeScaleBias(2.0f * maxDistanceForEncoding, -maxDistanceForEncoding);
 
+		//SparseMeshDistanceField sparseMeshDistanceField;
+		const uint32_t brickSizeBytes = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * sizeof(uint8_t);
+		uint32_t numBricks = indirectionDimensions.x * indirectionDimensions.y * indirectionDimensions.z;
+		//mdf.distanceFieldVolume.resize(brickSizeBytes * numBricks);
+		mdf.DistanceFieldToVolumeScaleBias = distanceFieldToVolumeScaleBias;
+		mdf.IndirectionDimensions = indirectionDimensions;
+		mdf.NumDistanceFieldBricks = numBricks;
+		mdf.volumeBounds = distanceFieldBounds;
+		mdf.localSpaceMeshBounds = localSpaceMeshBounds;
+		mdf.BrickDimensions = indirectionDimensions;
+		mdf.TextureResolution = { indirectionDimensions[0] * indirectionDimensions[1] * MeshDistanceField::BrickSize, indirectionDimensions[2] * MeshDistanceField::BrickSize };
+		//mdf.dimensions = 
+		mdf.GenerateMDFTexture();
+		//std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
+		//mdf.localToVolumnScale = localToVolumnScale;
+		//mdf.VolumeToVirtualUVScale = localToVolumnScale;
+		//sparseMeshDistanceField.VolumeToVirtualUVScale = 1.f / localToVolumnScale;
+
 		for (int z = 0; z < indirectionDimensions.z; z++){
 			for (int y = 0; y < indirectionDimensions.y; y++){
 				for (int x = 0; x < indirectionDimensions.x; x++) {
+					SparseMeshDistanceFieldGenerateTask task;
+					task.GenerateMeshDistanceFieldInternal(
+						embreeScene,
+						&sampleDirections,
+						localSpaceTraceDistance,
+						distanceFieldBounds,
+						localToVolumnScale,
+						distanceFieldToVolumeScaleBias,
+						glm::ivec3(x, y, z),
+						indirectionDimensions
+					);
 
+					VkOffset3D origin = {x * MeshDistanceField::BrickSize, y * MeshDistanceField::BrickSize, z * MeshDistanceField::BrickSize};
+					VkExtent3D scale = { MeshDistanceField::BrickSize , MeshDistanceField::BrickSize , MeshDistanceField::BrickSize };
+					Singleton<MVulkanEngine>::instance().LoadTextureData(mdf.mdfTexture, task.distanceFieldVolume.data(), task.distanceFieldVolume.size() * sizeof(uint8_t), 0, origin, scale);
+
+					//mdf.mdfTexture->LoadData()
+					//uint32_t brickIndex = z * indirectionDimensions.x * indirectionDimensions.y + y * indirectionDimensions.x + x;
+					//uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
+					//memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
+					//auto brickIndex = glm::ivec3(x, y, z);
+					//for (auto _z = 0; _z < MeshDistanceField::BrickSize; _z++) {
+					//	uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
+					//	memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
+					//}
+					//break;
 				}
+				//break;
 			}
+			//break;
 		}
 	
+
 	}
 
+	embreeScene->Clean();
+
+}
+
+void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
+	std::shared_ptr<EmbreeScene> embreeScene,
+	const std::vector<glm::vec3>* sampleDirections,
+	float localSpaceTraceDistance,
+	BoundingBox volumeBounds,
+	float localToVolumeScale,
+	glm::vec2 distanceFieldToVolumeScaleBias,
+	glm::ivec3 brickCoordinate,
+	glm::ivec3 indirectionSize
+)
+{
+	uint8_t brickMaxDistance;
+	uint8_t brickMinDistance;
+
+	const glm::vec3 indirectionVoxelSize = volumeBounds.GetSize() / glm::vec3(indirectionSize);
+	const glm::vec3 distanceFieldVoxelSize = indirectionVoxelSize / glm::vec3(MeshDistanceField::UniqueDataBrickSize);
+	const glm::vec3 brickMinPosition = volumeBounds.pMin + glm::vec3(brickCoordinate) * indirectionVoxelSize;
+
+	distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+
+	for (auto zIndex = 0; zIndex < MeshDistanceField::BrickSize; zIndex++) {
+		for (auto yIndex = 0; yIndex < MeshDistanceField::BrickSize; yIndex++) {
+			for (auto xIndex = 0; xIndex < MeshDistanceField::BrickSize; xIndex++) {
+				
+				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition;
+				const int index = (zIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize) + (yIndex * MeshDistanceField::BrickSize) + xIndex;
+				
+				int hitNum = 0;
+				int hitBackfaceNum = 0;
+
+				float minLocalSpaceDistance = localSpaceTraceDistance;
+
+				for (auto i = 0; i < sampleDirections->size(); i++) {
+					auto direction = (*sampleDirections)[i];
+
+					auto hit = embreeScene->RayCast(voxelPosition, direction);
+					if (hit.hit) {
+						hitNum++;
+						hitBackfaceNum += (hit.outSide ? 0 : 1);
+
+						float distance = hit.distance * localSpaceTraceDistance;
+						
+						if (distance < minLocalSpaceDistance) {
+							minLocalSpaceDistance = distance;
+						}
+					}
+				}
+
+				if (hitNum > 0 && hitBackfaceNum > 0.25f * sampleDirections->size()) {
+					minLocalSpaceDistance *= -1;
+				}
+
+				const float volumeSpaceDistance = minLocalSpaceDistance * localToVolumeScale;
+				const float rescaledDistance = (volumeSpaceDistance - distanceFieldToVolumeScaleBias.y) / distanceFieldToVolumeScaleBias.x;
+				const uint8_t quantizedDistance = std::clamp(uint8_t(rescaledDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
+				//float clampedVolumeSpaceDistance = std::clamp(volumeSpaceDistance, -0.5f / 255.f, 1.f - 0.5f / 255.f);
+				//const uint8_t quantizedDistance = std::clamp(uint8_t(clampedVolumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
+
+				distanceFieldVolume[index] = quantizedDistance;
+				brickMinDistance = std::min(brickMinDistance, quantizedDistance);
+				brickMaxDistance = std::max(brickMaxDistance, quantizedDistance);
+			}
+		}
+	}
+}
+
+
+void SparseMeshDistanceField::GenerateMDFTexture()
+{
+	{
+		//std::vector<float> floatDatas(distanceFieldVolume.size());
+		//for (auto i = 0; i < distanceFieldVolume.size(); i++) {
+		//	floatDatas[i] = static_cast<float>(distanceFieldVolume[i]) / 255.f;
+		//	//floatDatas[i] = (float)i / distanceFieldVolume.size();
+		//}
+
+		mdfTexture = std::make_shared<MVulkanTexture>();
+
+		ImageCreateInfo imageInfo;
+		ImageViewCreateInfo viewInfo;
+		imageInfo.arrayLength = 1;
+		imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		imageInfo.width = IndirectionDimensions[0] * MeshDistanceField::BrickSize;
+		imageInfo.height = IndirectionDimensions[1] * MeshDistanceField::BrickSize;
+		imageInfo.depth = IndirectionDimensions[2] * MeshDistanceField::BrickSize;
+		imageInfo.format = VK_FORMAT_R8_UNORM;
+		imageInfo.type = VK_IMAGE_TYPE_3D;
+
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
+		viewInfo.format = imageInfo.format;
+		viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.baseMipLevel = 0;
+		viewInfo.levelCount = 1;
+		viewInfo.baseArrayLayer = 0;
+		viewInfo.layerCount = 1;
+
+		Singleton<MVulkanEngine>::instance().CreateImage(mdfTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
+
+		//Singleton<MVulkanEngine>::instance().LoadTextureData(mdfTexture, distanceFieldVolume.data(), distanceFieldVolume.size() * sizeof(uint8_t), 0);
+	}
+}
+
+MeshDistanceFieldInput SparseMeshDistanceField::GetMDFBuffer() {
+	MeshDistanceFieldInput input;
+
+	input.distanceFieldToVolumeScaleBias = DistanceFieldToVolumeScaleBias;
+	input.volumeCenter = volumeBounds.GetCenter();
+	input.volumeOffset = volumeBounds.GetExtent();
+	input.volumeToWorldScale = localSpaceMeshBounds.GetExtent();
+
+	//glm::mat4 m(1.0f);
+	glm::mat4 trans = glm::translate(glm::mat4(1.f), volumeBounds.GetCenter());
+	glm::mat4 scale = glm::scale(glm::mat4(1.0f), volumeBounds.GetExtent());
+	input.VolumeToWorld = trans * scale;
+	input.WorldToVolume = glm::inverse(input.VolumeToWorld);
+
+	input.dimensions = BrickDimensions;
+	input.mdfTextureResolusion = TextureResolution;
+
+	return input;
+
+	//input.numDistanceFieldBricks = NumDistanceFieldBricks;
+	//input.mdfTexture = mdfTexture->GetTexture();
 }

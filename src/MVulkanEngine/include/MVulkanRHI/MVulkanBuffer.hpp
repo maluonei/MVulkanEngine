@@ -56,6 +56,8 @@ public:
 
 	inline void* GetData()const { return m_mappedData; }
 
+	inline bool IsActive() const { return m_active; }
+
 protected:
 	BufferCreateInfo	m_info;
 	VkDevice			m_device;
@@ -67,6 +69,7 @@ protected:
 	VkDeviceMemory		m_bufferMemory;
 
 	VkDeviceAddress		m_deviceAddress;
+	bool				m_active = false;
 };
 
 class MSRV :public MVulkanBuffer {
@@ -233,7 +236,7 @@ public:
 			m_stagingBuffer.LoadData(imageDatas[layer]->GetData(), offset, imageInfo.width * imageInfo.height * 4);
 			m_stagingBuffer.UnMap();
 	
-			commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), offset, mipLevel, uint32_t(layer));
+			commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), 1, offset, mipLevel, uint32_t(layer));
 			
 		}
 	
@@ -243,6 +246,13 @@ public:
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
+
+	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, 
+		void* data, uint32_t size, uint32_t offset = 0);
+
+	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device,
+		void* data, uint32_t size, uint32_t offset,
+		VkOffset3D origin, VkExtent3D extent);
 
 	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
 	void Create(MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);

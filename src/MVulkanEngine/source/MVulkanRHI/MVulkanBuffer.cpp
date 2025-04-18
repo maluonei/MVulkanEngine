@@ -10,6 +10,7 @@ MVulkanBuffer::MVulkanBuffer(BufferType _type):m_type(_type)
 
 void MVulkanBuffer::Create(MVulkanDevice device, BufferCreateInfo info)
 {
+    m_active = true;
     m_info = info;
     m_device = device.GetDevice();
     m_bufferSize = info.size;
@@ -70,6 +71,7 @@ void MVulkanBuffer::Clean()
     vkDestroyBuffer(m_device, m_buffer, nullptr);
     if(m_bufferView)
         vkDestroyBufferView(m_device, m_bufferView, nullptr);
+    m_active = false;
 }
 
 Buffer::Buffer(BufferType type) :m_dataBuffer(BufferType::SHADER_INPUT), m_stagingBuffer(BufferType::STAGING_BUFFER), m_type(type)
@@ -299,6 +301,97 @@ void MVulkanTexture::Create(MVulkanDevice device, ImageCreateInfo imageInfo, Ima
 
     m_state.m_state = ETextureState::Undefined;
 }
+
+void MVulkanTexture::LoadData(
+    MVulkanCommandList* commandList, 
+    MVulkanDevice device, 
+    void* data, 
+    uint32_t size, 
+    uint32_t offset)
+{
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = m_image.GetImage();
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.levelCount = m_image.GetMipLevel();
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    BufferCreateInfo binfo;
+    binfo.size = size;
+    binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    m_stagingBuffer.Create(device, binfo);
+    m_stagingBufferUsed = true;
+
+    //for (auto layer = 0; layer < imageDatas.size(); layer++) {
+
+    //uint32_t offset = 0;
+    m_stagingBuffer.Map();
+    m_stagingBuffer.LoadData(data, offset, size);
+    m_stagingBuffer.UnMap();
+
+    commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(m_imageInfo.width), static_cast<uint32_t>(m_imageInfo.height), static_cast<uint32_t>(m_imageInfo.depth), offset, 0, uint32_t(0));
+
+    //}
+
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    m_state.m_state = ETextureState::SRV;
+    m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
+}
+
+void MVulkanTexture::LoadData(MVulkanCommandList* commandList, MVulkanDevice device, void* data, uint32_t size, uint32_t offset, VkOffset3D origin, VkExtent3D extent)
+{
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = m_image.GetImage();
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.levelCount = m_image.GetMipLevel();
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    BufferCreateInfo binfo;
+    binfo.size = size;
+    binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    if (!m_stagingBuffer.IsActive()) {
+        m_stagingBuffer.Create(device, binfo);
+        m_stagingBufferUsed = true;
+    }
+
+    //for (auto layer = 0; layer < imageDatas.size(); layer++) {
+
+    //uint32_t offset = 0;
+    m_stagingBuffer.Map();
+    m_stagingBuffer.LoadData(data, offset, size);
+    m_stagingBuffer.UnMap();
+
+    commandList->CopyBufferToImage(
+        m_stagingBuffer.GetBuffer(), m_image.GetImage(), 
+        origin, extent,
+        offset, 0, uint32_t(0));
+
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = 0;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    m_state.m_state = ETextureState::GENERAL;
+    //m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
+}
+
 
 void MVulkanTexture::TransferTextureState(int currentFrame, TextureState newState)
 {

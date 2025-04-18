@@ -199,7 +199,8 @@ enum class ETextureState : uint32_t {
     DepthAttachment = 1 << 2,
     SRV = 1 << 3,
     UAV = 1 << 4,
-    PRESENT = 1 << 5
+    PRESENT = 1 << 5,
+    GENERAL = 1 << 6
 };
 
 struct TextureState {

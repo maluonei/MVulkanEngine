@@ -1,3 +1,4 @@
+#pragma once
 [[vk::binding(1, 0)]] RaytracingAccelerationStructure Tlas;
 [[vk::binding(2, 0)]] StructuredBuffer<float> VertexBuffer;
 [[vk::binding(3, 0)]] StructuredBuffer<int> IndexBuffer;

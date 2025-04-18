@@ -3,7 +3,7 @@
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Shaders/ShaderModule.hpp"
 
-void ShaderManager::AddShader(const std::string& name, std::initializer_list<std::string> args)
+void ShaderManager::AddShader(const std::string& name, std::initializer_list<std::string> args, bool compileEveryTime)
 {
     auto argSize = args.size();
 
@@ -30,7 +30,7 @@ void ShaderManager::AddShader(const std::string& name, std::initializer_list<std
                 }
 
                 std::shared_ptr<ShaderModule> shader =
-                    std::make_shared<ShaderModule>(vertShaderFile, "", fragShaderFile, vertEntry, "", fragEntry);
+                    std::make_shared<ShaderModule>(vertShaderFile, "", fragShaderFile, vertEntry, "", fragEntry, compileEveryTime);
 
                 AddShader(name, shader);
             }
@@ -50,7 +50,7 @@ void ShaderManager::AddShader(const std::string& name, std::initializer_list<std
                 }
 
                 std::shared_ptr<ShaderModule> shader =
-                    std::make_shared<ShaderModule>(vertShaderFile, geomShaderFile, fragShaderFile, vertEntry, geomEntry, fragEntry);
+                    std::make_shared<ShaderModule>(vertShaderFile, geomShaderFile, fragShaderFile, vertEntry, geomEntry, fragEntry, compileEveryTime);
 
                 AddShader(name, shader);
             }
@@ -70,7 +70,7 @@ void ShaderManager::AddShader(const std::string& name, std::initializer_list<std
                 }
 
                 std::shared_ptr<MeshShaderModule> shader =
-                    std::make_shared<MeshShaderModule>("", meshShaderFile, fragShaderFile, "", meshEntry, fragEntry);
+                    std::make_shared<MeshShaderModule>("", meshShaderFile, fragShaderFile, "", meshEntry, fragEntry, compileEveryTime);
 
                 AddShader(name, shader);
             }
@@ -90,7 +90,7 @@ void ShaderManager::AddShader(const std::string& name, std::initializer_list<std
                 }
 
                 std::shared_ptr<ShaderModule> shader =
-                    std::make_shared<ShaderModule>(taskShaderFile, meshShaderFile, fragShaderFile, taskEntry, meshEntry, fragEntry);
+                    std::make_shared<ShaderModule>(taskShaderFile, meshShaderFile, fragShaderFile, taskEntry, meshEntry, fragEntry, compileEveryTime);
 
                 AddShader(name, shader);
             }
@@ -104,7 +104,7 @@ void ShaderManager::AddShader(const std::string& name, std::initializer_list<std
             }
 
             std::shared_ptr<ComputeShaderModule> shader =
-                std::make_shared<ComputeShaderModule>(compShaderFile, compEntry);
+                std::make_shared<ComputeShaderModule>(compShaderFile, compEntry, compileEveryTime);
 
             AddShader(name, shader);
             break;

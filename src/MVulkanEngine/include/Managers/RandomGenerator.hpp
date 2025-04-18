@@ -4,13 +4,16 @@
 
 #include <random>
 #include "Singleton.hpp"
+#include <glm/glm.hpp>
 
 class RandomGenerator : public Singleton<RandomGenerator> {
 public:
 	float GetRandomFloat();
-
+    glm::vec3 GetRandomUnitVector();
 
 protected:
+    const float pi = 3.1415926536;
+
     friend class Singleton<RandomGenerator>; // 让 Singleton 访问构造函数
     RandomGenerator(); // 只能通过 Singleton::instance() 访问
 

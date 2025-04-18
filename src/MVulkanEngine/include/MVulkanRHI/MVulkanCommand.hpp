@@ -63,7 +63,9 @@ public:
 	void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	void TransitionImageLayout(MVulkanImageMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel=0, uint32_t baseArrayLayer=0);
-	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
+	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
+	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, unsigned int depth, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
+	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkOffset3D origin, VkExtent3D extent, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
 	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, std::vector<MVulkanDescriptorSet> sets);

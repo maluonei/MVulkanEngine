@@ -76,6 +76,10 @@ public:
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
 
+    void LoadTextureData(std::shared_ptr<MVulkanTexture> texture, void* data, size_t size, uint32_t offset);
+    void LoadTextureData(std::shared_ptr<MVulkanTexture> texture, void* data, size_t size, uint32_t offset,
+        VkOffset3D origin, VkExtent3D extent);
+
     template<class T>
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
         MImage<T>* image = images[0];
