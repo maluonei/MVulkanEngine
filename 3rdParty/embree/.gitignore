@@ -1,4 +1,4 @@
-*.user
+
 Win32
 x64
 *.suo
@@ -11,3 +11,6 @@ include/embree4/rtcore_config.h
 build
 build*
 out
+
+!kernels/builders/
+!kernels/builders/**
