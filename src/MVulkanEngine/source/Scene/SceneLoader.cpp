@@ -238,6 +238,10 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
         auto mesh = aiscene->mMeshes[i];
         auto _mesh = std::make_shared<Mesh>();
 
+        const int maxPos = 10000000;
+        _mesh->m_box.pMax = glm::vec3(-maxPos, -maxPos, -maxPos);
+        _mesh->m_box.pMin = glm::vec3(maxPos, maxPos, maxPos);
+
         for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
             aiFace face = mesh->mFaces[j];
 
@@ -266,6 +270,17 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
             }
 
             _mesh->vertices.push_back(vertex);
+
+            _mesh->m_box.pMin.x = std::min(_mesh->m_box.pMin.x, vertex.position.x);
+            _mesh->m_box.pMin.y = std::min(_mesh->m_box.pMin.y, vertex.position.y);
+            _mesh->m_box.pMin.z = std::min(_mesh->m_box.pMin.z, vertex.position.z);
+
+            _mesh->m_box.pMax.x = std::max(_mesh->m_box.pMax.x, vertex.position.x);
+            _mesh->m_box.pMax.y = std::max(_mesh->m_box.pMax.y, vertex.position.y);
+            _mesh->m_box.pMax.z = std::max(_mesh->m_box.pMax.z, vertex.position.z);
+
+            //_mesh->m_box.pMin = glm::min(_mesh->m_box.pMin, vertex.position);
+            //_mesh->m_box.pMax = glm::min(_mesh->m_box.pMax, vertex.position);
         }
 
         //_mesh->matId = mesh->mMaterialIndex;

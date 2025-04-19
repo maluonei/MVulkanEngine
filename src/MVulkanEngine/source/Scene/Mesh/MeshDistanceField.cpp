@@ -29,6 +29,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		}
 	}
 
+	BoundingBox worldSpaceMeshBounds(mesh->m_box);
 	BoundingBox localSpaceMeshBounds(mesh->m_box);
 	{
 		glm::vec3 center = localSpaceMeshBounds.GetCenter();
@@ -79,6 +80,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		mdf.localSpaceMeshBounds = localSpaceMeshBounds;
 		mdf.BrickDimensions = indirectionDimensions;
 		mdf.TextureResolution = { indirectionDimensions[0] * indirectionDimensions[1] * MeshDistanceField::BrickSize, indirectionDimensions[2] * MeshDistanceField::BrickSize };
+		mdf.worldSpaceMeshBounds = worldSpaceMeshBounds;
 		//mdf.dimensions = 
 		//mdf.GenerateMDFTexture();
 		std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
@@ -231,28 +233,28 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
 //	}
 //}
 
-MeshDistanceFieldInput SparseMeshDistanceField::GetMDFBuffer() {
-	MeshDistanceFieldInput input;
-
-	input.distanceFieldToVolumeScaleBias = DistanceFieldToVolumeScaleBias;
-	input.volumeCenter = volumeBounds.GetCenter();
-	input.volumeOffset = volumeBounds.GetExtent();
-	input.volumeToWorldScale = localSpaceMeshBounds.GetExtent();
-
-	//glm::mat4 m(1.0f);
-	glm::mat4 trans = glm::translate(glm::mat4(1.f), volumeBounds.GetCenter());
-	glm::mat4 scale = glm::scale(glm::mat4(1.0f), volumeBounds.GetExtent());
-	input.VolumeToWorld = trans * scale;
-	input.WorldToVolume = glm::inverse(input.VolumeToWorld);
-
-	input.dimensions = BrickDimensions;
-	input.mdfTextureResolusion = TextureResolution;
-
-	return input;
-
-	//input.numDistanceFieldBricks = NumDistanceFieldBricks;
-	//input.mdfTexture = mdfTexture->GetTexture();
-}
+//MeshDistanceFieldInput SparseMeshDistanceField::GetMDFBuffer() {
+//	MeshDistanceFieldInput input;
+//
+//	input.distanceFieldToVolumeScaleBias = DistanceFieldToVolumeScaleBias;
+//	input.volumeCenter = volumeBounds.GetCenter();
+//	input.volumeOffset = volumeBounds.GetExtent();
+//	input.volumeToWorldScale = localSpaceMeshBounds.GetExtent();
+//
+//	//glm::mat4 m(1.0f);
+//	glm::mat4 trans = glm::translate(glm::mat4(1.f), worldSpaceMeshBounds.GetCenter());
+//	glm::mat4 scale = glm::scale(glm::mat4(1.0f), worldSpaceMeshBounds.GetExtent());
+//	input.VolumeToWorld = trans * scale;
+//	input.WorldToVolume = glm::inverse(input.VolumeToWorld);
+//
+//	input.dimensions = BrickDimensions;
+//	input.mdfTextureResolusion = TextureResolution;
+//
+//	return input;
+//
+//	//input.numDistanceFieldBricks = NumDistanceFieldBricks;
+//	//input.mdfTexture = mdfTexture->GetTexture();
+//}
 
 
 void MeshDistanceFieldAtlas::Init() {

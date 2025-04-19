@@ -17,7 +17,7 @@ namespace MeshDistanceField {
 	inline const int UniqueDataBrickSize = 7;
 	inline const int BandSizeInVoxels = 2;
 
-	inline const glm::ivec3 MdfAtlasDims = { 32, 32, 8 };
+	inline const glm::ivec3 MdfAtlasDims = { 1024, 1024, 8 };
 }
 
 struct Mesh;
@@ -27,11 +27,12 @@ class MVulkanTexture;
 class SparseMeshDistanceField {
 public:
 	//void GenerateMDFTexture();
-	MeshDistanceFieldInput GetMDFBuffer();
+	//MeshDistanceFieldInput GetMDFBuffer();
 public:
 	float localToVolumnScale;
 	BoundingBox volumeBounds;
 	BoundingBox localSpaceMeshBounds;
+	BoundingBox worldSpaceMeshBounds;
 	std::vector<uint8_t> distanceFieldVolume;
 	glm::ivec3 IndirectionDimensions;
 	int32_t NumDistanceFieldBricks;

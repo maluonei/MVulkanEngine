@@ -287,7 +287,7 @@ void MDF::loadScene()
 
     m_sphere = std::make_shared<Scene>();
     //fs::path cubePath = resourcePath / "sphere.obj";
-    fs::path cubePath = resourcePath / "suzanne.obj";
+    fs::path cubePath = resourcePath / "2obj.obj";
     Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
 
 
@@ -486,7 +486,9 @@ void MDF::createStorageBuffers()
             mdfInputs[i].volumeToWorldScale = mdf.localSpaceMeshBounds.GetExtent();
 
             //glm::mat4 m(1.0f);
-            glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
+            glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.worldSpaceMeshBounds.GetCenter());
+            //glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.worldSpaceMeshBounds.GetExtent());
+            //glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
             glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.volumeBounds.GetExtent());
             mdfInputs[i].VolumeToWorld = trans * scale;
             mdfInputs[i].WorldToVolume = glm::inverse(mdfInputs[i].VolumeToWorld);
