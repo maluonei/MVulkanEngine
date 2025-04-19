@@ -46,6 +46,7 @@ private:
 
 	void testEmbreeScene();
 	void createMDF();
+	void createStorageBuffers();
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -82,7 +83,9 @@ private:
 	std::shared_ptr<Camera>		m_directionalLightCamera;
 	std::shared_ptr<Camera>		m_camera;
 
-	SparseMeshDistanceField		m_mdf;
+	//SparseMeshDistanceField		m_mdf;
+	MeshDistanceFieldAtlas		m_mdfAtlas;
+	std::shared_ptr<StorageBuffer> m_mdfBuffers;
 };
 
 

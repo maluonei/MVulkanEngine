@@ -71,7 +71,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		//SparseMeshDistanceField sparseMeshDistanceField;
 		const uint32_t brickSizeBytes = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * sizeof(uint8_t);
 		uint32_t numBricks = indirectionDimensions.x * indirectionDimensions.y * indirectionDimensions.z;
-		//mdf.distanceFieldVolume.resize(brickSizeBytes * numBricks);
+		mdf.distanceFieldVolume.resize(brickSizeBytes * numBricks);
 		mdf.DistanceFieldToVolumeScaleBias = distanceFieldToVolumeScaleBias;
 		mdf.IndirectionDimensions = indirectionDimensions;
 		mdf.NumDistanceFieldBricks = numBricks;
@@ -80,8 +80,8 @@ void MeshUtilities::GenerateMeshDistanceField(
 		mdf.BrickDimensions = indirectionDimensions;
 		mdf.TextureResolution = { indirectionDimensions[0] * indirectionDimensions[1] * MeshDistanceField::BrickSize, indirectionDimensions[2] * MeshDistanceField::BrickSize };
 		//mdf.dimensions = 
-		mdf.GenerateMDFTexture();
-		//std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
+		//mdf.GenerateMDFTexture();
+		std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
 		//mdf.localToVolumnScale = localToVolumnScale;
 		//mdf.VolumeToVirtualUVScale = localToVolumnScale;
 		//sparseMeshDistanceField.VolumeToVirtualUVScale = 1.f / localToVolumnScale;
@@ -101,19 +101,19 @@ void MeshUtilities::GenerateMeshDistanceField(
 						indirectionDimensions
 					);
 
-					VkOffset3D origin = {x * MeshDistanceField::BrickSize, y * MeshDistanceField::BrickSize, z * MeshDistanceField::BrickSize};
-					VkExtent3D scale = { MeshDistanceField::BrickSize , MeshDistanceField::BrickSize , MeshDistanceField::BrickSize };
-					Singleton<MVulkanEngine>::instance().LoadTextureData(mdf.mdfTexture, task.distanceFieldVolume.data(), task.distanceFieldVolume.size() * sizeof(uint8_t), 0, origin, scale);
+					//VkOffset3D origin = {x * MeshDistanceField::BrickSize, y * MeshDistanceField::BrickSize, z * MeshDistanceField::BrickSize};
+					//VkExtent3D scale = { MeshDistanceField::BrickSize , MeshDistanceField::BrickSize , MeshDistanceField::BrickSize };
+					//Singleton<MVulkanEngine>::instance().LoadTextureData(mdf.mdfTexture, task.distanceFieldVolume.data(), task.distanceFieldVolume.size() * sizeof(uint8_t), 0, origin, scale);
 
 					//mdf.mdfTexture->LoadData()
 					//uint32_t brickIndex = z * indirectionDimensions.x * indirectionDimensions.y + y * indirectionDimensions.x + x;
 					//uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
 					//memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
 					//auto brickIndex = glm::ivec3(x, y, z);
-					//for (auto _z = 0; _z < MeshDistanceField::BrickSize; _z++) {
-					//	uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
-					//	memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
-					//}
+					for (auto _z = 0; _z < MeshDistanceField::BrickSize; _z++) {
+						uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
+						memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
+					}
 					//break;
 				}
 				//break;
@@ -144,7 +144,8 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
 
 	const glm::vec3 indirectionVoxelSize = volumeBounds.GetSize() / glm::vec3(indirectionSize);
 	const glm::vec3 distanceFieldVoxelSize = indirectionVoxelSize / glm::vec3(MeshDistanceField::UniqueDataBrickSize);
-	const glm::vec3 brickMinPosition = volumeBounds.pMin + glm::vec3(brickCoordinate) * indirectionVoxelSize;
+	//const glm::vec3 distanceFieldVoxelSize = indirectionVoxelSize / glm::vec3(6.f);
+	const glm::vec3 brickMinPosition = volumeBounds.pMin + glm::vec3(brickCoordinate) * indirectionVoxelSize;// -distanceFieldVoxelSize;
 
 	distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
 
@@ -195,40 +196,40 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
 }
 
 
-void SparseMeshDistanceField::GenerateMDFTexture()
-{
-	{
-		//std::vector<float> floatDatas(distanceFieldVolume.size());
-		//for (auto i = 0; i < distanceFieldVolume.size(); i++) {
-		//	floatDatas[i] = static_cast<float>(distanceFieldVolume[i]) / 255.f;
-		//	//floatDatas[i] = (float)i / distanceFieldVolume.size();
-		//}
-
-		mdfTexture = std::make_shared<MVulkanTexture>();
-
-		ImageCreateInfo imageInfo;
-		ImageViewCreateInfo viewInfo;
-		imageInfo.arrayLength = 1;
-		imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		imageInfo.width = IndirectionDimensions[0] * MeshDistanceField::BrickSize;
-		imageInfo.height = IndirectionDimensions[1] * MeshDistanceField::BrickSize;
-		imageInfo.depth = IndirectionDimensions[2] * MeshDistanceField::BrickSize;
-		imageInfo.format = VK_FORMAT_R8_UNORM;
-		imageInfo.type = VK_IMAGE_TYPE_3D;
-
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
-		viewInfo.format = imageInfo.format;
-		viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		viewInfo.baseMipLevel = 0;
-		viewInfo.levelCount = 1;
-		viewInfo.baseArrayLayer = 0;
-		viewInfo.layerCount = 1;
-
-		Singleton<MVulkanEngine>::instance().CreateImage(mdfTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
-
-		//Singleton<MVulkanEngine>::instance().LoadTextureData(mdfTexture, distanceFieldVolume.data(), distanceFieldVolume.size() * sizeof(uint8_t), 0);
-	}
-}
+//void SparseMeshDistanceField::GenerateMDFTexture()
+//{
+//	{
+//		//std::vector<float> floatDatas(distanceFieldVolume.size());
+//		//for (auto i = 0; i < distanceFieldVolume.size(); i++) {
+//		//	floatDatas[i] = static_cast<float>(distanceFieldVolume[i]) / 255.f;
+//		//	//floatDatas[i] = (float)i / distanceFieldVolume.size();
+//		//}
+//
+//		mdfTexture = std::make_shared<MVulkanTexture>();
+//
+//		ImageCreateInfo imageInfo;
+//		ImageViewCreateInfo viewInfo;
+//		imageInfo.arrayLength = 1;
+//		imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+//		imageInfo.width = IndirectionDimensions[0] * MeshDistanceField::BrickSize;
+//		imageInfo.height = IndirectionDimensions[1] * MeshDistanceField::BrickSize;
+//		imageInfo.depth = IndirectionDimensions[2] * MeshDistanceField::BrickSize;
+//		imageInfo.format = VK_FORMAT_R8_UNORM;
+//		imageInfo.type = VK_IMAGE_TYPE_3D;
+//
+//		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
+//		viewInfo.format = imageInfo.format;
+//		viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+//		viewInfo.baseMipLevel = 0;
+//		viewInfo.levelCount = 1;
+//		viewInfo.baseArrayLayer = 0;
+//		viewInfo.layerCount = 1;
+//
+//		Singleton<MVulkanEngine>::instance().CreateImage(mdfTexture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
+//
+//		//Singleton<MVulkanEngine>::instance().LoadTextureData(mdfTexture, distanceFieldVolume.data(), distanceFieldVolume.size() * sizeof(uint8_t), 0);
+//	}
+//}
 
 MeshDistanceFieldInput SparseMeshDistanceField::GetMDFBuffer() {
 	MeshDistanceFieldInput input;
@@ -251,4 +252,72 @@ MeshDistanceFieldInput SparseMeshDistanceField::GetMDFBuffer() {
 
 	//input.numDistanceFieldBricks = NumDistanceFieldBricks;
 	//input.mdfTexture = mdfTexture->GetTexture();
+}
+
+
+void MeshDistanceFieldAtlas::Init() {
+	m_mdfAtlas = std::make_shared<MVulkanTexture>();
+
+	ImageCreateInfo imageInfo;
+	ImageViewCreateInfo viewInfo;
+	imageInfo.arrayLength = 1;
+	imageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageInfo.width = MeshDistanceField::MdfAtlasDims.x;
+	imageInfo.height = MeshDistanceField::MdfAtlasDims.y;
+	imageInfo.depth = MeshDistanceField::MdfAtlasDims.z;
+	imageInfo.format = VK_FORMAT_R8_UNORM;
+	imageInfo.type = VK_IMAGE_TYPE_3D;
+
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
+	viewInfo.format = imageInfo.format;
+	viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+	viewInfo.baseMipLevel = 0;
+	viewInfo.levelCount = 1;
+	viewInfo.baseArrayLayer = 0;
+	viewInfo.layerCount = 1;
+
+	Singleton<MVulkanEngine>::instance().CreateImage(m_mdfAtlas, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
+}
+
+int MeshDistanceFieldAtlas::LoadData(
+	SparseMeshDistanceField& field
+) {
+	int numBricks = field.BrickDimensions.x * field.BrickDimensions.y * field.BrickDimensions.z;
+	int firstBrick = brickIndex;
+
+	for (auto x = 0; x < field.BrickDimensions.x; x++) {
+		for (auto y = 0; y < field.BrickDimensions.y; y++) {
+			for (auto z = 0; z < field.BrickDimensions.z; z++) {
+				int localBrickIndex = (x * field.BrickDimensions.y + y) * field.BrickDimensions.z + z;
+				int brickVoxelNum = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize;
+
+				loadBrickData(&(field.distanceFieldVolume[localBrickIndex * brickVoxelNum]));
+			}
+		}
+	}
+
+	field.firstBrickIndex = firstBrick;
+	m_smdfs.push_back(field);
+	return firstBrick;
+}
+
+void MeshDistanceFieldAtlas::loadBrickData(
+	uint8_t* data
+) {
+	//int numBricks = field.BrickDimensions.x * field.BrickDimensions.y * field.BrickDimensions.z;
+	int d = MeshDistanceField::MdfAtlasDims.x / MeshDistanceField::BrickSize;
+
+	int originX = brickIndex / d;
+	int originY = (brickIndex % d);
+	int originZ = 0;
+	//int originZ = brickIndex % 32;
+
+	VkOffset3D origin = { originX * MeshDistanceField::BrickSize, originY * MeshDistanceField::BrickSize, originZ * MeshDistanceField::BrickSize };
+	VkExtent3D scale = { MeshDistanceField::BrickSize, MeshDistanceField::BrickSize, MeshDistanceField::BrickSize };
+
+	Singleton<MVulkanEngine>::instance().LoadTextureData(
+		m_mdfAtlas, data, sizeof(uint8_t) * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize,
+		0, origin, scale);
+
+	brickIndex++;
 }

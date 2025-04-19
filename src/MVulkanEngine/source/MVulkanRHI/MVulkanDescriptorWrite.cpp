@@ -54,16 +54,16 @@ PassResources PassResources::SetBufferResource(std::string name, int binding, in
 
 PassResources PassResources::SetBufferResource(
     int binding, int set, 
-    StorageBuffer buffer, int offset, int range
+    std::shared_ptr<StorageBuffer> buffer
 ) {
     PassResources resource;
     resource.m_type = ResourceType_StorageBuffer;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_buffers = { buffer.GetBuffer() };
-    resource.m_offset = offset;
-    resource.m_range = range;
+    resource.m_buffers = { buffer->GetBuffer() };
+    resource.m_offset = 0;
+    resource.m_range = buffer->GetBufferSize();
 
     return resource;
 }

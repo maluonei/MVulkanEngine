@@ -16,6 +16,8 @@ namespace MeshDistanceField {
 	inline const int MeshDistanceFieldObjectBorder = 1;
 	inline const int UniqueDataBrickSize = 7;
 	inline const int BandSizeInVoxels = 2;
+
+	inline const glm::ivec3 MdfAtlasDims = { 32, 32, 8 };
 }
 
 struct Mesh;
@@ -24,19 +26,20 @@ class MVulkanTexture;
 
 class SparseMeshDistanceField {
 public:
-	void GenerateMDFTexture();
+	//void GenerateMDFTexture();
 	MeshDistanceFieldInput GetMDFBuffer();
 public:
 	float localToVolumnScale;
 	BoundingBox volumeBounds;
 	BoundingBox localSpaceMeshBounds;
-	//std::vector<uint8_t> distanceFieldVolume;
+	std::vector<uint8_t> distanceFieldVolume;
 	glm::ivec3 IndirectionDimensions;
 	int32_t NumDistanceFieldBricks;
 	glm::vec3 VolumeToVirtualUVScale;
 	glm::vec3 VolumeToVirtualUVAdd;
 	glm::vec2 DistanceFieldToVolumeScaleBias;
-	std::shared_ptr<MVulkanTexture> mdfTexture;
+	int firstBrickIndex = 0;
+	//std::shared_ptr<MVulkanTexture> mdfTexture;
 
 	glm::ivec3 BrickDimensions;
 	glm::ivec2 TextureResolution;
@@ -75,6 +78,22 @@ public:
 	std::vector<uint8_t> distanceFieldVolume;
 	uint8_t brickMaxDistance;
 	uint8_t brickMinDistance;
+};
+
+class MeshDistanceFieldAtlas {
+public:
+	void Init();
+	int LoadData(
+		SparseMeshDistanceField& field
+	);
+
+public:
+	std::shared_ptr<MVulkanTexture> m_mdfAtlas = nullptr;
+	std::vector<SparseMeshDistanceField> m_smdfs;
+private:
+	void loadBrickData(uint8_t* data);
+
+	int brickIndex = 0;
 };
 
 #endif // MESHDISTANCEFIELD_HPP

@@ -40,8 +40,8 @@ struct PassResources
 	);
 
 	static PassResources SetBufferResource(
-		int binding, int set, 
-		StorageBuffer buffer, int offset, int range
+		int binding, int set,
+		std::shared_ptr<StorageBuffer> buffer
 	);
 
 	static PassResources SetSampledImageResource(

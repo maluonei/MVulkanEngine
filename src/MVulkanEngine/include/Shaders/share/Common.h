@@ -69,3 +69,12 @@ struct MVPBuffer
     float4x4 View;
     float4x4 Projection;
 };
+
+struct MSceneBuffer{
+    int numInstances;
+};
+
+struct MDFGlobalBuffer{
+    int3 mdfAtlasDim;
+    float padding0;
+};

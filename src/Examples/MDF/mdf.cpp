@@ -31,6 +31,7 @@ void MDF::SetUp()
 
     //testEmbreeScene();
     createMDF();
+    createStorageBuffers();
 }
 
 void MDF::ComputeAndDraw(uint32_t imageIndex)
@@ -76,7 +77,7 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
         //lightBuffer.lights[0].shadowCameraZnear = m_directionalLightCamera->GetZnear();
         //lightBuffer.lights[0].shadowCameraZfar = m_directionalLightCamera->GetZfar();
         //lightBuffer.lights[0].shadowmapResolution = int2(shadowmapExtent.width, shadowmapExtent.height);
-        MeshDistanceFieldInput mdfBuffer = m_mdf.GetMDFBuffer(); 
+        //MeshDistanceFieldInput mdfBuffer = m_mdf.GetMDFBuffer(); 
 
         MCameraBuffer cameraBuffer{};
         cameraBuffer.cameraPos = m_camera->GetPosition();
@@ -88,9 +89,16 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
         MScreenBuffer screenBuffer{};
         screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
 
-        Singleton<ShaderResourceManager>::instance().LoadData("mdfBuffer", imageIndex, &mdfBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
+        MSceneBuffer sceneBuffer{};
+        sceneBuffer.numInstances = m_sphere->GetNumPrimInfos();
+
+        MDFGlobalBuffer mdfGlobalBuffer{};
+        mdfGlobalBuffer.mdfAtlasDim = MeshDistanceField::MdfAtlasDims;
+
+        Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", m_currentFrame, &sceneBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", m_currentFrame, &cameraBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", m_currentFrame, &screenBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("mdfGlobalBuffer", m_currentFrame, &mdfGlobalBuffer, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -136,11 +144,11 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
             RenderingAttachment{
                 .texture = nullptr,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .view = swapChain.GetImageView(imageIndex),
+                .view = swapChain.GetImageView(m_currentFrame),
             }
         );
         shadingRenderInfo.depthAttachment = RenderingAttachment{
-                .texture = swapchainDepthViews[imageIndex],
+                .texture = swapchainDepthViews[m_currentFrame],
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
@@ -410,7 +418,8 @@ void MDF::loadShaders()
 {
     //Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     //Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdf.frag.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdf.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdfVisulize.frag.hlsl" }, true);
 
 }
 
@@ -431,15 +440,70 @@ void MDF::testEmbreeScene()
 
 void MDF::createMDF()
 {
-    MeshUtilities utils;
-    utils.GenerateMeshDistanceField(
-        m_sphere->GetMesh(0),
-        32,
-        m_mdf
-    );
+    //MeshUtilities utils;
+    //utils.GenerateMeshDistanceField(
+    //    m_sphere->GetMesh(0),
+    //    32,
+    //    m_mdf
+    //);
+    m_mdfAtlas.Init();
 
-    //m_mdf.GenerateMDFTexture();
+    auto numPrims = m_sphere->GetNumPrimInfos();
+    auto drawIndexedIndirectCommands = m_sphere->GetIndirectDrawCommands();
+
+    for (auto i = 0; i < numPrims; i++) {
+        auto mesh = m_sphere->GetMesh(m_sphere->m_primInfos[i].mesh_id);
+        SparseMeshDistanceField mdf;
+
+        MeshUtilities utils;
+        utils.GenerateMeshDistanceField(
+            mesh,
+            32,
+            mdf
+        );
+
+        m_mdfAtlas.LoadData(mdf);
+    }
+
     return;
+}
+
+void MDF::createStorageBuffers()
+{
+    //m_mdfBuffers = std::make_shared<StorageBuffer>();
+
+    {
+        auto mdfAssets = m_mdfAtlas.m_smdfs;
+
+        std::vector<MeshDistanceFieldInput> mdfInputs(mdfAssets.size());
+        for (int i = 0; i < mdfAssets.size(); i++) {
+            //auto volumeBounds = mdf.;
+            auto& mdf = mdfAssets[i];
+            
+            mdfInputs[i].distanceFieldToVolumeScaleBias = mdf.DistanceFieldToVolumeScaleBias;
+            mdfInputs[i].volumeCenter = mdf.volumeBounds.GetCenter();
+            mdfInputs[i].volumeOffset = mdf.volumeBounds.GetExtent();
+            mdfInputs[i].volumeToWorldScale = mdf.localSpaceMeshBounds.GetExtent();
+
+            //glm::mat4 m(1.0f);
+            glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
+            glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.volumeBounds.GetExtent());
+            mdfInputs[i].VolumeToWorld = trans * scale;
+            mdfInputs[i].WorldToVolume = glm::inverse(mdfInputs[i].VolumeToWorld);
+
+            mdfInputs[i].dimensions = mdf.BrickDimensions;
+            mdfInputs[i].mdfTextureResolusion = mdf.TextureResolution;
+
+            mdfInputs[i].firstBrickIndex = mdf.firstBrickIndex;
+        }
+
+        BufferCreateInfo info{};
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        info.arrayLength = 1;
+        info.size = sizeof(MeshDistanceFieldInput) * mdfInputs.size();
+
+        m_mdfBuffers = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, mdfInputs.data());
+    }
 }
 
 //void MDF::createGbufferPass()
@@ -545,7 +609,8 @@ void MDF::createShadingPass()
         //    shadowMapDepth
         //};
         std::vector<std::shared_ptr<MVulkanTexture>> mdfTexture{
-            m_mdf.mdfTexture
+            //m_mdf.mdfTexture
+            m_mdfAtlas.m_mdfAtlas
         };
 
         for (int i = 0; i < info.frambufferCount; i++) {
@@ -553,7 +618,7 @@ void MDF::createShadingPass()
 
             resources.push_back(
                 PassResources::SetBufferResource(
-                    "mdfBuffer", 0, 0, i));
+                    "sceneBuffer", 0, 0, i));
             resources.push_back(
                 PassResources::SetBufferResource(
                     "cameraBuffer", 1, 0, i));
@@ -561,12 +626,18 @@ void MDF::createShadingPass()
                 PassResources::SetBufferResource(
                     "screenBuffer", 2, 0, i));
             resources.push_back(
+                PassResources::SetBufferResource(
+                    "mdfGlobalBuffer", 6, 0, i));
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    3, 0, m_mdfBuffers));
+            resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, mdfTexture));
+                    4, 0, mdfTexture));
 
             resources.push_back(
                 PassResources::SetSamplerResource(
-                    4, 0, m_linearSampler.GetSampler()));
+                    5, 0, m_linearSampler.GetSampler()));
 
 
             m_shadingPass->UpdateDescriptorSetWrite(i, resources);
