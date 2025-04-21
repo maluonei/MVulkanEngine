@@ -44,7 +44,7 @@ private:
 
 	void loadShaders();
 
-	void testEmbreeScene();
+	//void testEmbreeScene();
 	void createMDF();
 	void createStorageBuffers();
 

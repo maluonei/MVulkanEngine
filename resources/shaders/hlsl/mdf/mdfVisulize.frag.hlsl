@@ -98,6 +98,7 @@ PSOutput main(PSInput input)
         //output.Color = hit.step * float4(1.f, 1.f, 1.f, 1.f) + 1e-10f * float4(hit.distance, 0.f, 0.f, 1.f);
         //output.Color = float4(hitPosition, 1.f);// + 1e-10f * float4(finalDistance, 0.f, 0.f, 1.f);
         output.Color = float4(worldSpaceNormal, 1.f);
+        output.Color = float4(worldSpaceNormal * 0.5f + 0.5f, 1.f);
     }
     else{
         output.Color = float4(0.f, 0.f, 0.f, 1.f);

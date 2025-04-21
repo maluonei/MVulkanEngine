@@ -11,6 +11,18 @@
 #include "Scene/EmbreeScene.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
+#include "MultiThread/ParallelFor.hpp"
+
+AsyncDistanceFieldTask::AsyncDistanceFieldTask(
+	std::shared_ptr<Mesh> mesh,
+	float distanceFieldResolutionScale
+) :m_mesh(mesh), m_distanceFieldResolutionScale(distanceFieldResolutionScale) {};
+
+void AsyncDistanceFieldTask::DoWork() {
+	MeshUtilities util;
+	util.GenerateMeshDistanceField(m_mesh, m_distanceFieldResolutionScale, m_mdf);
+}
+
 
 void MeshUtilities::GenerateMeshDistanceField(
 	std::shared_ptr<Mesh> mesh,
@@ -88,11 +100,23 @@ void MeshUtilities::GenerateMeshDistanceField(
 		//mdf.VolumeToVirtualUVScale = localToVolumnScale;
 		//sparseMeshDistanceField.VolumeToVirtualUVScale = 1.f / localToVolumnScale;
 
+		std::vector<SparseMeshDistanceFieldGenerateTask> tasks;
+
 		for (int z = 0; z < indirectionDimensions.z; z++){
 			for (int y = 0; y < indirectionDimensions.y; y++){
 				for (int x = 0; x < indirectionDimensions.x; x++) {
-					SparseMeshDistanceFieldGenerateTask task;
-					task.GenerateMeshDistanceFieldInternal(
+					//SparseMeshDistanceFieldGenerateTask task;
+					//task.GenerateMeshDistanceFieldInternal(
+					//	embreeScene,
+					//	&sampleDirections,
+					//	localSpaceTraceDistance,
+					//	distanceFieldBounds,
+					//	localToVolumnScale,
+					//	distanceFieldToVolumeScaleBias,
+					//	glm::ivec3(x, y, z),
+					//	indirectionDimensions
+					//);
+					tasks.push_back(SparseMeshDistanceFieldGenerateTask(
 						embreeScene,
 						&sampleDirections,
 						localSpaceTraceDistance,
@@ -101,7 +125,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 						distanceFieldToVolumeScaleBias,
 						glm::ivec3(x, y, z),
 						indirectionDimensions
-					);
+					));
 
 					//VkOffset3D origin = {x * MeshDistanceField::BrickSize, y * MeshDistanceField::BrickSize, z * MeshDistanceField::BrickSize};
 					//VkExtent3D scale = { MeshDistanceField::BrickSize , MeshDistanceField::BrickSize , MeshDistanceField::BrickSize };
@@ -112,33 +136,72 @@ void MeshUtilities::GenerateMeshDistanceField(
 					//uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
 					//memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
 					//auto brickIndex = glm::ivec3(x, y, z);
-					for (auto _z = 0; _z < MeshDistanceField::BrickSize; _z++) {
-						uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
-						memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
-					}
+					//for (auto _z = 0; _z < MeshDistanceField::BrickSize; _z++) {
+						//uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
+						//memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], task.distanceFieldVolume.data(), sizeof(uint8_t) * task.distanceFieldVolume.size());
+					//}
 					//break;
 				}
 				//break;
 			}
 			//break;
 		}
-	
 
+		ParallelFor(tasks.begin(), tasks.end(), [this](SparseMeshDistanceFieldGenerateTask& task)
+			{
+				task.GenerateMeshDistanceFieldInternal();
+			},
+			8
+		);
+
+		int index = 0;
+		for (int z = 0; z < indirectionDimensions.z; z++) {
+			for (int y = 0; y < indirectionDimensions.y; y++) {
+				for (int x = 0; x < indirectionDimensions.x; x++) {
+					uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
+					memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], tasks[index].distanceFieldVolume.data(), sizeof(uint8_t) * tasks[index].distanceFieldVolume.size());
+					index++;
+				}
+			}
+		}
+	
+		//for (auto i = 0; i < tasks.size(); i++) {
+		//	uint32_t brickIndex = i;
+		//	memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], tasks[i].distanceFieldVolume.data(), sizeof(uint8_t) * tasks[i].distanceFieldVolume.size());
+		//}
 	}
 
 	embreeScene->Clean();
 
 }
 
-void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
+SparseMeshDistanceFieldGenerateTask::SparseMeshDistanceFieldGenerateTask(
 	std::shared_ptr<EmbreeScene> embreeScene,
 	const std::vector<glm::vec3>* sampleDirections,
-	float localSpaceTraceDistance,
-	BoundingBox volumeBounds,
-	float localToVolumeScale,
-	glm::vec2 distanceFieldToVolumeScaleBias,
-	glm::ivec3 brickCoordinate,
-	glm::ivec3 indirectionSize
+	float inLocalSpaceTraceDistance,
+	BoundingBox inVolumeBounds,
+	float inLocalToVolumeScale,
+	glm::vec2 InDistanceFieldToVolumeScaleBias,
+	glm::ivec3 inBrickCoordinate,
+	glm::ivec3 inIndirectionSize):
+	embreeScene(embreeScene),
+	sampleDirections(sampleDirections),
+	localSpaceTraceDistance(inLocalSpaceTraceDistance),
+	volumeBounds(inVolumeBounds),
+	localToVolumeScale(inLocalToVolumeScale),
+	distanceFieldToVolumeScaleBias(InDistanceFieldToVolumeScaleBias),
+	brickCoordinate(inBrickCoordinate),
+	indirectionSize(inIndirectionSize){ }
+
+void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal(
+//	std::shared_ptr<EmbreeScene> embreeScene,
+//	const std::vector<glm::vec3>* sampleDirections,
+//	float localSpaceTraceDistance,
+//	BoundingBox volumeBounds,
+//	float localToVolumeScale,
+//	glm::vec2 distanceFieldToVolumeScaleBias,
+//	glm::ivec3 brickCoordinate,
+//	glm::ivec3 indirectionSize
 )
 {
 	uint8_t brickMaxDistance;

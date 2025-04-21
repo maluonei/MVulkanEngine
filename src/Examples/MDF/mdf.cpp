@@ -19,6 +19,10 @@
 #include "Shaders/share/MeshDistanceField.h"
 #include "Scene/EmbreeScene.hpp"
 
+#include "MultiThread/ParallelFor.hpp"
+
+#define targetScene m_sphere
+
 void MDF::SetUp()
 {
     createSamplers();
@@ -90,7 +94,7 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
         screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
 
         MSceneBuffer sceneBuffer{};
-        sceneBuffer.numInstances = m_sphere->GetNumPrimInfos();
+        sceneBuffer.numInstances = targetScene->GetNumPrimInfos();
 
         MDFGlobalBuffer mdfGlobalBuffer{};
         mdfGlobalBuffer.mdfAtlasDim = MeshDistanceField::MdfAtlasDims;
@@ -238,8 +242,8 @@ void MDF::loadScene()
     ////fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
     //
     //Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
-    //
-    ////split Image
+    ////
+    //////split Image
     //{
     //    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
     //
@@ -287,8 +291,9 @@ void MDF::loadScene()
 
     m_sphere = std::make_shared<Scene>();
     //fs::path cubePath = resourcePath / "sphere.obj";
-    fs::path cubePath = resourcePath / "2obj.obj";
-    Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
+    fs::path cubePath = resourcePath / "mdf_test.obj";
+    //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
+    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
 
 
     m_squad->GenerateIndirectDataAndBuffers();
@@ -423,46 +428,54 @@ void MDF::loadShaders()
 
 }
 
-void MDF::testEmbreeScene()
-{
-    auto mesh = m_sphere->GetMesh(0);
-    
-    EmbreeScene embreeScene;
-    embreeScene.Build(mesh);
-    
-    glm::vec3 origin = glm::vec3(0.f, 3.f, 0.f);
-    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -1.f, 0.f));
-    
-    HitResult result = embreeScene.RayCast(origin, direction);
-    //embreeScene.buildBVH(mesh);
-    return;
-}
+//void MDF::testEmbreeScene()
+//{
+//    auto mesh = m_sphere->GetMesh(0);
+//    
+//    EmbreeScene embreeScene;
+//    embreeScene.Build(mesh);
+//    
+//    glm::vec3 origin = glm::vec3(0.f, 3.f, 0.f);
+//    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -1.f, 0.f));
+//    
+//    HitResult result = embreeScene.RayCast(origin, direction);
+//    //embreeScene.buildBVH(mesh);
+//    return;
+//}
 
 void MDF::createMDF()
 {
-    //MeshUtilities utils;
-    //utils.GenerateMeshDistanceField(
-    //    m_sphere->GetMesh(0),
-    //    32,
-    //    m_mdf
-    //);
     m_mdfAtlas.Init();
 
-    auto numPrims = m_sphere->GetNumPrimInfos();
-    auto drawIndexedIndirectCommands = m_sphere->GetIndirectDrawCommands();
+    auto numPrims = targetScene->GetNumPrimInfos();
+    auto drawIndexedIndirectCommands = targetScene->GetIndirectDrawCommands();
+
+    spdlog::info("building mdf");
+
+    std::vector<AsyncDistanceFieldTask> tasks;
+    for (auto i = 0; i < numPrims; i++) {
+        //spdlog::info("building mesh:{0}, total:{1}", i, numPrims);
+        auto mesh = targetScene->GetMesh(targetScene->m_primInfos[i].mesh_id);
+        //SparseMeshDistanceField mdf;
+
+        auto scale = mesh->m_box.GetExtent();
+        auto maxLength = std::max(scale.x, std::max(scale.y, scale.z));
+        maxLength = std::min(maxLength, 4.f);
+
+        tasks.push_back(
+            AsyncDistanceFieldTask(mesh, 16 * maxLength)
+        );
+    }
+
+    ParallelFor(tasks.begin(), tasks.end(), [this](AsyncDistanceFieldTask& task)
+        {
+            task.DoWork();
+        },
+        6
+    );
 
     for (auto i = 0; i < numPrims; i++) {
-        auto mesh = m_sphere->GetMesh(m_sphere->m_primInfos[i].mesh_id);
-        SparseMeshDistanceField mdf;
-
-        MeshUtilities utils;
-        utils.GenerateMeshDistanceField(
-            mesh,
-            32,
-            mdf
-        );
-
-        m_mdfAtlas.LoadData(mdf);
+        m_mdfAtlas.LoadData(tasks[i].m_mdf);
     }
 
     return;

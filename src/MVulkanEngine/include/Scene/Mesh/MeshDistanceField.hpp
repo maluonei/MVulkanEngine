@@ -61,24 +61,58 @@ private:
 
 };
 
+class AsyncDistanceFieldTask {
+public:
+	AsyncDistanceFieldTask() = default;
+	AsyncDistanceFieldTask(
+		std::shared_ptr<Mesh> mesh,
+		float distanceFieldResolutionScale
+	);
+	void DoWork();
+public:
+	std::shared_ptr<Mesh> m_mesh;
+	float m_distanceFieldResolutionScale;
+	SparseMeshDistanceField m_mdf;
+};
+
 class SparseMeshDistanceFieldGenerateTask {
 public:
-	void GenerateMeshDistanceFieldInternal(
-		std::shared_ptr<EmbreeScene> embreeScene,
+	SparseMeshDistanceFieldGenerateTask(std::shared_ptr<EmbreeScene> embreeScene,
 		const std::vector<glm::vec3>* sampleDirections,
 		float inLocalSpaceTraceDistance,
 		BoundingBox inVolumeBounds,
 		float inLocalToVolumeScale,
 		glm::vec2 InDistanceFieldToVolumeScaleBias,
 		glm::ivec3 inBrickCoordinate,
-		glm::ivec3 inIndirectionSize
-	);
+		glm::ivec3 inIndirectionSize);
+
+	void GenerateMeshDistanceFieldInternal();
+	//void GenerateMeshDistanceFieldInternal(
+	//	std::shared_ptr<EmbreeScene> embreeScene,
+	//	const std::vector<glm::vec3>* sampleDirections,
+	//	float inLocalSpaceTraceDistance,
+	//	BoundingBox inVolumeBounds,
+	//	float inLocalToVolumeScale,
+	//	glm::vec2 InDistanceFieldToVolumeScaleBias,
+	//	glm::ivec3 inBrickCoordinate,
+	//	glm::ivec3 inIndirectionSize
+	//);
 
 
 public:
 	std::vector<uint8_t> distanceFieldVolume;
 	uint8_t brickMaxDistance;
 	uint8_t brickMinDistance;
+
+private:
+	std::shared_ptr<EmbreeScene> embreeScene;
+	const std::vector<glm::vec3>* sampleDirections;
+	float localSpaceTraceDistance;
+	BoundingBox volumeBounds;
+	float localToVolumeScale;
+	glm::vec2 distanceFieldToVolumeScaleBias;
+	glm::ivec3 brickCoordinate;
+	glm::ivec3 indirectionSize;
 };
 
 class MeshDistanceFieldAtlas {
