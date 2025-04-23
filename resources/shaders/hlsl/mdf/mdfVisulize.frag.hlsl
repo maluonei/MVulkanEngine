@@ -70,6 +70,7 @@ PSOutput main(PSInput input)
     float3 rayDir = camDir;
     
     for(int i=0; i<scene.numInstances; i++){
+    //for(int i=min(scene.numInstances, 5); i<min(scene.numInstances, 6); i++){
         MDFHitPoint hit;
         MarchRay ray;
         ray.origin = rayOrigin;
@@ -95,9 +96,9 @@ PSOutput main(PSInput input)
         float3 worldSpaceNormal = normalize(mul(transpose(inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
         //float3 worldSpaceNormal = normalize(mul(transpose(mdfInput.VolumeToWorld), volumeSpaceNormal));
 
-        //output.Color = hit.step * float4(1.f, 1.f, 1.f, 1.f) + 1e-10f * float4(hit.distance, 0.f, 0.f, 1.f);
+        //output.Color = float4(1.f, 1.f, 1.f, 1.f) + 1e-10f * float4(finalHit.distance, 0.f, 0.f, 1.f);
         //output.Color = float4(hitPosition, 1.f);// + 1e-10f * float4(finalDistance, 0.f, 0.f, 1.f);
-        output.Color = float4(worldSpaceNormal, 1.f);
+        //output.Color = float4(worldSpaceNormal, 1.f);
         output.Color = float4(worldSpaceNormal * 0.5f + 0.5f, 1.f);
     }
     else{

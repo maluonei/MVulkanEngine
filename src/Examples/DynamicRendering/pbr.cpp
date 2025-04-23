@@ -215,10 +215,11 @@ void PBR::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    fs::path arcadePath = resourcePath / "Arcade" / "Arcade.gltf";
     //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
     //fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
 
-    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
+    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_scene.get());
 
     //split Image
     {

@@ -95,6 +95,7 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
 
         MSceneBuffer sceneBuffer{};
         sceneBuffer.numInstances = targetScene->GetNumPrimInfos();
+        //sceneBuffer.numInstances = 1;
 
         MDFGlobalBuffer mdfGlobalBuffer{};
         mdfGlobalBuffer.mdfAtlasDim = MeshDistanceField::MdfAtlasDims;
@@ -238,6 +239,7 @@ void MDF::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    fs::path arcadePath = resourcePath / "Arcade" / "Arcade.gltf";
     ////fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
     ////fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
     //
@@ -291,9 +293,9 @@ void MDF::loadScene()
 
     m_sphere = std::make_shared<Scene>();
     //fs::path cubePath = resourcePath / "sphere.obj";
-    fs::path cubePath = resourcePath / "mdf_test.obj";
+    fs::path cubePath = resourcePath / "mdf_test3.obj";
+    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
     //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
-    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
 
 
     m_squad->GenerateIndirectDataAndBuffers();
@@ -456,6 +458,7 @@ void MDF::createMDF()
     for (auto i = 0; i < numPrims; i++) {
         //spdlog::info("building mesh:{0}, total:{1}", i, numPrims);
         auto mesh = targetScene->GetMesh(targetScene->m_primInfos[i].mesh_id);
+        //spdlog::info("mesh:{0}",)
         //SparseMeshDistanceField mdf;
 
         auto scale = mesh->m_box.GetExtent();
@@ -463,7 +466,7 @@ void MDF::createMDF()
         maxLength = std::min(maxLength, 4.f);
 
         tasks.push_back(
-            AsyncDistanceFieldTask(mesh, 16 * maxLength)
+            AsyncDistanceFieldTask(mesh, 64 * maxLength)
         );
     }
 
@@ -510,6 +513,11 @@ void MDF::createStorageBuffers()
             mdfInputs[i].mdfTextureResolusion = mdf.TextureResolution;
 
             mdfInputs[i].firstBrickIndex = mdf.firstBrickIndex;
+
+            const glm::vec3 volumeSpacePositionExtent = mdf.localSpaceMeshBounds.GetExtent() * mdf.localToVolumnScale;
+            const glm::vec3 _expandSurfaceDistance = MeshDistanceField::GMeshSDFSurfaceBiasExpand * volumeSpacePositionExtent / glm::vec3(mdf.IndirectionDimensions * MeshDistanceField::UniqueDataBrickSize);
+            float expandSurfaceDistance = glm::length(_expandSurfaceDistance);
+            mdfInputs[i].expandSurfaceDistance = expandSurfaceDistance;
         }
 
         BufferCreateInfo info{};
