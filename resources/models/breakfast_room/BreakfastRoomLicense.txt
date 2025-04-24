@@ -1,0 +1,8 @@
+BreakfastRoom:
+Origninal scene created by Wig42
+Materials and geometry corrected by Morgan McGuire.
+Cleaned up geometry, replaced walls and slats, fixed materials, added instancing and rebuilt in blender by Matthew Oliver.
+Original by: Wig42
+Based on: Morgan McGuire (https://casual-effects.com/data/)
+Oringinaly Based on : BlendSwap (https://www.blendswap.com/blend/13363)
+License: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)

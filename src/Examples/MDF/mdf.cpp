@@ -250,6 +250,7 @@ void MDF::loadScene()
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
     fs::path arcadePath = resourcePath / "Arcade" / "Arcade.gltf";
+    fs::path breakfastRoomPath = resourcePath / "breakfast_room" / "breakfastRoom.gltf";
     ////fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
     ////fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
     //
@@ -305,7 +306,7 @@ void MDF::loadScene()
     //fs::path cubePath = resourcePath / "sphere.obj";
     //fs::path cubePath = resourcePath / "mdf_test3.obj";
     fs::path cubePath = resourcePath / "mdf_test4_2.obj";
-    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
+    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
     //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
 
 
@@ -484,7 +485,7 @@ void MDF::createMDF()
         maxLength = std::min(maxLength, 3.f);
 
         tasks.push_back(
-            AsyncDistanceFieldTask(mesh, 24 * maxLength)
+            AsyncDistanceFieldTask(mesh, 16 * maxLength)
             //AsyncDistanceFieldTask(mesh, 32)
         );
     }
@@ -525,6 +526,7 @@ void MDF::createStorageBuffers()
             //glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.worldSpaceMeshBounds.GetExtent());
             //glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
             float _scale = glm::compMax(mdf.volumeBounds.GetExtent());
+            _scale = 1.f;
             mdfInputs[i].volumeToWorldScale = _scale;
 
             glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(_scale));
@@ -686,9 +688,9 @@ void MDF::createShadingPass()
             resources.push_back(
                 PassResources::SetSampledImageResource(
                     4, 0, mdfTexture));
-            //resources.push_back(
-            //    PassResources::SetSampledImageResource(
-            //        7, 0, mdfTexture2));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    7, 0, mdfTexture2));
 
             resources.push_back(
                 PassResources::SetSamplerResource(

@@ -358,6 +358,11 @@ void MeshDistanceFieldAtlas::loadBrickData(
 		0, origin, scale);
 
 	brickIndex++;
+
+	const int maxBrickIndex = 128 * 128;
+	if (brickIndex > maxBrickIndex) {
+		spdlog::error("too many mdf bricks");
+	}
 }
 
 void MeshDistanceFieldAtlas::loadBrickDataOrigin(float* data)

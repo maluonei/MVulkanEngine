@@ -17,8 +17,8 @@ namespace MeshDistanceField {
 	inline const int UniqueDataBrickSize = 7;
 	inline const int BandSizeInVoxels = 2;
 
-	//inline const glm::ivec3 MdfAtlasDims = { 1024, 1024, 8 };
 	inline const glm::ivec3 MdfAtlasDims = { 1024, 1024, 8 };
+	//inline const glm::ivec3 MdfAtlasDims = { 8, 8, 8 };
 	inline const float GMeshSDFSurfaceBiasExpand = 0.25f;
 }
 
