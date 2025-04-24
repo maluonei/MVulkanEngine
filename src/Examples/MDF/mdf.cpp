@@ -306,8 +306,8 @@ void MDF::loadScene()
     //fs::path cubePath = resourcePath / "sphere.obj";
     //fs::path cubePath = resourcePath / "mdf_test3.obj";
     fs::path cubePath = resourcePath / "mdf_test4_2.obj";
-    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
-    //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
+    //Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
+    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
 
 
     m_squad->GenerateIndirectDataAndBuffers();
@@ -356,6 +356,7 @@ void MDF::createSamplers()
         info.minFilter = VK_FILTER_LINEAR;
         info.magFilter = VK_FILTER_LINEAR;
         info.mipMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.anisotropyEnable = false;
         m_linearSampler.Create(Singleton<MVulkanEngine>::instance().GetDevice(), info);
     }
 }
@@ -413,7 +414,7 @@ void MDF::createTextures()
 
             swapchainDebugViews0[i] = std::make_shared<MVulkanTexture>();
             Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-                swapchainDebugViews0[i], swapchainExtent, Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat()
+                swapchainDebugViews0[i], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
             );
             //swapchainDebugViews0
         }
@@ -485,8 +486,8 @@ void MDF::createMDF()
         maxLength = std::min(maxLength, 3.f);
 
         tasks.push_back(
-            AsyncDistanceFieldTask(mesh, 16 * maxLength)
-            //AsyncDistanceFieldTask(mesh, 32)
+            //AsyncDistanceFieldTask(mesh, 24 * maxLength)
+            AsyncDistanceFieldTask(mesh, 32)
         );
     }
 
@@ -632,7 +633,7 @@ void MDF::createShadingPass()
         //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-        info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
         info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();

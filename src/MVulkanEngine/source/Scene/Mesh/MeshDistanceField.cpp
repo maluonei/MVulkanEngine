@@ -51,7 +51,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 	}
 
 	//volumn scale:[-1, 1]
-	const float localToVolumnScale = 1.f / glm::compMax(localSpaceMeshBounds.GetExtent());
+	//const float localToVolumnScale = 1.f / glm::compMax(localSpaceMeshBounds.GetExtent());
 
 	const glm::vec3 desiredDimensions = glm::vec3(localSpaceMeshBounds.GetSize() * numVoxelsPerLocalSpaceUnit / (float)MeshDistanceField::UniqueDataBrickSize);
 	const glm::ivec3 mip0IndirectionDimensions = glm::ivec3(
@@ -76,9 +76,11 @@ void MeshUtilities::GenerateMeshDistanceField(
 		const glm::vec3 indirectionVoxelSize = distanceFieldBounds.GetSize() / glm::vec3(indirectionDimensions);
 		const float indirectionVoxelRadius = glm::length(indirectionVoxelSize);
 
-		const glm::vec3 volumeSpaceDistanceFieldVoxelSize = indirectionVoxelSize * localToVolumnScale / glm::vec3(MeshDistanceField::UniqueDataBrickSize);
+		//const glm::vec3 volumeSpaceDistanceFieldVoxelSize = indirectionVoxelSize * localToVolumnScale / glm::vec3(MeshDistanceField::UniqueDataBrickSize);
+		const glm::vec3 volumeSpaceDistanceFieldVoxelSize = indirectionVoxelSize / glm::vec3(MeshDistanceField::UniqueDataBrickSize);
 		const float maxDistanceForEncoding = glm::length(volumeSpaceDistanceFieldVoxelSize) * MeshDistanceField::BandSizeInVoxels;
-		const float localSpaceTraceDistance = maxDistanceForEncoding / localToVolumnScale;
+		//const float localSpaceTraceDistance = maxDistanceForEncoding / localToVolumnScale;
+		const float localSpaceTraceDistance = maxDistanceForEncoding;
 		const glm::vec2 distanceFieldToVolumeScaleBias(2.0f * maxDistanceForEncoding, -maxDistanceForEncoding);
 
 		//SparseMeshDistanceField sparseMeshDistanceField;
@@ -95,7 +97,8 @@ void MeshUtilities::GenerateMeshDistanceField(
 		mdf.BrickDimensions = indirectionDimensions;
 		mdf.TextureResolution = { indirectionDimensions[0] * indirectionDimensions[1] * MeshDistanceField::BrickSize, indirectionDimensions[2] * MeshDistanceField::BrickSize };
 		mdf.worldSpaceMeshBounds = worldSpaceMeshBounds;
-		mdf.localToVolumnScale = localToVolumnScale;
+		//mdf.localToVolumnScale = localToVolumnScale;
+		mdf.localToVolumnScale = 1.f;
 		//mdf.dimensions = 
 		//mdf.GenerateMDFTexture();
 		std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
@@ -112,7 +115,8 @@ void MeshUtilities::GenerateMeshDistanceField(
 						&sampleDirections,
 						localSpaceTraceDistance,
 						distanceFieldBounds,
-						localToVolumnScale,
+						//localToVolumnScale,
+						1.f,
 						distanceFieldToVolumeScaleBias,
 						glm::ivec3(x, y, z),
 						indirectionDimensions
@@ -210,7 +214,7 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 					minLocalSpaceDistance *= -1;
 				}
 
-				const float volumeSpaceDistance = minLocalSpaceDistance * localToVolumeScale;
+				const float volumeSpaceDistance = minLocalSpaceDistance;// *localToVolumeScale;
 				const float rescaledDistance = (volumeSpaceDistance - distanceFieldToVolumeScaleBias.y) / distanceFieldToVolumeScaleBias.x;
 				const uint8_t quantizedDistance = std::clamp(uint8_t(rescaledDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
 				//const uint8_t quantizedOriginDistance = std::clamp(uint8_t(volumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);

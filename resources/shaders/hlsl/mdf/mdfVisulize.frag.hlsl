@@ -72,7 +72,7 @@ PSOutput main(PSInput input)
     float3 rayOrigin = cam.cameraPos;
     float3 rayDir = camDir;
 
-    float v = MDFAtlasOrigin.SampleLevel(trilinerSampler, float3(0.f, 0.f, 0.f), 0).r;
+    float v = MDFAtlasOrigin.SampleLevel(trilinerSampler, float3(input.texCoord, 8.f / 14.f), 0).r;
 
     for(int i=0; i<scene.numInstances; i++){
     //for(int i=min(scene.numInstances, 1); i<min(scene.numInstances, 2); i++){
@@ -94,6 +94,8 @@ PSOutput main(PSInput input)
         }
     }
 
+
+
     if(finalHit.distance > 0 && finalHit.distance < MAX_RAY_DISTANCE){
         float3 hitPosition = finalHit.distance * rayDir + rayOrigin;
         
@@ -104,7 +106,7 @@ PSOutput main(PSInput input)
         float3 volumeSpaceNormal = length(volumeSpaceGradient) > 0.f? volumeSpaceGradient : float3(0.f, 0.f, 0.f);
         float3 worldSpaceNormal = normalize(mul(transpose(inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
         //float3 worldSpaceNormal = normalize(mul(transpose(mdfInput.VolumeToWorld), volumeSpaceNormal));
-
+ 
         //if(finalHit.hitBoxButMiss){
         //    output.Color = float4(0.f, 1.f, 0.f, 1.f);
         //}
@@ -120,6 +122,8 @@ PSOutput main(PSInput input)
     else{
         output.Color = float4(0.f, 0.f, 0.f, 1.f);
     }
+
+    output.Color_Debug1 = float4(v * float3(1.f, 1.f, 1.f), 1.f);
 
     return output;
 }

@@ -243,18 +243,18 @@ void RayMarchingMDF2(
             }
 
             float ExpandSurfaceDistance = meshDistanceFieldInput.expandSurfaceDistance;
+            //ExpandSurfaceDistance = 0.f;
 			const float ExpandSurfaceFalloff = 2.0f * ExpandSurfaceDistance;
 			const float ExpandSurfaceAmount = ExpandSurfaceDistance * saturate(distance / ExpandSurfaceFalloff);
             
-            //if(mdfValue < ExpandSurfaceAmount){
-            if(mdfValue < 1e-5f){
+            if(mdfValue < ExpandSurfaceAmount){
                 bHit = true;
                 distance = clamp(distance + mdfValue - ExpandSurfaceAmount, intersectBox.x, intersectBox.y);
                 break;
             }
 
             float MinStepSize = 1.0f / (16 * MAXSTEPS);
-			float StepDistance = max(mdfValue * 0.8f, MinStepSize);
+			float StepDistance = max(mdfValue * 0.95f, MinStepSize);
             //distance += (mdfValue * 0.8f);
             distance += StepDistance;
 
