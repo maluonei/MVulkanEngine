@@ -24,6 +24,7 @@ void EmbreeScene::Clean()
 HitResult EmbreeScene::RayCast(const glm::vec3 origin, const const glm::vec3 direction)
 {
     HitResult result;
+    result.hit = false;
     RayTracingData data;
     data.traversable = rtcGetSceneTraversable(scene_);
     

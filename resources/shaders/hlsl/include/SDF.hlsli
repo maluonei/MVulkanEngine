@@ -51,6 +51,7 @@ float2 GetNearestDistance(
     out bool hit){
     float tMin = -1e20f;
     float tMax = 1e20f;
+    hit = false;
 
     //x axis
     if(direction.x != 0.f){
@@ -86,7 +87,6 @@ float2 GetNearestDistance(
     }
 
     if(tMin > tMax || (tMin <= tMax && tMax < 0)){
-        hit = false;
         return float2(-1.f, -1.f);
     }
 

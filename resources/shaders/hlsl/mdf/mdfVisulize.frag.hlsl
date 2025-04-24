@@ -13,6 +13,7 @@ struct PSInput
 struct PSOutput
 {
     [[vk::location(0)]] float4 Color : SV_TARGET0;
+    [[vk::location(1)]] float4 Color_Debug1 : SV_TARGET1;
 };
 
 //[[vk::binding(0, 0)]]
@@ -48,6 +49,7 @@ cbuffer mdfGlobalBuffer : register(b3)
 [[vk::binding(3, 0)]] StructuredBuffer<MeshDistanceFieldInput> mdfInputs : register(t2);
 
 [[vk::binding(4, 0)]] Texture3D MDFAtlas : register(t0);
+//[[vk::binding(7, 0)]] Texture3D MDFAtlasOrigin : register(t1);
 [[vk::binding(5, 0)]] SamplerState trilinerSampler : register(s0);
 
 PSOutput main(PSInput input)
@@ -60,18 +62,22 @@ PSOutput main(PSInput input)
         cam,
         screen,
         input.texCoord
-    );
+    ); 
 
     const float MAX_RAY_DISTANCE = 1e+10;
     //float finalDistance = MAX_RAY_DISTANCE;
     MDFHitPoint finalHit;
     finalHit.distance = MAX_RAY_DISTANCE;
+    finalHit.hitBoxButMiss = false;
     float3 rayOrigin = cam.cameraPos;
     float3 rayDir = camDir;
-    
+
+    //float v = MDFAtlasOrigin.SampleLevel(trilinerSampler, float3(0.f, 0.f, 0.f), 0).r;
+
     for(int i=0; i<scene.numInstances; i++){
     //for(int i=min(scene.numInstances, 5); i<min(scene.numInstances, 6); i++){
         MDFHitPoint hit;
+        hit.hitBoxButMiss = false;
         MarchRay ray;
         ray.origin = rayOrigin;
         ray.direction = rayDir;
@@ -82,6 +88,7 @@ PSOutput main(PSInput input)
         if(hit.distance > 0 && finalHit.distance > hit.distance){
             finalHit = hit;
             finalHit.instanceIndex = i;
+            finalHit.distance = hit.distance;
         }
     }
 
@@ -96,10 +103,17 @@ PSOutput main(PSInput input)
         float3 worldSpaceNormal = normalize(mul(transpose(inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
         //float3 worldSpaceNormal = normalize(mul(transpose(mdfInput.VolumeToWorld), volumeSpaceNormal));
 
+        //if(finalHit.hitBoxButMiss){
+        //    output.Color = float4(0.f, 1.f, 0.f, 1.f);
+        //}
+        //else{
+        //output.Color = float4(finalHit.distance / 20.f * float3(1.f, 1.f, 1.f), 1.f);
+        //output.Color = float4(finalHit.step * float3(1.f, 1.f, 1.f), 1.f) + 1e-10f * float4(finalHit.distance, 0.f, 0.f, 1.f);
         //output.Color = float4(1.f, 1.f, 1.f, 1.f) + 1e-10f * float4(finalHit.distance, 0.f, 0.f, 1.f);
         //output.Color = float4(hitPosition, 1.f);// + 1e-10f * float4(finalDistance, 0.f, 0.f, 1.f);
         //output.Color = float4(worldSpaceNormal, 1.f);
         output.Color = float4(worldSpaceNormal * 0.5f + 0.5f, 1.f);
+        //}
     }
     else{
         output.Color = float4(0.f, 0.f, 0.f, 1.f);

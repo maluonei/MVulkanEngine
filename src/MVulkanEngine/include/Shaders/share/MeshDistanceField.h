@@ -18,8 +18,10 @@ struct MeshDistanceFieldInput{
     float3 volumeOffset;
     int firstBrickIndex;
 
-    float3 volumeToWorldScale;
+    float volumeToWorldScale;
     float expandSurfaceDistance;
+    float padding1;
+    float padding2;
 
     float2 distanceFieldToVolumeScaleBias;
     float2 mdfTextureResolusion;

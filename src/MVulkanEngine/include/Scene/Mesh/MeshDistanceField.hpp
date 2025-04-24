@@ -17,6 +17,7 @@ namespace MeshDistanceField {
 	inline const int UniqueDataBrickSize = 7;
 	inline const int BandSizeInVoxels = 2;
 
+	//inline const glm::ivec3 MdfAtlasDims = { 1024, 1024, 8 };
 	inline const glm::ivec3 MdfAtlasDims = { 1024, 1024, 8 };
 	inline const float GMeshSDFSurfaceBiasExpand = 0.25f;
 }
@@ -35,6 +36,7 @@ public:
 	BoundingBox localSpaceMeshBounds;
 	BoundingBox worldSpaceMeshBounds;
 	std::vector<uint8_t> distanceFieldVolume;
+	std::vector<float> originDistanceFieldVolume;
 	glm::ivec3 IndirectionDimensions;
 	int32_t NumDistanceFieldBricks;
 	glm::vec3 VolumeToVirtualUVScale;
@@ -102,6 +104,7 @@ public:
 
 public:
 	std::vector<uint8_t> distanceFieldVolume;
+	std::vector<float> originDistanceFieldVolume;
 	uint8_t brickMaxDistance;
 	uint8_t brickMinDistance;
 
@@ -125,11 +128,14 @@ public:
 
 public:
 	std::shared_ptr<MVulkanTexture> m_mdfAtlas = nullptr;
+	std::shared_ptr<MVulkanTexture> m_mdfAtlas_origin = nullptr;
 	std::vector<SparseMeshDistanceField> m_smdfs;
 private:
 	void loadBrickData(uint8_t* data);
+	void loadBrickDataOrigin(float* data);
 
 	int brickIndex = 0;
+	int brickIndex_o = 0;
 };
 
 #endif // MESHDISTANCEFIELD_HPP

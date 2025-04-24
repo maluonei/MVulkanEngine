@@ -85,6 +85,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		const uint32_t brickSizeBytes = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * sizeof(uint8_t);
 		uint32_t numBricks = indirectionDimensions.x * indirectionDimensions.y * indirectionDimensions.z;
 		mdf.distanceFieldVolume.resize(brickSizeBytes * numBricks);
+		mdf.originDistanceFieldVolume.resize(brickSizeBytes * numBricks);
 		mdf.DistanceFieldToVolumeScaleBias = distanceFieldToVolumeScaleBias;
 		mdf.IndirectionDimensions = indirectionDimensions;
 		mdf.NumDistanceFieldBricks = numBricks;
@@ -97,6 +98,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		//mdf.dimensions = 
 		//mdf.GenerateMDFTexture();
 		std::fill(mdf.distanceFieldVolume.begin(), mdf.distanceFieldVolume.end(), 0);
+		std::fill(mdf.originDistanceFieldVolume.begin(), mdf.originDistanceFieldVolume.end(), 0);
 
 		std::vector<SparseMeshDistanceFieldGenerateTask> tasks;
 
@@ -131,6 +133,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 				for (int x = 0; x < indirectionDimensions.x; x++) {
 					uint32_t brickIndex = z + y * indirectionDimensions.z + x * indirectionDimensions.y * indirectionDimensions.z;
 					memcpy(&mdf.distanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], tasks[index].distanceFieldVolume.data(), sizeof(uint8_t) * tasks[index].distanceFieldVolume.size());
+					memcpy(&mdf.originDistanceFieldVolume[brickIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize], tasks[index].originDistanceFieldVolume.data(), sizeof(float) * tasks[index].originDistanceFieldVolume.size());
 					index++;
 				}
 			}
@@ -171,12 +174,14 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 	const glm::vec3 brickMinPosition = volumeBounds.pMin + glm::vec3(brickCoordinate) * indirectionVoxelSize;// -distanceFieldVoxelSize;
 
 	distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+	originDistanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
 
 	for (auto zIndex = 0; zIndex < MeshDistanceField::BrickSize; zIndex++) {
 		for (auto yIndex = 0; yIndex < MeshDistanceField::BrickSize; yIndex++) {
 			for (auto xIndex = 0; xIndex < MeshDistanceField::BrickSize; xIndex++) {
 				
-				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition;
+				const glm::vec3 randomOffset = Singleton<RandomGenerator>::instance().GetRandomUnitVector() * 1e-4f * localSpaceTraceDistance;
+				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition + randomOffset;
 				const int index = (zIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize) + (yIndex * MeshDistanceField::BrickSize) + xIndex;
 				
 				int hitNum = 0;
@@ -207,10 +212,13 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 				const float volumeSpaceDistance = minLocalSpaceDistance * localToVolumeScale;
 				const float rescaledDistance = (volumeSpaceDistance - distanceFieldToVolumeScaleBias.y) / distanceFieldToVolumeScaleBias.x;
 				const uint8_t quantizedDistance = std::clamp(uint8_t(rescaledDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
+				//const uint8_t quantizedOriginDistance = std::clamp(uint8_t(volumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
+				const float quantizedOriginDistance = volumeSpaceDistance / 3.f;
 				//float clampedVolumeSpaceDistance = std::clamp(volumeSpaceDistance, -0.5f / 255.f, 1.f - 0.5f / 255.f);
 				//const uint8_t quantizedDistance = std::clamp(uint8_t(clampedVolumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
 
 				distanceFieldVolume[index] = quantizedDistance;
+				originDistanceFieldVolume[index] = quantizedOriginDistance;
 				brickMinDistance = std::min(brickMinDistance, quantizedDistance);
 				brickMaxDistance = std::max(brickMaxDistance, quantizedDistance);
 			}
@@ -280,6 +288,7 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 
 void MeshDistanceFieldAtlas::Init() {
 	m_mdfAtlas = std::make_shared<MVulkanTexture>();
+	m_mdfAtlas_origin = std::make_shared<MVulkanTexture>();
 
 	ImageCreateInfo imageInfo;
 	ImageViewCreateInfo viewInfo;
@@ -300,6 +309,10 @@ void MeshDistanceFieldAtlas::Init() {
 	viewInfo.layerCount = 1;
 
 	Singleton<MVulkanEngine>::instance().CreateImage(m_mdfAtlas, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
+
+	imageInfo.format = VK_FORMAT_R32_SFLOAT;
+	viewInfo.format = imageInfo.format;
+	Singleton<MVulkanEngine>::instance().CreateImage(m_mdfAtlas_origin, imageInfo, viewInfo, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 int MeshDistanceFieldAtlas::LoadData(
@@ -315,6 +328,7 @@ int MeshDistanceFieldAtlas::LoadData(
 				int brickVoxelNum = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize;
 
 				loadBrickData(&(field.distanceFieldVolume[localBrickIndex * brickVoxelNum]));
+				loadBrickDataOrigin(&(field.originDistanceFieldVolume[localBrickIndex * brickVoxelNum]));
 			}
 		}
 	}
@@ -343,4 +357,24 @@ void MeshDistanceFieldAtlas::loadBrickData(
 		0, origin, scale);
 
 	brickIndex++;
+}
+
+void MeshDistanceFieldAtlas::loadBrickDataOrigin(float* data)
+{
+	//int numBricks = field.BrickDimensions.x * field.BrickDimensions.y * field.BrickDimensions.z;
+	int d = MeshDistanceField::MdfAtlasDims.x / MeshDistanceField::BrickSize;
+
+	int originX = brickIndex_o / d;
+	int originY = (brickIndex_o % d);
+	int originZ = 0;
+	//int originZ = brickIndex % 32;
+
+	VkOffset3D origin = { originX * MeshDistanceField::BrickSize, originY * MeshDistanceField::BrickSize, originZ * MeshDistanceField::BrickSize };
+	VkExtent3D scale = { MeshDistanceField::BrickSize, MeshDistanceField::BrickSize, MeshDistanceField::BrickSize };
+
+	Singleton<MVulkanEngine>::instance().LoadTextureData(
+		m_mdfAtlas_origin, data, sizeof(float) * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize,
+		0, origin, scale);
+
+	brickIndex_o++;
 }

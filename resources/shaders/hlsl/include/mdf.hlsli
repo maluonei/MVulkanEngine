@@ -9,15 +9,21 @@ struct MarchRay{
 
 struct MDFHitPoint{
     float dis0;
+    float dis1;
     bool hitBox;
     float step;
 
     float3 volumeSpaceHitPosition;
 
     int instanceIndex;
+    float volumeSpaceDistance;
+    float sdf0;
+    //float distance0;
     float distance;
     float3 position;
     float3 normal;
+
+    bool hitBoxButMiss;
 };
 
 float SampleMeshDistanceField(
@@ -96,7 +102,6 @@ void RayMarchingMDF(
             //float ExpandSurfaceDistance = DFObjectData.VolumeSurfaceBias;
 			//const float ExpandSurfaceFalloff = 2.0f * ExpandSurfaceDistance;
 			//const float ExpandSurfaceAmount = ExpandSurfaceDistance * saturate(SampleRayTime / ExpandSurfaceFalloff);
-
             if(mdfValue < 0.005f){
                 bHit = true;
                 distance = clamp(distance, intersectBox.x, intersectBox.y);
@@ -134,11 +139,13 @@ float SampleMeshDistanceField2(
 
     float3 volumnDim = meshDistanceFieldInput.dimensions * float3(8, 8, 8);
     float3 uv = (sampleVolumePosition - volumeMin) / (volumeMax - volumeMin);
-    
+    uv = saturate(uv);
+
     float3 uvInt = uv * volumnDim;
     int3 brickUV = (int3)(uv * meshDistanceFieldInput.dimensions);
     float3 uvInBrick = uvInt - brickUV * float3(8, 8, 8);
     uvInBrick = uvInBrick * 7.f / 8.f + 0.5f;
+    //uvInBrick = uvInBrick + 0.5f;
     //uvInBrick = 3.5f * (uvInBrick - 4.f) / 4.f + 3.5f;
 
     int localBrickIndex = (brickUV.x * meshDistanceFieldInput.dimensions.y + brickUV.y) * meshDistanceFieldInput.dimensions.z + brickUV.z;
@@ -191,6 +198,7 @@ void RayMarchingMDF2(
 ){
     hitPoint.distance = -1.f;
     hitPoint.step = 0;
+    hitPoint.hitBoxButMiss = false;
 
     float3 worldRayStart = ray.origin;
     float3 worldRayEnd = ray.origin + ray.direction * 1.0f;
@@ -199,8 +207,10 @@ void RayMarchingMDF2(
     float3 volumeSpaceRayEnd = mul(meshDistanceFieldInput.WorldToVolume, float4(worldRayEnd, 1.0f)).xyz;
     float3 volumeSpaceRayDirection = normalize(volumeSpaceRayEnd - volumeSpaceRayOrigin);
 
-    float3 aabbMin = -float3(1.f, 1.f, 1.f);
-    float3 aabbMax = float3(1.f, 1.f, 1.f);
+    float3 aabbMin = -meshDistanceFieldInput.volumeOffset * 0.95f;
+    float3 aabbMax = meshDistanceFieldInput.volumeOffset * 0.95f;
+    //float3 aabbMin = -float3(1.f, 1.f, 1.f);
+    //float3 aabbMax = float3(1.f, 1.f, 1.f);
     //float3 aabbMin = meshDistanceFieldInput.volumeCenter - meshDistanceFieldInput.volumeOffset;
     //float3 aabbMax = meshDistanceFieldInput.volumeCenter + meshDistanceFieldInput.volumeOffset;
 
@@ -208,10 +218,13 @@ void RayMarchingMDF2(
     float2 intersectBox = GetNearestDistance(
         volumeSpaceRayOrigin, volumeSpaceRayDirection, aabbMin, aabbMax, hit);
 
-    hitPoint.dis0 = intersectBox.x;
+    //hitPoint.dis0 = intersectBox.x;
     hitPoint.hitBox = hit;
-    //hitPoint.distance = intersectBox.x;
-    //return;
+    //hitPoint.hitBoxButMiss = false;
+    //hitPoint.dis1 = intersectBox.y;
+
+    hitPoint.dis0 = length(volumeSpaceRayDirection * intersectBox.x * meshDistanceFieldInput.volumeToWorldScale);
+    hitPoint.dis1 = length(volumeSpaceRayDirection * intersectBox.y * meshDistanceFieldInput.volumeToWorldScale);
 
     if (hit){
         bool bHit = false;
@@ -223,21 +236,34 @@ void RayMarchingMDF2(
         for(; step < MAXSTEPS; step++){
             float3 volumeSpacePosition = volumeSpaceRayOrigin + volumeSpaceRayDirection * distance;
             float mdfValue = SampleMeshDistanceField2(meshDistanceFieldTexture, sampler, atlasDim, meshDistanceFieldInput, volumeSpacePosition);
+     
+            if(step==0){
+                hitPoint.sdf0 = mdfValue;
+            }
 
             float ExpandSurfaceDistance = meshDistanceFieldInput.expandSurfaceDistance;
 			const float ExpandSurfaceFalloff = 2.0f * ExpandSurfaceDistance;
 			const float ExpandSurfaceAmount = ExpandSurfaceDistance * saturate(distance / ExpandSurfaceFalloff);
-
+            
             if(mdfValue < ExpandSurfaceAmount){
             //if(mdfValue < 1.f){
                 bHit = true;
-                distance = clamp(distance, intersectBox.x, intersectBox.y);
+                distance = clamp(distance + mdfValue - ExpandSurfaceAmount, intersectBox.x, intersectBox.y);
                 break;
             }
 
-            distance += (mdfValue * 0.95f);
+            float MinStepSize = 1.0f / (16 * MAXSTEPS);
+			float StepDistance = max(mdfValue * 0.95f, MinStepSize);
+            //distance += (mdfValue * 0.8f);
+            distance += StepDistance;
 
-            if(distance > intersectBox.y){
+            //if(distance > intersectBox.y){
+            if(distance > intersectBox.y + ExpandSurfaceAmount){
+                hitPoint.hitBoxButMiss = true;
+                //hitPoint.volumeSpaceDistance = distance;
+                //const float newHitDistance = length(volumeSpaceRayDirection * distance * meshDistanceFieldInput.volumeToWorldScale);
+                //hitPoint.distance = newHitDistance;
+
                 break;
             }
         }
@@ -245,7 +271,9 @@ void RayMarchingMDF2(
         if(bHit || step == MAXSTEPS){
             const float newHitDistance = length(volumeSpaceRayDirection * distance * meshDistanceFieldInput.volumeToWorldScale);
 
+            hitPoint.volumeSpaceDistance = distance;
             hitPoint.distance = newHitDistance;
+            //hitPoint.step = step;
 
             float3 volumeSpacePosition = volumeSpaceRayOrigin + volumeSpaceRayDirection * distance;
             hitPoint.volumeSpaceHitPosition = volumeSpacePosition;

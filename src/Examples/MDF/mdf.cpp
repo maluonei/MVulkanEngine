@@ -14,6 +14,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/component_wise.hpp>
 
 #include "Shaders/share/Common.h"
 #include "Shaders/share/MeshDistanceField.h"
@@ -152,6 +153,15 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
                 .view = swapChain.GetImageView(m_currentFrame),
             }
         );
+
+        shadingRenderInfo.colorAttachments.push_back(
+            RenderingAttachment{
+                .texture = swapchainDebugViews0[m_currentFrame],
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                //.view = swapChain.GetImageView(m_currentFrame),
+            }
+            );
+
         shadingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[m_currentFrame],
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -293,8 +303,9 @@ void MDF::loadScene()
 
     m_sphere = std::make_shared<Scene>();
     //fs::path cubePath = resourcePath / "sphere.obj";
-    fs::path cubePath = resourcePath / "mdf_test3.obj";
-    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
+    //fs::path cubePath = resourcePath / "mdf_test3.obj";
+    fs::path cubePath = resourcePath / "mdf_test4_3.obj";
+    Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
     //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
 
 
@@ -387,6 +398,7 @@ void MDF::createTextures()
 
     {
         swapchainDepthViews.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
+        swapchainDebugViews0.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
 
         for (auto i = 0; i < swapchainDepthViews.size(); i++) {
             //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
@@ -397,6 +409,12 @@ void MDF::createTextures()
             Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
                 swapchainDepthViews[i], swapchainExtent, depthFormat
             );
+
+            swapchainDebugViews0[i] = std::make_shared<MVulkanTexture>();
+            Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+                swapchainDebugViews0[i], swapchainExtent, Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat()
+            );
+            //swapchainDebugViews0
         }
     }
 
@@ -463,10 +481,11 @@ void MDF::createMDF()
 
         auto scale = mesh->m_box.GetExtent();
         auto maxLength = std::max(scale.x, std::max(scale.y, scale.z));
-        maxLength = std::min(maxLength, 4.f);
+        maxLength = std::min(maxLength, 3.f);
 
         tasks.push_back(
-            AsyncDistanceFieldTask(mesh, 64 * maxLength)
+            AsyncDistanceFieldTask(mesh, 24 * maxLength)
+            //AsyncDistanceFieldTask(mesh, 32)
         );
     }
 
@@ -499,13 +518,16 @@ void MDF::createStorageBuffers()
             mdfInputs[i].distanceFieldToVolumeScaleBias = mdf.DistanceFieldToVolumeScaleBias;
             mdfInputs[i].volumeCenter = mdf.volumeBounds.GetCenter();
             mdfInputs[i].volumeOffset = mdf.volumeBounds.GetExtent();
-            mdfInputs[i].volumeToWorldScale = mdf.localSpaceMeshBounds.GetExtent();
+           
 
             //glm::mat4 m(1.0f);
             glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.worldSpaceMeshBounds.GetCenter());
             //glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.worldSpaceMeshBounds.GetExtent());
             //glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
-            glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.volumeBounds.GetExtent());
+            float _scale = glm::compMax(mdf.volumeBounds.GetExtent());
+            mdfInputs[i].volumeToWorldScale = _scale;
+
+            glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(_scale));
             mdfInputs[i].VolumeToWorld = trans * scale;
             mdfInputs[i].WorldToVolume = glm::inverse(mdfInputs[i].VolumeToWorld);
 
@@ -601,11 +623,13 @@ void MDF::createShadingPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        std::vector<VkFormat> lightingPassFormats;
-        lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        //std::vector<VkFormat> lightingPassFormats;
+        //lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        //lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
 
         //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
@@ -636,6 +660,11 @@ void MDF::createShadingPass()
             m_mdfAtlas.m_mdfAtlas
         };
 
+        std::vector<std::shared_ptr<MVulkanTexture>> mdfTexture2{
+            //m_mdf.mdfTexture
+            m_mdfAtlas.m_mdfAtlas_origin
+        };
+
         for (int i = 0; i < info.frambufferCount; i++) {
             std::vector<PassResources> resources;
 
@@ -657,6 +686,9 @@ void MDF::createShadingPass()
             resources.push_back(
                 PassResources::SetSampledImageResource(
                     4, 0, mdfTexture));
+            //resources.push_back(
+            //    PassResources::SetSampledImageResource(
+            //        7, 0, mdfTexture2));
 
             resources.push_back(
                 PassResources::SetSamplerResource(
