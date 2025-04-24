@@ -34,8 +34,8 @@ float SampleMeshDistanceField(
     MeshDistanceFieldInput meshDistanceFieldInput,
     float3 sampleVolumePosition
 ){
-    float3 volumeMin = - meshDistanceFieldInput.volumeOffset;
-    float3 volumeMax = meshDistanceFieldInput.volumeOffset;
+    float3 volumeMin = - meshDistanceFieldInput.volumeSpaceExtent;
+    float3 volumeMax = meshDistanceFieldInput.volumeSpaceExtent;
     
     //const int brickSize = 8;
     //const int brickDim = meshDistanceFieldInput.dimensions / brickSize; 
@@ -77,8 +77,8 @@ void RayMarchingMDF(
     float3 volumeSpaceRayEnd = mul(meshDistanceFieldInput.WorldToVolume, float4(worldRayEnd, 1.0f)).xyz;
     float3 volumeSpaceRayDirection = normalize(volumeSpaceRayEnd - volumeSpaceRayOrigin);
 
-    float3 aabbMin = -meshDistanceFieldInput.volumeOffset;
-    float3 aabbMax = meshDistanceFieldInput.volumeOffset;
+    float3 aabbMin = -meshDistanceFieldInput.volumeSpaceExtent;
+    float3 aabbMax = meshDistanceFieldInput.volumeSpaceExtent;
 
     bool hit = false;
     float2 intersectBox = GetNearestDistance(
@@ -135,8 +135,8 @@ float SampleMeshDistanceField2(
     //float3 atlasDim = float3(1024, 1024, 8); 
     int d = atlasDim.x / 8;
 
-    float3 volumeMin = -meshDistanceFieldInput.volumeOffset;
-    float3 volumeMax = meshDistanceFieldInput.volumeOffset;
+    float3 volumeMin = -meshDistanceFieldInput.volumeSpaceExtent;
+    float3 volumeMax = meshDistanceFieldInput.volumeSpaceExtent;
 
     float3 volumnDim = meshDistanceFieldInput.dimensions * float3(8, 8, 8);
     float3 uv = (sampleVolumePosition - volumeMin) / (volumeMax - volumeMin);
@@ -174,7 +174,7 @@ float3 CalculateMeshSDFGradient(
     int DistanceFieldUniqueDataBrickSize = 7;
     float3 voxelSize = 1.f / float3(DistanceFieldUniqueDataBrickSize, DistanceFieldUniqueDataBrickSize, DistanceFieldUniqueDataBrickSize);//1.f / DistanceFieldUniqueDataBrickSize
 
-    float3 volumeSpaceBrickSize = 2.f * meshDistanceFieldInput.volumeOffset / meshDistanceFieldInput.dimensions;
+    float3 volumeSpaceBrickSize = 2.f * meshDistanceFieldInput.volumeSpaceExtent / meshDistanceFieldInput.dimensions;
     float3 volumeSpaceVoxelSize = voxelSize * volumeSpaceBrickSize;
 
     float3 voxelOffset = 0.5f * volumeSpaceVoxelSize;
@@ -208,8 +208,10 @@ void RayMarchingMDF2(
     float3 volumeSpaceRayEnd = mul(meshDistanceFieldInput.WorldToVolume, float4(worldRayEnd, 1.0f)).xyz;
     float3 volumeSpaceRayDirection = normalize(volumeSpaceRayEnd - volumeSpaceRayOrigin);
 
-    float3 aabbMin = -meshDistanceFieldInput.volumeOffset * (1.f - 0.04f / meshDistanceFieldInput.dimensions[0]);
-    float3 aabbMax = meshDistanceFieldInput.volumeOffset * (1.f - 0.04f / meshDistanceFieldInput.dimensions[0]);
+    //float3 extent3d = meshDistanceFieldInput.volumeSpaceExtent;// * meshDistanceFieldInput.volumeToWorldScale
+
+    float3 aabbMin = -meshDistanceFieldInput.volumeSpaceExtent * (1.f - 0.04f / meshDistanceFieldInput.dimensions[0]);
+    float3 aabbMax = meshDistanceFieldInput.volumeSpaceExtent * (1.f - 0.04f / meshDistanceFieldInput.dimensions[0]);
 
     bool hit = false;
     float2 intersectBox = GetNearestDistance(
@@ -218,10 +220,10 @@ void RayMarchingMDF2(
     hitPoint.hitBox = hit;
     //hitPoint.dis0 = length(volumeSpaceRayDirection * intersectBox.x * meshDistanceFieldInput.volumeToWorldScale);
     //hitPoint.dis1 = length(volumeSpaceRayDirection * intersectBox.y * meshDistanceFieldInput.volumeToWorldScale);
-    //hitPoint.dis0 = intersectBox.x * meshDistanceFieldInput.volumeToWorldScale;       
-    //hitPoint.dis1 = intersectBox.y * meshDistanceFieldInput.volumeToWorldScale;
-    hitPoint.dis0 = intersectBox.x;// * meshDistanceFieldInput.volumeToWorldScale;
-    hitPoint.dis1 = intersectBox.y;// * meshDistanceFieldInput.volumeToWorldScale;
+    hitPoint.dis0 = intersectBox.x * meshDistanceFieldInput.volumeToWorldScale;       
+    hitPoint.dis1 = intersectBox.y * meshDistanceFieldInput.volumeToWorldScale;
+    //hitPoint.dis0 = intersectBox.x;// * meshDistanceFieldInput.volumeToWorldScale;
+    //hitPoint.dis1 = intersectBox.y;// * meshDistanceFieldInput.volumeToWorldScale;
 
     if (hit == true){
         if(hitPoint.dis0 > ray.tMax){
@@ -271,8 +273,8 @@ void RayMarchingMDF2(
 
         if(bHit || step == MAXSTEPS){
             //const float newHitDistance = length(volumeSpaceRayDirection * distance * meshDistanceFieldInput.volumeToWorldScale);
-            //const float newHitDistance = distance * meshDistanceFieldInput.volumeToWorldScale;
-            const float newHitDistance = distance;// * meshDistanceFieldInput.volumeToWorldScale;
+            const float newHitDistance = distance * meshDistanceFieldInput.volumeToWorldScale;
+            //const float newHitDistance = distance;// * meshDistanceFieldInput.volumeToWorldScale;
 
             hitPoint.volumeSpaceDistance = distance;
             hitPoint.distance = newHitDistance;

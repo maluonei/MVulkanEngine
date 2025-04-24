@@ -516,18 +516,20 @@ void MDF::createStorageBuffers()
         for (int i = 0; i < mdfAssets.size(); i++) {
             //auto volumeBounds = mdf.;
             auto& mdf = mdfAssets[i];
+
+            float _scale = glm::compMax(mdf.localSpaceMeshBounds.GetExtent());
             
             mdfInputs[i].distanceFieldToVolumeScaleBias = mdf.DistanceFieldToVolumeScaleBias;
-            mdfInputs[i].volumeCenter = mdf.volumeBounds.GetCenter();
-            mdfInputs[i].volumeOffset = mdf.volumeBounds.GetExtent();
-           
+            mdfInputs[i].worldSpaceVolumeCenter = mdf.localSpaceMeshBounds.GetCenter();
+            mdfInputs[i].worldSpaceVolumeExtent = mdf.localSpaceMeshBounds.GetExtent();
+            
+            mdfInputs[i].volumeSpaceExtent = mdf.volumeBounds.GetExtent() / _scale;
 
             //glm::mat4 m(1.0f);
-            glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.worldSpaceMeshBounds.GetCenter());
+            glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.localSpaceMeshBounds.GetCenter());
             //glm::mat4 scale = glm::scale(glm::mat4(1.0f), mdf.worldSpaceMeshBounds.GetExtent());
             //glm::mat4 trans = glm::translate(glm::mat4(1.f), mdf.volumeBounds.GetCenter());
-            float _scale = glm::compMax(mdf.volumeBounds.GetExtent());
-            _scale = 1.f;
+            //_scale = 1.f;
             mdfInputs[i].volumeToWorldScale = _scale;
 
             glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(_scale));
