@@ -75,7 +75,7 @@ PSOutput main(PSInput input)
     //float v = MDFAtlasOrigin.SampleLevel(trilinerSampler, float3(0.f, 0.f, 0.f), 0).r;
 
     for(int i=0; i<scene.numInstances; i++){
-    //for(int i=min(scene.numInstances, 5); i<min(scene.numInstances, 6); i++){
+    //for(int i=min(scene.numInstances, 1); i<min(scene.numInstances, 2); i++){
         MDFHitPoint hit;
         hit.hitBoxButMiss = false;
         MarchRay ray;

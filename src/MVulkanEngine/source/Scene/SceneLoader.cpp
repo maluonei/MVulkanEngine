@@ -283,6 +283,17 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
             //_mesh->m_box.pMax = glm::min(_mesh->m_box.pMax, vertex.position);
         }
 
+        auto boundCenter = _mesh->m_box.GetCenter();
+        auto boundExtent = _mesh->m_box.GetExtent();
+        boundExtent.x = std::max(boundExtent.x, 1e-3f);
+        boundExtent.y = std::max(boundExtent.y, 1e-3f);
+        boundExtent.z = std::max(boundExtent.z, 1e-3f);
+        //boundExtent.x = std::max(boundExtent.x, 1.f);
+        //boundExtent.y = std::max(boundExtent.y, 1.f);
+        //boundExtent.z = std::max(boundExtent.z, 1.f);
+
+        _mesh->m_box.pMin = boundCenter - boundExtent;
+        _mesh->m_box.pMax = boundCenter + boundExtent;
         //_mesh->matId = mesh->mMaterialIndex;
 
         scene->SetMesh(i, _mesh);

@@ -304,8 +304,8 @@ void MDF::loadScene()
     m_sphere = std::make_shared<Scene>();
     //fs::path cubePath = resourcePath / "sphere.obj";
     //fs::path cubePath = resourcePath / "mdf_test3.obj";
-    fs::path cubePath = resourcePath / "mdf_test4_3.obj";
-    Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
+    fs::path cubePath = resourcePath / "mdf_test4_2.obj";
+    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
     //Singleton<SceneLoader>::instance().Load(cubePath.string(), m_sphere.get());
 
 

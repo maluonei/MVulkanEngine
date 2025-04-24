@@ -71,7 +71,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		);
 
 		const glm::vec3 texelObjectSpaceSize = localSpaceMeshBounds.GetSize() / glm::vec3(indirectionDimensions * MeshDistanceField::UniqueDataBrickSize - glm::ivec3(2 * MeshDistanceField::MeshDistanceFieldObjectBorder));
-		const BoundingBox distanceFieldBounds = localSpaceMeshBounds.ExpandBy(texelObjectSpaceSize);
+		const BoundingBox distanceFieldBounds = localSpaceMeshBounds.ExpandBy(texelObjectSpaceSize + glm::vec3(1e-4f));
 
 		const glm::vec3 indirectionVoxelSize = distanceFieldBounds.GetSize() / glm::vec3(indirectionDimensions);
 		const float indirectionVoxelRadius = glm::length(indirectionVoxelSize);
@@ -84,6 +84,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 		//SparseMeshDistanceField sparseMeshDistanceField;
 		const uint32_t brickSizeBytes = MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * sizeof(uint8_t);
 		uint32_t numBricks = indirectionDimensions.x * indirectionDimensions.y * indirectionDimensions.z;
+		
 		mdf.distanceFieldVolume.resize(brickSizeBytes * numBricks);
 		mdf.originDistanceFieldVolume.resize(brickSizeBytes * numBricks);
 		mdf.DistanceFieldToVolumeScaleBias = distanceFieldToVolumeScaleBias;
@@ -181,7 +182,7 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 			for (auto xIndex = 0; xIndex < MeshDistanceField::BrickSize; xIndex++) {
 				
 				const glm::vec3 randomOffset = Singleton<RandomGenerator>::instance().GetRandomUnitVector() * 1e-4f * localSpaceTraceDistance;
-				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition + randomOffset;
+				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition;// +randomOffset;
 				const int index = (zIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize) + (yIndex * MeshDistanceField::BrickSize) + xIndex;
 				
 				int hitNum = 0;
