@@ -153,14 +153,15 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
                 .view = swapChain.GetImageView(m_currentFrame),
             }
         );
-
-        shadingRenderInfo.colorAttachments.push_back(
-            RenderingAttachment{
-                .texture = swapchainDebugViews0[m_currentFrame],
-                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                //.view = swapChain.GetImageView(m_currentFrame),
-            }
-            );
+        for (int i = 0; i < 7; i++) {
+            shadingRenderInfo.colorAttachments.push_back(
+                RenderingAttachment{
+                    .texture = swapchainDebugViewss[i][m_currentFrame],
+                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    //.view = swapChain.GetImageView(m_currentFrame),
+                }
+                );
+        }
 
         shadingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[m_currentFrame],
@@ -307,7 +308,7 @@ void MDF::loadScene()
     //fs::path cubePath = resourcePath / "mdf_test3.obj";
     fs::path cubePath = resourcePath / "mdf_test4_2.obj";
     //Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
-    Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
+    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
 
 
     m_squad->GenerateIndirectDataAndBuffers();
@@ -400,7 +401,8 @@ void MDF::createTextures()
 
     {
         swapchainDepthViews.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
-        swapchainDebugViews0.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
+        //swapchainDebugViews0.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
+        swapchainDebugViewss.resize(7);
 
         for (auto i = 0; i < swapchainDepthViews.size(); i++) {
             //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
@@ -412,11 +414,23 @@ void MDF::createTextures()
                 swapchainDepthViews[i], swapchainExtent, depthFormat
             );
 
-            swapchainDebugViews0[i] = std::make_shared<MVulkanTexture>();
-            Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-                swapchainDebugViews0[i], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
-            );
+            //swapchainDebugViews0[i] = std::make_shared<MVulkanTexture>();
+            //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+            //    swapchainDebugViews0[i], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
+            //);
             //swapchainDebugViews0
+        }
+
+        for (int i = 0; i < 7; i++) {
+            swapchainDebugViewss[i].resize(swapchainDepthViews.size());
+
+            for (auto j = 0; j < swapchainDepthViews.size(); j++) {
+                swapchainDebugViewss[i][j] = std::make_shared<MVulkanTexture>();
+                
+                Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+                    swapchainDebugViewss[i][j], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
+                );
+            }
         }
     }
 
@@ -446,7 +460,7 @@ void MDF::loadShaders()
     //Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     //Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdf.frag.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdfVisulize.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/mdf/mdfVisulizeDebug.frag.hlsl" }, true);
 
 }
 
@@ -635,7 +649,11 @@ void MDF::createShadingPass()
         //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        for (int i = 0; i < 7; i++)
+        {
+            info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        }
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
         info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();

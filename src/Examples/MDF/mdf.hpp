@@ -60,7 +60,7 @@ private:
 	std::shared_ptr<RenderPass> m_shadingPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
-	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDebugViews0;
+	std::vector<std::vector<std::shared_ptr<MVulkanTexture>>> swapchainDebugViewss;
 	//std::shared_ptr<MVulkanTexture> shadowMap;
 	//std::shared_ptr<MVulkanTexture> shadowMapDepth;
 	//std::shared_ptr<MVulkanTexture> gBuffer0;
