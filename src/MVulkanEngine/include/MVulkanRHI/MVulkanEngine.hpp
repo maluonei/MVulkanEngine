@@ -23,6 +23,7 @@
 #include "MVulkanSyncObject.hpp"
 #include "Managers/Singleton.hpp"
 #include "MVulkanDescriptorWrite.hpp"
+#include "UIRenderer.hpp"
 //#include "Camera.hpp"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -316,11 +317,14 @@ public:
     const MVulkanSwapchain GetSwapchain() { return m_swapChain; }
 private: 
     void initVulkan();
+    void initUIRenderer();
 
     void createInstance();
     void createDevice();
     void createSurface();
     void createSwapChain();
+
+    void createUIRenderPass();
 
     void transitionSwapchainImageFormat();
     void transitionFramebufferImageLayout();
@@ -444,6 +448,9 @@ private:
     MGraphicsCommandList    m_transferList;
     MComputeCommandList     m_computeList;
     MRaytracingCommandList  m_raytracingList;
+
+    std::shared_ptr<MVulkanRenderPass> m_uiRenderPass = nullptr;
+    UIRenderer              m_uiRenderer;
 
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;

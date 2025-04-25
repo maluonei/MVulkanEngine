@@ -20,6 +20,8 @@ add_library(
 	${MVULKANENGINE_HEADERS} 
 	${MVULKANENGINE_SOURCES}
 	${stbimage_src}
+	${imgui_src}
+	${imgui_backends}
 	"source/Utils/MImage.cpp"
 )
 
@@ -50,6 +52,7 @@ target_include_directories(MVulkanEngine PUBLIC
 										${tinyobjloader_include}
 										${embree_include}
 										${imgui_include}
+										${imgui_backends_include}
 )
 
 set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")

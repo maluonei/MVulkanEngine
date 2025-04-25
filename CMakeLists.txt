@@ -23,7 +23,23 @@ set(json_include "${third_party_dir}/json")
 set(meshoptimizer_include "${third_party_dir}/meshoptimizer/src")
 set(tinyobjloader_include "${third_party_dir}/tinyobjloader")
 set(embree_include "${third_party_dir}/embree/include/embree4")
-set(imgui_include "${third_party_dir}/imgui/backends")
+set(imgui_include "${third_party_dir}/imgui")
+set(imgui_backends_include "${third_party_dir}/imgui/backends")
+
+set(imgui_src 
+    "${third_party_dir}/imgui/imgui.h"
+    "${third_party_dir}/imgui/imgui_internal.h"
+    "${third_party_dir}/imgui/imgui.cpp"
+    "${third_party_dir}/imgui/imgui_demo.cpp"
+    "${third_party_dir}/imgui/imgui_draw.cpp"
+    "${third_party_dir}/imgui/imgui_tables.cpp"
+    "${third_party_dir}/imgui/imgui_widgets.cpp"
+)
+
+set(imgui_backends
+    "${third_party_dir}/imgui/backends/imgui_impl_glfw.cpp"
+    "${third_party_dir}/imgui/backends/imgui_impl_vulkan.cpp"
+)
 
 set(stbimage_src "${third_party_dir}/stb_image/stb_image.h" "${third_party_dir}/stb_image/stb_image.cpp")
 #set(shaderc_include "${shaderc_SOURCE_DIR}/libshaderc/include"

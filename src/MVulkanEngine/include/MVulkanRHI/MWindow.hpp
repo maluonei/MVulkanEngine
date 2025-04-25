@@ -5,6 +5,7 @@
 #include "Utils/VulkanUtil.hpp"
 
 #include <cstdint>
+#include <GLFW/glfw3.h>
 
 struct GLFWwindow;
 

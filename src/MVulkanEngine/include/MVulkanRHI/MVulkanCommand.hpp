@@ -162,6 +162,7 @@ public:
 	VkResult Present(VkPresentInfoKHR* presentInfo);
 
 	inline VkQueue Get() const { return m_queue; }
+	//inline int GetQueueFamilyIndex() const { return m_index; }
 private:
 	VkQueue m_queue;
 };

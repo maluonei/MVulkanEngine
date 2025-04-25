@@ -33,6 +33,7 @@ void MVulkanEngine::Init()
     m_window->Init(m_windowWidth, m_windowHeight);
 
     initVulkan();
+    initUIRenderer();
 }
 
 void MVulkanEngine::Clean()
@@ -519,7 +520,24 @@ void MVulkanEngine::initVulkan()
     
     createDescriptorSetAllocator();
 
+    createUIRenderPass();
     createPlaceHolderTexture();
+}
+
+void MVulkanEngine::initUIRenderer()
+{
+    m_uiRenderer = UIRenderer(
+        m_window,
+        m_device,
+        m_instance,
+        m_surface,
+        m_allocator,
+        m_uiRenderPass,
+        m_device.GetQueueFamilyIndices(GRAPHICS_QUEUE)
+    );
+
+    m_uiRenderer.Init(m_graphicsQueue);
+    //m_uiRenderer.Init(m_device, m_swapChain, m_transferQueue, m_transferList);
 }
 
 void MVulkanEngine::createInstance()
@@ -543,6 +561,27 @@ void MVulkanEngine::createSurface()
 void MVulkanEngine::createSwapChain()
 {
     m_swapChain.Create(m_device, m_window->GetWindow(), m_surface);
+}
+
+void MVulkanEngine::createUIRenderPass()
+{
+    m_uiRenderPass = std::make_shared<MVulkanRenderPass>();
+
+    //VkFormat imageFormat = GetSwapchainImageFormat();
+    //VkFormat depthFormat = m_device.FindDepthFormat();
+    //VkImageLayout srcLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //VkImageLayout dstLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    RenderPassFormatsInfo info{};
+    info.imageFormats.push_back(GetSwapchainImageFormat());
+    info.depthFormat = m_device.FindDepthFormat();
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+    m_uiRenderPass->Create(m_device, info);
 }
 
 void MVulkanEngine::transitionSwapchainImageFormat()

@@ -27,7 +27,13 @@ class MVulkanRenderPass {
 public:
 	MVulkanRenderPass();
 
-	void Create(MVulkanDevice device, VkFormat imageFormat, VkFormat depthFormat, VkFormat swapChainImageFormat, VkImageLayout initialLayout, VkImageLayout finalLayout);
+	//void Create(
+	//	MVulkanDevice device,
+	//	VkFormat imageFormat, 
+	//	VkFormat depthFormat,
+	//	VkFormat swapChainImageFormat, 
+	//	VkImageLayout initialLayout, 
+	//	VkImageLayout finalLayout);
 	void Create(MVulkanDevice device, RenderPassFormatsInfo formats);
 	void Clean();
 
