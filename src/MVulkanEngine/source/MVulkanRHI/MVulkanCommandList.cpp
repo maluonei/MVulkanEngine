@@ -377,18 +377,20 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
         colorAttachments.push_back(ainfo);
     }
 
-    {
-        auto depthAttachment = renderingInfo.depthAttachment;
+    if (renderingInfo.useDepth) {
+        {
+            auto depthAttachment = renderingInfo.depthAttachment;
 
-        depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        if(depthAttachment.texture!=nullptr)
-            depthAttachments.imageView = depthAttachment.texture->GetImageView();
-        else
-            depthAttachments.imageView = depthAttachment.view;
-        depthAttachments.imageLayout = depthAttachment.layout;
-        depthAttachments.loadOp = depthAttachment.loadOp;
-        depthAttachments.storeOp = depthAttachment.storeOp;
-        depthAttachments.clearValue.depthStencil = depthAttachment.depthStencil;
+            depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            if (depthAttachment.texture != nullptr)
+                depthAttachments.imageView = depthAttachment.texture->GetImageView();
+            else
+                depthAttachments.imageView = depthAttachment.view;
+            depthAttachments.imageLayout = depthAttachment.layout;
+            depthAttachments.loadOp = depthAttachment.loadOp;
+            depthAttachments.storeOp = depthAttachment.storeOp;
+            depthAttachments.clearValue.depthStencil = depthAttachment.depthStencil;
+        }
     }
 
     VkRenderingInfo vrenderingInfo = {};
@@ -398,7 +400,12 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
     vrenderingInfo.layerCount = 1;
     vrenderingInfo.colorAttachmentCount = colorAttachments.size();
     vrenderingInfo.pColorAttachments = colorAttachments.data();
-    vrenderingInfo.pDepthAttachment = &depthAttachments;
+    if (renderingInfo.useDepth) {
+        vrenderingInfo.pDepthAttachment = &depthAttachments;
+    }
+    else {
+        vrenderingInfo.pDepthAttachment = nullptr;
+    }
     vrenderingInfo.pStencilAttachment = nullptr;
 
     vkCmdBeginRendering(m_commandBuffer, &vrenderingInfo);

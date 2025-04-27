@@ -30,6 +30,22 @@ public:
 
 	void SetupVulkanWindow();
 
+	void Render();
+
+	void RenderFrame(MVulkanCommandList commandList);
+	void PresentFrame();
+
+	bool IsRender();
+
+	VkSemaphore GetImageRequireSemaphore(int imageIndex);
+	VkSemaphore GetRenderCompleteSemaphore(int imageIndex);
+	VkFence GetFence(int imageIndex);
+
+	VkRenderPassBeginInfo GetRenderPassBeginInfo();
+	RenderingInfo GetRenderingInfo();
+
+	VkExtent2D GetRenderingExtent();
+
 private:
 	void createOrResizeWindow();
 
@@ -43,6 +59,12 @@ private:
 	int				m_graphicsQueue;
 
 	ImGui_ImplVulkanH_Window g_MainWindowData;
+
+	bool show_demo_window = true;
+	bool show_another_window = false;
+	bool render = true;
+
+	glm::vec4 clear_color = glm::vec4(0.f, 0.f, 0.f, 1.f);
 };
 
 #endif

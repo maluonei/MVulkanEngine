@@ -60,6 +60,7 @@ void MVulkanEngine::Clean()
     {
         m_imageAvailableSemaphores[i].Clean();
         m_finalRenderFinishedSemaphores[i].Clean();
+        m_uiRenderFinishedSemaphores[i].Clean();
         m_inFlightFences[i].Clean();
     }
 
@@ -323,7 +324,7 @@ void MVulkanEngine::SubmitGraphicsCommands(
     m_graphicsQueue.SubmitCommands(1, &submitInfo, m_inFlightFences[currentFrame].GetFence());
     m_graphicsQueue.WaitForQueueComplete();
 
-    VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    //VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
     vkDeviceWaitIdle(m_device.GetDevice());
     //present(m_swapChain.GetPtr(), currentFrame, &imageIndex, recreateSwapchain);
@@ -503,6 +504,59 @@ void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulka
 void MVulkanEngine::TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
     list.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+}
+
+void MVulkanEngine::RenderUI(uint32_t imageIndex, uint32_t currentFrame)
+{
+    m_uiRenderer.Render();
+
+    auto graphicsList = m_graphicsLists[currentFrame];
+
+    graphicsList.Reset();
+    graphicsList.Begin();
+
+    RenderingInfo renderInfo{};
+    renderInfo.offset = { 0, 0 };
+    //renderInfo.extent = m_uiRenderer.GetRenderingExtent();
+    renderInfo.extent = m_swapChain.GetSwapChainExtent();
+    renderInfo.useDepth = false;
+    renderInfo.colorAttachments.push_back(
+        RenderingAttachment{
+            .texture = nullptr,
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .view = m_swapChain.GetImageView(imageIndex),
+        }
+        );
+
+    graphicsList.BeginRendering(renderInfo);
+
+    m_uiRenderer.RenderFrame(graphicsList);
+
+    graphicsList.EndRendering();
+
+    //graphicsList.EndRenderPass();
+    graphicsList.End();
+
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
+
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSemaphore waitSemaphores[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore signalSemaphores[] = { m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pWaitDstStageMask = &waitStage,  // 必须指定
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.WaitForQueueComplete();
+
+    //m_uiRenderer.RenderFrame();
 }
 
 void MVulkanEngine::initVulkan()
@@ -692,11 +746,13 @@ void MVulkanEngine::createSyncObjects()
 {
     m_imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_uiRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
     for (size_t i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
         m_imageAvailableSemaphores[i].Create(m_device.GetDevice());
         m_finalRenderFinishedSemaphores[i].Create(m_device.GetDevice());
+        m_uiRenderFinishedSemaphores[i].Create(m_device.GetDevice());
         m_inFlightFences[i].Create(m_device.GetDevice());
     }
 }
@@ -798,7 +854,8 @@ void MVulkanEngine::transitionImageLayouts(
 
 void MVulkanEngine::Present(uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
 {
-    VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    //VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore(), m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore()};
+    VkSemaphore waitSemaphore[] = { m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

@@ -120,6 +120,7 @@ struct RenderingInfo {
     RenderingAttachment depthAttachment;
     VkExtent2D extent;
     VkOffset2D offset;
+    bool useDepth = true;
     
     //VkRenderingInfo vkRenderingInfo;
     //void RenderingInfo2VkRenderingInfo();

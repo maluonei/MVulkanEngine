@@ -49,7 +49,12 @@ void UIRenderer::Init(MVulkanCommandQueue queue)
     initInfo.MinImageCount = 2; // Swapchain Í¼ÏñÊýÁ¿
     initInfo.ImageCount = 2;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    initInfo.RenderPass = m_renderPass->Get();
+    //initInfo.RenderPass = m_renderPass->Get();
+    initInfo.UseDynamicRendering = true;
+    initInfo.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    VkFormat swapchainFormat = Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat();
+    initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchainFormat;
 
     ImGui_ImplVulkan_Init(&initInfo);
 
@@ -63,6 +68,8 @@ void UIRenderer::Init(MVulkanCommandQueue queue)
     //cmdList.Begin();
 
     ImGui_ImplVulkan_CreateFontsTexture();
+
+    ImGui::CreateContext();
 
     //cmdList.End();
     //ImGui_ImplVulkanH_CreateOrResizeWindow(m_instance.GetInstance(), m_device.GetPhysicalDevice(), m_device.GetDevice(), g_MainWindowData, m_graphicsQueue, m_allocator.Get(), width, height, g_MinImageCount);
@@ -107,4 +114,132 @@ void UIRenderer::SetupVulkanWindow()
     // Create SwapChain, RenderPass, Framebuffer, etc.
     //IM_ASSERT(g_MinImageCount >= 2);
     //ImGui_ImplVulkanH_CreateOrResizeWindow(m_instance.GetInstance(), m_device.GetPhysicalDevice(), m_device.GetDevice(), &g_MainWindowData, m_graphicsQueue, m_allocator.Get(), width, height, g_MinImageCount);
+}
+
+void UIRenderer::Render()
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Start the Dear ImGui frame
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+    if (show_demo_window)
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+    {
+        static float f = 0.0f;
+        static int counter = 0;
+
+        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+        ImGui::Checkbox("Another Window", &show_another_window);
+
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::End();
+    }
+
+    // 3. Show another simple window.
+    if (show_another_window)
+    {
+        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Text("Hello from another window!");
+        if (ImGui::Button("Close Me"))
+            show_another_window = false;
+        ImGui::End();
+    }
+
+    // Rendering
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
+    const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+    if (!is_minimized)
+    {
+        g_MainWindowData.ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+        g_MainWindowData.ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+        g_MainWindowData.ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+        g_MainWindowData.ClearValue.color.float32[3] = clear_color.w;
+        //FrameRender(g_MainWindowData, draw_data);
+        //FramePresent(g_MainWindowData);
+        
+    }
+}
+
+void UIRenderer::RenderFrame(MVulkanCommandList commandList)
+{
+    ImDrawData* draw_data = ImGui::GetDrawData();
+    ImGui_ImplVulkan_RenderDrawData(draw_data, commandList.GetBuffer());
+}
+
+bool UIRenderer::IsRender()
+{
+    return render;
+}
+
+VkSemaphore UIRenderer::GetImageRequireSemaphore(int imageIndex)
+{
+    return g_MainWindowData.FrameSemaphores[g_MainWindowData.SemaphoreIndex].ImageAcquiredSemaphore;
+}
+
+VkSemaphore UIRenderer::GetRenderCompleteSemaphore(int imageIndex)
+{
+    return g_MainWindowData.FrameSemaphores[g_MainWindowData.SemaphoreIndex].RenderCompleteSemaphore;
+}
+
+VkFence UIRenderer::GetFence(int imageIndex)
+{
+    return g_MainWindowData.Frames[g_MainWindowData.FrameIndex].Fence;
+}
+
+VkRenderPassBeginInfo UIRenderer::GetRenderPassBeginInfo()
+{
+    ImGui_ImplVulkanH_Frame* fd = &g_MainWindowData.Frames[g_MainWindowData.FrameIndex];
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = m_renderPass->Get();
+    renderPassInfo.framebuffer = fd->Framebuffer;
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = { (unsigned int)g_MainWindowData.Width, (unsigned int)g_MainWindowData.Height};
+
+    //uint32_t attachmentCount = renderPass->GetAttachmentCount();
+    //std::vector<VkClearValue> clearValues(attachmentCount + 1);
+    //for (auto i = 0; i < attachmentCount; i++) {
+    //    clearValues[i].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    //}
+    //clearValues[attachmentCount].depthStencil = { 1.0f, 0 };
+    VkClearValue clearValue{};
+    clearValue.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearValue;
+
+    return renderPassInfo;
+}
+
+RenderingInfo UIRenderer::GetRenderingInfo()
+{
+    RenderingInfo renderingInfo{};
+
+
+
+    return RenderingInfo();
+}
+
+VkExtent2D UIRenderer::GetRenderingExtent()
+{
+    return {(uint32_t)g_MainWindowData.Width, (uint32_t)g_MainWindowData.Height};
 }

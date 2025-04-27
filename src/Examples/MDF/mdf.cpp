@@ -150,7 +150,7 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
             RenderingAttachment{
                 .texture = nullptr,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .view = swapChain.GetImageView(m_currentFrame),
+                .view = swapChain.GetImageView(imageIndex),
             }
         );
         for (int i = 0; i < 7; i++) {

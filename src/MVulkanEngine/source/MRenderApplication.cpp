@@ -93,18 +93,9 @@ void MRenderApplication::drawFrame()
     fence.Reset();
 
     ComputeAndDraw(imageIndex);
-    //auto graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-    //auto graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-    //
-    //graphicsList.Reset();
-    //graphicsList.Begin();
-    //
-    //UpdatePerFrame(imageIndex);
-    //
-    //graphicsList.End();
 
-    //Singleton<MVulkanEngine>::instance().SubmitCommands(imageIndex, m_currentFrame);
-
+    Singleton<MVulkanEngine>::instance().RenderUI(imageIndex, m_currentFrame);
+    
     std::function<void()> recreateSwapchain = [this]() {
         this->RecreateSwapchainAndRenderPasses();
         };

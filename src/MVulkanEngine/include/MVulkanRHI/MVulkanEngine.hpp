@@ -311,6 +311,8 @@ public:
     void TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
     void TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
+    void RenderUI(uint32_t imageIndex, uint32_t currentFrame);
+
     void Present(
         uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
@@ -454,6 +456,7 @@ private:
 
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> m_uiRenderFinishedSemaphores;
     std::vector<MVulkanFence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
