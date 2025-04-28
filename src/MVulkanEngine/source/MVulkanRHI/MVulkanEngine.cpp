@@ -33,7 +33,7 @@ void MVulkanEngine::Init()
     m_window->Init(m_windowWidth, m_windowHeight);
 
     initVulkan();
-    initUIRenderer();
+    //initUIRenderer();
 }
 
 void MVulkanEngine::Clean()
@@ -506,9 +506,9 @@ void MVulkanEngine::TransitionImageLayout2(MGraphicsCommandList list, std::vecto
     list.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
 
-void MVulkanEngine::RenderUI(uint32_t imageIndex, uint32_t currentFrame)
+void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame)
 {
-    m_uiRenderer.Render();
+    uirenderer->Render();
 
     auto graphicsList = m_graphicsLists[currentFrame];
 
@@ -525,12 +525,13 @@ void MVulkanEngine::RenderUI(uint32_t imageIndex, uint32_t currentFrame)
             .texture = nullptr,
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .view = m_swapChain.GetImageView(imageIndex),
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
         }
         );
 
     graphicsList.BeginRendering(renderInfo);
 
-    m_uiRenderer.RenderFrame(graphicsList);
+    uirenderer->RenderFrame(graphicsList);
 
     graphicsList.EndRendering();
 
@@ -574,25 +575,38 @@ void MVulkanEngine::initVulkan()
     
     createDescriptorSetAllocator();
 
-    createUIRenderPass();
+    //createUIRenderPass();
     createPlaceHolderTexture();
 }
 
-void MVulkanEngine::initUIRenderer()
+void MVulkanEngine::InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer)
 {
-    m_uiRenderer = UIRenderer(
+    uiRenderer->Init(
         m_window,
         m_device,
         m_instance,
         m_surface,
         m_allocator,
-        m_uiRenderPass,
         m_device.GetQueueFamilyIndices(GRAPHICS_QUEUE)
     );
 
-    m_uiRenderer.Init(m_graphicsQueue);
-    //m_uiRenderer.Init(m_device, m_swapChain, m_transferQueue, m_transferList);
+    uiRenderer->InitImgui(m_graphicsQueue);
 }
+
+//void MVulkanEngine::initUIRenderer()
+//{
+//    m_uiRenderer = UIRenderer(
+//        m_window,
+//        m_device,
+//        m_instance,
+//        m_surface,
+//        m_allocator,
+//        m_device.GetQueueFamilyIndices(GRAPHICS_QUEUE)
+//    );
+//
+//    m_uiRenderer.Init(m_graphicsQueue);
+//    //m_uiRenderer.Init(m_device, m_swapChain, m_transferQueue, m_transferList);
+//}
 
 void MVulkanEngine::createInstance()
 {
@@ -617,26 +631,26 @@ void MVulkanEngine::createSwapChain()
     m_swapChain.Create(m_device, m_window->GetWindow(), m_surface);
 }
 
-void MVulkanEngine::createUIRenderPass()
-{
-    m_uiRenderPass = std::make_shared<MVulkanRenderPass>();
-
-    //VkFormat imageFormat = GetSwapchainImageFormat();
-    //VkFormat depthFormat = m_device.FindDepthFormat();
-    //VkImageLayout srcLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //VkImageLayout dstLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    RenderPassFormatsInfo info{};
-    info.imageFormats.push_back(GetSwapchainImageFormat());
-    info.depthFormat = m_device.FindDepthFormat();
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-
-    m_uiRenderPass->Create(m_device, info);
-}
+//void MVulkanEngine::createUIRenderPass()
+//{
+//    m_uiRenderPass = std::make_shared<MVulkanRenderPass>();
+//
+//    //VkFormat imageFormat = GetSwapchainImageFormat();
+//    //VkFormat depthFormat = m_device.FindDepthFormat();
+//    //VkImageLayout srcLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//    //VkImageLayout dstLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//
+//    RenderPassFormatsInfo info{};
+//    info.imageFormats.push_back(GetSwapchainImageFormat());
+//    info.depthFormat = m_device.FindDepthFormat();
+//    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//    info.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//    info.initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//    info.finalDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//
+//
+//    m_uiRenderPass->Create(m_device, info);
+//}
 
 void MVulkanEngine::transitionSwapchainImageFormat()
 {

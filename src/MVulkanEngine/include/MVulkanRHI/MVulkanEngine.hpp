@@ -147,76 +147,12 @@ public:
     inline MRaytracingCommandList& GetRaytracingCommandList(){return m_raytracingList;}
     MGraphicsCommandList& GetGraphicsList(int i);
 
-    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass, 
-    //    std::shared_ptr<ShaderModule> shader, std::vector<std::vector<VkImageView>> imageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    //
-    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    //    std::shared_ptr<ShaderModule> shader, 
-    //    std::vector<uint32_t> storageBufferSizes, 
-    //    std::vector<std::vector<VkImageView>> imageViews, 
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers, 
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    //
-    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    //    std::shared_ptr<ShaderModule> shader,
-    //    std::vector<StorageBuffer> storageBuffers,
-    //    std::vector<std::vector<VkImageView>> imageViews,
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers,
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    //
-    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    //    std::shared_ptr<MeshShaderModule> shader,
-    //    std::vector<StorageBuffer> storageBuffers,
-    //    std::vector<std::vector<VkImageView>> imageViews,
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers,
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-
-    //void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
-    //    std::shared_ptr<ShaderModule> shader, std::vector<PassResources> resources
-    //);
-
     void CreateRenderPass(std::shared_ptr<RenderPass> renderPass,
         std::shared_ptr<ShaderModule> shader
     );
 
-    //void CreateDynamicRenderPass(std::shared_ptr<DynamicRenderPass> renderPass,
-    //    std::shared_ptr<ShaderModule> shader,
-    //    std::vector<StorageBuffer> storageBuffers,
-    //    std::vector<std::vector<VkImageView>> imageViews,
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers,
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-
     void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader);
 
-    //void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
-    //    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<StorageImageCreateInfo>> storageImageCreateInfos,
-    //    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    //
-    //void CreateComputePass(std::shared_ptr<ComputePass> computePass, 
-    //    std::shared_ptr<ComputeShaderModule> shader,
-    //    std::vector<uint32_t> storageBufferSizes, 
-    //    std::vector<std::vector<VkImageView>> seperateImageViews, 
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers, 
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    //
-    //void CreateComputePass(std::shared_ptr<ComputePass> computePass,
-    //    std::shared_ptr<ComputeShaderModule> shader,
-    //    std::vector<StorageBuffer> storageBuffers,
-    //    std::vector<std::vector<VkImageView>> seperateImageViews,
-    //    std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<VkSampler> samplers,
-    //    std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-
-
-    //void CreateComputePass(std::shared_ptr<ComputePass> computePass, std::shared_ptr<ComputeShaderModule> shader,
-    //    std::vector<uint32_t> storageBufferSizes, std::vector<std::vector<VkImageView>> storageImageViews,
-    //    std::vector<std::vector<VkImageView>> seperateImageViews, std::vector<VkSampler> samplers, std::vector<VkAccelerationStructureKHR> accelerationStructures = {});
-    
     inline VkExtent2D GetSwapchainImageExtent()const { return m_swapChain.GetSwapChainExtent(); }
     inline VkFormat GetSwapchainImageFormat()const { return m_swapChain.GetSwapChainImageFormat(); }
     inline uint32_t GetSwapchainImageCount()const { return m_swapChain.GetImageCount(); }
@@ -311,22 +247,25 @@ public:
     void TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
     void TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
-    void RenderUI(uint32_t imageIndex, uint32_t currentFrame);
+    void RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame);
 
     void Present(
         uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
     const MVulkanSwapchain GetSwapchain() { return m_swapChain; }
+
+    void InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer);
 private: 
     void initVulkan();
-    void initUIRenderer();
+    //void initUIRenderer();
+    //void InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer);
 
     void createInstance();
     void createDevice();
     void createSurface();
     void createSwapChain();
 
-    void createUIRenderPass();
+    //void createUIRenderPass();
 
     void transitionSwapchainImageFormat();
     void transitionFramebufferImageLayout();
@@ -427,7 +366,8 @@ private:
 protected:
     virtual void InitSingleton();
 private:
-    uint16_t m_windowWidth = 800, m_windowHeight = 600;
+    //uint16_t m_windowWidth = 800, m_windowHeight = 600;
+    uint16_t m_windowWidth = 1920, m_windowHeight = 1080;
 
     MWindow*                m_window = nullptr;
     bool                    m_enableValidationLayer;
@@ -451,8 +391,8 @@ private:
     MComputeCommandList     m_computeList;
     MRaytracingCommandList  m_raytracingList;
 
-    std::shared_ptr<MVulkanRenderPass> m_uiRenderPass = nullptr;
-    UIRenderer              m_uiRenderer;
+    //std::shared_ptr<MVulkanRenderPass> m_uiRenderPass = nullptr;
+    //UIRenderer              m_uiRenderer;
 
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;

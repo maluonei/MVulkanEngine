@@ -13,13 +13,13 @@ struct PSInput
 struct PSOutput
 {
     [[vk::location(0)]] float4 Color : SV_TARGET0;
-    [[vk::location(1)]] float4 Color_Debug1 : SV_TARGET1;
-    [[vk::location(2)]] float4 Color_Debug2 : SV_TARGET2;
-    [[vk::location(3)]] float4 Color_Debug3 : SV_TARGET3;
-    [[vk::location(4)]] float4 Color_Debug4 : SV_TARGET4;
-    [[vk::location(5)]] float4 Color_Debug5 : SV_TARGET5;
-    [[vk::location(6)]] float4 Color_Debug6 : SV_TARGET6;
-    [[vk::location(7)]] float4 Color_Debug7 : SV_TARGET7;
+    //[[vk::location(1)]] float4 Color_Debug1 : SV_TARGET1;
+    //[[vk::location(2)]] float4 Color_Debug2 : SV_TARGET2;
+    //[[vk::location(3)]] float4 Color_Debug3 : SV_TARGET3;
+    //[[vk::location(4)]] float4 Color_Debug4 : SV_TARGET4;
+    //[[vk::location(5)]] float4 Color_Debug5 : SV_TARGET5;
+    //[[vk::location(6)]] float4 Color_Debug6 : SV_TARGET6;
+    //[[vk::location(7)]] float4 Color_Debug7 : SV_TARGET7;
 };
 
 //[[vk::binding(0, 0)]]
@@ -61,13 +61,13 @@ cbuffer mdfGlobalBuffer : register(b3)
 PSOutput main(PSInput input)
 {
     PSOutput output;
-    output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug2 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug3 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug4 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug5 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug6 = float4(0.f, 0.f, 0.f, 1.f);
-    output.Color_Debug7 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug1 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug2 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug3 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug4 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug5 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug6 = float4(0.f, 0.f, 0.f, 1.f);
+    //output.Color_Debug7 = float4(0.f, 0.f, 0.f, 1.f);
     //RayMarchSDFStruct struc;
 
     //struc.step = 0;
@@ -145,8 +145,18 @@ PSOutput main(PSInput input)
     //}
 
     //for(int i=0; i<scene.numInstances; i++){
-    int targetIndex = 3;
-    for(int i=min(scene.numInstances, targetIndex); i<min(scene.numInstances, targetIndex+1); i++){
+    int startIndex;
+    int endIndex;
+    if(scene.targetIndex == scene.numInstances){
+        startIndex = 0;
+        endIndex = scene.numInstances;
+    }
+    else{
+        startIndex = min(max(0, scene.targetIndex), scene.numInstances);
+        endIndex = min(max(0, scene.targetIndex+1), scene.numInstances);
+    }
+    //int targetIndex = max(0, scene.targetIndex);
+    for(int i=startIndex; i<endIndex; i++){
         MDFHitPoint hit;
         hit.hitBoxButMiss = false;
         MarchRay ray;

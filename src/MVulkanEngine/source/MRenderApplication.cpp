@@ -2,6 +2,7 @@
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Managers/InputManager.hpp"
 #include "Managers/GlobalConfig.hpp" 
+#include "UIRenderer.hpp"
 
 void MRenderApplication::Init()
 {
@@ -53,10 +54,19 @@ void MRenderApplication::Clean()
     Singleton<MVulkanEngine>::instance().Clean();
 }
 
+void MRenderApplication::initUIRenderer()
+{
+    m_uiRenderer = std::make_shared<UIRenderer>();
+    //Singleton<MVulkanEngine>::instance().InitUIRenderer(m_uiRenderer);
+}
+
 void MRenderApplication::init()
 {
     Singleton<MVulkanEngine>::instance().SetWindowRes(WIDTH, HEIGHT);
     Singleton<MVulkanEngine>::instance().Init();
+
+    initUIRenderer();
+    Singleton<MVulkanEngine>::instance().InitUIRenderer(m_uiRenderer);
 
     //MRenderApplication::SetCameraMove setCameraMovePtr = &MRenderApplication::SetCameraMoved;
     //Singleton<InputManager>::instance().RegisterSetCameraMoveFunc(setCameraMovePtr);
@@ -94,7 +104,7 @@ void MRenderApplication::drawFrame()
 
     ComputeAndDraw(imageIndex);
 
-    Singleton<MVulkanEngine>::instance().RenderUI(imageIndex, m_currentFrame);
+    Singleton<MVulkanEngine>::instance().RenderUI(m_uiRenderer, imageIndex, m_currentFrame);
     
     std::function<void()> recreateSwapchain = [this]() {
         this->RecreateSwapchainAndRenderPasses();

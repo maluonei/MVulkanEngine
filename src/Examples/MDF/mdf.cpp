@@ -96,6 +96,7 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
 
         MSceneBuffer sceneBuffer{};
         sceneBuffer.numInstances = targetScene->GetNumPrimInfos();
+        sceneBuffer.targetIndex = std::static_pointer_cast<MDFUI>(m_uiRenderer)->index;
         //sceneBuffer.numInstances = 1;
 
         MDFGlobalBuffer mdfGlobalBuffer{};
@@ -314,6 +315,8 @@ void MDF::loadScene()
     m_squad->GenerateIndirectDataAndBuffers();
     //m_scene->GenerateIndirectDataAndBuffers();
     m_sphere->GenerateIndirectDataAndBuffers();
+
+    std::static_pointer_cast<MDFUI>(m_uiRenderer)->numSDFs = m_sphere->GetIndirectDrawCommands().size();
 }
 
 void MDF::createLight()
@@ -464,21 +467,6 @@ void MDF::loadShaders()
 
 }
 
-//void MDF::testEmbreeScene()
-//{
-//    auto mesh = m_sphere->GetMesh(0);
-//    
-//    EmbreeScene embreeScene;
-//    embreeScene.Build(mesh);
-//    
-//    glm::vec3 origin = glm::vec3(0.f, 3.f, 0.f);
-//    glm::vec3 direction = glm::normalize(glm::vec3(0.f, -1.f, 0.f));
-//    
-//    HitResult result = embreeScene.RayCast(origin, direction);
-//    //embreeScene.buildBVH(mesh);
-//    return;
-//}
-
 void MDF::createMDF()
 {
     m_mdfAtlas.Init();
@@ -568,6 +556,11 @@ void MDF::createStorageBuffers()
 
         m_mdfBuffers = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, mdfInputs.data());
     }
+}
+
+void MDF::initUIRenderer()
+{
+    m_uiRenderer = std::make_shared<MDFUI>();
 }
 
 //void MDF::createGbufferPass()
@@ -723,85 +716,45 @@ void MDF::createShadingPass()
     }
 }
 
-//void MDF::ImageLayoutToShaderRead(int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = gBuffer0->GetImage();
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//        barriers.push_back(barrier);
-//
-//        barrier.image = gBuffer1->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        barrier.image = shadowMapDepth->GetImage();
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-//}
-//
-//void MDF::ImageLayoutToAttachment(int imageIndex, int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = gBuffer0->GetImage();
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.dstAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-//        barriers.push_back(barrier);
-//
-//        barrier.image = gBuffer1->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.image = shadowMap->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-//        barriers.push_back(barrier);
-//
-//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        barrier.image = shadowMapDepth->GetImage();
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-//        barrier.dstAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-//        //barrier.dst
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-//}
-//
-//void MDF::ImageLayoutToPresent(int imageIndex, int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = 0;
-//        barrier.dstAccessMask = 0;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
-//}
-//
+
+void MDFUI::RenderContext()
+{
+    {
+        ImGui::Begin("DR_UI Window", &shouldRenderUI);
+
+        // 1. 使用静态或持久化的字符串存储
+        static std::vector<std::string> item_strings(0);
+        static std::vector<const char*> item_pointers(0);
+
+        // 2. 更新字符串和指针（仅在 numSDFs 变化时）
+        if (item_strings.size() != (numSDFs+1)) {
+            item_strings.resize(numSDFs + 1);
+            item_pointers.resize(numSDFs + 1);
+            for (int i = 0; i < numSDFs + 1; i++) {
+                item_strings[i] = std::to_string(i);
+                item_pointers[i] = item_strings[i].c_str(); // 持久化指针
+            }
+        }
+
+        // 3. 安全处理空列表
+        const char* combo_preview_value = (numSDFs > 0) ? item_pointers[index] : "None";
+
+        // 4. 显示 Combo
+        if (ImGui::BeginCombo("sdfIndex", combo_preview_value, showSDFIndex)) {
+            for (int n = 0; n < numSDFs + 1; n++) {
+                const bool is_selected = (index == n);
+                if (ImGui::Selectable(item_pointers[n], is_selected)) {
+                    index = n; // 更新选中项
+                }
+                if (is_selected) {
+                    ImGui::SetItemDefaultFocus(); // 滚动到选中项
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::End();
+    }
+
+    //spdlog::info("index:{0}", index);
+}

@@ -6,6 +6,8 @@
 #include "spdlog/spdlog.h"
 //#include "Utils/VulkanUtil.hpp"
 
+#include <imgui.h>
+
 MWindow::MWindow()
 {
 }
@@ -35,7 +37,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {   
     //spdlog::info("xpos:" + std::to_string(xpos) + ", ypos:" + std::to_string(ypos));
-    Singleton<InputManager>::instance().SetMousePosition(glm::vec2(xpos, ypos));
+    //if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
+        Singleton<InputManager>::instance().SetMousePosition(glm::vec2(xpos, ypos));
+    //}
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)

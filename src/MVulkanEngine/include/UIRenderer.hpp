@@ -14,17 +14,16 @@ class UIRenderer {
 public:
 	UIRenderer() = default;
 
-	UIRenderer(
+	void Init(
 		MWindow* window,
 		MVulkanDevice device,
 		MVulkanInstance instance,
 		VkSurfaceKHR surface,
 		MVulkanDescriptorSetAllocator allocator,
-		std::shared_ptr<MVulkanRenderPass> renderPass,
 		int	graphicsQueue
 	);
 
-	void Init(MVulkanCommandQueue queue);
+	void InitImgui(MVulkanCommandQueue queue);
 
 	void Update();
 
@@ -41,10 +40,12 @@ public:
 	VkSemaphore GetRenderCompleteSemaphore(int imageIndex);
 	VkFence GetFence(int imageIndex);
 
-	VkRenderPassBeginInfo GetRenderPassBeginInfo();
-	RenderingInfo GetRenderingInfo();
+	//VkRenderPassBeginInfo GetRenderPassBeginInfo();
+	//RenderingInfo GetRenderingInfo();
 
 	VkExtent2D GetRenderingExtent();
+
+	virtual void RenderContext();
 
 private:
 	void createOrResizeWindow();
@@ -54,13 +55,13 @@ private:
 	MVulkanInstance m_instance;
 	MVulkanDevice	m_device;
 	MWindow*		m_window;
-	std::shared_ptr<MVulkanRenderPass> m_renderPass;
+	//std::shared_ptr<MVulkanRenderPass> m_renderPass;
 	VkSurfaceKHR    m_surface;
 	int				m_graphicsQueue;
 
 	ImGui_ImplVulkanH_Window g_MainWindowData;
 
-	bool show_demo_window = true;
+	bool show_demo_window = false;
 	bool show_another_window = false;
 	bool render = true;
 

@@ -14,12 +14,11 @@ public:
 	void DealInputs();
 
 	inline void SetKey(int key, bool pressed) { Keys[key] = pressed; }
-	inline void SetMousePosition(glm::vec2 pos){ 
-		mousePos = pos; 
-	}
+	void SetMousePosition(glm::vec2 pos);
 	inline void SetCursorEnter(bool entered) { cursorEnter = entered; }
 	inline void SetCursorLeave(bool leaved) { cursorLeave = leaved; }
 	inline void SetMousePressed(int button, bool pressed){ mouseButtons[button] = pressed; }
+	inline bool ApplyCameraRotation() const { return applyCameraRotation; }
 
 	void RegisterApplication(MRenderApplication* _application);
 
@@ -50,6 +49,9 @@ private:
 	//MRenderApplication::SetCameraMove m_setCameraMoved;
 	MRenderApplication* m_application = nullptr;
 	//MRenderApplication::SetCameraMoved moved;
+
+	bool applyCameraRotation = false;
+	bool firstApplyCameraRotation = true;
 };
 
 

@@ -2,6 +2,9 @@
 #define MRENDERAPPLICATION_HPP
 
 #include <cstdint>
+#include <memory>
+
+class UIRenderer;
 
 class MRenderApplication {
 public:
@@ -23,14 +26,19 @@ public:
     //typedef void (MRenderApplication::* SetCameraMove)(bool state);
 
 protected:
+    virtual void initUIRenderer();
+
     uint32_t    m_currentFrame = 0;
     bool        m_cameraMoved = false;
+
+    std::shared_ptr<UIRenderer> m_uiRenderer;
 
     uint16_t WIDTH = 1280;
     uint16_t HEIGHT = 800;
 
     void init();
     void renderLoop();
+    //void dealUIInput();
 
     void drawFrame();
 };

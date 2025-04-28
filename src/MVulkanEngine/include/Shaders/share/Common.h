@@ -72,6 +72,7 @@ struct MVPBuffer
 
 struct MSceneBuffer{
     int numInstances;
+    int targetIndex;
 };
 
 struct MDFGlobalBuffer{

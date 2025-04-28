@@ -1,7 +1,8 @@
 #ifndef MVULKANENGINE_PBR_HPP
 #define MVULKANENGINE_PBR_HPP
 
-#include <MRenderApplication.hpp>
+#include "MRenderApplication.hpp"
+#include "UIRenderer.hpp"
 #include <memory>
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
@@ -45,6 +46,9 @@ private:
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
 	//void ImageLayoutToPresent(int imageIndex, int currentFrame);
+protected:
+	virtual void initUIRenderer();
+
 private:
 	//std::shared_ptr<RenderPass> m_gbufferPass;
 	//std::shared_ptr<RenderPass> m_shadowPass;
@@ -75,7 +79,14 @@ private:
 	std::shared_ptr<Camera>		m_camera;
 };
 
+class DRUI :public UIRenderer {
+public:
+	virtual void  RenderContext();
 
+private:
+	bool shouleRenderUI = true;
+	int a;
+};
 
 
 #endif

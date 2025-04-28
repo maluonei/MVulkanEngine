@@ -1,15 +1,16 @@
 #ifndef MVULKANENGINE_PBR_HPP
 #define MVULKANENGINE_PBR_HPP
 
-#include <MRenderApplication.hpp>
+#include "MRenderApplication.hpp"
+#include "UIRenderer.hpp"
 #include <memory>
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "Scene/Mesh/MeshDistanceField.hpp"
 
-const uint16_t WIDTH = 1280;
-const uint16_t HEIGHT = 800;
+const uint16_t WIDTH = 1920;
+const uint16_t HEIGHT = 1080;
 
 class Scene;
 class RenderPass;
@@ -51,6 +52,8 @@ private:
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
 	//void ImageLayoutToPresent(int imageIndex, int currentFrame);
+protected:
+	virtual void initUIRenderer();
 private:
 	//std::shared_ptr<RenderPass> m_gbufferPass;
 	//std::shared_ptr<RenderPass> m_shadowPass;
@@ -89,7 +92,20 @@ private:
 	std::shared_ptr<StorageBuffer> m_mdfBuffers;
 };
 
+class MDFUI :public UIRenderer {
+public:
+	virtual void  RenderContext();
 
+public:
+	int numSDFs = 0;
+
+	int index = 0;
+
+private:
+	bool shouldRenderUI = true;
+	bool showSDFIndex = true;
+	//int a;
+};
 
 
 #endif

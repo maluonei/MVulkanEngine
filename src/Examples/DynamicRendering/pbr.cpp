@@ -390,8 +390,13 @@ void PBR::loadShaders()
 {
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" });
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
 
+}
+
+void PBR::initUIRenderer()
+{
+    m_uiRenderer = std::make_shared<DRUI>();
 }
 
 void PBR::createGbufferPass()
@@ -604,7 +609,7 @@ void PBR::createShadingPass()
 //        barrier.layerCount = 1;
 //        barrier.levelCount = 1;
 //        barrier.srcAccessMask = 0;
-//        barrier.dstAccessMask = 0;
+//        barrie    `r.dstAccessMask = 0;
 //        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 //        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 //        barriers.push_back(barrier);
@@ -612,3 +617,11 @@ void PBR::createShadingPass()
 //    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
 //}
 //
+
+void DRUI::RenderContext() {
+    ImGui::Begin("DR_UI Window", &shouleRenderUI);
+    ImGui::Text("Hello from another window!");
+    //if (ImGui::Button("Close Me"))
+    //    show_another_window = false;
+    ImGui::End();
+}
