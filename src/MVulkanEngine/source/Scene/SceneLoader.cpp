@@ -65,35 +65,6 @@ void SceneLoader::LoadForMeshlet(std::string path, Scene* scene)
 
     m_currentScenePath = path;
 
-    //Assimp::Importer importer;
-    //
-    //spdlog::info("assimp start loading");
-    //
-    //// 通过指定路径加载模型
-    ////const aiScene* aiscene = importer.ReadFile(path,
-    ////    aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals
-    ////    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
-    ////);
-    //
-    //const aiScene* aiscene = importer.ReadFile(path,
-    //    0
-    //    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
-    //);
-    //
-    //// 检查加载是否成功
-    //if (!aiscene || aiscene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aiscene->mRootNode) {
-    //    //std::cerr << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-    //    spdlog::error("ERROR::ASSIMP:: " + std::string(importer.GetErrorString()));
-    //    return;
-    //}
-    //
-    //spdlog::info("start processing scene");
-    //processMeshs(aiscene, scene);
-    //processTextures(aiscene);
-    //processMaterials(aiscene, scene);
-    //
-    //processNode(aiscene->mRootNode, aiscene, scene);
-
     tinyobj::attrib_t                attrib;
     std::vector<tinyobj::shape_t>    shapes;
     std::vector<tinyobj::material_t> materials;
@@ -157,6 +128,7 @@ void SceneLoader::LoadForMeshlet(std::string path, Scene* scene)
             Vertex vertex;
             vertex.position = positions[i];
             mesh->vertices[i] = vertex;
+            //mesh->positions[i] = vertex.position;
         }
 
         int indexid = 0;
@@ -183,6 +155,11 @@ void SceneLoader::LoadForMeshlet(std::string path, Scene* scene)
     scene->GenerateIndirectDrawData();
 
     scene->CalculateBB();
+}
+
+void SceneLoader::SaveScene(std::string path)
+{
+
 }
 
 void SceneLoader::InitSingleton()
@@ -270,6 +247,7 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
             }
 
             _mesh->vertices.push_back(vertex);
+            _mesh->positions.push_back(vertex.position);
 
             _mesh->m_box.pMin.x = std::min(_mesh->m_box.pMin.x, vertex.position.x);
             _mesh->m_box.pMin.y = std::min(_mesh->m_box.pMin.y, vertex.position.y);

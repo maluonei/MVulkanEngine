@@ -73,11 +73,13 @@ void Scene::GenerateIndirectDrawCommand()
 
     auto currentIndex = 0;
     for (auto i = 0; i < numMeshes;i++) {
+        //if (i != 6) continue;
         //auto name = names[i];
         auto meshIndex = m_primInfos[i].mesh_id;
 
         VkDrawIndexedIndirectCommand cmd{};
         cmd.indexCount = m_meshs[meshIndex]->indices.size();
+        //if (i != 6) cmd.indexCount = 0;
         cmd.instanceCount = 1;
         cmd.firstIndex = currentIndex;
         cmd.vertexOffset = 0;
@@ -86,6 +88,35 @@ void Scene::GenerateIndirectDrawCommand()
         m_indirectCommands.push_back(cmd);
 
         currentIndex += cmd.indexCount;
+
+        //if (i == 0) break;
+    }
+}
+
+void Scene::GenerateIndirectDrawCommand2()
+{
+    m_indirectCommands.clear();
+
+    auto numMeshes = GetNumMeshes();
+    //std::vector<std::string> names = GetMeshNames();
+
+    auto currentIndex = 0;
+    for (auto i = 0; i < numMeshes; i++) {
+        //if (i != 6) continue;
+        //auto name = names[i];
+        auto meshIndex = m_primInfos[i].mesh_id;
+
+        VkDrawIndexedIndirectCommand cmd{};
+        cmd.indexCount = m_meshs[meshIndex]->indices.size();
+        if (i != 6) cmd.indexCount = 0;
+        cmd.instanceCount = 1;
+        cmd.firstIndex = currentIndex;
+        cmd.vertexOffset = 0;
+        cmd.firstInstance = i;
+
+        m_indirectCommands.push_back(cmd);
+
+        currentIndex += m_meshs[meshIndex]->indices.size();
 
         //if (i == 0) break;
     }
@@ -210,6 +241,27 @@ void Scene::GenerateIndirectDataAndBuffers()
     SetIndirectBuffer(indirectCommandBuffer);
 }
 
+void Scene::GenerateIndirectDataAndBuffers2()
+{
+    auto totalVertexs = GetTotalVertexs();
+    auto totalIndeices = GetTotalIndices();
+
+    std::shared_ptr<Buffer> vertexBuffer = std::make_shared<Buffer>(BufferType::VERTEX_BUFFER);
+    std::shared_ptr<Buffer> indexBuffer = std::make_shared<Buffer>(BufferType::INDEX_BUFFER);
+
+    Singleton<MVulkanEngine>::instance().CreateBuffer(vertexBuffer, (const void*)(totalVertexs.data()), sizeof(Vertex) * totalVertexs.size());
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indexBuffer, (const void*)(totalIndeices.data()), sizeof(unsigned int) * totalIndeices.size());
+
+    SetIndirectVertexBuffer(vertexBuffer);
+    SetIndirectIndexBuffer(indexBuffer);
+
+    GenerateIndirectDrawCommand2();
+    std::vector<VkDrawIndexedIndirectCommand> commands = GetIndirectDrawCommands();
+    std::shared_ptr<Buffer> indirectCommandBuffer = std::make_shared<Buffer>(BufferType::INDIRECT_BUFFER);
+    Singleton<MVulkanEngine>::instance().CreateBuffer(indirectCommandBuffer, (const void*)(commands.data()), sizeof(VkDrawIndexedIndirectCommand) * commands.size());
+    SetIndirectBuffer(indirectCommandBuffer);
+}
+
 void Scene::GenerateMeshBuffers()
 {
     for(auto pair:m_meshs)
@@ -268,4 +320,17 @@ TexBuffer Scene::GenerateTexBuffer()
     }
 
     return texBuffer;
+}
+
+glm::vec3 Scene::GetVertx(int geomIndex, int primIndex, int vertxIndex)
+{
+    auto mesh = m_meshs[geomIndex];
+    auto triIndex = mesh->indices[3 * primIndex + vertxIndex];
+    return mesh->positions[triIndex];
+}
+
+glm::vec3 Mesh::GetPosition(int triIndex, int vertxIndex)
+{
+    auto tri = indices[3 * triIndex + vertxIndex];
+    return positions[tri];
 }

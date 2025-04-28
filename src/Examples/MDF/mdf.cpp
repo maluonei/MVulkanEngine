@@ -154,15 +154,15 @@ void MDF::ComputeAndDraw(uint32_t imageIndex)
                 .view = swapChain.GetImageView(imageIndex),
             }
         );
-        for (int i = 0; i < 7; i++) {
-            shadingRenderInfo.colorAttachments.push_back(
-                RenderingAttachment{
-                    .texture = swapchainDebugViewss[i][m_currentFrame],
-                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    //.view = swapChain.GetImageView(m_currentFrame),
-                }
-                );
-        }
+        //for (int i = 0; i < 7; i++) {
+        //    shadingRenderInfo.colorAttachments.push_back(
+        //        RenderingAttachment{
+        //            .texture = swapchainDebugViewss[i][m_currentFrame],
+        //            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //            //.view = swapChain.GetImageView(m_currentFrame),
+        //        }
+        //        );
+        //}
 
         shadingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[m_currentFrame],
@@ -251,6 +251,7 @@ void MDF::loadScene()
     fs::path projectRootPath = PROJECT_ROOT;
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
+    //fs::path modelPath = resourcePath / "Sponza2" / "Sponza.gltf";
     fs::path arcadePath = resourcePath / "Arcade" / "Arcade.gltf";
     fs::path breakfastRoomPath = resourcePath / "breakfast_room" / "breakfastRoom.gltf";
     ////fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
@@ -305,11 +306,11 @@ void MDF::loadScene()
     Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
 
     m_sphere = std::make_shared<Scene>();
-    //fs::path cubePath = resourcePath / "sphere.obj";
+    fs::path cubePath = resourcePath / "sphere.obj";
     //fs::path cubePath = resourcePath / "mdf_test3.obj";
-    fs::path cubePath = resourcePath / "mdf_test4_2.obj";
-    //Singleton<SceneLoader>::instance().Load(arcadePath.string(), m_sphere.get());
+    //fs::path cubePath = resourcePath / "mdf_test4_2.obj";
     Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
+    //Singleton<SceneLoader>::instance().Load(modelPath.string(), m_sphere.get());
 
 
     m_squad->GenerateIndirectDataAndBuffers();
@@ -404,8 +405,8 @@ void MDF::createTextures()
 
     {
         swapchainDepthViews.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
-        //swapchainDebugViews0.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
-        swapchainDebugViewss.resize(7);
+        ////swapchainDebugViews0.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
+        //swapchainDebugViewss.resize(7);
 
         for (auto i = 0; i < swapchainDepthViews.size(); i++) {
             //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
@@ -424,17 +425,17 @@ void MDF::createTextures()
             //swapchainDebugViews0
         }
 
-        for (int i = 0; i < 7; i++) {
-            swapchainDebugViewss[i].resize(swapchainDepthViews.size());
-
-            for (auto j = 0; j < swapchainDepthViews.size(); j++) {
-                swapchainDebugViewss[i][j] = std::make_shared<MVulkanTexture>();
-                
-                Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-                    swapchainDebugViewss[i][j], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
-                );
-            }
-        }
+        //for (int i = 0; i < 7; i++) {
+        //    swapchainDebugViewss[i].resize(swapchainDepthViews.size());
+        //
+        //    for (auto j = 0; j < swapchainDepthViews.size(); j++) {
+        //        swapchainDebugViewss[i][j] = std::make_shared<MVulkanTexture>();
+        //        
+        //        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //            swapchainDebugViewss[i][j], swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
+        //        );
+        //    }
+        //}
     }
 
     //{
@@ -488,8 +489,8 @@ void MDF::createMDF()
         maxLength = std::min(maxLength, 3.f);
 
         tasks.push_back(
-            //AsyncDistanceFieldTask(mesh, 24 * maxLength)
-            AsyncDistanceFieldTask(mesh, 32)
+            AsyncDistanceFieldTask(mesh, 32 * maxLength)
+            //AsyncDistanceFieldTask(mesh, 1)
         );
     }
 
@@ -499,6 +500,17 @@ void MDF::createMDF()
         },
         6
     );
+
+    //for (int z = 0; z < 8; z++) {
+    //    for (int y = 0; y < 8; y++) {
+    //        for (int x = 0; x < 8; x++) {
+    //            auto index = (x + y * 8) * 8 + z;
+    //            std::cout << tasks[0].m_mdf.originDistanceFieldVolume[index] * 3.f << ",";
+    //        }
+    //        std::cout << "\n";
+    //    }
+    //    std::cout << "\n";
+    //}
 
     for (auto i = 0; i < numPrims; i++) {
         m_mdfAtlas.LoadData(tasks[i].m_mdf);
@@ -642,10 +654,10 @@ void MDF::createShadingPass()
         //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-        for (int i = 0; i < 7; i++)
-        {
-            info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        }
+        //for (int i = 0; i < 7; i++)
+        //{
+        //    info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //}
         //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;

@@ -320,8 +320,8 @@ PSOutput main(PSInput input)
         float3 R = reflect(-V, fragNormal);
 
         fragcolor += (1.f - ocllusion) * BRDF(fragAlbedo.rgb, lightBuffer.lights[i].intensity * lightBuffer.lights[i].color, L, V, fragNormal, metallic, roughness);
-        fragcolor += fragAlbedo.rgb * 0.04f; //ambient
     }
+    fragcolor += fragAlbedo.rgb * 0.04f; //ambient
 
     output.color = float4(fragcolor, 1.f);
     

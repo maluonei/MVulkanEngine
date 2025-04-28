@@ -5,6 +5,7 @@
 #include <embree4/rtcore.h>
 #include <memory>
 #include "Util.hpp"
+#include <vector>
 
 struct Mesh;
 
@@ -36,9 +37,15 @@ public:
 	
 	void buildBVH(std::shared_ptr<Mesh> mesh);
 private:
+	std::shared_ptr<Mesh> m_mesh;
+	//std::vector<glm::vec3> positions;
+	//std::vector<uint32_t> indices;
 
 	RTCDevice device_;
 	RTCScene scene_;
+
+	static void FilterBackface(const RTCFilterFunctionNArguments* args);
+	void handleBackface(const RTCFilterFunctionNArguments* args);
 };
 
 

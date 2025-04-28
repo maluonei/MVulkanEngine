@@ -37,12 +37,14 @@ struct Mesh {
     uint32_t matId;
 
     std::vector<Vertex> vertices;
+    std::vector<glm::vec3> positions;
     std::vector<uint32_t> indices;
 
     std::shared_ptr<Buffer> m_vertexBuffer = nullptr;
     std::shared_ptr<Buffer> m_indexBuffer = nullptr;
 
     BoundingBox             m_box;
+    glm::vec3 GetPosition(int triIndex, int vertxIndex);
     //void SetPositions(size_t count, const glm::vec3* pPositions);
     //void SetPositions(size_t count, const glm::vec3* pPositions);
     //void SetPositions(size_t count, const glm::vec3* pPositions);
@@ -129,6 +131,7 @@ public:
     void GenerateIndirectDrawData();
     //std::vector<std::string> GetMeshNames();
     void GenerateIndirectDrawCommand();
+    void GenerateIndirectDrawCommand2();
     void GenerateIndirectDrawCommand(int repeatNum);
     inline std::vector<VkDrawIndexedIndirectCommand> GetIndirectDrawCommands(){return m_indirectCommands;}
 
@@ -146,6 +149,7 @@ public:
 
     void GenerateIndirectDataAndBuffers(int repeatNums);
     void GenerateIndirectDataAndBuffers();
+    void GenerateIndirectDataAndBuffers2();
     void GenerateMeshBuffers();
 
     inline auto GetNumTriangles() const{return m_totalIndeices.size()/3;}
@@ -157,6 +161,8 @@ public:
     std::vector<PrimInfo>   m_primInfos;
 
     TexBuffer GenerateTexBuffer();
+
+    glm::vec3 GetVertx(int geomIndex, int primIndex, int vertxIndex);
 private:
     BoundingBox m_bbx;
 

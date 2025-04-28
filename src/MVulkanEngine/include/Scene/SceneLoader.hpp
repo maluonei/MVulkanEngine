@@ -22,6 +22,8 @@ public:
 	void Load(std::string path, Scene* scene);
 	void LoadForMeshlet(std::string path, Scene* scene);
 
+	void SaveScene(std::string path);
+
 protected:
 	virtual void InitSingleton();
 private:

@@ -35,6 +35,7 @@ Makefile
 # 3rdParty/embree
 
 # Ignore executables and libraries
+resources/models/Sponza2
 !resources/models
 !resources/textures
 

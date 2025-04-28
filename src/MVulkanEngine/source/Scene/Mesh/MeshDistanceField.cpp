@@ -30,7 +30,7 @@ void MeshUtilities::GenerateMeshDistanceField(
 	SparseMeshDistanceField& mdf)
 {
 	const float numVoxelsPerLocalSpaceUnit = MeshDistanceField::VoxelDensity * distanceFieldResolutionScale;
-	const int maxNumBlocksOneDim = 8;
+	//const int maxNumBlocksOneDim = 4;
 
 	//todo: generate sample directions
 	const int numSamples = 256;
@@ -56,9 +56,9 @@ void MeshUtilities::GenerateMeshDistanceField(
 
 	const glm::vec3 desiredDimensions = glm::vec3(localSpaceMeshBounds.GetSize() * numVoxelsPerLocalSpaceUnit / (float)MeshDistanceField::UniqueDataBrickSize);
 	const glm::ivec3 mip0IndirectionDimensions = glm::ivec3(
-		std::clamp((int)std::ceil(desiredDimensions.x), 1, maxNumBlocksOneDim),
-		std::clamp((int)std::ceil(desiredDimensions.x), 1, maxNumBlocksOneDim),
-		std::clamp((int)std::ceil(desiredDimensions.x), 1, maxNumBlocksOneDim)
+		std::clamp((int)std::ceil(desiredDimensions.x), 1, MeshDistanceField::MaxNumBlocksOneDim),
+		std::clamp((int)std::ceil(desiredDimensions.x), 1, MeshDistanceField::MaxNumBlocksOneDim),
+		std::clamp((int)std::ceil(desiredDimensions.x), 1, MeshDistanceField::MaxNumBlocksOneDim)
 	);
 
 	std::shared_ptr<EmbreeScene> embreeScene = std::make_shared<EmbreeScene>();
@@ -167,7 +167,11 @@ SparseMeshDistanceFieldGenerateTask::SparseMeshDistanceFieldGenerateTask(
 	localToVolumeScale(inLocalToVolumeScale),
 	distanceFieldToVolumeScaleBias(InDistanceFieldToVolumeScaleBias),
 	brickCoordinate(inBrickCoordinate),
-	indirectionSize(inIndirectionSize){ }
+	indirectionSize(inIndirectionSize)
+{ 
+	distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+	originDistanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+}
 
 void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 {
@@ -179,14 +183,15 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 	//const glm::vec3 distanceFieldVoxelSize = indirectionVoxelSize / glm::vec3(6.f);
 	const glm::vec3 brickMinPosition = volumeBounds.pMin + glm::vec3(brickCoordinate) * indirectionVoxelSize;// -distanceFieldVoxelSize;
 
-	distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
-	originDistanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+	//distanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+	//originDistanceFieldVolume.resize(MeshDistanceField::BrickSize * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize, 0);
+	int innerNum = 0;
 
 	for (auto zIndex = 0; zIndex < MeshDistanceField::BrickSize; zIndex++) {
 		for (auto yIndex = 0; yIndex < MeshDistanceField::BrickSize; yIndex++) {
 			for (auto xIndex = 0; xIndex < MeshDistanceField::BrickSize; xIndex++) {
 				
-				const glm::vec3 randomOffset = Singleton<RandomGenerator>::instance().GetRandomUnitVector() * 1e-4f * localSpaceTraceDistance;
+				//const glm::vec3 randomOffset = Singleton<RandomGenerator>::instance().GetRandomUnitVector() * 1e-4f * localSpaceTraceDistance;
 				const glm::vec3 voxelPosition = glm::vec3(xIndex, yIndex, zIndex) * distanceFieldVoxelSize + brickMinPosition;// +randomOffset;
 				const int index = (zIndex * MeshDistanceField::BrickSize * MeshDistanceField::BrickSize) + (yIndex * MeshDistanceField::BrickSize) + xIndex;
 				
@@ -196,14 +201,15 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 				float minLocalSpaceDistance = localSpaceTraceDistance;
 
 				for (auto i = 0; i < sampleDirections->size(); i++) {
-					auto direction = (*sampleDirections)[i];
+					auto direction = glm::normalize((*sampleDirections)[i]);
 
-					auto hit = embreeScene->RayCast(voxelPosition, direction);
+					auto hit = embreeScene->RayCast(voxelPosition - direction * 1e-6f , direction);
 					if (hit.hit) {
 						hitNum++;
 						hitBackfaceNum += (hit.outSide ? 0 : 1);
 
-						float distance = hit.distance * localSpaceTraceDistance;
+
+						float distance = hit.distance;// *localSpaceTraceDistance;
 						
 						if (distance < minLocalSpaceDistance) {
 							minLocalSpaceDistance = distance;
@@ -211,8 +217,9 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 					}
 				}
 
-				if (hitNum > 0 && hitBackfaceNum > 0.25f * sampleDirections->size()) {
+				if (hitNum > 0 && hitBackfaceNum > 0.48f * sampleDirections->size()) {
 					minLocalSpaceDistance *= -1;
+					innerNum++;
 				}
 
 				const float volumeSpaceDistance = minLocalSpaceDistance * localToVolumeScale;
@@ -220,7 +227,7 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 				const float rescaledDistance = (volumeSpaceDistance - distanceFieldToVolumeScaleBias.y) / distanceFieldToVolumeScaleBias.x;
 				const uint8_t quantizedDistance = std::clamp(uint8_t(rescaledDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
 				//const uint8_t quantizedOriginDistance = std::clamp(uint8_t(volumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
-				const float quantizedOriginDistance = volumeSpaceDistance / 3.f;
+				const float quantizedOriginDistance = volumeSpaceDistance * 3.f;
 				//float clampedVolumeSpaceDistance = std::clamp(volumeSpaceDistance, -0.5f / 255.f, 1.f - 0.5f / 255.f);
 				//const uint8_t quantizedDistance = std::clamp(uint8_t(clampedVolumeSpaceDistance * 255.0f + .5f), (uint8_t)0, (uint8_t)255);
 
@@ -231,6 +238,8 @@ void SparseMeshDistanceFieldGenerateTask::GenerateMeshDistanceFieldInternal()
 			}
 		}
 	}
+
+	//spdlog::info("innerNum:{0}", innerNum);
 }
 
 
