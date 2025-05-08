@@ -109,6 +109,18 @@ PassResources PassResources::SetStorageImageResource(
     return resource;
 }
 
+PassResources PassResources::SetStorageImageResource(int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views)
+{
+    PassResources resource;
+    resource.m_type = ResourceType_StorageImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+
+    resource.m_textures = views;
+
+    return resource;
+}
+
 
 PassResources PassResources::SetSamplerResource(
     int binding, int set, 

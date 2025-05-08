@@ -58,6 +58,11 @@ struct PassResources
 		std::shared_ptr<MVulkanTexture> view
 	);
 
+	static PassResources SetStorageImageResource(
+		int binding, int set,
+		std::vector<std::shared_ptr<MVulkanTexture>>& views
+	);
+
 	static PassResources SetSamplerResource(
 		int binding, int set,
 		VkSampler sampler

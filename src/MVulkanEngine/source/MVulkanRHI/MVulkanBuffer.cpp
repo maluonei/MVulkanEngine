@@ -300,6 +300,7 @@ void MVulkanTexture::Create(MVulkanDevice device, ImageCreateInfo imageInfo, Ima
     m_image.CreateImageView(m_viewInfo);
 
     m_state.m_state = ETextureState::Undefined;
+    
 }
 
 void MVulkanTexture::LoadData(
@@ -417,9 +418,13 @@ void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, 
     _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
     _barrier.newLayout = TextureState2ImageLayout(newState.m_state);    
     _barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
+    _barrier.aspectMask = m_viewInfo.flag;
     //if()
-    if(newState.m_state==ETextureState::DepthAttachment || oldState.m_state==ETextureState::DepthAttachment)
-        _barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //if(newState.m_state==ETextureState::DepthAttachment || oldState.m_state==ETextureState::DepthAttachment)
+    //    _barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //if (m_viewInfo.flag == VK_IMAGE_ASPECT_DEPTH_BIT) {
+    //
+    //}
     //_barrier.aspectMask = ETextureState2VkImageAspectFlag(newState.m_state);
     barriers.push_back(_barrier);
 

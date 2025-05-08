@@ -194,6 +194,12 @@ private:
 	VkImageView		m_view;
 };
 
+//enum class TextureAspact {
+//	Color,
+//	Depth,
+//	Stencil
+//};
+
 class MVulkanTexture {
 public:
 	MVulkanTexture();
@@ -280,6 +286,7 @@ private:
 	MVulkanBuffer		m_stagingBuffer;
 
 	TextureState		m_state;
+	//TextureAspact		m_aspect = TextureAspact::Color;
 };
 
 

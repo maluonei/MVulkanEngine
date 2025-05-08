@@ -110,3 +110,9 @@ struct IndirectDrawArgs{
     //float padding5;
     //float padding6;
 };
+
+struct HIZBuffer{
+    int u_previousLevel; 
+    uint2 u_previousLevelDimensions; 
+    uint padding0;
+};

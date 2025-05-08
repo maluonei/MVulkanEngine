@@ -7,6 +7,7 @@
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "Hiz.hpp"
 
 const uint16_t WIDTH = 1280;
 const uint16_t HEIGHT = 800;
@@ -42,6 +43,7 @@ private:
 	void createShadowPass();
 	void createShadingPass();
 	void createFrustumCullingPass();
+	void createGenHizPass();
 
 	void loadShaders();
 	void createStorageBuffers();
@@ -62,6 +64,7 @@ private:
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
+	std::shared_ptr<ComputePass> m_hizPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;
@@ -70,13 +73,14 @@ private:
 	std::shared_ptr<MVulkanTexture> gBuffer1;
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
 
+	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
 	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
 
 	VkExtent2D shadowmapExtent = { 4096, 4096 };
 
-
+	Hiz							m_hiz;
 	MVulkanSampler				m_linearSampler;
 
 	std::shared_ptr<Scene>		m_scene;
