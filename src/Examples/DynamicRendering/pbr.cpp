@@ -6,6 +6,7 @@
 #include "Managers/TextureManager.hpp"
 #include "Managers/ShaderManager.hpp"
 #include "RenderPass.hpp"
+#include "ComputePass.hpp"
 #include "Camera.hpp"
 #include "Scene/Light/DirectionalLight.hpp"
 #include "Shaders/ShaderModule.hpp"
@@ -26,12 +27,16 @@ void PBR::SetUp()
     loadShaders();
 
     loadScene();
+    createStorageBuffers(); 
 }
 
 void PBR::ComputeAndDraw(uint32_t imageIndex)
 {
     auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
     auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+
+    auto& computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
+    auto& computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
 
     //ImageLayoutToAttachment(imageIndex);
     auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
@@ -82,6 +87,22 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+    }
+
+    {
+        auto frustum = m_camera->GetFrustum();
+        FrustumBuffer buffer;
+        for (int i = 0; i < 6; i++) {
+            buffer.planes[i] = frustum.planes[i];
+        }
+
+        MSceneBuffer sceneBuffer;
+        sceneBuffer.numInstances = m_scene->GetIndirectDrawCommands().size();
+        sceneBuffer.targetIndex = 0;
+        sceneBuffer.cullingMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->cullingMode;
+
+        Singleton<ShaderResourceManager>::instance().LoadData("FrustumBuffer", 0, &buffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
     }
 
     RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo; 
@@ -143,12 +164,29 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     shadingRenderInfo.offset = { 0, 0 };
     shadingRenderInfo.extent = swapchainExtent;
 
+    computeList.Reset();
+    computeList.Begin();
+
+    auto numInstances = m_scene->GetIndirectDrawCommands().size();
+    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, (numInstances+7)/8, 1, 1, std::string("FrustumCulling Pass"));
+
+    computeList.End();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &computeList.GetBuffer();
+    computeQueue.SubmitCommands(1, &submitInfo, nullptr);
+    computeQueue.WaitForQueueComplete();
+
     graphicsList.Reset();
     graphicsList.Begin();
 
     //todo:  ÷∂Ø±‰ªªimage layout
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
+    //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
+    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
+    //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_indirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
 
     graphicsList.End();
@@ -185,6 +223,7 @@ void PBR::CreateRenderPass()
     createGbufferPass();
     createShadowPass();
     createShadingPass();
+    createFrustumCullingPass();
 
     createLightCamera();
 }
@@ -268,7 +307,21 @@ void PBR::loadScene()
     Singleton<SceneLoader>::instance().Load(squadPath.string(), m_squad.get());
 
     m_squad->GenerateIndirectDataAndBuffers();
-    m_scene->GenerateIndirectDataAndBuffers2();
+    m_scene->GenerateIndirectDataAndBuffers();
+
+    //createStorageBuffers();
+    
+    //{
+    //    std::vector<PassResources> resources;
+    //
+    //    //PassResources resource;
+    //    //resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
+    //    resources.push_back(PassResources::SetBufferResource(0, 1, m_instanceBoundsBuffer));
+    //    resources.push_back(PassResources::SetBufferResource(0, 2, m_indirectDrawBuffer));
+    //    resources.push_back(PassResources::SetBufferResource(0, 3, m_culledIndirectDrawBuffer));
+    //
+    //    m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
+    //}
 }
 
 void PBR::createLight()
@@ -391,7 +444,45 @@ void PBR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
+}
 
+void PBR::createStorageBuffers()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        auto indirectDrawCommands = m_scene->GetIndirectDrawCommands();
+        std::vector<IndirectDrawArgs> indirectDrawArgs(indirectDrawCommands.size());
+        for (auto i = 0; i < indirectDrawCommands.size(); i++) {
+            indirectDrawArgs[i].indexCount = indirectDrawCommands[i].indexCount;
+            indirectDrawArgs[i].instanceCount = indirectDrawCommands[i].instanceCount;
+            indirectDrawArgs[i].firstIndex = indirectDrawCommands[i].firstIndex;
+            indirectDrawArgs[i].vertexOffset = indirectDrawCommands[i].vertexOffset;
+            indirectDrawArgs[i].firstInstance = indirectDrawCommands[i].firstInstance;
+        }
+
+        BufferCreateInfo info{};
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+        info.arrayLength = 1;
+        info.size = sizeof(IndirectDrawArgs) * indirectDrawCommands.size();
+
+        m_indirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indirectDrawArgs.data());
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+        m_culledIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+
+        std::vector<InstanceBound> bounds(indirectDrawCommands.size());
+        for (auto i = 0; i < bounds.size(); i++) {
+            auto indirectDrawCommand = indirectDrawCommands[i];
+            bounds[i].center = m_scene->GetMesh(indirectDrawCommand.firstInstance)->m_box.GetCenter();
+            bounds[i].extent = m_scene->GetMesh(indirectDrawCommand.firstInstance)->m_box.GetExtent();
+        }
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(InstanceBound) * indirectDrawCommands.size();
+        m_instanceBoundsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, bounds.data());
+    }
 }
 
 void PBR::initUIRenderer()
@@ -535,6 +626,31 @@ void PBR::createShadingPass()
     }
 }
 
+void PBR::createFrustumCullingPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        m_frustumCullingPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("FrustumCulling Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_frustumCullingPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("sceneBuffer", 4, 0, 0));
+        resources.push_back(PassResources::SetBufferResource(1, 0, m_instanceBoundsBuffer));
+        resources.push_back(PassResources::SetBufferResource(2, 0, m_indirectDrawBuffer));
+        resources.push_back(PassResources::SetBufferResource(3, 0, m_culledIndirectDrawBuffer));
+
+        m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
+    }
+}
+
 //void PBR::ImageLayoutToShaderRead(int currentFrame)
 //{
 //    std::vector<MVulkanImageMemoryBarrier> barriers;
@@ -621,6 +737,9 @@ void PBR::createShadingPass()
 void DRUI::RenderContext() {
     ImGui::Begin("DR_UI Window", &shouleRenderUI);
     ImGui::Text("Hello from another window!");
+
+    ImGui::RadioButton("cullingmode sphere", &cullingMode, CULLINGMODE_SPHERE); ImGui::SameLine();
+    ImGui::RadioButton("cullingmode bbx", &cullingMode, CULLINGMODE_AABB);
     //if (ImGui::Button("Close Me"))
     //    show_another_window = false;
     ImGui::End();

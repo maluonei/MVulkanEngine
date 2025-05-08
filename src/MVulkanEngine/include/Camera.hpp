@@ -7,6 +7,7 @@
 #include<glm/ext/matrix_clip_space.hpp>
 #include<glm/gtc/type_ptr.hpp>
 #include <math.h>
+#include "Frustum.hpp"
 
 //static const glm::vec3 UP = { 0.f, 1.f, 0.f };
 
@@ -162,6 +163,8 @@ public:
 		FrustumPlane* pBottom,
 		FrustumPlane* pNear,
 		FrustumPlane* pFar);
+
+	Frustum GetFrustum();
 };
 
 

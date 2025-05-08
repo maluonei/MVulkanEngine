@@ -379,6 +379,19 @@ void MVulkanEngine::RecordCommandBuffer(
     recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
 }
 
+void MVulkanEngine::RecordCommandBuffer(
+    uint32_t frameIndex,
+    std::shared_ptr<RenderPass> renderPass,
+    uint32_t currentFrame,
+    RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer,
+    std::shared_ptr<Buffer> indexBuffer,
+    std::shared_ptr<StorageBuffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName, bool flipY) {
+    recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+}
+
 void MVulkanEngine::RecordCommandBuffer2(
     uint32_t frameIndex, 
     std::shared_ptr<DynamicRenderPass> renderPass, 
@@ -736,24 +749,30 @@ void MVulkanEngine::createCommandList()
 
     m_graphicsLists.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     for (int i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
-        m_graphicsLists[i].Create(m_device.GetDevice(), info);
+        //m_graphicsLists[i].Create(m_device.GetDevice(), info);
+        m_graphicsLists[i] = MGraphicsCommandList(m_device.GetDevice(), info);
     }
 
-    m_generalGraphicList.Create(m_device.GetDevice(), info);
+    //m_generalGraphicList.Create(m_device.GetDevice(), info);
+    m_generalGraphicList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     info.commandPool = m_commandAllocator.Get(QueueType::TRANSFER_QUEUE);
-    m_transferList.Create(m_device.GetDevice(), info);
+    //m_transferList.Create(m_device.GetDevice(), info);
+    m_transferList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     info.commandPool = m_commandAllocator.Get(QueueType::PRESENT_QUEUE);
-    m_presentList.Create(m_device.GetDevice(), info);
+    //m_presentList.Create(m_device.GetDevice(), info);
+    m_presentList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     if (m_device.SupportRayTracing()) {
         info.commandPool = m_commandAllocator.Get(QueueType::GRAPHICS_QUEUE);
         m_raytracingList.Create(m_device.GetDevice(), info);
     }
 
+    //m_computeList = MComputeCommandList();
     info.commandPool = m_commandAllocator.Get(QueueType::COMPUTE_QUEUE);
-    m_computeList.Create(m_device.GetDevice(), info);
+    //m_computeList.Create(m_device.GetDevice(), info);
+    m_computeList = MComputeCommandList(m_device.GetDevice(), info);
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -1429,6 +1448,65 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
 
     commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+
+    commandList.EndRendering();
+
+    commandList.EndDebugLabel();
+
+    //use swapchain Image
+    if (renderingInfo.colorAttachments[0].texture == nullptr) {
+        swapchainImage2Present(imageIndex, _currentFrame);
+    }
+}
+
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, uint32_t _currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectCount, std::string eventName, bool flipY)
+{
+    auto& commandList = m_graphicsLists[_currentFrame];
+
+    commandList.BeginDebugLabel(eventName);
+
+    auto extent = renderingInfo.extent;
+    auto offset = renderingInfo.offset;
+
+    prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
+    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+
+    commandList.BeginRendering(renderingInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(IndirectDrawArgs));
 
     commandList.EndRendering();
 

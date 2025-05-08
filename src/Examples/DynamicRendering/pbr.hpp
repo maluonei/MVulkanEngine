@@ -13,6 +13,7 @@ const uint16_t HEIGHT = 800;
 
 class Scene;
 class RenderPass;
+class ComputePass;
 class DynamicRenderPass;
 class Camera;
 class Light;
@@ -40,8 +41,12 @@ private:
 	void createGbufferPass();
 	void createShadowPass();
 	void createShadingPass();
+	void createFrustumCullingPass();
 
 	void loadShaders();
+	void createStorageBuffers();
+
+	//void 
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -56,6 +61,7 @@ private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
+	std::shared_ptr<ComputePass> m_frustumCullingPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;
@@ -64,6 +70,9 @@ private:
 	std::shared_ptr<MVulkanTexture> gBuffer1;
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
 
+	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
+	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
 
 	VkExtent2D shadowmapExtent = { 4096, 4096 };
 
@@ -86,6 +95,8 @@ public:
 private:
 	bool shouleRenderUI = true;
 	int a;
+public:
+	int cullingMode = 0;
 };
 
 

@@ -1,4 +1,4 @@
-#define SHARED_CODE_HLSL
+//#define SHARED_CODE_HLSL
 #include "util.hlsli"
 #include "mdf.hlsli"
 //#include "common.h"

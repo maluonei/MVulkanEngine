@@ -9,7 +9,7 @@
 //    float3 diffuseColor;
 //    int padding0;
 //};
-#define SHARED_CODE_HLSL
+////#define SHARED_CODE_HLSL
 
 #include "Common.h"
 

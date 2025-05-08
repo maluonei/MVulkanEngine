@@ -321,3 +321,34 @@ void Camera::GetFrustumPlane(FrustumPlane* pLeft, FrustumPlane* pRight, FrustumP
 	}
 }
 
+Frustum Camera::GetFrustum()
+{
+	//return Frustum();
+
+	float zNearHalfHeight = std::tan(glm::radians(m_fov) * 0.5f) * m_zNear;
+	float zNearHalfWidth = zNearHalfHeight * m_aspect_ratio;
+
+	float zFarHalfHeight = std::tan(glm::radians(m_fov) * 0.5f) * m_zFar;
+	float zFarHalfWidth = zNearHalfHeight * m_aspect_ratio;
+	
+	glm::vec3 zNearLeftBottom = m_position + m_direction * m_zNear - m_right * zNearHalfWidth - m_up * zNearHalfHeight;
+	glm::vec3 zNearLeftUp = m_position + m_direction * m_zNear - m_right * zNearHalfWidth + m_up * zNearHalfHeight;
+	glm::vec3 zNearRightBottom = m_position + m_direction * m_zNear + m_right * zNearHalfWidth - m_up * zNearHalfHeight;
+	glm::vec3 zNearRightUp = m_position + m_direction * m_zNear + m_right * zNearHalfWidth + m_up * zNearHalfHeight;
+
+	glm::vec3 zFarLeftBottom = m_position + m_direction * m_zFar - m_right * zFarHalfWidth - m_up * zFarHalfHeight;
+	glm::vec3 zFarLeftUp = m_position + m_direction * m_zFar - m_right * zFarHalfWidth + m_up * zFarHalfHeight;
+	glm::vec3 zFarRightBottom = m_position + m_direction * m_zFar + m_right * zFarHalfWidth - m_up * zFarHalfHeight;
+	glm::vec3 zFarRightUp = m_position + m_direction * m_zFar + m_right * zFarHalfWidth + m_up * zFarHalfHeight;
+
+	Frustum frustum;
+	frustum.planes[(int)MFrustumPlane::MNEAR] = GetPlane(zNearLeftUp, zNearLeftBottom, zNearRightBottom);
+	frustum.planes[(int)MFrustumPlane::MFAR] = GetPlane(zFarLeftBottom, zFarLeftUp, zFarRightBottom);
+	frustum.planes[(int)MFrustumPlane::MLEFT] = GetPlane(zNearLeftBottom, zNearLeftUp, zFarLeftBottom);
+	frustum.planes[(int)MFrustumPlane::MRIGHT] = GetPlane(zNearRightUp, zNearRightBottom, zFarRightBottom);
+	frustum.planes[(int)MFrustumPlane::MBOTTOM] = GetPlane(zNearRightBottom, zNearLeftBottom, zFarLeftBottom);
+	frustum.planes[(int)MFrustumPlane::MUP] = GetPlane(zNearLeftUp, zNearRightUp, zFarLeftUp);
+
+	return frustum;
+}
+

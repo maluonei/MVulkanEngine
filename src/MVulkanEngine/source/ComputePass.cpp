@@ -128,6 +128,15 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
         m_descriptorSets.insert({ set, descriptorSet });
     }
 
+    //for (int i = 0; i < m_descriptorSets.size(); i++) {
+    auto& sets = m_descriptorSets;
+    for (auto& set : sets) {
+        int setIndex = set.first;
+        auto& descriptorSet = set.second;
+        descriptorSet.Create(m_device.GetDevice(), allocator.Get(), layouts[setIndex]);
+    }
+    //}
+
     for (auto set = 0; set < maxSet; set++)
     {
         auto& descriptorSetLayoutBinding = bindings[set];
@@ -144,7 +153,7 @@ void ComputePass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
                 if (binding.name.substr(0, 5) == "type.")
                     binding.name = binding.name.substr(5);
 
-                Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, 0);
+                Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, 1);
             }
         }
     }

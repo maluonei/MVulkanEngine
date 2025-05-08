@@ -1,5 +1,5 @@
 // HLSL Shader
-#define SHARED_CODE_HLSL
+//#define SHARED_CODE_HLSL
 
 #include "Common.h"
 

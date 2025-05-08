@@ -166,6 +166,7 @@ public:
     inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return m_imageAvailableSemaphores[index]; }
     inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return m_finalRenderFinishedSemaphores[index]; }
 
+    //void SubmitCommands();
     void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
@@ -203,6 +204,17 @@ public:
         std::shared_ptr<Buffer> vertexBuffer,
         std::shared_ptr<Buffer> indexBuffer,
         std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName, bool flipY = true);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<StorageBuffer> indirectBuffer,
         uint32_t indirectCount,
         std::string eventName, bool flipY = true);
 
@@ -307,6 +319,19 @@ private:
         std::shared_ptr<Buffer> vertexBuffer,
         std::shared_ptr<Buffer> indexBuffer,
         std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName,
+        bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        //MGraphicsCommandList commandList,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<StorageBuffer> indirectBuffer,
         uint32_t indirectCount,
         std::string eventName,
         bool flipY = true);

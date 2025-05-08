@@ -70,12 +70,43 @@ struct MVPBuffer
     float4x4 Projection;
 };
 
+#define CULLINGMODE_SPHERE 0
+#define CULLINGMODE_AABB 1
+
 struct MSceneBuffer{
     int numInstances;
     int targetIndex;
+    int cullingMode;
 };
 
 struct MDFGlobalBuffer{
     int3 mdfAtlasDim;
     float padding0;
+};
+
+struct InstanceBound{
+    float3 center;
+    float padding0;
+    float3 extent;
+    float padding1;
+};
+
+struct FrustumBuffer{
+    float4 planes[6];
+};
+
+struct IndirectDrawArgs{
+    int    indexCount;
+    int    instanceCount;
+    int    firstIndex;
+    int    vertexOffset;
+    int    firstInstance;
+
+    float padding0;
+    float padding1;
+    float padding2;
+    //float padding3;
+    //float padding4;
+    //float padding5;
+    //float padding6;
 };
