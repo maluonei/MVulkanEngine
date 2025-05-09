@@ -130,3 +130,4 @@ struct HIZBuffer{
     uint2 u_previousLevelDimensions; 
     uint padding0;
 };
+

@@ -79,6 +79,9 @@ private:
 	std::shared_ptr<MVulkanTexture> shadowMapDepth;
 	std::shared_ptr<MVulkanTexture> gBuffer0;
 	std::shared_ptr<MVulkanTexture> gBuffer1;
+	//std::shared_ptr<MVulkanTexture> gBuffer2;
+	//std::shared_ptr<MVulkanTexture> gBuffer3;
+	//std::shared_ptr<MVulkanTexture> gBuffer4;
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;

@@ -61,6 +61,13 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         TexBuffer texBuffer = m_scene->GenerateTexBuffer();
         Singleton<ShaderResourceManager>::instance().LoadData("texBuffer", 0, &texBuffer, 0);
         //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+
+        auto gbufferExtent = swapchainExtent;
+        MScreenBuffer gBufferInfoBuffer{};
+        gBufferInfoBuffer.WindowRes = int2(gbufferExtent.width, gbufferExtent.height);
+
+        Singleton<ShaderResourceManager>::instance().LoadData("gBufferInfoBuffer", 0, &gBufferInfoBuffer, 0);
+
     }
 
     //prepare shadowPass ubo
@@ -130,6 +137,24 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
+        //gbufferRenderInfo.colorAttachments.push_back(
+        //    RenderingAttachment{
+        //        .texture = gBuffer2,
+        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //    }
+        //);
+        //gbufferRenderInfo.colorAttachments.push_back(
+        //    RenderingAttachment{
+        //        .texture = gBuffer3,
+        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //    }
+        //);
+        //gbufferRenderInfo.colorAttachments.push_back(
+        //    RenderingAttachment{
+        //        .texture = gBuffer4,
+        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //    }
+        //);
         gbufferRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -465,9 +490,13 @@ void PBR::createTextures()
 
     {
         auto gbufferFormat = VK_FORMAT_R32G32B32A32_UINT;
+        auto motionVectorFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
         gBuffer0 = std::make_shared<MVulkanTexture>();
         gBuffer1 = std::make_shared<MVulkanTexture>();
+        //gBuffer2 = std::make_shared<MVulkanTexture>();
+        //gBuffer3 = std::make_shared<MVulkanTexture>();
+        //gBuffer4 = std::make_shared<MVulkanTexture>();
         gBufferDepth = std::make_shared<MVulkanTexture>();
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             gBuffer0, swapchainExtent, gbufferFormat
@@ -477,6 +506,18 @@ void PBR::createTextures()
             gBuffer1, swapchainExtent, gbufferFormat
         );
 
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    gBuffer2, swapchainExtent, motionVectorFormat
+        //);
+
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    gBuffer3, swapchainExtent, motionVectorFormat
+        //);
+        //
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    gBuffer4, swapchainExtent, motionVectorFormat
+        //);
+        //
         Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
             gBufferDepth, swapchainExtent, depthFormat
         );
@@ -601,6 +642,9 @@ void PBR::createGbufferPass()
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         info.frambufferCount = 1;
         info.dynamicRender = 1;
@@ -627,6 +671,9 @@ void PBR::createGbufferPass()
         resources.push_back(
             PassResources::SetBufferResource(
                 "texBuffer", 3, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "gBufferInfoBuffer", 6, 0, 0));
 
         resources.push_back(
             PassResources::SetSampledImageResource(
@@ -720,7 +767,10 @@ void PBR::createShadingPass()
             resources.push_back(
                 PassResources::SetSampledImageResource(
                     4, 0, gBuffer1));
-
+            //resources.push_back(
+            //    PassResources::SetSampledImageResource(
+            //        8, 0, gBuffer2));
+            //
             resources.push_back(
                 PassResources::SetSamplerResource(
                     6, 0, m_linearSampler.GetSampler()));
@@ -929,7 +979,8 @@ void DRUI::RenderContext() {
     ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
 
     ImGui::RadioButton("not show motionVector", &showMotionVector, 0); ImGui::SameLine();
-    ImGui::RadioButton("show motionVector", &showMotionVector, 1);
+    ImGui::RadioButton("show motionVector", &showMotionVector, 1); ImGui::SameLine();
+    //ImGui::RadioButton("show motionVector2", &showMotionVector, 2);
     //if (ImGui::Button("Close Me"))
     //    show_another_window = false;
     ImGui::End();

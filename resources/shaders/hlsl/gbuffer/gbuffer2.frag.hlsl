@@ -12,10 +12,22 @@
 //#define SHARED_CODE_HLSL
 #include "Common.h"
 
+[[vk::binding(1, 0)]]
+cbuffer vpBuffer_p : register(b1)
+{
+    VPBuffer vp_p;
+};
+
 [[vk::binding(3, 0)]]
 cbuffer texBuffer : register(b2)
 {
     TexBuffer texbuffer;
+}; 
+
+[[vk::binding(6, 0)]]
+cbuffer gBufferInfoBuffer : register(b3)
+{
+    MScreenBuffer gBufferInfoBuffer;
 }; 
 
 [[vk::binding(4, 0)]] Texture2D textures[MAX_TEXTURES] : register(t2);
@@ -28,7 +40,7 @@ struct PSInput
     float2 texCoord : TEXCOORD0;
     uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
-    float4 positionPreviousFrame : TEXCOORD3;
+    //float4 positionPreviousFrame : TEXCOORD3;
     //float3x3 TBN : TEXCOORD1;
     float3 tangent : TEXCOORD1;
     float3 bitangent : TEXCOORD2;
@@ -44,6 +56,9 @@ struct PSOutput
 
     [[vk::location(0)]] uint4 gBuffer0 : SV_TARGET0; // 16 bytes normalx, 16bytes normaly, 16bytes normalz, 16bytes positionx, 16bytes positiony, 16bytes positionz, 16bytes u, 16bytes v
     [[vk::location(1)]] uint4 gBuffer1 : SV_TARGET1; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(2)]] float4 gBuffer2 : SV_TARGET2;
+    //[[vk::location(3)]] float4 gBuffer3 : SV_TARGET3;
+    //[[vk::location(4)]] float4 gBuffer4 : SV_TARGET4;
 };
 
 //void packf32to16()
@@ -95,7 +110,17 @@ PSOutput main(PSInput input)
     float2 uv = input.texCoord;
     float3 albedo;
     float3 metallicAndRoughness;
-    float3 motionVector = input.position.xyz - input.positionPreviousFrame.xyz;;
+    
+    float4 screenSpacePositionPrevFrame = mul(vp_p.View, float4(input.worldPos, 1.f));
+    screenSpacePositionPrevFrame = mul(vp_p.Projection, screenSpacePositionPrevFrame);
+    screenSpacePositionPrevFrame /= screenSpacePositionPrevFrame.w;
+    screenSpacePositionPrevFrame.xy = float2(
+        (screenSpacePositionPrevFrame.x + 1.0) * 0.5,
+        (1.0 - screenSpacePositionPrevFrame.y) * 0.5  // Y轴翻转
+    );
+    //output.positionPreviousFrame = screenSpacePositionPrevFrame;
+
+    float3 motionVector = (input.position.xyz / float3(gBufferInfoBuffer.WindowRes, 1.f) - screenSpacePositionPrevFrame.xyz);
 
     // Sample diffuse texture if valid, otherwise default to white
     if (diffuseTextureIdx != -1)
@@ -120,45 +145,9 @@ PSOutput main(PSInput input)
     //motionVector = input.position.xyz - input.positionPreviousFrame.xyz;
 
     pack(normal, position, uv, albedo, metallicAndRoughness, motionVector, output.gBuffer0, output.gBuffer1);
-    //metallicAndRoughness.a = 0.0; // Optional alpha channel
-
-
-    //// Output normal and position
-    //output.Normal = float4(input.normal, input.texCoord.x);
-    //output.Position = float4(input.worldPos, input.texCoord.y);
-//
-    //if (normalTextureIdx != -1){
-    //    float3 texNormal = normalize(textures[normalTextureIdx].Sample(linearSampler, input.texCoord).xyz * 2.0 - 1.0);
-    //    float3 tnorm = mul(texNormal, TBN);
-    //    //output.Normal = float4(input.tangent.xyz, 1.f);
-    //    //output.Normal = float4(tnorm, 1.f);
-    //    output.Normal = float4(input.normal, 1.f);
-    //}
-//
-    //// Sample diffuse texture if valid, otherwise default to white
-    //if (diffuseTextureIdx != -1)
-    //{
-    //    output.Albedo = textures[diffuseTextureIdx].Sample(linearSampler, input.texCoord);
-    //}
-    //else
-    //{
-    //    //output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-    //    output.Albedo = float4(texbuffer.tex[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
-    //}
-//
-    //// Sample metallic and roughness texture if valid, otherwise default values
-    //if (metallicAndRoughnessTextureIdx != -1)
-    //{
-    //    output.MetallicAndRoughness.rgb = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, input.texCoord).rgb;
-    //}
-    //else
-    //{
-    //    output.MetallicAndRoughness.rgb = float3(0.0, 0.5, 0.5);
-    //}
-    //output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
-//
-    //// Output material ID
-    //output.MatId = uint4(texbuffer.tex[input.instanceID].matId, input.instanceID, 0, 0);
+    //output.gBuffer2.xyz = motionVector;
+    //output.gBuffer3.xyz = input.position.xyz / float3(gBufferInfoBuffer.WindowRes, 1.f);
+    //output.gBuffer4.xyz = screenSpacePositionPrevFrame.xyz;
 
     return output;
 }

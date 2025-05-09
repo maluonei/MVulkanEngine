@@ -19,7 +19,7 @@ cbuffer screenBuffer : register(b2)
 }
 
 [[vk::binding(7, 0)]]
-cbuffer intBuffer : register(b2)
+cbuffer intBuffer : register(b3)
 {
     int outputMotionVector;
 }
@@ -28,6 +28,7 @@ cbuffer intBuffer : register(b2)
 
 [[vk::binding(3, 0)]]Texture2D<uint4> gBuffer0 : register(t0);
 [[vk::binding(4, 0)]]Texture2D<uint4> gBuffer1 : register(t1);
+//[[vk::binding(8, 0)]]Texture2D<float4> gBuffer2 : register(t2);
 [[vk::binding(5, 0)]]Texture2D<float> shadowMaps[2] : register(t4);
 [[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
 
@@ -256,6 +257,7 @@ PSOutput main(PSInput input)
     uint3 coord = uint3(uint2(input.texCoord * float2(screenBuffer.WindowRes.x, screenBuffer.WindowRes.y)), 0);
     uint4 gBufferValue0 = gBuffer0.Load(coord);
     uint4 gBufferValue1 = gBuffer1.Load(coord);
+    //float4 gBufferValue2 = gBuffer2.Load(coord);
     float3 fragNormal;
     float3 fragPos;
     float2 fragUV;
@@ -290,8 +292,11 @@ PSOutput main(PSInput input)
     fragcolor += fragAlbedo.rgb * 0.04f; //ambient
 
     if(outputMotionVector==1){
-        output.color = float4(motionVector.xyz, 1.f);
+        output.color = float4(motionVector.xy, 0.f, 1.f);// * 100.f;
     }
+    //else if(outputMotionVector==2){
+    //    output.color = float4(gBufferValue2.xy, 0.f, 1.f);
+    //}
     else{
         output.color = float4(fragcolor, 1.f);
     }

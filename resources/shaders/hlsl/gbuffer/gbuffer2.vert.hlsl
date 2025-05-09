@@ -17,11 +17,6 @@ cbuffer vpBuffer : register(b0)
     VPBuffer vp;
 };
 
-[[vk::binding(1, 0)]]
-cbuffer vpBuffer_p : register(b1)
-{
-    VPBuffer vp_p;
-};
 
 [[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> ModelBuffers : register(t0); 
 
@@ -45,7 +40,7 @@ struct VSOutput
     float2 texCoord : TEXCOORD0;
     uint instanceID : INSTANCE_ID;
     float4 position : SV_POSITION;
-    float4 positionPreviousFrame : TEXCOORD3;
+    //float4 positionPreviousFrame : TEXCOORD3;
     float3 tangent : TEXCOORD1;
     float3 bitangent : TEXCOORD2;
 
@@ -104,9 +99,20 @@ VSOutput main(VSInput input)
     screenSpacePosition = mul(vp.Projection, screenSpacePosition);
     output.position = screenSpacePosition;
 
-    float4 screenSpacePositionPrevFrame = mul(vp_p.View, worldSpacePosition);
-    screenSpacePositionPrevFrame = mul(vp_p.Projection, screenSpacePosition);
-    output.positionPreviousFrame = screenSpacePositionPrevFrame;
+    //float4 screenSpacePositionPrevFrame = mul(vp_p.View, worldSpacePosition);
+    //screenSpacePositionPrevFrame = mul(vp_p.Projection, screenSpacePositionPrevFrame);
+    ////output.positionPreviousFrame = screenSpacePositionPrevFrame;
+    //output.positionPreviousFrame = screenSpacePosition;
+    //
+    //output.positionPreviousFrame.xyzw /= output.positionPreviousFrame.w;
+    //// Vulkan NDC到UV空间转换（Y轴需要翻转）
+    //output.positionPreviousFrame.xy = float2(
+    //    (output.positionPreviousFrame.x + 1.0) * 0.5,
+    //    (1.0 - output.positionPreviousFrame.y) * 0.5  // Y轴翻转
+    //);
+    //output.positionPreviousFrame.xyzw /= output.positionPreviousFrame.w;
+    //[-1, 1] -> [0, 1]
+    //output.positionPreviousFrame.xyz = (screenSpacePositionPrevFrame.xyz + 1.f) * 0.5f;
 
     // Compute normal in world space
     float3x3 normalMatrix = transpose(inverse((float3x3)Model));
