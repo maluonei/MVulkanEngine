@@ -1,11 +1,12 @@
 #include "Common.h"
 
-[[vk::binding(0, 0)]]
-cbuffer hizBuffer : register(b0)
-{  
-    HIZBuffer hizBuffer;
-}
+//[[vk::binding(0, 0)]]
+//cbuffer hizBuffer : register(b0)
+//{  
+//    HIZBuffer hizBuffer;
+//}
 
+[[vk::binding(0, 0)]] StructuredBuffer<HIZBuffer> hizBuffers : register(t1); 
 [[vk::binding(1, 0)]] Texture2D<float> BaseDepthTexture : register(t0); 
 [[vk::binding(2, 0)]] RWTexture2D<float> DepthTexture[13] : register(u0); 
 //[[vk::binding(3, 0)]] RWTexture2D<float> DepthTexture[13] : register(u0); 
@@ -14,6 +15,8 @@ cbuffer hizBuffer : register(b0)
 void main(uint3 threadID : SV_DispatchThreadID)
 {
     uint2 texCoord = threadID.xy;
+    HIZBuffer hizBuffer = hizBuffers[0];
+    
     if(hizBuffer.u_previousLevel==-1){
         DepthTexture[0][texCoord] = BaseDepthTexture.Load(int3(texCoord.xy, 0)).r;
         return;

@@ -19,6 +19,10 @@ class DynamicRenderPass;
 class Camera;
 class Light;
 
+#define NOT_DO_HIZ 0
+#define DO_HIZ_MODE_0 1
+#define DO_HIZ_MODE_1 2
+
 class PBR: public MRenderApplication {
 public:
 	virtual void SetUp();
@@ -44,6 +48,8 @@ private:
 	void createShadingPass();
 	void createFrustumCullingPass();
 	void createGenHizPass();
+	void createUpdateHizBufferPass();
+	void createResetHizBufferPass();
 
 	void loadShaders();
 	void createStorageBuffers();
@@ -65,6 +71,8 @@ private:
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
 	std::shared_ptr<ComputePass> m_hizPass;
+	std::shared_ptr<ComputePass> m_updateHizBufferPass;
+	std::shared_ptr<ComputePass> m_resetHizBufferPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;
@@ -77,6 +85,8 @@ private:
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
 	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_hizBuffer;
+	std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
 
 	VkExtent2D shadowmapExtent = { 4096, 4096 };
 
@@ -101,6 +111,7 @@ private:
 	int a;
 public:
 	int cullingMode = 0;
+	int hizMode = NOT_DO_HIZ;
 };
 
 
