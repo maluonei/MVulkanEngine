@@ -87,8 +87,9 @@ private:
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_hizBuffer;
 	std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
+	std::shared_ptr<StorageBuffer> m_modelBuffer;
 
-	VkExtent2D shadowmapExtent = { 4096, 4096 };
+	VkExtent2D shadowmapExtent = { 2048, 2048 };
 
 	Hiz							m_hiz;
 	MVulkanSampler				m_linearSampler;
@@ -100,6 +101,9 @@ private:
 
 	std::shared_ptr<Camera>		m_directionalLightCamera;
 	std::shared_ptr<Camera>		m_camera;
+
+	glm::mat4					m_prevView;
+	glm::mat4					m_prevProj;
 };
 
 class DRUI :public UIRenderer {
@@ -112,6 +116,7 @@ private:
 public:
 	int cullingMode = 0;
 	int hizMode = NOT_DO_HIZ;
+	int showMotionVector = 0;
 };
 
 

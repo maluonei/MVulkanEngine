@@ -70,6 +70,16 @@ struct MVPBuffer
     float4x4 Projection;
 };
 
+struct ModelBuffer {
+    float4x4 Model;
+};
+
+struct VPBuffer
+{
+    float4x4 View;
+    float4x4 Projection;
+};
+
 #define CULLINGMODE_SPHERE 0
 #define CULLINGMODE_AABB 1
 

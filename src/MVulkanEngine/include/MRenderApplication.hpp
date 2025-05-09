@@ -30,6 +30,7 @@ protected:
 
     uint32_t    m_currentFrame = 0;
     bool        m_cameraMoved = false;
+    uint32_t    m_frameIndex = 0;
 
     std::shared_ptr<UIRenderer> m_uiRenderer;
 

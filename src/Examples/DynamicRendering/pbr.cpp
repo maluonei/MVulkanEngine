@@ -41,13 +41,21 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     //ImageLayoutToAttachment(imageIndex);
     auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
 
+    //if()
+
     //prepare gbufferPass ubo
     {
-        MVPBuffer mvpBuffer{};
-        mvpBuffer.Model = glm::mat4(1.f);
-        mvpBuffer.View = m_camera->GetViewMatrix();
-        mvpBuffer.Projection = m_camera->GetProjMatrix();
-        Singleton<ShaderResourceManager>::instance().LoadData("mvpBuffer", 0, &mvpBuffer, 0);
+        //MVPBuffer mvpBuffer{};
+        //mvpBuffer.Model = glm::mat4(1.f);
+        VPBuffer vpBuffer{};
+        vpBuffer.View = m_camera->GetViewMatrix();
+        vpBuffer.Projection = m_camera->GetProjMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer", 0, &vpBuffer, 0);
+
+        VPBuffer vpBuffer_p{};
+        vpBuffer_p.View = m_prevView;
+        vpBuffer_p.Projection = m_prevProj;
+        Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer_p", 0, &vpBuffer_p, 0);
         //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
         TexBuffer texBuffer = m_scene->GenerateTexBuffer();
@@ -83,9 +91,12 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         MScreenBuffer screenBuffer{};
         screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
 
+        int showMotionVector = std::static_pointer_cast<DRUI>(m_uiRenderer)->showMotionVector;
+
         Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", imageIndex, &showMotionVector, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -185,11 +196,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
     
-    //int hizMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->hizMode;
-    //if (hizMode == NOT_DO_HIZ) {
-    //
-    //}
-    //else if (hizMode == DO_HIZ_MODE_0) {
     graphicsList.End();
     submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
     graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
@@ -198,7 +204,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     computeList.Reset();
     computeList.Begin();
 
-    //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"));
     auto numHizLayers = m_hiz.hizRes.size();
     for (auto layer = 0; layer < numHizLayers; layer++) {
         if (layer == 0) {
@@ -217,40 +222,14 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     graphicsList.Reset();
     graphicsList.Begin();
-    //}
-
-
-    //graphicsList.End();
-    //submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-    //graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    //graphicsQueue.WaitForQueueComplete();
-    //
-    //computeList.Reset();
-    //computeList.Begin();
-    //
-    ////Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"));
-    //auto numHizLayers = m_hiz.hizRes.size();
-    //for (auto layer = 0; layer < numHizLayers; layer++) {
-    //    if (layer == 0) {
-    //        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"));
-    //    }
-    //    else {
-    //        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("UpdateHizBuffer Pass"));
-    //    }
-    //    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_hizPass, (m_hiz.hizRes[layer].x + 15) / 16, (m_hiz.hizRes[layer].y + 15) / 16, 1, std::string("GenHiz Pass"));
-    //}
-    //
-    //computeList.End();
-    //submitInfo.pCommandBuffers = &computeList.GetBuffer();
-    //computeQueue.SubmitCommands(1, &submitInfo, nullptr);
-    //computeQueue.WaitForQueueComplete();
-    //
-    //graphicsList.Reset();
-    //graphicsList.Begin();
+    
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
 
     graphicsList.End();
     Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame);
+
+    m_prevView = m_camera->GetViewMatrix();
+    m_prevProj = m_camera->GetProjMatrix();
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()
@@ -416,6 +395,9 @@ void PBR::createCamera()
 
     m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
     Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
+
+    m_prevView = m_camera->GetViewMatrix();
+    m_prevProj = m_camera->GetProjMatrix();
 }
 
 void PBR::createSamplers()
@@ -448,7 +430,7 @@ void PBR::createTextures()
 {
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
     auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
-    auto shadowMapExtent = VkExtent2D{ 4096, 4096 };
+    auto shadowMapExtent = shadowmapExtent;
 
     auto depthFormat = device.FindDepthFormat();
     auto shadowMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -536,9 +518,11 @@ void PBR::createTextures()
 
 void PBR::loadShaders() 
 {
-    Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
+    //Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer/gbuffer2.vert.hlsl", "hlsl/gbuffer/gbuffer2.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" }, true);
@@ -593,6 +577,14 @@ void PBR::createStorageBuffers()
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(HIZBuffer);
         m_hizBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+
+        std::vector<glm::mat4> models(m_scene->GetIndirectDrawCommands().size());
+        for (auto i = 0; i < models.size(); i++) {
+            models[i] = glm::mat4(1.0f);
+        }
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(glm::mat4) * models.size();
+        m_modelBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, models.data());
     }
 }
 
@@ -625,17 +617,23 @@ void PBR::createGbufferPass()
         std::vector<PassResources> resources;
         resources.push_back(
             PassResources::SetBufferResource(
-                "mvpBuffer", 0, 0));
+                "vpBuffer", 0, 0));
         resources.push_back(
             PassResources::SetBufferResource(
-                "texBuffer", 1, 0));
+                "vpBuffer_p", 1, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                2, 0, m_modelBuffer));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "texBuffer", 3, 0));
 
         resources.push_back(
             PassResources::SetSampledImageResource(
-                2, 0, bufferTextures));
+                4, 0, bufferTextures));
         resources.push_back(
             PassResources::SetSamplerResource(
-                3, 0, m_linearSampler.GetSampler()));
+                5, 0, m_linearSampler.GetSampler()));
 
         m_gbufferPass->UpdateDescriptorSetWrite(0, resources);
     }
@@ -730,6 +728,10 @@ void PBR::createShadingPass()
             resources.push_back(
                 PassResources::SetSampledImageResource(
                     5, 0, shadowViews));
+
+            resources.push_back(
+                PassResources::SetBufferResource(
+                    "intBuffer", 7, 0, i));
 
 
             m_lightingPass->UpdateDescriptorSetWrite(i, resources);
@@ -925,6 +927,9 @@ void DRUI::RenderContext() {
     ImGui::RadioButton("not do hiz", &hizMode, NOT_DO_HIZ); ImGui::SameLine();
     ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0); ImGui::SameLine();
     ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
+
+    ImGui::RadioButton("not show motionVector", &showMotionVector, 0); ImGui::SameLine();
+    ImGui::RadioButton("show motionVector", &showMotionVector, 1);
     //if (ImGui::Button("Close Me"))
     //    show_another_window = false;
     ImGui::End();

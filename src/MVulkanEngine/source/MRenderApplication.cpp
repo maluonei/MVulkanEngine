@@ -21,6 +21,8 @@ void MRenderApplication::Run()
     while (!Singleton<MVulkanEngine>::instance().WindowShouldClose()) {
         renderLoop();
         SetCameraMoved(false);
+
+        m_frameIndex++;
     }
 }
 

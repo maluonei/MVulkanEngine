@@ -18,6 +18,12 @@ cbuffer screenBuffer : register(b2)
     MScreenBuffer screenBuffer;
 }
 
+[[vk::binding(7, 0)]]
+cbuffer intBuffer : register(b2)
+{
+    int outputMotionVector;
+}
+
 //#define ShadingShaderConstantBuffer ubo0;
 
 [[vk::binding(3, 0)]]Texture2D<uint4> gBuffer0 : register(t0);
@@ -221,15 +227,17 @@ void Unpack(
     out float2 uv,
     out float3 albedo,
     out float metallic,
-    out float roughness
+    out float roughness,
+    out float3 motionVector
 ){
     uint3 unpackedNormal = uint3((gBuffer0.x & 0xFFFF0000) >> 16, gBuffer0.x & 0xFFFF, (gBuffer0.y & 0xFFFF0000) >> 16);
-    uint3 unpackedPosition = uint3((gBuffer0.y & 0xFFFF), (gBuffer0.z & 0xFFFF0000) >> 16, gBuffer0.z & 0xFFFF);
+    uint3 unpackedPosition = uint3(gBuffer0.y & 0xFFFF, (gBuffer0.z & 0xFFFF0000) >> 16, gBuffer0.z & 0xFFFF);
     uint2 unpackedUV = uint2((gBuffer0.w & 0xFFFF0000) >> 16, gBuffer0.w & 0xFFFF);
 
     uint3 unpackedAlbedo = uint3((gBuffer1.x & 0xFFFF0000) >> 16, gBuffer1.x & 0xFFFF, (gBuffer1.y & 0xFFFF0000) >> 16);
     uint unpackedMetallic = gBuffer1.y & 0xFFFF;
-    uint unpackedRoughness = gBuffer1.z & 0xFFFF;
+    uint unpackedRoughness = (gBuffer1.z & 0xFFFF0000) >> 16;
+    uint3 unpackedMotionVector = uint3(gBuffer1.z & 0xFFFF, (gBuffer1.w & 0xFFFF0000) >> 16, gBuffer1.w & 0xFFFF);
 
     normal = normalize(f16tof32(unpackedNormal));
     position = f16tof32(unpackedPosition);
@@ -237,6 +245,7 @@ void Unpack(
     albedo = f16tof32(unpackedAlbedo);
     metallic = f16tof32(unpackedMetallic);
     roughness = f16tof32(unpackedRoughness);
+    motionVector = f16tof32(unpackedMotionVector);
 }
 
 
@@ -253,6 +262,7 @@ PSOutput main(PSInput input)
     float3 fragAlbedo;
     float metallic;
     float roughness;
+    float3 motionVector;
 
     Unpack(
         gBufferValue0, 
@@ -262,7 +272,8 @@ PSOutput main(PSInput input)
         fragUV, 
         fragAlbedo, 
         metallic, 
-        roughness);
+        roughness,
+        motionVector);
 
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 
@@ -278,7 +289,12 @@ PSOutput main(PSInput input)
     }
     fragcolor += fragAlbedo.rgb * 0.04f; //ambient
 
-    output.color = float4(fragcolor, 1.f);
-    
+    if(outputMotionVector==1){
+        output.color = float4(motionVector.xyz, 1.f);
+    }
+    else{
+        output.color = float4(fragcolor, 1.f);
+    }
+
     return output;
 }
