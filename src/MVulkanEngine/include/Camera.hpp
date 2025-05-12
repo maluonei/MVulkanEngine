@@ -107,6 +107,14 @@ public:
 		return m_direction;
 	}
 
+	inline glm::vec3& GetPositionRef()  {
+		return m_position;
+	}
+
+	inline glm::vec3& GetDirectionRef()  {
+		return m_direction;
+	}
+
 	inline glm::mat4 GetProjMatrix()const {
 		if (IsOrtho()) return m_orthoMatrix;
 		else return m_projMatrix;

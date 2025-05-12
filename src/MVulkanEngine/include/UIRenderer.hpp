@@ -6,9 +6,11 @@
 #include "MVulkanRHI/MVulkanCommand.hpp"
 #include "MVulkanRHI/MVulkanDescriptor.hpp"
 #include "imgui_impl_vulkan.h"
+#include "MRenderApplication.hpp"
 
 class MWindow;
 class MVulkanRenderPass;
+class MRenderApplication;
 
 class UIRenderer {
 public:
@@ -20,7 +22,8 @@ public:
 		MVulkanInstance instance,
 		VkSurfaceKHR surface,
 		MVulkanDescriptorSetAllocator allocator,
-		int	graphicsQueue
+		int	graphicsQueue,
+		MRenderApplication* app
 	);
 
 	void InitImgui(MVulkanCommandQueue queue);
@@ -36,6 +39,8 @@ public:
 
 	bool IsRender();
 
+	//void ResisterApp();
+
 	VkSemaphore GetImageRequireSemaphore(int imageIndex);
 	VkSemaphore GetRenderCompleteSemaphore(int imageIndex);
 	VkFence GetFence(int imageIndex);
@@ -47,6 +52,8 @@ public:
 
 	virtual void RenderContext();
 
+protected:
+	MRenderApplication* m_app = nullptr;
 private:
 	void createOrResizeWindow();
 

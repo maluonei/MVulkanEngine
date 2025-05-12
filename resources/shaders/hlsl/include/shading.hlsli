@@ -1,14 +1,5 @@
 #pragma once
-struct Light
-{
-    float4x4 shadowViewProj;
-
-    float3 direction;
-    float  intensity;
-
-    float3 color;
-    int    padding0;
-};
+//#include "common.h"
 
 static const float2 poisson_points[49] =
 {
@@ -133,7 +124,7 @@ float3 BRDF(float3 albedo, float3 lightColor, float3 L, float3 V, float3 N, floa
 }
 
 float PCF(
-    Texture2D<float> shadowMap, SamplerState sampler, Light light, float3 fragPos, int2 Resolution)
+    Texture2D<float> shadowMap, SamplerState sampler, MLight light, float3 fragPos)
 {
     float occlusion = 0.f;
 
@@ -147,7 +138,7 @@ float PCF(
     {
         for (int j = -3; j <= 3; j++)
         {
-            float2 offset = poisson_points[i * 7 + j + 24] * float2(5.f, 5.f) / float2(Resolution);
+            float2 offset = poisson_points[i * 7 + j + 24] * float2(5.f, 5.f) / float2(light.shadowmapResolution);
             float shadowDepthSample = shadowMap.Sample(sampler, shadowCoord.xy + offset).r;
             if ((shadowDepthSample + DepthBias) < shadowCoord.z)
             {
@@ -161,7 +152,7 @@ float PCF(
 }
 
 
-bool VisibleToLight(Texture2D<float> shadowMap, SamplerState sampler, float3 fragPos, Light light){
+bool VisibleToLight(Texture2D<float> shadowMap, SamplerState sampler, float3 fragPos, MLight light){
     float4 shadowCoord = mul(biasMat, mul(light.shadowViewProj, float4(fragPos, 1.f)));
     shadowCoord.xyz /= shadowCoord.w;
     shadowCoord.y = 1.f - shadowCoord.y;

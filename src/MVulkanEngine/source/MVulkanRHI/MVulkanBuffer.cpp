@@ -1,6 +1,7 @@
 #include "MVulkanRHI/MVulkanBuffer.hpp"
 #include <stdexcept>
 #include <MVulkanRHI/MVulkanEngine.hpp>
+#include <spdlog/spdlog.h>
 
 MVulkanBuffer::MVulkanBuffer(BufferType _type):m_type(_type)
 {
@@ -303,6 +304,134 @@ void MVulkanTexture::Create(MVulkanDevice device, ImageCreateInfo imageInfo, Ima
     
 }
 
+void MVulkanTexture::MLoadImage(
+    MVulkanCommandList* commandList, 
+    MVulkanCommandQueue commandQueue, 
+    MVulkanDevice device, 
+    fs::path imagePath)
+{
+    auto extension = imagePath.extension().string();
+    if (extension == ".dds") {
+        //LoadKtx(commandList, device, imagePath);
+        gli::texture tex = gli::load(imagePath.string().c_str());
+        if (tex.empty()) {
+            //throw std::runtime_error("Failed to load DDS file");
+            spdlog::error("Failed to load DDS file: {0}", imagePath.string().c_str());
+        }
+
+        gli::format gliFormat = tex.format();
+        VkFormat vkFormat = ConvertGliFormatToVkFormat(gliFormat);
+        if (vkFormat == VK_FORMAT_UNDEFINED) {
+            //throw std::runtime_error("Unsupported format");
+            spdlog::error("unknown VkFormat when creating texture from dds file");
+        }
+
+        const glm::tvec3<uint32_t>& extent = tex.extent();
+        uint32_t mipLevels = static_cast<uint32_t>(tex.levels());
+        mipLevels = 1;
+
+        ImageCreateInfo imageInfo{};
+        imageInfo.width = extent.x;
+        imageInfo.height = extent.y;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        imageInfo.format = vkFormat;
+        imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.mipLevels = mipLevels;
+
+        ImageViewCreateInfo viewInfo{};
+        viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.format = vkFormat;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        //viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.baseMipLevel = 0;
+        viewInfo.levelCount = mipLevels;
+        viewInfo.baseArrayLayer = 0;
+        viewInfo.layerCount = 1;
+        viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        this->Create(device, imageInfo, viewInfo);
+
+        commandList->Reset();
+        commandList->Begin();
+
+        LoadData(commandList, device, tex.data(), tex.size(), 0);
+        //tex.data(0);
+
+        commandList->End();
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandList->GetBuffer();
+
+        commandQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        commandQueue.WaitForQueueComplete();
+    }
+    else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg") {
+        //LoadImageFile(commandList, device, imagePath);
+        MImage<unsigned char> image;
+        if (image.Load(imagePath)) {
+            int mipLevels = 1;
+
+            ImageCreateInfo imageInfo{};
+            imageInfo.width = image.Width();
+            imageInfo.height = image.Height();
+            imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+            imageInfo.format = image.Format();
+            imageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            imageInfo.mipLevels = mipLevels;
+
+            ImageViewCreateInfo viewInfo{};
+            viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.format = image.Format();
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            //viewInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.baseMipLevel = 0;
+            viewInfo.levelCount = mipLevels;
+            viewInfo.baseArrayLayer = 0;
+            viewInfo.layerCount = 1;
+            viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
+
+            commandList->Reset();
+            commandList->Begin();
+
+            std::vector<MImage<unsigned char>*> images(1, &image);
+            CreateAndLoadData(commandList, device, imageInfo, viewInfo, images);
+
+            commandList->End();
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &commandList->GetBuffer();
+
+            commandQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+            commandQueue.WaitForQueueComplete();
+        }
+        else {
+            spdlog::error("fail to load image: {0}", imagePath.string());
+        }
+    }
+    else {
+        throw std::runtime_error("Unsupported image format");
+    }
+
+    ImageCreateInfo imageInfo;
+    ImageViewCreateInfo viewInfo;
+}
+
 void MVulkanTexture::LoadData(
     MVulkanCommandList* commandList, 
     MVulkanDevice device, 
@@ -312,9 +441,11 @@ void MVulkanTexture::LoadData(
 {
     MVulkanImageMemoryBarrier barrier{};
     barrier.image = m_image.GetImage();
-    barrier.srcAccessMask = 0;
+    //barrier.srcAccessMask = 0;
+    barrier.srcAccessMask = TextureState2AccessFlag(m_state.m_state);
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    barrier.oldLayout = TextureState2ImageLayout(m_state.m_state);
+    //barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.levelCount = m_image.GetMipLevel();
     barrier.baseArrayLayer = 0;
@@ -436,3 +567,173 @@ void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, 
     }
 }
 
+VkFormat ConvertGliFormatToVkFormat(gli::format format)
+{
+    switch (format) {
+    case gli::FORMAT_UNDEFINED:
+        return VK_FORMAT_UNDEFINED;
+
+        // 8-bit formats
+    case gli::FORMAT_R8_UNORM_PACK8:
+        return VK_FORMAT_R8_UNORM;
+    case gli::FORMAT_R8_SNORM_PACK8:
+        return VK_FORMAT_R8_SNORM;
+    case gli::FORMAT_R8_UINT_PACK8:
+        return VK_FORMAT_R8_UINT;
+    case gli::FORMAT_R8_SINT_PACK8:
+        return VK_FORMAT_R8_SINT;
+    case gli::FORMAT_R8_SRGB_PACK8:
+        return VK_FORMAT_R8_SRGB;
+
+    case gli::FORMAT_RG8_UNORM_PACK8:
+        return VK_FORMAT_R8G8_UNORM;
+    case gli::FORMAT_RG8_SNORM_PACK8:
+        return VK_FORMAT_R8G8_SNORM;
+    case gli::FORMAT_RG8_UINT_PACK8:
+        return VK_FORMAT_R8G8_UINT;
+    case gli::FORMAT_RG8_SINT_PACK8:
+        return VK_FORMAT_R8G8_SINT;
+    case gli::FORMAT_RG8_SRGB_PACK8:
+        return VK_FORMAT_R8G8_SRGB;
+
+    case gli::FORMAT_RGB8_UNORM_PACK8:
+        return VK_FORMAT_R8G8B8_UNORM;
+    case gli::FORMAT_RGB8_SNORM_PACK8:
+        return VK_FORMAT_R8G8B8_SNORM;
+    case gli::FORMAT_RGB8_UINT_PACK8:
+        return VK_FORMAT_R8G8B8_UINT;
+    case gli::FORMAT_RGB8_SINT_PACK8:
+        return VK_FORMAT_R8G8B8_SINT;
+    case gli::FORMAT_RGB8_SRGB_PACK8:
+        return VK_FORMAT_R8G8B8_SRGB;
+
+    case gli::FORMAT_RGBA8_UNORM_PACK8:
+        return VK_FORMAT_R8G8B8A8_UNORM;
+    case gli::FORMAT_RGBA8_SNORM_PACK8:
+        return VK_FORMAT_R8G8B8A8_SNORM;
+    case gli::FORMAT_RGBA8_UINT_PACK8:
+        return VK_FORMAT_R8G8B8A8_UINT;
+    case gli::FORMAT_RGBA8_SINT_PACK8:
+        return VK_FORMAT_R8G8B8A8_SINT;
+    case gli::FORMAT_RGBA8_SRGB_PACK8:
+        return VK_FORMAT_R8G8B8A8_SRGB;
+
+        // 16-bit formats
+    case gli::FORMAT_R16_UNORM_PACK16:
+        return VK_FORMAT_R16_UNORM;
+    case gli::FORMAT_R16_SNORM_PACK16:
+        return VK_FORMAT_R16_SNORM;
+    case gli::FORMAT_R16_UINT_PACK16:
+        return VK_FORMAT_R16_UINT;
+    case gli::FORMAT_R16_SINT_PACK16:
+        return VK_FORMAT_R16_SINT;
+    case gli::FORMAT_R16_SFLOAT_PACK16:
+        return VK_FORMAT_R16_SFLOAT;
+
+    case gli::FORMAT_RG16_UNORM_PACK16:
+        return VK_FORMAT_R16G16_UNORM;
+    case gli::FORMAT_RG16_SNORM_PACK16:
+        return VK_FORMAT_R16G16_SNORM;
+    case gli::FORMAT_RG16_UINT_PACK16:
+        return VK_FORMAT_R16G16_UINT;
+    case gli::FORMAT_RG16_SINT_PACK16:
+        return VK_FORMAT_R16G16_SINT;
+    case gli::FORMAT_RG16_SFLOAT_PACK16:
+        return VK_FORMAT_R16G16_SFLOAT;
+
+    case gli::FORMAT_RGB16_UNORM_PACK16:
+        return VK_FORMAT_R16G16B16_UNORM;
+    case gli::FORMAT_RGB16_SNORM_PACK16:
+        return VK_FORMAT_R16G16B16_SNORM;
+    case gli::FORMAT_RGB16_UINT_PACK16:
+        return VK_FORMAT_R16G16B16_UINT;
+    case gli::FORMAT_RGB16_SINT_PACK16:
+        return VK_FORMAT_R16G16B16_SINT;
+    case gli::FORMAT_RGB16_SFLOAT_PACK16:
+        return VK_FORMAT_R16G16B16_SFLOAT;
+
+    case gli::FORMAT_RGBA16_UNORM_PACK16:
+        return VK_FORMAT_R16G16B16A16_UNORM;
+    case gli::FORMAT_RGBA16_SNORM_PACK16:
+        return VK_FORMAT_R16G16B16A16_SNORM;
+    case gli::FORMAT_RGBA16_UINT_PACK16:
+        return VK_FORMAT_R16G16B16A16_UINT;
+    case gli::FORMAT_RGBA16_SINT_PACK16:
+        return VK_FORMAT_R16G16B16A16_SINT;
+    case gli::FORMAT_RGBA16_SFLOAT_PACK16:
+        return VK_FORMAT_R16G16B16A16_SFLOAT;
+
+        // 32-bit formats
+    case gli::FORMAT_R32_UINT_PACK32:
+        return VK_FORMAT_R32_UINT;
+    case gli::FORMAT_R32_SINT_PACK32:
+        return VK_FORMAT_R32_SINT;
+    case gli::FORMAT_R32_SFLOAT_PACK32:
+        return VK_FORMAT_R32_SFLOAT;
+
+    case gli::FORMAT_RG32_UINT_PACK32:
+        return VK_FORMAT_R32G32_UINT;
+    case gli::FORMAT_RG32_SINT_PACK32:
+        return VK_FORMAT_R32G32_SINT;
+    case gli::FORMAT_RG32_SFLOAT_PACK32:
+        return VK_FORMAT_R32G32_SFLOAT;
+
+    case gli::FORMAT_RGB32_UINT_PACK32:
+        return VK_FORMAT_R32G32B32_UINT;
+    case gli::FORMAT_RGB32_SINT_PACK32:
+        return VK_FORMAT_R32G32B32_SINT;
+    case gli::FORMAT_RGB32_SFLOAT_PACK32:
+        return VK_FORMAT_R32G32B32_SFLOAT;
+
+    case gli::FORMAT_RGBA32_UINT_PACK32:
+        return VK_FORMAT_R32G32B32A32_UINT;
+    case gli::FORMAT_RGBA32_SINT_PACK32:
+        return VK_FORMAT_R32G32B32A32_SINT;
+    case gli::FORMAT_RGBA32_SFLOAT_PACK32:
+        return VK_FORMAT_R32G32B32A32_SFLOAT;
+
+        // Compressed formats
+    case gli::FORMAT_RGB_DXT1_UNORM_BLOCK8:
+        return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+    case gli::FORMAT_RGB_DXT1_SRGB_BLOCK8:
+        return VK_FORMAT_BC1_RGB_SRGB_BLOCK;
+    case gli::FORMAT_RGBA_DXT3_UNORM_BLOCK16:
+        return VK_FORMAT_BC2_UNORM_BLOCK;
+    case gli::FORMAT_RGBA_DXT3_SRGB_BLOCK16:
+        return VK_FORMAT_BC2_SRGB_BLOCK;
+    case gli::FORMAT_RGBA_DXT5_UNORM_BLOCK16:
+        return VK_FORMAT_BC3_UNORM_BLOCK;
+    case gli::FORMAT_RGBA_DXT5_SRGB_BLOCK16:
+        return VK_FORMAT_BC3_SRGB_BLOCK;
+
+        // Depth-stencil formats
+    case gli::FORMAT_D16_UNORM_PACK16:
+        return VK_FORMAT_D16_UNORM;
+    case gli::FORMAT_D24_UNORM_PACK32:
+        return VK_FORMAT_X8_D24_UNORM_PACK32;
+    case gli::FORMAT_D32_SFLOAT_PACK32:
+        return VK_FORMAT_D32_SFLOAT;
+    case gli::FORMAT_S8_UINT_PACK8:
+        return VK_FORMAT_S8_UINT;
+    case gli::FORMAT_D16_UNORM_S8_UINT_PACK32:
+        return VK_FORMAT_D16_UNORM_S8_UINT;
+    case gli::FORMAT_D24_UNORM_S8_UINT_PACK32:
+        return VK_FORMAT_D24_UNORM_S8_UINT;
+    case gli::FORMAT_D32_SFLOAT_S8_UINT_PACK64:
+        return VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+    case gli::FORMAT_RGB_BP_UFLOAT_BLOCK16:
+        return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+    case gli::FORMAT_RGB_BP_SFLOAT_BLOCK16:
+        return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+    case gli::FORMAT_RGBA_BP_UNORM_BLOCK16:
+        return VK_FORMAT_BC7_UNORM_BLOCK;
+    case gli::FORMAT_RGBA_BP_SRGB_BLOCK16:
+        return VK_FORMAT_BC7_SRGB_BLOCK;
+
+        // Add additional mappings as needed
+
+    default:
+        return VK_FORMAT_UNDEFINED;
+    }
+}

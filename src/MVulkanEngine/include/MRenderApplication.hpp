@@ -24,7 +24,6 @@ public:
     inline bool GetCameraMoved() { return m_cameraMoved; }
 
     //typedef void (MRenderApplication::* SetCameraMove)(bool state);
-
 protected:
     virtual void initUIRenderer();
 

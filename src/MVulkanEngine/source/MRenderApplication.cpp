@@ -59,6 +59,7 @@ void MRenderApplication::Clean()
 void MRenderApplication::initUIRenderer()
 {
     m_uiRenderer = std::make_shared<UIRenderer>();
+    //m_uiRenderer->m_app = this;
     //Singleton<MVulkanEngine>::instance().InitUIRenderer(m_uiRenderer);
 }
 
@@ -68,7 +69,7 @@ void MRenderApplication::init()
     Singleton<MVulkanEngine>::instance().Init();
 
     initUIRenderer();
-    Singleton<MVulkanEngine>::instance().InitUIRenderer(m_uiRenderer);
+    Singleton<MVulkanEngine>::instance().InitUIRenderer(m_uiRenderer, this);
 
     //MRenderApplication::SetCameraMove setCameraMovePtr = &MRenderApplication::SetCameraMoved;
     //Singleton<InputManager>::instance().RegisterSetCameraMoveFunc(setCameraMovePtr);

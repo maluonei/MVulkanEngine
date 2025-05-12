@@ -81,6 +81,8 @@ public:
     void LoadTextureData(std::shared_ptr<MVulkanTexture> texture, void* data, size_t size, uint32_t offset,
         VkOffset3D origin, VkExtent3D extent);
 
+    void CreateTextureFromImage(std::shared_ptr<MVulkanTexture> texture, fs::path imagePath);
+
     template<class T>
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
         MImage<T>* image = images[0];
@@ -266,7 +268,7 @@ public:
 
     const MVulkanSwapchain GetSwapchain() { return m_swapChain; }
 
-    void InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer);
+    void InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer, MRenderApplication* app);
 private: 
     void initVulkan();
     //void initUIRenderer();

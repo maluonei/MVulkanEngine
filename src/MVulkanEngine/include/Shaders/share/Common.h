@@ -1,5 +1,7 @@
+//#pragma once
 #ifdef SHARED_CODE_HLSL
 #include "HLSLTypeAlise.h"
+#define PI 3.1415926535f
 #else
 #pragma once
 #include "Shaders/share/HLSLTypeAlise.h"
@@ -7,6 +9,18 @@
 
 #define MAX_LIGHTS 4
 #define MAX_TEXTURES 1024
+
+
+enum class OutputContent{
+    Render = 0,
+    Depth = 1,
+    Albedo = 2,
+    Normal = 3,
+    Position = 4,
+    Roughness = 5,
+    Metallic = 6,
+    MotionVector = 7
+};
 
 struct MLight{
     float4x4 shadowViewProj;
@@ -80,8 +94,9 @@ struct VPBuffer
     float4x4 Projection;
 };
 
-#define CULLINGMODE_SPHERE 0
-#define CULLINGMODE_AABB 1
+#define CULLINGMODE_SPHERE 1
+#define CULLINGMODE_AABB 2
+#define CULLINGMODE_NULL 0
 
 struct MSceneBuffer{
     int numInstances;

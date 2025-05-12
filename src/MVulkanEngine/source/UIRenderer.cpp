@@ -13,7 +13,8 @@ void UIRenderer::Init(
     MVulkanInstance instance,
     VkSurfaceKHR surface,
     MVulkanDescriptorSetAllocator allocator,
-    int	graphicsQueue)
+    int	graphicsQueue,
+    MRenderApplication* app)
 {
     m_window = window;
     m_device = device;
@@ -21,6 +22,7 @@ void UIRenderer::Init(
     m_allocator = allocator;
     m_surface = surface;
     m_graphicsQueue = graphicsQueue;
+    m_app = app;
 }
 
 void UIRenderer::InitImgui(MVulkanCommandQueue queue)

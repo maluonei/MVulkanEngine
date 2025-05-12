@@ -9,7 +9,7 @@
 #include "Utils/VulkanUtil.hpp"
 
 //class MVulkanCommandList;
-
+VkFormat ConvertGliFormatToVkFormat(gli::format gliFormat);
 
 struct BufferCreateInfo {
 	VkBufferUsageFlagBits usage;
@@ -253,6 +253,59 @@ public:
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 
+
+	//void LoadData();
+	//void CreateAndLoadData(
+	//	MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, std::vector<MImage<T>*> imageDatas, uint32_t mipLevel = 0);
+
+
+	//template<typename T>
+	//void CreateAndLoadData(
+	//	MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, std::shared_ptr<MImage<T>> imageDatas, uint32_t mipLevel = 0)
+	//{
+	//	m_imageInfo = imageInfo;
+	//	m_viewInfo = viewInfo;
+	//	m_imageValid = true;
+	//
+	//	m_image.CreateImage(device, imageInfo);
+	//	m_image.CreateImageView(viewInfo);
+	//
+	//	MVulkanImageMemoryBarrier barrier{};
+	//	barrier.image = m_image.GetImage();
+	//	barrier.srcAccessMask = 0;
+	//	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	//	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	//	barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	//	barrier.levelCount = m_image.GetMipLevel();
+	//	barrier.baseArrayLayer = 0;
+	//	barrier.layerCount = imageDatas.size();
+	//
+	//	commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+	//	BufferCreateInfo binfo;
+	//	binfo.size = imageDatas.size() * imageInfo.width * imageInfo.height * 4;
+	//	binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	//
+	//	m_stagingBuffer.Create(device, binfo);
+	//	m_stagingBufferUsed = true;
+	//
+	//	for (auto layer = 0; layer < imageDatas.size(); layer++) {
+	//
+	//		uint32_t offset = layer * imageInfo.width * imageInfo.height * 4;
+	//		m_stagingBuffer.Map();
+	//		m_stagingBuffer.LoadData(imageDatas[layer]->GetData(), offset, imageInfo.width * imageInfo.height * 4);
+	//		m_stagingBuffer.UnMap();
+	//
+	//		commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), 1, offset, mipLevel, uint32_t(layer));
+	//
+	//	}
+	//
+	//	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	//	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	//	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	//	commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	//}
+
 	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, 
 		void* data, uint32_t size, uint32_t offset = 0);
 
@@ -262,6 +315,13 @@ public:
 
 	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
 	void Create(MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
+	
+	void MLoadImage(
+		MVulkanCommandList* commandList,
+		MVulkanCommandQueue commandQueue,
+		MVulkanDevice device, 
+		fs::path imagePath);
+	
 	inline VkImage GetImage() const { return m_image.GetImage(); }
 	inline VkImageView GetImageView() const { return m_image.GetImageView(); }
 	inline VkDeviceMemory GetImageMemory() const { return m_image.GetImageMemory(); }

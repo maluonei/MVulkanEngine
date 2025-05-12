@@ -98,12 +98,12 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         MScreenBuffer screenBuffer{};
         screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
 
-        int showMotionVector = std::static_pointer_cast<DRUI>(m_uiRenderer)->showMotionVector;
+        int outputContext = std::static_pointer_cast<DRUI>(m_uiRenderer)->outputContext;
 
         Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", imageIndex, &showMotionVector, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", imageIndex, &outputContext, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -200,6 +200,8 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     shadingRenderInfo.offset = { 0, 0 };
     shadingRenderInfo.extent = swapchainExtent;
 
+
+
     computeList.Reset();
     computeList.Begin();
 
@@ -221,32 +223,36 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"));
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"));
     
-    graphicsList.End();
-    submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
-    graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
-    graphicsQueue.WaitForQueueComplete();
+    auto hizMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->hizMode;
+    if (hizMode == DO_HIZ_MODE_0) {
 
-    computeList.Reset();
-    computeList.Begin();
+        graphicsList.End();
+        submitInfo.pCommandBuffers = &graphicsList.GetBuffer();
+        graphicsQueue.SubmitCommands(1, &submitInfo, nullptr);
+        graphicsQueue.WaitForQueueComplete();
 
-    auto numHizLayers = m_hiz.hizRes.size();
-    for (auto layer = 0; layer < numHizLayers; layer++) {
-        if (layer == 0) {
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"));
+        computeList.Reset();
+        computeList.Begin();
+
+        auto numHizLayers = m_hiz.hizRes.size();
+        for (auto layer = 0; layer < numHizLayers; layer++) {
+            if (layer == 0) {
+                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"));
+            }
+            else {
+                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("UpdateHizBuffer Pass"));
+            }
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_hizPass, (m_hiz.hizRes[layer].x + 15) / 16, (m_hiz.hizRes[layer].y + 15) / 16, 1, std::string("GenHiz Pass"));
         }
-        else {
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("UpdateHizBuffer Pass"));
-        }
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_hizPass, (m_hiz.hizRes[layer].x + 15) / 16, (m_hiz.hizRes[layer].y + 15) / 16, 1, std::string("GenHiz Pass"));
+
+        computeList.End();
+        submitInfo.pCommandBuffers = &computeList.GetBuffer();
+        computeQueue.SubmitCommands(1, &submitInfo, nullptr);
+        computeQueue.WaitForQueueComplete();
+
+        graphicsList.Reset();
+        graphicsList.Begin();
     }
-
-    computeList.End();
-    submitInfo.pCommandBuffers = &computeList.GetBuffer();
-    computeQueue.SubmitCommands(1, &submitInfo, nullptr);
-    computeQueue.WaitForQueueComplete();
-
-    graphicsList.Reset();
-    graphicsList.Begin();
     
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"));
 
@@ -322,10 +328,11 @@ void PBR::loadScene()
     fs::path resourcePath = projectRootPath.append("resources").append("models");
     fs::path modelPath = resourcePath / "Sponza" / "glTF" / "Sponza.gltf";
     fs::path arcadePath = resourcePath / "Arcade" / "Arcade.gltf";
+    fs::path bistroPath = resourcePath / "Bistro" / "bistro.gltf";
     //fs::path modelPath = resourcePath / "San_Miguel" / "san-miguel-low-poly.obj";
     //fs::path modelPath = resourcePath / "shapespark_example_room" / "shapespark_example_room.gltf";
 
-    Singleton<SceneLoader>::instance().Load(modelPath.string(), m_scene.get());
+    Singleton<SceneLoader>::instance().Load(bistroPath.string(), m_scene.get());
 
     //split Image
     {
@@ -396,6 +403,7 @@ void PBR::createLight()
     glm::vec3 direction = glm::normalize(glm::vec3(-1.f, -6.f, -1.f));
     //glm::vec3 direction = glm::normalize(glm::vec3(-2.f, -1.f, 1.f));
     glm::vec3 color = glm::vec3(1.f, 1.f, 1.f);
+    //float intensity = 10.f;
     float intensity = 10.f;
     m_directionalLight = std::make_shared<DirectionalLight>(direction, color, intensity);
 }
@@ -407,8 +415,13 @@ void PBR::createCamera()
     //glm::vec3 direction = glm::normalize(center - position);
 
     //-4.9944386, 2.9471996, -5.8589
-    glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
-    glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
+    //glm::vec3 position(-4.9944386, 2.9471996, -5.8589);
+    //glm::vec3 direction = glm::normalize(glm::vec3(2.f, -1.f, 2.f));
+    //
+    //bistro
+    glm::vec3 position(-20.f, 3.0f, 19.f);
+    glm::vec3 direction = glm::normalize(glm::vec3(0.12f, -0.06f, -0.99f));
+
 
     //volumn pmin : -6.512552, 0.31353754, -6.434822
     // volumn pmax : 2.139489, 3.020252, 6.2549577
@@ -884,102 +897,45 @@ void PBR::createResetHizBufferPass()
     }
 }
 
-//void PBR::ImageLayoutToShaderRead(int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = gBuffer0->GetImage();
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//        barriers.push_back(barrier);
-//
-//        barrier.image = gBuffer1->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        barrier.image = shadowMapDepth->GetImage();
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-//}
-//
-//void PBR::ImageLayoutToAttachment(int imageIndex, int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = gBuffer0->GetImage();
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.dstAccessMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-//        barriers.push_back(barrier);
-//
-//        barrier.image = gBuffer1->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.image = shadowMap->GetImage();
-//        barriers.push_back(barrier);
-//
-//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-//        barriers.push_back(barrier);
-//
-//        barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-//        barrier.image = shadowMapDepth->GetImage();
-//        barrier.srcAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-//        barrier.dstAccessMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-//        //barrier.dst
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-//}
-//
-//void PBR::ImageLayoutToPresent(int imageIndex, int currentFrame)
-//{
-//    std::vector<MVulkanImageMemoryBarrier> barriers;
-//    {
-//        MVulkanImageMemoryBarrier barrier{};
-//        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
-//        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        barrier.baseArrayLayer = 0;
-//        barrier.layerCount = 1;
-//        barrier.levelCount = 1;
-//        barrier.srcAccessMask = 0;
-//        barrie    `r.dstAccessMask = 0;
-//        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-//        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//        barriers.push_back(barrier);
-//    }
-//    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE);
-//}
-//
+
+static const char* OutputBufferContents[] = {
+    "Render",
+    "Depth",
+    "Albedo",
+    "Normal",
+    "Position",
+    "Roughness",
+    "Metallic",
+    "MotionVector"
+};
 
 void DRUI::RenderContext() {
     ImGui::Begin("DR_UI Window", &shouleRenderUI);
     ImGui::Text("Hello from another window!");
 
+    ImGui::RadioButton("cullingmode null", &cullingMode, CULLINGMODE_NULL); ImGui::SameLine();
     ImGui::RadioButton("cullingmode sphere", &cullingMode, CULLINGMODE_SPHERE); ImGui::SameLine();
     ImGui::RadioButton("cullingmode bbx", &cullingMode, CULLINGMODE_AABB);
 
     ImGui::RadioButton("not do hiz", &hizMode, NOT_DO_HIZ); ImGui::SameLine();
-    ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0); ImGui::SameLine();
-    ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
+    ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0);// ImGui::SameLine();
+    //ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
 
-    ImGui::RadioButton("not show motionVector", &showMotionVector, 0); ImGui::SameLine();
-    ImGui::RadioButton("show motionVector", &showMotionVector, 1); ImGui::SameLine();
+    ImGui::Combo("outputContext", &outputContext, OutputBufferContents, IM_ARRAYSIZE(OutputBufferContents));
+    //static int outputContext = 0;
+    //ImGui::RadioButton("not show motionVector", &showMotionVector, 0); ImGui::SameLine();
+    //ImGui::RadioButton("show motionVector", &showMotionVector, 1);// ImGui::SameLine();
+
+    auto app = (PBR*)(this->m_app);
+    auto camera = app->GetMainCamera();
+    auto& cameraPosition = camera->GetPositionRef();
+    auto& cameraDirection = camera->GetDirectionRef();
+
+    ImGui::InputFloat3("Camera Position:", &cameraPosition[0], "%.3f");
+    ImGui::InputFloat3("Camera Direction:", &cameraDirection[0], "%.3f");
+    //ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    //ImGui::Text("Camera Direction: (%.2f, %.2f, %.2f)", cameraDirection.x, cameraDirection.y, cameraDirection.z);
+
     //ImGui::RadioButton("show motionVector2", &showMotionVector, 2);
     //if (ImGui::Button("Close Me"))
     //    show_another_window = false;

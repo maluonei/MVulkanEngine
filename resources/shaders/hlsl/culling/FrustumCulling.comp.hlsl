@@ -43,7 +43,7 @@ bool InFrustum(int instanceIndex){
                 insideNum += 1;
             }
         }
-        else{   
+        else if(scene.cullingMode==CULLINGMODE_AABB){   
             int3 arrays[8] = {
                 int3(-1, -1, -1),
                 int3(-1, -1,  1),
@@ -68,6 +68,9 @@ bool InFrustum(int instanceIndex){
             if(_insideNum > 0){
                 insideNum += 1;
             }
+        }
+        else{
+            return true;
         }
     }
 

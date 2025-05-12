@@ -34,6 +34,12 @@ public:
 
 	virtual void PreComputes();
 	virtual void Clean();
+
+	inline std::shared_ptr<Camera> GetMainCamera() {
+		return m_camera;
+	}
+
+	//int m_outputContext = 0;
 private:
 	void loadScene();
 	void createLight();
@@ -53,7 +59,6 @@ private:
 
 	void loadShaders();
 	void createStorageBuffers();
-
 	//void 
 
 	//void ImageLayoutToShaderRead(int currentFrame);
@@ -116,10 +121,12 @@ public:
 private:
 	bool shouleRenderUI = true;
 	int a;
+
 public:
 	int cullingMode = 0;
 	int hizMode = NOT_DO_HIZ;
-	int showMotionVector = 0;
+	//int showMotionVector = 0;
+	int outputContext = 0;
 };
 
 

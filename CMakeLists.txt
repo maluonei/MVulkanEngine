@@ -25,6 +25,7 @@ set(tinyobjloader_include "${third_party_dir}/tinyobjloader")
 set(embree_include "${third_party_dir}/embree/include/embree4")
 set(imgui_include "${third_party_dir}/imgui")
 set(imgui_backends_include "${third_party_dir}/imgui/backends")
+set(gli_include "${third_party_dir}/gli")
 
 set(imgui_src 
     "${third_party_dir}/imgui/imgui.h"

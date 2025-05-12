@@ -53,6 +53,7 @@ target_include_directories(MVulkanEngine PUBLIC
 										${embree_include}
 										${imgui_include}
 										${imgui_backends_include}
+										${gli_include}
 )
 
 set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")

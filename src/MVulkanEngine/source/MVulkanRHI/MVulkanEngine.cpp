@@ -592,7 +592,7 @@ void MVulkanEngine::initVulkan()
     createPlaceHolderTexture();
 }
 
-void MVulkanEngine::InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer)
+void MVulkanEngine::InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer, MRenderApplication* app)
 {
     uiRenderer->Init(
         m_window,
@@ -600,7 +600,8 @@ void MVulkanEngine::InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer)
         m_instance,
         m_surface,
         m_allocator,
-        m_device.GetQueueFamilyIndices(GRAPHICS_QUEUE)
+        m_device.GetQueueFamilyIndices(GRAPHICS_QUEUE),
+        app
     );
 
     uiRenderer->InitImgui(m_graphicsQueue);
@@ -1058,6 +1059,11 @@ void MVulkanEngine::LoadTextureData(std::shared_ptr<MVulkanTexture> texture, voi
 
     m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     m_transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::CreateTextureFromImage(std::shared_ptr<MVulkanTexture> texture, fs::path imagePath)
+{
+    texture->MLoadImage(&m_generalGraphicList, m_graphicsQueue, m_device, imagePath);
 }
 
 //void MVulkanEngine::present(
