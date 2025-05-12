@@ -16,6 +16,7 @@ cbuffer sceneBuffer : register(b1)
 [[vk::binding(1, 0)]] StructuredBuffer<InstanceBound> InstanceBounds : register(t0);
 [[vk::binding(2, 0)]] StructuredBuffer<IndirectDrawArgs> DrawIndices : register(t1);
 [[vk::binding(3, 0)]] RWStructuredBuffer<IndirectDrawArgs> CulledDrawIndices : register(u2);
+[[vk::binding(5, 0)]] RWStructuredBuffer<int> NumDrawInstances : register(u3);
 
 bool IsOutsideThePlane(float4 plane, float3 pointPosition){
     if(dot(plane.xyz, pointPosition) + plane.w > 0)
@@ -44,23 +45,23 @@ bool InFrustum(int instanceIndex){
             }
         }
         else if(scene.cullingMode==CULLINGMODE_AABB){   
-            int3 arrays[8] = {
-                int3(-1, -1, -1),
-                int3(-1, -1,  1),
-                int3(-1,  1, -1),
-                int3(-1,  1,  1),
-                int3( 1, -1, -1),
-                int3( 1, -1,  1),
-                int3( 1,  1, -1),
-                int3( 1,  1,  1)
+            float3 arrays[8] = {
+                float3(-1.f, -1.f, -1.f),
+                float3(-1.f, -1.f,  1.f),
+                float3(-1.f,  1.f, -1.f),
+                float3(-1.f,  1.f,  1.f),
+                float3( 1.f, -1.f, -1.f),
+                float3( 1.f, -1.f,  1.f),
+                float3( 1.f,  1.f, -1.f),
+                float3( 1.f,  1.f,  1.f)
             };
 
             int _insideNum = 0;
-            for(int i=0;i<8;i++){
-                float3 pointPosition = boundingSphereCenter + (float3)(arrays[i]) * bound.extent;
-                float dtp = distanceToPlane(frustum.planes[i], boundingSphereCenter);
+            for(int j=0;j<8;j++){
+                float3 pointPosition = bound.center + arrays[j] * bound.extent;
+                float dtp = distanceToPlane(frustum.planes[i], pointPosition);
                 if(dtp < 0){
-                    insideNum += 1;
+                    _insideNum += 1;
                     break;
                 }
             }
@@ -88,6 +89,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
         
         if(InFrustum(i)){
             CulledDrawIndices[i] = DrawIndices[i];
+            InterlockedAdd(NumDrawInstances[0], 1);
         }
         else{
             CulledDrawIndices[i].indexCount = 0;

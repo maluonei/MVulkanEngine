@@ -105,7 +105,7 @@ PSOutput main(PSInput input)
         roughness,
         motionVector);
 
-    float depth = input.depth;
+    //float depth = input.depth;
 
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 

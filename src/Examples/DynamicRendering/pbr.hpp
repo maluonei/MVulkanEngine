@@ -43,6 +43,9 @@ public:
 		return m_directionalLightCamera;
 	}
 
+
+	int numDrawInstances = 0;
+	int numTotalInstances = 0;
 	//int m_outputContext = 0;
 private:
 	void loadScene();
@@ -57,13 +60,14 @@ private:
 	void createShadowPass();
 	void createShadingPass();
 	void createFrustumCullingPass();
+	void createResetDidirectDrawBufferPass();
 	void createGenHizPass();
 	void createUpdateHizBufferPass();
 	void createResetHizBufferPass();
 
 	void loadShaders();
 	void createStorageBuffers();
-	//void 
+
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -79,6 +83,7 @@ private:
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
+	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
 	std::shared_ptr<ComputePass> m_hizPass;
 	std::shared_ptr<ComputePass> m_updateHizBufferPass;
 	std::shared_ptr<ComputePass> m_resetHizBufferPass;
@@ -96,6 +101,7 @@ private:
 	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
 	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_numIndirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_hizBuffer;
 	std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;

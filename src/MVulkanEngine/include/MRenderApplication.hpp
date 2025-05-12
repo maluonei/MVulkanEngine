@@ -24,12 +24,18 @@ public:
     inline bool GetCameraMoved() { return m_cameraMoved; }
 
     //typedef void (MRenderApplication::* SetCameraMove)(bool state);
+
+    inline double GetFPS() const { return m_fps; }
 protected:
     virtual void initUIRenderer();
 
     uint32_t    m_currentFrame = 0;
     bool        m_cameraMoved = false;
     uint32_t    m_frameIndex = 0;
+    
+    int         m_fpsFrameIndex = 0;
+    double      m_fpsTime = 0.0f;
+    double      m_fps = 0;
 
     std::shared_ptr<UIRenderer> m_uiRenderer;
 

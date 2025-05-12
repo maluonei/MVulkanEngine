@@ -170,12 +170,12 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             }
         );
         shadingRenderInfo.depthAttachment = RenderingAttachment{
-                //.texture = swapchainDepthViews[imageIndex],
-                .texture = gBufferDepth,
+                .texture = swapchainDepthViews[imageIndex],
+                //.texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                .view = nullptr,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-                .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
+                //.view = nullptr,
+                //.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+                //.storeOp = VK_ATTACHMENT_STORE_OP_NONE,
 
                 //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
@@ -194,6 +194,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     computeList.Reset();
     computeList.Begin();
 
+    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"));
     auto numInstances = m_scene->GetIndirectDrawCommands().size();
     Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, (numInstances+7)/8, 1, 1, std::string("FrustumCulling Pass"));
 
@@ -205,6 +206,9 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     submitInfo.pCommandBuffers = &computeList.GetBuffer();
     computeQueue.SubmitCommands(1, &submitInfo, nullptr);
     computeQueue.WaitForQueueComplete();
+
+    numTotalInstances = numInstances;
+    numDrawInstances = *(uint32_t*)m_numIndirectDrawBuffer->GetMappedData();
 
     graphicsList.Reset();
     graphicsList.Begin();
@@ -282,10 +286,12 @@ void PBR::CreateRenderPass()
     createGbufferPass();
     createShadowPass();
     createShadingPass();
+    createResetDidirectDrawBufferPass();
     createFrustumCullingPass();
     createGenHizPass();
     createResetHizBufferPass();
     createUpdateHizBufferPass();
+    
 
     createLightCamera();
 }
@@ -587,6 +593,7 @@ void PBR::loadShaders()
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" }, true);
@@ -648,6 +655,11 @@ void PBR::createStorageBuffers()
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(glm::mat4) * models.size();
         m_modelBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, models.data());
+    
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(uint32_t);
+        m_numIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+
     }
 }
 
@@ -831,8 +843,30 @@ void PBR::createFrustumCullingPass()
         resources.push_back(PassResources::SetBufferResource(1, 0, m_instanceBoundsBuffer));
         resources.push_back(PassResources::SetBufferResource(2, 0, m_indirectDrawBuffer));
         resources.push_back(PassResources::SetBufferResource(3, 0, m_culledIndirectDrawBuffer));
+        resources.push_back(PassResources::SetBufferResource(5, 0, m_numIndirectDrawBuffer));
 
         m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
+    }
+}
+
+void PBR::createResetDidirectDrawBufferPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        m_resetDidirectDrawBufferPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetIndirectDrawBuffer Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_resetDidirectDrawBufferPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource(0, 0, m_numIndirectDrawBuffer));
+
+        m_resetDidirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
     }
 }
 
@@ -923,6 +957,9 @@ void DRUI::RenderContext() {
     ImGui::Begin("DR_UI Window", &shouleRenderUI);
     ImGui::Text("Hello from another window!");
 
+    double fps = this->m_app->GetFPS();
+    ImGui::Text("FPS: %.2f", fps);
+
     ImGui::RadioButton("cullingmode null", &cullingMode, CULLINGMODE_NULL); ImGui::SameLine();
     ImGui::RadioButton("cullingmode sphere", &cullingMode, CULLINGMODE_SPHERE); ImGui::SameLine();
     ImGui::RadioButton("cullingmode bbx", &cullingMode, CULLINGMODE_AABB);
@@ -932,9 +969,6 @@ void DRUI::RenderContext() {
     //ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
 
     ImGui::Combo("outputContext", &outputContext, OutputBufferContents, IM_ARRAYSIZE(OutputBufferContents));
-    //static int outputContext = 0;
-    //ImGui::RadioButton("not show motionVector", &showMotionVector, 0); ImGui::SameLine();
-    //ImGui::RadioButton("show motionVector", &showMotionVector, 1);// ImGui::SameLine();
 
     auto app = (PBR*)(this->m_app);
     //auto camera = app->GetMainCamera();
@@ -947,11 +981,10 @@ void DRUI::RenderContext() {
 
     auto& cameraVelocity = Singleton<InputManager>::instance().m_cameraVelocity;
     ImGui::InputFloat("Camera Velocity:", &cameraVelocity, 0.001f, 0, "%.4f");
-    //ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    //ImGui::Text("Camera Direction: (%.2f, %.2f, %.2f)", cameraDirection.x, cameraDirection.y, cameraDirection.z);
 
-    //ImGui::RadioButton("show motionVector2", &showMotionVector, 2);
-    //if (ImGui::Button("Close Me"))
-    //    show_another_window = false;
+    auto numTotalInstances = ((PBR*)(this->m_app))->numTotalInstances;
+    auto numDrawInstances = ((PBR*)(this->m_app))->numDrawInstances;
+    ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
+
     ImGui::End();
 }

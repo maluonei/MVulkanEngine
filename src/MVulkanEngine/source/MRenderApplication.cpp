@@ -19,8 +19,24 @@ void MRenderApplication::Init()
 void MRenderApplication::Run()
 {
     while (!Singleton<MVulkanEngine>::instance().WindowShouldClose()) {
+        auto start = std::chrono::high_resolution_clock::now();
+        
         renderLoop();
         SetCameraMoved(false);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        m_fpsTime += (float)elapsed.count();
+        m_fpsFrameIndex++;
+
+        if (m_fpsFrameIndex == 100) {
+            m_fps = 100000.0 / m_fpsTime;
+
+            //spdlog::info("m_fpsTime:{0}", m_fpsTime);
+
+            m_fpsTime = 0.0;
+            m_fpsFrameIndex = 0;
+        }
 
         m_frameIndex++;
     }

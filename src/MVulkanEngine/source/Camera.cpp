@@ -329,7 +329,7 @@ Frustum Camera::GetFrustum()
 	float zNearHalfWidth = zNearHalfHeight * m_aspect_ratio;
 
 	float zFarHalfHeight = std::tan(glm::radians(m_fov) * 0.5f) * m_zFar;
-	float zFarHalfWidth = zNearHalfHeight * m_aspect_ratio;
+	float zFarHalfWidth = zFarHalfHeight * m_aspect_ratio;
 	
 	glm::vec3 zNearLeftBottom = m_position + m_direction * m_zNear - m_right * zNearHalfWidth - m_up * zNearHalfHeight;
 	glm::vec3 zNearLeftUp = m_position + m_direction * m_zNear - m_right * zNearHalfWidth + m_up * zNearHalfHeight;
