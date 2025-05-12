@@ -19,7 +19,8 @@ enum class OutputContent{
     Position = 4,
     Roughness = 5,
     Metallic = 6,
-    MotionVector = 7
+    MotionVector = 7,
+    ShadowMap = 8
 };
 
 struct MLight{

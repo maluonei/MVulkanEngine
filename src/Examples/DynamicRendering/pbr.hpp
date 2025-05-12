@@ -39,6 +39,10 @@ public:
 		return m_camera;
 	}
 
+	inline std::shared_ptr<Camera> GetLightCamera() {
+		return m_directionalLightCamera;
+	}
+
 	//int m_outputContext = 0;
 private:
 	void loadScene();

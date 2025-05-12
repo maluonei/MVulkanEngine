@@ -24,6 +24,7 @@ public:
 
 	//void RegisterSetCameraMoveFunc(MRenderApplication::SetCameraMove);
 
+	float m_cameraVelocity = 0.01f;
 protected:
 	virtual void InitSingleton();
 

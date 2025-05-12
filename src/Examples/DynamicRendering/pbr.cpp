@@ -5,6 +5,7 @@
 #include "Scene/Scene.hpp"
 #include "Managers/TextureManager.hpp"
 #include "Managers/ShaderManager.hpp"
+#include "Managers/InputManager.hpp"
 #include "RenderPass.hpp"
 #include "ComputePass.hpp"
 #include "Camera.hpp"
@@ -137,24 +138,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer2,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer3,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer4,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
+
         gbufferRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -186,8 +170,13 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             }
         );
         shadingRenderInfo.depthAttachment = RenderingAttachment{
-                .texture = swapchainDepthViews[imageIndex],
+                //.texture = swapchainDepthViews[imageIndex],
+                .texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                .view = nullptr,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+                .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
+
                 //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
     }
@@ -431,6 +420,9 @@ void PBR::createCamera()
     float zNear = 0.01f;
     float zFar = 1000.f;
 
+    //m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
+    //m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar, xMin, xMax, yMin, yMax, zMin, zMax);
+    //Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
     m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
     Singleton<MVulkanEngine>::instance().SetCamera(m_camera);
 
@@ -453,15 +445,32 @@ void PBR::createLightCamera()
 {
     VkExtent2D extent = shadowmapExtent;
 
+    //sponza
+    //glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
+    //glm::vec3 position = -50.f * direction;
+
+    //bistro
     glm::vec3 direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
-    glm::vec3 position = -50.f * direction;
+    glm::vec3 position = glm::vec3(16.015f, 79.726f, 22.634f);
 
     float fov = 60.f;
     float aspect = (float)extent.width / (float)extent.height;
     float zNear = 0.001f;
-    float zFar = 60.f;
-    m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
+    float zFar = 100.f;
+
+    float xMin = -42.f;
+    float xMax = 42.f;
+    float yMin = -70.f;
+    float yMax = 70.f;
+
+    //sponza
+    //m_directionalLightCamera = std::make_shared<Camera>(position, direction, fov, aspect, zNear, zFar);
+    
+    //bistro
+    m_directionalLightCamera = std::make_shared<Camera>(position, direction, float3(0.f, 1.f, 0.f), aspect, xMin, xMax, yMin, yMax, zNear, zFar);
     m_directionalLightCamera->SetOrth(true);
+
+    //Singleton<MVulkanEngine>::instance().SetCamera(m_directionalLightCamera);
 }
 
 void PBR::createTextures()
@@ -906,7 +915,8 @@ static const char* OutputBufferContents[] = {
     "Position",
     "Roughness",
     "Metallic",
-    "MotionVector"
+    "MotionVector",
+    "ShadowMap",
 };
 
 void DRUI::RenderContext() {
@@ -927,12 +937,16 @@ void DRUI::RenderContext() {
     //ImGui::RadioButton("show motionVector", &showMotionVector, 1);// ImGui::SameLine();
 
     auto app = (PBR*)(this->m_app);
-    auto camera = app->GetMainCamera();
+    //auto camera = app->GetMainCamera();
+    auto camera = app->GetLightCamera();
     auto& cameraPosition = camera->GetPositionRef();
     auto& cameraDirection = camera->GetDirectionRef();
 
-    ImGui::InputFloat3("Camera Position:", &cameraPosition[0], "%.3f");
-    ImGui::InputFloat3("Camera Direction:", &cameraDirection[0], "%.3f");
+    ImGui::DragFloat3("Camera Position:", &cameraPosition[0]);
+    ImGui::DragFloat3("Camera Direction:", &cameraDirection[0]);
+
+    auto& cameraVelocity = Singleton<InputManager>::instance().m_cameraVelocity;
+    ImGui::InputFloat("Camera Velocity:", &cameraVelocity, 0.001f, 0, "%.4f");
     //ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPosition.x, cameraPosition.y, cameraPosition.z);
     //ImGui::Text("Camera Direction: (%.2f, %.2f, %.2f)", cameraDirection.x, cameraDirection.y, cameraDirection.z);
 
