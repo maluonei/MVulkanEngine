@@ -16,6 +16,8 @@
 
 class Scene;
 
+glm::mat4 AIMat2GLMMat(aiMatrix4x4 transform);
+
 class SceneLoader : public Singleton<SceneLoader> {
 public:
 	SceneLoader();
@@ -37,7 +39,7 @@ private:
 	void processTextures(const aiScene* aiscene);
 	void processMaterials(const aiScene* aiscene, Scene* scene);
 	//void processMaterial(const aiMaterial* material, const aiScene* aiscene, std::string matName);
-	void processNode(const aiNode* node, const aiScene* aiscene, Scene* scene);
+	void processNode(const aiNode* node, const aiScene* aiscene, Scene* scene, glm::mat4 transform);
 	void processMeshs(const aiScene* aiscene, Scene* scene);
 
 	//std::unordered_map<std::string, std::shared_ptr<PhongMaterial>> materials;

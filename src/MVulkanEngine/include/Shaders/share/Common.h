@@ -74,6 +74,8 @@ struct TexBuf
     int padding0;
 };
 
+using MaterialBuffer = TexBuf;
+
 struct TexBuffer{
     TexBuf tex[MAX_TEXTURES];
 };

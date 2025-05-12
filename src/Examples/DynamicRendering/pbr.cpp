@@ -59,9 +59,9 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer_p", 0, &vpBuffer_p, 0);
         //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
 
-        TexBuffer texBuffer = m_scene->GenerateTexBuffer();
-        Singleton<ShaderResourceManager>::instance().LoadData("texBuffer", 0, &texBuffer, 0);
-        //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+        //TexBuffer texBuffer = m_scene->GenerateTexBuffer();
+        //Singleton<ShaderResourceManager>::instance().LoadData("texBuffer", 0, &texBuffer, 0);
+        ////m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
 
         auto gbufferExtent = swapchainExtent;
         MScreenBuffer gBufferInfoBuffer{};
@@ -196,7 +196,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"));
     auto numInstances = m_scene->GetIndirectDrawCommands().size();
-    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, (numInstances+7)/8, 1, 1, std::string("FrustumCulling Pass"));
+    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, numInstances, 1, 1, std::string("FrustumCulling Pass"));
 
     computeList.End();
 
@@ -207,7 +207,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     computeQueue.SubmitCommands(1, &submitInfo, nullptr);
     computeQueue.WaitForQueueComplete();
 
-    numTotalInstances = numInstances;
+    //numTotalInstances = numInstances;
     numDrawInstances = *(uint32_t*)m_numIndirectDrawBuffer->GetMappedData();
 
     graphicsList.Reset();
@@ -624,15 +624,9 @@ void PBR::createStorageBuffers()
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
         m_culledIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
 
-        std::vector<InstanceBound> bounds(indirectDrawCommands.size());
-        for (auto i = 0; i < bounds.size(); i++) {
-            auto indirectDrawCommand = indirectDrawCommands[i];
-            bounds[i].center = m_scene->GetMesh(indirectDrawCommand.firstInstance)->m_box.GetCenter();
-            bounds[i].extent = m_scene->GetMesh(indirectDrawCommand.firstInstance)->m_box.GetExtent();
-        }
-
+        std::vector<InstanceBound> bounds = m_scene->GetBounds();
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        info.size = sizeof(InstanceBound) * indirectDrawCommands.size();
+        info.size = sizeof(InstanceBound) * bounds.size();
         m_instanceBoundsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, bounds.data());
     
         std::vector<HizDimension> hizDimensions(m_hiz.hizRes.size());
@@ -648,18 +642,39 @@ void PBR::createStorageBuffers()
         info.size = sizeof(HIZBuffer);
         m_hizBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
 
-        std::vector<glm::mat4> models(m_scene->GetIndirectDrawCommands().size());
-        for (auto i = 0; i < models.size(); i++) {
-            models[i] = glm::mat4(1.0f);
-        }
+        //std::vector<glm::mat4> models(m_scene->GetIndirectDrawCommands().size());
+        //for (auto i = 0; i < models.size(); i++) {
+        //    models[i] = glm::mat4(1.0f);
+        //}
+        std::vector<glm::mat4> models = m_scene->GetTransforms();
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(glm::mat4) * models.size();
         m_modelBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, models.data());
     
+        std::vector<int> materialIds = m_scene->GetMaterialsIds();
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(int) * materialIds.size();
+        m_materialIdBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, materialIds.data());
+
+        std::vector<MaterialBuffer> materials = m_scene->GetMaterials();
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(MaterialBuffer) * materials.size();
+        m_materialBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, materials.data());
+
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(uint32_t);
         m_numIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
 
+        auto numInstances = models.size();
+        std::vector<int> indirectInstances(numInstances);
+        for (auto i = 0; i < numInstances; i++) {
+            indirectInstances[i] = i;
+        }
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(uint32_t) * indirectInstances.size();
+        m_indirectInstanceBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indirectInstances.data());
+    
+        numTotalInstances = numInstances;
     }
 }
 
@@ -704,7 +719,16 @@ void PBR::createGbufferPass()
                 2, 0, m_modelBuffer));
         resources.push_back(
             PassResources::SetBufferResource(
-                "texBuffer", 3, 0));
+                3, 0, m_materialBuffer));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                7, 0, m_materialIdBuffer));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                8, 0, m_indirectInstanceBuffer));
+        //resources.push_back(
+        //    PassResources::SetBufferResource(
+        //        "texBuffer", 3, 0));
         resources.push_back(
             PassResources::SetBufferResource(
                 "gBufferInfoBuffer", 6, 0, 0));
@@ -844,6 +868,7 @@ void PBR::createFrustumCullingPass()
         resources.push_back(PassResources::SetBufferResource(2, 0, m_indirectDrawBuffer));
         resources.push_back(PassResources::SetBufferResource(3, 0, m_culledIndirectDrawBuffer));
         resources.push_back(PassResources::SetBufferResource(5, 0, m_numIndirectDrawBuffer));
+        resources.push_back(PassResources::SetBufferResource(6, 0, m_indirectInstanceBuffer));
 
         m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
     }

@@ -18,4 +18,4 @@
 ##add_subdirectory(RayTracingPipelineTest)
 ##add_subdirectory(bindless)
 add_subdirectory(DynamicRendering)
-add_subdirectory(MDF)
+#add_subdirectory(MDF)

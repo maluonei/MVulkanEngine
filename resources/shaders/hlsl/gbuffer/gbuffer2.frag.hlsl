@@ -18,17 +18,20 @@ cbuffer vpBuffer_p : register(b1)
     VPBuffer vp_p;
 };
 
-[[vk::binding(3, 0)]]
-cbuffer texBuffer : register(b2)
-{
-    TexBuffer texbuffer;
-}; 
+//[[vk::binding(3, 0)]]
+//cbuffer texBuffer : register(b2)
+//{
+//    TexBuffer texbuffer;
+//}; 
 
 [[vk::binding(6, 0)]]
 cbuffer gBufferInfoBuffer : register(b3)
 {
     MScreenBuffer gBufferInfoBuffer;
 }; 
+
+[[vk::binding(3, 0)]] StructuredBuffer<MaterialBuffer> materials : register(t11); 
+[[vk::binding(7, 0)]] StructuredBuffer<int> materialIds : register(t12); 
 
 [[vk::binding(4, 0)]] Texture2D textures[MAX_TEXTURES] : register(t2);
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s2);
@@ -101,9 +104,16 @@ PSOutput main(PSInput input)
 
     float3x3 TBN = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
 
-    int diffuseTextureIdx = texbuffer.tex[input.instanceID].diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx = texbuffer.tex[input.instanceID].metallicAndRoughnessTextureIdx;
-    int normalTextureIdx = texbuffer.tex[input.instanceID].normalTextureIdx;
+    int matId = materialIds[input.instanceID];
+
+    int diffuseTextureIdx = materials[matId].diffuseTextureIdx;
+    int metallicAndRoughnessTextureIdx = materials[matId].metallicAndRoughnessTextureIdx;
+    int normalTextureIdx = materials[matId].normalTextureIdx;
+
+
+    //int diffuseTextureIdx = texbuffer.tex[input.instanceID].diffuseTextureIdx;
+    //int metallicAndRoughnessTextureIdx = texbuffer.tex[input.instanceID].metallicAndRoughnessTextureIdx;
+    //int normalTextureIdx = texbuffer.tex[input.instanceID].normalTextureIdx;
 
     float3 normal = normalize(input.normal);
     float3 position = input.worldPos;
@@ -130,7 +140,7 @@ PSOutput main(PSInput input)
     else
     {
         //output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-        albedo = texbuffer.tex[input.instanceID].diffuseColor; // Use diffuse color from UBO
+        albedo = materials[matId].diffuseColor; // Use diffuse color from UBO
     }
     // Sample metallic and roughness texture if valid, otherwise default values
     if (metallicAndRoughnessTextureIdx != -1)

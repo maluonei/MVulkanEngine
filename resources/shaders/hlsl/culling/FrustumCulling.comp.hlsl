@@ -15,7 +15,12 @@ cbuffer sceneBuffer : register(b1)
 
 [[vk::binding(1, 0)]] StructuredBuffer<InstanceBound> InstanceBounds : register(t0);
 [[vk::binding(2, 0)]] StructuredBuffer<IndirectDrawArgs> DrawIndices : register(t1);
+//[[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> Models : register(t1);
+//[[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> DrawIndices : register(t1);
+
 [[vk::binding(3, 0)]] RWStructuredBuffer<IndirectDrawArgs> CulledDrawIndices : register(u2);
+[[vk::binding(6, 0)]] RWStructuredBuffer<int> CulledIndirectInstances : register(u4);
+//[[vk::binding(2, 0)]] RWStructuredBuffer<ModelBuffer> CulledModels : register(t1);
 [[vk::binding(5, 0)]] RWStructuredBuffer<int> NumDrawInstances : register(u3);
 
 bool IsOutsideThePlane(float4 plane, float3 pointPosition){
@@ -79,20 +84,48 @@ bool InFrustum(int instanceIndex){
     return false;
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(1, 1, 1)]
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    const int numInstances = 8;
+    //const int numInstances = 8;
+//
+    //for(int i=DispatchThreadID.x * numInstances;i<DispatchThreadID.x * numInstances + numInstances;i++){
+    //    if(i>=scene.numInstances) break;
+    //    
+    //    if(InFrustum(i)){
+    //        CulledDrawIndices[i] = DrawIndices[i];
+    //        InterlockedAdd(NumDrawInstances[0], 1);
+    //    }
+    //    else{
+    //        CulledDrawIndices[i].indexCount = 0;
+    //    }
+    //}
 
-    for(int i=DispatchThreadID.x * numInstances;i<DispatchThreadID.x * numInstances + numInstances;i++){
-        if(i>=scene.numInstances) break;
-        
-        if(InFrustum(i)){
-            CulledDrawIndices[i] = DrawIndices[i];
+    IndirectDrawArgs originArgs = DrawIndices[DispatchThreadID.x];
+    int numInstances = originArgs.instanceCount;
+    int firstInstance = originArgs.firstInstance;
+
+    int unculledInstances = 0;
+    for(int i=0;i<numInstances;i++){
+        if(InFrustum(firstInstance + i)){
+            CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
+            unculledInstances += 1;
             InterlockedAdd(NumDrawInstances[0], 1);
         }
-        else{
-            CulledDrawIndices[i].indexCount = 0;
-        }
     }
+
+    for(int i=unculledInstances;i<numInstances;i++){
+        CulledIndirectInstances[firstInstance + i] = -1;
+    }
+
+    CulledDrawIndices[DispatchThreadID.x] = DrawIndices[DispatchThreadID.x];
+    CulledDrawIndices[DispatchThreadID.x].instanceCount = unculledInstances;
+    if(unculledInstances == 0){
+        CulledDrawIndices[DispatchThreadID.x].indexCount = 0;
+    }
+    //else{
+    //    //CulledDrawIndices[DispatchThreadID.x] = DrawIndices[DispatchThreadID.x];
+    //    CulledDrawIndices[DispatchThreadID.x].instanceCount = unculledInstances;
+    //}
+
 } 

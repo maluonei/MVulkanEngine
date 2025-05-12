@@ -106,6 +106,9 @@ private:
 	std::shared_ptr<StorageBuffer> m_hizBuffer;
 	std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
 	std::shared_ptr<StorageBuffer> m_modelBuffer;
+	std::shared_ptr<StorageBuffer> m_materialBuffer;
+	std::shared_ptr<StorageBuffer> m_materialIdBuffer;
+	std::shared_ptr<StorageBuffer> m_indirectInstanceBuffer;
 
 	VkExtent2D shadowmapExtent = { 2048, 2048 };
 

@@ -43,90 +43,90 @@ void MVulkanRaytracing::Clean() {
 
 void MVulkanRaytracing::TestCreateAccelerationStructure(const std::shared_ptr<Scene>& scene)
 {
-    //auto names = scene->GetMeshNames();
-    auto numPrims = scene->GetNumPrimInfos();
-
-    m_buildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(numPrims);
-    m_rangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(numPrims);
-    m_blas = std::vector<VkAccelerationStructureKHR>(numPrims);
-    m_asBuffers = std::vector<Buffer>(numPrims);
-    m_scrathBuffers = std::vector<Buffer>(numPrims);
-
-    std::vector<BLASBuildInfo>                                  blasBuildInfos(numPrims);
-
-    auto rayTracingCommandList = Singleton<MVulkanEngine>::instance().GetRaytracingCommandList();
-
-    //int i=0;
-    for(auto index = 0; index < numPrims; index++)
-    {
-        auto mesh = scene->GetMesh(scene->m_primInfos[index].mesh_id);
-
-        //spdlog::info("mesh->vertices.size():{0}", mesh->vertices.size());
-        
-        CreateBLAS(mesh, blasBuildInfos[index]);
-
-        m_buildInfos[index] = blasBuildInfos[index].geometryInfo;
-        m_rangeInfos[index] = blasBuildInfos[index].rangeInfo;
-        m_blas[index] = blasBuildInfos[index].blas;
-        m_asBuffers[index] = blasBuildInfos[index].asBuffer;
-        m_scrathBuffers[index] = blasBuildInfos[index].scrathBuffer;
-
-        //i++;
-    }
-
-    rayTracingCommandList.Reset();
-    rayTracingCommandList.Begin();
-    
-    rayTracingCommandList.BuildAccelerationStructure(m_buildInfos, m_rangeInfos);
-
-    //nvvk::accelerationStructureBarrier(cmd, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-    //    VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR);
-    //VkMemoryBarrier barrier{ VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-    //barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-    //barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-    //vkCmdPipelineBarrier(rayTracingCommandList.GetBuffer(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-    //    VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
-
-    rayTracingCommandList.End();
-    
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &rayTracingCommandList.GetBuffer();
-    
-    auto queue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-    queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    queue.WaitForQueueComplete();
-
-    //build tlas
-    //TLASBuildInfo tlasBuildInfo;
-    CreateTLAS(m_asBuffers, m_tlasBuildInfo);
-    //tlas = tlasBuildInfo.tlas;
-
-    //std::vector<VkAccelerationStructureBuildGeometryInfoKHR> _tlasBuildInfos(1, m_tlasBuildInfo.geometryInfo);
-    //std::vector<VkAccelerationStructureBuildRangeInfoKHR*> _tlasRangeInfos(1, m_tlasBuildInfo.rangeInfo);
-    m_tlasBuildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(1, m_tlasBuildInfo.geometryInfo);
-    m_tlasRangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(1, m_tlasBuildInfo.rangeInfo);
-    
-
-
-    {
-        rayTracingCommandList.Reset();
-        rayTracingCommandList.Begin();
-
-        rayTracingCommandList.BuildAccelerationStructure(m_tlasBuildInfos, m_tlasRangeInfos);
-
-        rayTracingCommandList.End();
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &rayTracingCommandList.GetBuffer();
-
-        auto queue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        queue.WaitForQueueComplete();
-    }
+    ////auto names = scene->GetMeshNames();
+    //auto numPrims = scene->GetNumPrimInfos();
+    //
+    //m_buildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(numPrims);
+    //m_rangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(numPrims);
+    //m_blas = std::vector<VkAccelerationStructureKHR>(numPrims);
+    //m_asBuffers = std::vector<Buffer>(numPrims);
+    //m_scrathBuffers = std::vector<Buffer>(numPrims);
+    //
+    //std::vector<BLASBuildInfo>                                  blasBuildInfos(numPrims);
+    //
+    //auto rayTracingCommandList = Singleton<MVulkanEngine>::instance().GetRaytracingCommandList();
+    //
+    ////int i=0;
+    //for(auto index = 0; index < numPrims; index++)
+    //{
+    //    auto mesh = scene->GetMesh(scene->m_primInfos[index].mesh_id);
+    //
+    //    //spdlog::info("mesh->vertices.size():{0}", mesh->vertices.size());
+    //    
+    //    CreateBLAS(mesh, blasBuildInfos[index]);
+    //
+    //    m_buildInfos[index] = blasBuildInfos[index].geometryInfo;
+    //    m_rangeInfos[index] = blasBuildInfos[index].rangeInfo;
+    //    m_blas[index] = blasBuildInfos[index].blas;
+    //    m_asBuffers[index] = blasBuildInfos[index].asBuffer;
+    //    m_scrathBuffers[index] = blasBuildInfos[index].scrathBuffer;
+    //
+    //    //i++;
+    //}
+    //
+    //rayTracingCommandList.Reset();
+    //rayTracingCommandList.Begin();
+    //
+    //rayTracingCommandList.BuildAccelerationStructure(m_buildInfos, m_rangeInfos);
+    //
+    ////nvvk::accelerationStructureBarrier(cmd, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+    ////    VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR);
+    ////VkMemoryBarrier barrier{ VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+    ////barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    ////barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    ////vkCmdPipelineBarrier(rayTracingCommandList.GetBuffer(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+    ////    VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+    //
+    //rayTracingCommandList.End();
+    //
+    //VkSubmitInfo submitInfo{};
+    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //submitInfo.commandBufferCount = 1;
+    //submitInfo.pCommandBuffers = &rayTracingCommandList.GetBuffer();
+    //
+    //auto queue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    //queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //queue.WaitForQueueComplete();
+    //
+    ////build tlas
+    ////TLASBuildInfo tlasBuildInfo;
+    //CreateTLAS(m_asBuffers, m_tlasBuildInfo);
+    ////tlas = tlasBuildInfo.tlas;
+    //
+    ////std::vector<VkAccelerationStructureBuildGeometryInfoKHR> _tlasBuildInfos(1, m_tlasBuildInfo.geometryInfo);
+    ////std::vector<VkAccelerationStructureBuildRangeInfoKHR*> _tlasRangeInfos(1, m_tlasBuildInfo.rangeInfo);
+    //m_tlasBuildInfos = std::vector<VkAccelerationStructureBuildGeometryInfoKHR>(1, m_tlasBuildInfo.geometryInfo);
+    //m_tlasRangeInfos = std::vector<VkAccelerationStructureBuildRangeInfoKHR>(1, m_tlasBuildInfo.rangeInfo);
+    //
+    //
+    //
+    //{
+    //    rayTracingCommandList.Reset();
+    //    rayTracingCommandList.Begin();
+    //
+    //    rayTracingCommandList.BuildAccelerationStructure(m_tlasBuildInfos, m_tlasRangeInfos);
+    //
+    //    rayTracingCommandList.End();
+    //
+    //    VkSubmitInfo submitInfo{};
+    //    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    //    submitInfo.commandBufferCount = 1;
+    //    submitInfo.pCommandBuffers = &rayTracingCommandList.GetBuffer();
+    //
+    //    auto queue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    //    queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    //    queue.WaitForQueueComplete();
+    //}
 }
 
 void MVulkanRaytracing::CreateBLAS(const std::shared_ptr<Mesh>& mesh, BLASBuildInfo& blasBuildInfo)

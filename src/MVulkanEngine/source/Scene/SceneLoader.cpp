@@ -28,8 +28,14 @@ void SceneLoader::Load(std::string path, Scene* scene)
     spdlog::info("assimp start loading");
 
     // 通过指定路径加载模型
+    //const aiScene* aiscene = importer.ReadFile(path,
+    //    aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    //    //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
+    //);
+
+    // 通过指定路径加载模型
     const aiScene* aiscene = importer.ReadFile(path,
-        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_GenNormals
+        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenNormals
         //aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_PreTransformVertices | aiProcess_GenNormals
     );
 
@@ -50,7 +56,7 @@ void SceneLoader::Load(std::string path, Scene* scene)
     processTextures(aiscene);
     processMaterials(aiscene, scene);
 
-    processNode(aiscene->mRootNode, aiscene, scene);
+    processNode(aiscene->mRootNode, aiscene, scene, glm::mat4(1.0f));
 
     scene->GenerateIndirectDrawData();
 
@@ -171,10 +177,13 @@ void SceneLoader::InitSingleton()
 //
 //}
 
-void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene)
+void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene* scene, glm::mat4 transform)
 {
     //spdlog::info("node.name: " + std::string(node->mName.C_Str()));
     //spdlog::info("node.mNumChildren: " + std::to_string(node->mNumChildren));
+
+    glm::mat4 localTranform = AIMat2GLMMat(node->mTransformation);
+    transform = transform * localTranform;
 
     if (node->mMeshes) {
         for (auto i = 0; i < node->mNumMeshes; i++) {
@@ -184,21 +193,24 @@ void SceneLoader::processNode(const aiNode* node, const aiScene* aiscene, Scene*
 
             uint32_t          material_id = ai_mesh->mMaterialIndex;
 
-            glm::mat4 transform = glm::mat4(1.0f);
+            //glm::mat4 transform = glm::mat4(1.0f);
+            glm::mat4 localTranform = AIMat2GLMMat(node->mTransformation);
 
-            scene->m_primInfos.push_back(
-                PrimInfo({ .mesh_id = meshIndex, .material_id = material_id, .transform = transform })
-                //PrimInfo({
-                //    .mesh_id = meshIndex - 1, 
-                //    .material_id = material_id,
-                //    .transform = transform })
+            uint32_t instanceId = scene->m_numInstances[meshIndex]++;
+
+            scene->m_primInfos[meshIndex].push_back(
+                PrimInfo({ 
+                    .mesh_id = meshIndex, 
+                    .instance_id = instanceId,
+                    .material_id = material_id, 
+                    .transform = transform})
             );
         }
     }
 
     // 递归处理每个子节点
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        processNode(node->mChildren[i], aiscene, scene);
+        processNode(node->mChildren[i], aiscene, scene, transform);
     }
 }
 
@@ -278,6 +290,10 @@ void SceneLoader::processMeshs(const aiScene* aiscene, Scene* scene)
         //scene->SetMesh(i-1, _mesh);
     }
 
+    //auto numMeshes = scene->GetNumMeshes();
+
+    scene->m_numInstances.resize(numMeshes);
+    scene->m_primInfos.resize(numMeshes);
 }
 
 
@@ -315,17 +331,6 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
             std::string diffusePath = (currentSceneRootPath / texturePath.C_Str()).string();
 
             if (!Singleton<TextureManager>::instance().ExistTexture(diffusePath)) {
-                //if (diffuseImage.Load(diffusePath)) {
-                //    std::vector<MImage<unsigned char>*> images(1);
-                //    images[0] = &diffuseImage;
-                //    texture = std::make_shared<MVulkanTexture>();
-                //    //uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-                //    Singleton<MVulkanEngine>::instance().CreateImage(texture, images, true);
-                //}
-                //else
-                //{
-	            //    spdlog::error("fail to load diffuse texture: {0}", diffusePath);
-                //}
                 texture = std::make_shared<MVulkanTexture>();
                 Singleton<MVulkanEngine>::instance().CreateTextureFromImage(texture, diffusePath);
 
@@ -426,4 +431,14 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
 
         scene->AddMaterial(mat);
     }
+}
+
+glm::mat4 AIMat2GLMMat(aiMatrix4x4 aiMat)
+{
+    return glm::mat4(
+        aiMat.a1, aiMat.b1, aiMat.c1, aiMat.d1,
+        aiMat.a2, aiMat.b2, aiMat.c2, aiMat.d2,
+        aiMat.a3, aiMat.b3, aiMat.c3, aiMat.d3,
+        aiMat.a4, aiMat.b4, aiMat.c4, aiMat.d4
+    );
 }

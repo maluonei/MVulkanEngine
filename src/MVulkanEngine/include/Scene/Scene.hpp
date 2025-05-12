@@ -52,12 +52,30 @@ struct Mesh {
 
 struct PrimInfo {
     uint32_t        mesh_id;
+    uint32_t        instance_id;
     uint32_t        material_id;
     glm::mat4       transform;
     //Transform   transform;
 };
 
+//struct Instance {
+//
+//};
+
 class Light;
+
+class CalculateTransformedInstanceBoundsTask {
+public:
+    CalculateTransformedInstanceBoundsTask(std::shared_ptr<Mesh> mesh, glm::mat4 transform);
+
+    void DoWork();
+
+    const BoundingBox& GetTransformedBoundingBox() const;// { return m_transformedBoundingBox; }
+private:
+    std::shared_ptr<Mesh>   m_mesh;
+    glm::mat4               m_transform;
+    BoundingBox             m_transformedBoundingBox;
+};
 
 class Scene {
 public:
@@ -156,11 +174,21 @@ public:
     inline auto GetNumVertices() const{return m_totalVertexs.size();}
     //inline auto GetNumMeshes() const { return m_meshMap.size(); }
     inline auto GetNumMeshes() const { return m_meshs.size(); }
-    inline auto GetNumPrimInfos() const { return m_primInfos.size(); }
+    //inline auto GetNumPrimInfos() const { return m_primInfos.size(); }
 
-    std::vector<PrimInfo>   m_primInfos;
+    int GetTotalPrimInfos() const;
 
-    TexBuffer GenerateTexBuffer();
+    std::vector<glm::mat4> GetTransforms();
+    std::vector<MaterialBuffer> GetMaterials();
+    std::vector<int> GetMaterialsIds();
+    std::vector<InstanceBound> GetBounds();
+
+    //std::vector<PrimInfo>   m_primInfos;
+    std::vector<std::vector<PrimInfo>> m_primInfos;
+    std::vector<int>        m_numInstances;
+    
+
+    //TexBuffer GenerateTexBuffer();
 
     glm::vec3 GetVertx(int geomIndex, int primIndex, int vertxIndex);
 private:

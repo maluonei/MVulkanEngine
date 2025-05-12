@@ -208,37 +208,37 @@ public:
 
 	void createMeshlets(std::shared_ptr<Scene> scene) {
 	
-		auto numPrims = scene->GetNumPrimInfos();
-		int meshIndexOffset = 0;
-		int meshVertexOffset = 0;
-		int meshVertexIndexOffset = 0;
-		auto drawIndexedIndirectCommands = scene->GetIndirectDrawCommands();
-
-		for(auto i=0;i<numPrims;i++){
-			//to mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
-			auto indirectCommand = drawIndexedIndirectCommands[i];
-			auto mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
-
-			auto vertices = mesh->vertices;
-			auto indices = mesh->indices;
-			//auto matId = scene->m_primInfos[i].material_id;
-			auto matId = indirectCommand.firstInstance;
-			auto meshId = indirectCommand.firstInstance;
-			//auto mat = m_scene->GetMaterial(m_scene->m_primInfos[i].material_id);
-
-			auto meshVertexOffset = m_meshletVertices.size();
-
-			int vCount = 0;
-			int iCount = 0;
-
-			createMeshlets(&vertices, &indices, meshId, matId, meshVertexOffset, meshVertexIndexOffset, meshIndexOffset, vCount, iCount);
-
-			meshVertexOffset += vCount;
-			meshVertexIndexOffset += vertices.size();
-			//meshVertexOffset += vertices.size();
-			meshIndexOffset += iCount;
-		}
-	
+		//auto numPrims = scene->GetNumPrimInfos();
+		//int meshIndexOffset = 0;
+		//int meshVertexOffset = 0;
+		//int meshVertexIndexOffset = 0;
+		//auto drawIndexedIndirectCommands = scene->GetIndirectDrawCommands();
+		//
+		//for(auto i=0;i<numPrims;i++){
+		//	//to mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
+		//	auto indirectCommand = drawIndexedIndirectCommands[i];
+		//	auto mesh = scene->GetMesh(scene->m_primInfos[i].mesh_id);
+		//
+		//	auto vertices = mesh->vertices;
+		//	auto indices = mesh->indices;
+		//	//auto matId = scene->m_primInfos[i].material_id;
+		//	auto matId = indirectCommand.firstInstance;
+		//	auto meshId = indirectCommand.firstInstance;
+		//	//auto mat = m_scene->GetMaterial(m_scene->m_primInfos[i].material_id);
+		//
+		//	auto meshVertexOffset = m_meshletVertices.size();
+		//
+		//	int vCount = 0;
+		//	int iCount = 0;
+		//
+		//	createMeshlets(&vertices, &indices, meshId, matId, meshVertexOffset, meshVertexIndexOffset, meshIndexOffset, vCount, iCount);
+		//
+		//	meshVertexOffset += vCount;
+		//	meshVertexIndexOffset += vertices.size();
+		//	//meshVertexOffset += vertices.size();
+		//	meshIndexOffset += iCount;
+		//}
+		//
 	}
 
 	void packTriangles();
