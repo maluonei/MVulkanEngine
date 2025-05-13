@@ -46,8 +46,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare gbufferPass ubo
     {
-        //MVPBuffer mvpBuffer{};
-        //mvpBuffer.Model = glm::mat4(1.f);
         VPBuffer vpBuffer{};
         vpBuffer.View = m_camera->GetViewMatrix();
         vpBuffer.Projection = m_camera->GetProjMatrix();
@@ -57,11 +55,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         vpBuffer_p.View = m_prevView;
         vpBuffer_p.Projection = m_prevProj;
         Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer_p", 0, &vpBuffer_p, 0);
-        //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
-
-        //TexBuffer texBuffer = m_scene->GenerateTexBuffer();
-        //Singleton<ShaderResourceManager>::instance().LoadData("texBuffer", 0, &texBuffer, 0);
-        ////m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
 
         auto gbufferExtent = swapchainExtent;
         MScreenBuffer gBufferInfoBuffer{};
@@ -73,10 +66,9 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     //prepare shadowPass ubo
     {
-        glm::mat4 shadowMVP{};
-        shadowMVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
-        Singleton<ShaderResourceManager>::instance().LoadData("ShadowMVPBuffer", 0, &shadowMVP, 0);
-        //m_shadowPass->GetShader()->SetUBO(0, &ubo0);
+        glm::mat4 shadowVP{};
+        shadowVP = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowVpBuffer", 0, &shadowVP, 0);
     }
 
     //prepare lightingPass ubo
@@ -589,7 +581,8 @@ void PBR::loadShaders()
 {
     //Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer/gbuffer.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer/gbuffer2.vert.hlsl", "hlsl/gbuffer/gbuffer2.frag.hlsl", "main", "main" });
-    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
+    //Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "glsl/shadow.vert.glsl", "glsl/shadow.frag.glsl" });
+    Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "hlsl/shadow.vert.hlsl", "hlsl/shadow.frag.hlsl" });
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
@@ -765,7 +758,10 @@ void PBR::createShadowPass()
         std::vector<PassResources> resources;
         resources.push_back(
             PassResources::SetBufferResource(
-                "ShadowMVPBuffer", 0, 0));
+                "shadowVpBuffer", 0, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                1, 0, m_modelBuffer));
 
         m_shadowPass->UpdateDescriptorSetWrite(0, resources);
     }
@@ -798,10 +794,6 @@ void PBR::createShadingPass()
             m_lightingPass, shader);
 
 
-        //std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
-        //    m_shadowPass->GetFrameBuffer(0).GetDepthTexture(),
-        //    m_shadowPass->GetFrameBuffer(0).GetDepthTexture()
-        //};
         std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
             shadowMapDepth,
             shadowMapDepth
