@@ -79,6 +79,10 @@ public:
 	void Create(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	void Clean();
 
+	void WriteTimeStamp(VkPipelineStageFlagBits pipelineStage,
+						VkQueryPool             queryPool,
+						int						queryIndex);
+
 	void BeginDebugLabel(const std::string& labelName, glm::vec3 rgb = glm::vec3(1.f, 0.f, 0.f));
 	void EndDebugLabel();
 

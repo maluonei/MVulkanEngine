@@ -110,7 +110,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
         if(InFrustum(firstInstance + i)){
             CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
             unculledInstances += 1;
-            InterlockedAdd(NumDrawInstances[0], 1);
+            //InterlockedAdd(NumDrawInstances[0], 1);
         }
     }
 

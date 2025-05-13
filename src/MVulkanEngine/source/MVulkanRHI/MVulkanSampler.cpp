@@ -11,7 +11,7 @@ void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
 	
     VkPhysicalDeviceProperties properties = device.GetPhysicalDeviceProperties();
 
-	// ÉèÖÃ¹ýÂËÄ£Ê½¡¢µØÖ·Ä£Ê½µÈ
+	// ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½Ö·Ä£Ê½ï¿½ï¿½
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = info.magFilter;
     samplerInfo.minFilter = info.minFilter;
@@ -29,7 +29,7 @@ void MVulkanSampler::Create(MVulkanDevice device, MVulkanSamplerCreateInfo info)
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-	vkCreateSampler(device.GetDevice(), &samplerInfo, nullptr, &m_sampler);
+	VK_CHECK_RESULT(vkCreateSampler(device.GetDevice(), &samplerInfo, nullptr, &m_sampler));
 }
 
 void MVulkanSampler::Clean()

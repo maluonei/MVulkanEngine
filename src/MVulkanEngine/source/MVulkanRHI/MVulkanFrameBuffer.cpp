@@ -75,9 +75,10 @@ void MVulkanFrameBuffer::Create(MVulkanDevice device, FrameBufferCreateInfo crea
     framebufferInfo.height = creatInfo.extent.height;
     framebufferInfo.layers = 1;
 
-    if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create framebuffer!");
-    }
+    VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffer));
+    //if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffer) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create framebuffer!");
+    //}
 }
 
 void MVulkanFrameBuffer::Clean()

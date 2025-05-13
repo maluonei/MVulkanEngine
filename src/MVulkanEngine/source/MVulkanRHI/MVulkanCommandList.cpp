@@ -270,6 +270,11 @@ void MVulkanCommandList::Clean()
     //vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
+void MVulkanCommandList::WriteTimeStamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, int queryIndex)
+{
+    vkCmdWriteTimestamp(m_commandBuffer, pipelineStage, queryPool, queryIndex);
+}
+
 void MVulkanCommandList::BeginDebugLabel(const std::string& labelName, glm::vec3 rgb)
 {
     auto vkCmdBeginDebugUtilsLabelEXT =

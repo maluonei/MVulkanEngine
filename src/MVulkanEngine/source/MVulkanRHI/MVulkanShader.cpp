@@ -35,9 +35,10 @@ VkShaderModule MVulkanShader::createShaderModule(const std::vector<char>& code) 
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create shader module!");
-    }
+    VK_CHECK_RESULT(vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule));
+    //if (vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create shader module!");
+    //}
 
     return shaderModule;
 }
@@ -57,13 +58,13 @@ MVulkanShaderReflector::MVulkanShaderReflector(Shader _shader)
 
 void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
 {
-    uint32_t stride = 0;  // ¶¥µã²½½øÖµ
-    uint32_t binding = 0;  // ¼ÙÉè°ó¶¨µãÎª 0
+    uint32_t stride = 0;  // ï¿½ï¿½ï¿½ã²½ï¿½ï¿½Öµ
+    uint32_t binding = 0;  // ï¿½ï¿½ï¿½ï¿½ó¶¨µï¿½Îª 0
 
     for (const auto& input : m_resources.stage_inputs) {
         const spirv_cross::SPIRType& type = m_compiler.get_type(input.type_id);
 
-        // ¼ÙÉèÊÇ 32 Î»¿í¶ÈµÄ¸¡µãÊý£¬¼ÆËãÃ¿¸ö±äÁ¿µÄ´óÐ¡
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 32 Î»ï¿½ï¿½ï¿½ÈµÄ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
         uint32_t size = 0;
         if (type.columns == 1) {
             switch (type.vecsize) {
@@ -74,19 +75,19 @@ void MVulkanShaderReflector::GenerateVertexInputBindingDescription()
             }
         }
 
-        // ½«Ã¿¸öÊäÈë±äÁ¿µÄ´óÐ¡¼Óµ½×Ü²½½øÖµÖÐ
+        // ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´ï¿½Ð¡ï¿½Óµï¿½ï¿½Ü²ï¿½ï¿½ï¿½Öµï¿½ï¿½
         stride += size;
     }
 
     VkVertexInputBindingDescription binding_description = {};
-    binding_description.binding = binding;          // °ó¶¨µãË÷Òý
-    binding_description.stride = stride;            // ²½½øÖµ£¨Ã¿¸ö¶¥µãµÄ×Ö½Ú´óÐ¡£©
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;  // Ã¿¶¥µã
+    binding_description.binding = binding;          // ï¿½ó¶¨µï¿½ï¿½ï¿½ï¿½ï¿½
+    binding_description.stride = stride;            // ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½Ú´ï¿½Ð¡ï¿½ï¿½
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;  // Ã¿ï¿½ï¿½ï¿½ï¿½
 
-    // Êä³ö²½½øÖµºÍ°ó¶¨µãÐÅÏ¢
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½Í°ó¶¨µï¿½ï¿½ï¿½Ï¢
     spdlog::info("Binding:{0}, Stride:{1}", binding_description.binding, binding_description.stride);
 
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;  // Ã¿ÊµÀý
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;  // Ã¿Êµï¿½ï¿½
 }
 
 bool compVkVertexInputAttributeDescription(const VkVertexInputAttributeDescription& d0, const VkVertexInputAttributeDescription& d1) {
@@ -97,22 +98,22 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
 {
     PipelineVertexInputStateInfo info;
     std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
-    uint32_t location = 0;  // ÓÃÓÚ¸ú×ÙÊäÈëµÄÎ»ÖÃ
+    uint32_t location = 0;  // ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
 
-    // ±éÀú×ÅÉ«Æ÷µÄÊäÈë±äÁ¿
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for (const auto& input : m_resources.stage_inputs) {
-        // »ñÈ¡±äÁ¿µÄÀàÐÍÐÅÏ¢
+        // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
         const spirv_cross::SPIRType& type = m_compiler.get_type(input.type_id);
 
-        // ´´½¨ VkVertexInputAttributeDescription ²¢ÉèÖÃÊôÐÔ
+        // ï¿½ï¿½ï¿½ï¿½ VkVertexInputAttributeDescription ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         VkVertexInputAttributeDescription attribute_description = {};
         attribute_description.location = m_compiler.get_decoration(input.id, spv::DecorationLocation);
         //attribute_description.location = location;
-        attribute_description.binding = 0;  // °ó¶¨µã£¬Í¨³£Îª 0£¬¾ßÌå¸ù¾ÝÄãµÄÐèÇóµ÷Õû
-        attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;  // Ä¬ÈÏ¼ÙÉèÊÇ float3 ÀàÐÍ
-        attribute_description.offset = 0;  // ÕâÀïÐèÒª¸ù¾Ý¶¥µã½á¹¹Ìå¼ÆËã
+        attribute_description.binding = 0;  // ï¿½ó¶¨µã£¬Í¨ï¿½ï¿½Îª 0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;  // Ä¬ï¿½Ï¼ï¿½ï¿½ï¿½ï¿½ï¿½ float3 ï¿½ï¿½ï¿½ï¿½
+        attribute_description.offset = 0;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½
 
-        // ¸ù¾Ý SPIR-V ÖÐµÄÀàÐÍÐÅÏ¢£¬ÍÆ¶Ï Vulkan µÄ¸ñÊ½
+        // ï¿½ï¿½ï¿½ï¿½ SPIR-V ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½Æ¶ï¿½ Vulkan ï¿½Ä¸ï¿½Ê½
         if (type.columns == 1) {
             switch (type.width) {
             case 32:
@@ -121,14 +122,14 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
                 else if (type.vecsize == 3) attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
                 else if (type.vecsize == 4) attribute_description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 break;
-                // ¿ÉÒÔ¸ù¾ÝÐèÒªÀ©Õ¹Ö§³ÖÆäËûÎ»¿í£¨Èç 16 Î»¡¢64 Î»µÈ£©
+                // ï¿½ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Õ¹Ö§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 16 Î»ï¿½ï¿½64 Î»ï¿½È£ï¿½
             }
         }
 
-        // ½«Éú³ÉµÄ attribute_description ¼ÓÈëµ½Êý×é
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Éµï¿½ attribute_description ï¿½ï¿½ï¿½ëµ½ï¿½ï¿½ï¿½ï¿½
         attribute_descriptions.push_back(attribute_description);
 
-        // ¸üÐÂ offset ºÍ location ÒÔÊÊÓ¦ÏÂÒ»¸öÊäÈë±äÁ¿
+        // ï¿½ï¿½ï¿½ï¿½ offset ï¿½ï¿½ location ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         location++;
     }
 
@@ -140,7 +141,7 @@ PipelineVertexInputStateInfo MVulkanShaderReflector::GenerateVertexInputAttribut
     if (attribute_descriptions.size() >= 4) attribute_descriptions[3].offset = offsetof(Vertex, tangent);
     if (attribute_descriptions.size() >= 5) attribute_descriptions[4].offset = offsetof(Vertex, bitangent);
 
-    // Ê¹ÓÃµÄ×îÖÕ attribute_descriptions
+    // Ê¹ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ attribute_descriptions
     for (const auto& attr : attribute_descriptions) {
         //std::cout << "Location: " << attr.location
         //    << ", Format: " << attr.format
@@ -174,14 +175,14 @@ MVulkanDescriptorSet MVulkanShaderReflector::GenerateDescriptorSet()
 {
     for (const auto& ub : m_resources.uniform_buffers) {
         auto& type = m_compiler.get_type(ub.type_id);
-        // »ñÈ¡ Descriptor Set ºÍ°ó¶¨µã
+        // ï¿½ï¿½È¡ Descriptor Set ï¿½Í°ó¶¨µï¿½
         uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
         spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
     }
 
-    // ´¦Àí sampled images (ÎÆÀí)
+    // ï¿½ï¿½ï¿½ï¿½ sampled images (ï¿½ï¿½ï¿½ï¿½)
     for (const auto& image : m_resources.sampled_images) {
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
@@ -228,7 +229,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
 
     for (const auto& ub : m_resources.uniform_buffers) {
         auto& type = m_compiler.get_type(ub.type_id);
-        // »ñÈ¡ Descriptor Set ºÍ°ó¶¨µã
+        // ï¿½ï¿½È¡ Descriptor Set ï¿½Í°ó¶¨µï¿½
         uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
@@ -250,7 +251,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         //
 
         auto& type = m_compiler.get_type(sb.type_id);
-        // »ñÈ¡ Descriptor Set ºÍ°ó¶¨µã
+        // ï¿½ï¿½È¡ Descriptor Set ï¿½Í°ó¶¨µï¿½
         uint32_t set = m_compiler.get_decoration(sb.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
@@ -266,7 +267,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.storageBuffers.push_back(ShaderResourceInfo{ ResourceType_StorageBuffer, sb.name, stage, set, binding, size, 0, arrayLength });
     }
 
-    // ´¦Àí sampled images (ÎÆÀí) -- glsl
+    // ï¿½ï¿½ï¿½ï¿½ sampled images (ï¿½ï¿½ï¿½ï¿½) -- glsl
     for (const auto& image : m_resources.sampled_images) {
         auto& type = m_compiler.get_type(image.type_id);
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
@@ -283,7 +284,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.combinedImageSamplers.push_back(ShaderResourceInfo{ ResourceType_CombinedImageSampler, image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
-    // ´¦Àí seperate images (ÎÆÀí) -- hlsl
+    // ï¿½ï¿½ï¿½ï¿½ seperate images (ï¿½ï¿½ï¿½ï¿½) -- hlsl
     for (const auto& image : m_resources.separate_images) {
         auto& type = m_compiler.get_type(image.type_id);
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
@@ -317,7 +318,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         out.storageImages.push_back(ShaderResourceInfo{ ResourceType_StorageImage, image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
-    // ´¦Àí seperate samplers (²ÉÑùÆ÷) -- hlsl
+    // ï¿½ï¿½ï¿½ï¿½ seperate samplers (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) -- hlsl
     for (const auto& sampler : m_resources.separate_samplers) {
         auto& type = m_compiler.get_type(sampler.type_id);
         uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
@@ -389,7 +390,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
 
     for (const auto& ub : m_resources.uniform_buffers) {
         auto& type = m_compiler.get_type(ub.type_id);
-        // »ñÈ¡ Descriptor Set ºÍ°ó¶¨µã
+        // ï¿½ï¿½È¡ Descriptor Set ï¿½Í°ó¶¨µï¿½
         uint32_t set = m_compiler.get_decoration(ub.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
@@ -411,7 +412,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         //
 
         auto& type = m_compiler.get_type(sb.type_id);
-        // »ñÈ¡ Descriptor Set ºÍ°ó¶¨µã
+        // ï¿½ï¿½È¡ Descriptor Set ï¿½Í°ó¶¨µï¿½
         uint32_t set = m_compiler.get_decoration(sb.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
@@ -427,7 +428,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         out.m_resources.push_back(ShaderResourceInfo{ ResourceType_StorageBuffer, sb.name, stage, set, binding, size, 0, arrayLength });
     }
 
-    // ´¦Àí sampled images (ÎÆÀí) -- glsl
+    // ï¿½ï¿½ï¿½ï¿½ sampled images (ï¿½ï¿½ï¿½ï¿½) -- glsl
     for (const auto& image : m_resources.sampled_images) {
         auto& type = m_compiler.get_type(image.type_id);
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
@@ -444,7 +445,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         out.m_resources.push_back(ShaderResourceInfo{ ResourceType_CombinedImageSampler,  image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
-    // ´¦Àí seperate images (ÎÆÀí) -- hlsl
+    // ï¿½ï¿½ï¿½ï¿½ seperate images (ï¿½ï¿½ï¿½ï¿½) -- hlsl
     for (const auto& image : m_resources.separate_images) {
         auto& type = m_compiler.get_type(image.type_id);
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
@@ -478,7 +479,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         out.m_resources.push_back(ShaderResourceInfo{ ResourceType_StorageImage,  image.name, stage, set, binding, 0, 0, arrayLength });
     }
 
-    // ´¦Àí seperate samplers (²ÉÑùÆ÷) -- hlsl
+    // ï¿½ï¿½ï¿½ï¿½ seperate samplers (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) -- hlsl
     for (const auto& sampler : m_resources.separate_samplers) {
         auto& type = m_compiler.get_type(sampler.type_id);
         uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);

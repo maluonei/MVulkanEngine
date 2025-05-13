@@ -99,9 +99,11 @@ void MVulkanSwapchain::create()
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(m_device.GetDevice(), &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create swap chain!");
-    }
+    VK_CHECK_RESULT(vkCreateSwapchainKHR(m_device.GetDevice(), &createInfo, nullptr, &m_swapChain));
+
+    //if (vkCreateSwapchainKHR(m_device.GetDevice(), &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create swap chain!");
+    //}
 
     vkGetSwapchainImagesKHR(m_device.GetDevice(), m_swapChain, &imageCount, nullptr);
     m_swapChainImages.resize(imageCount);

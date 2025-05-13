@@ -160,7 +160,7 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{};
     meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
     meshShaderFeatures.meshShader = VK_TRUE;
-    meshShaderFeatures.taskShader = VK_TRUE; // ÈÎÎñ×ÅÉ«Æ÷¿ÉÑ¡
+    meshShaderFeatures.taskShader = VK_TRUE; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½Ñ¡
     meshShaderFeatures.pNext = &barycentricFeatures;
 
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
@@ -260,9 +260,10 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create logical device!");
-    }
+    VK_CHECK_RESULT(vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice));
+    //if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_logicalDevice) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create logical device!");
+    //}
 
 
     vkGetDeviceQueue(m_logicalDevice, m_indices.graphicsFamily.value(), 0, &m_graphicsQueue);

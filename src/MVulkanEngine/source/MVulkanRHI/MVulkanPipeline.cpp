@@ -217,18 +217,20 @@ void MVulkanComputePipeline::Create(
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &layout;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline layout!");
-    }
+    VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
+    //if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create compute pipeline layout!");
+    //}
 
     VkComputePipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineInfo.layout = m_pipelineLayout;
     pipelineInfo.stage = computeShaderStageInfo;
 
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline!");
-    }
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline));
+    //if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create compute pipeline!");
+    //}
 
     //vkDestroyShaderModule(device, computeShaderModule, nullptr);
 }
@@ -248,18 +250,20 @@ void MVulkanComputePipeline::Create(VkDevice device, VkShaderModule compShaderMo
     pipelineLayoutInfo.setLayoutCount = layouts.size();
     pipelineLayoutInfo.pSetLayouts = layouts.data();
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline layout!");
-    }
+    VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
+    //if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create compute pipeline layout!");
+    //}
 
     VkComputePipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineInfo.layout = m_pipelineLayout;
     pipelineInfo.stage = computeShaderStageInfo;
 
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline!");
-    }
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline));
+    //if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create compute pipeline!");
+    //}
 }
 
 void MVulkanGraphicsPipeline::Create(VkDevice device, MVulkanPilelineCreateInfo info, VkShaderModule vertShaderModule, VkShaderModule geomShaderModule, VkShaderModule fragShaderModule, VkRenderPass renderPass, PipelineVertexInputStateInfo vertexStateInfo, VkDescriptorSetLayout layout, uint32_t numAttachments, std::string vertEntryPoint, std::string geomEntryPoint, std::string fragEntryPoint)
