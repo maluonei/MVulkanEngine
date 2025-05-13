@@ -395,8 +395,23 @@ void MVulkanEngine::RecordCommandBuffer(
     std::shared_ptr<Buffer> indexBuffer,
     std::shared_ptr<StorageBuffer> indirectBuffer,
     uint32_t indirectCount,
-    std::string eventName, bool flipY) {
+    std::string eventName, bool flipY) 
+{
     recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+}
+
+void MVulkanEngine::RecordCommandBuffer(
+    uint32_t frameIndex,
+    std::shared_ptr<RenderPass> renderPass,
+    uint32_t currentFrame,
+    RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer,
+    std::shared_ptr<Buffer> indexBuffer,
+    std::shared_ptr<StorageBuffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName, int queryIndex, bool flipY)
+{
+    recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, queryIndex, flipY);
 }
 
 void MVulkanEngine::RecordCommandBuffer2(
@@ -637,6 +652,11 @@ const float MVulkanEngine::GetTimeStampPeriod() const {
 
 std::vector<uint64_t> MVulkanEngine::GetTimeStampQueryResults(int numQuerys) {
     return m_timestampQueryPool.GetQueryResults(numQuerys);
+}
+
+std::vector<uint64_t> MVulkanEngine::GetTimeStampQueryResults(int startQuery, int numQuerys)
+{
+    return m_timestampQueryPool.GetQueryResults(startQuery, numQuerys);
 }
 
 //void MVulkanEngine::initUIRenderer()
@@ -1611,6 +1631,79 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
 
     commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(IndirectDrawArgs));
+
+    commandList.EndRendering();
+
+    commandList.EndDebugLabel();
+
+    //use swapchain Image
+    if (renderingInfo.colorAttachments[0].texture == nullptr) {
+        swapchainImage2Present(imageIndex, _currentFrame);
+    }
+}
+
+void MVulkanEngine::recordCommandBuffer(
+    uint32_t imageIndex,
+    std::shared_ptr<RenderPass> renderPass,
+    //MGraphicsCommandList commandList,
+    uint32_t _currentFrame,
+    RenderingInfo& renderingInfo,
+    std::shared_ptr<Buffer> vertexBuffer,
+    std::shared_ptr<Buffer> indexBuffer,
+    std::shared_ptr<StorageBuffer> indirectBuffer,
+    uint32_t indirectCount,
+    std::string eventName,
+    int queryIndex,
+    bool flipY) 
+{
+    auto& commandList = m_graphicsLists[_currentFrame];
+
+    commandList.BeginDebugLabel(eventName);
+
+    auto extent = renderingInfo.extent;
+    auto offset = renderingInfo.offset;
+
+    prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
+    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+
+    commandList.BeginRendering(renderingInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(IndirectDrawArgs));
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
 
     commandList.EndRendering();
 

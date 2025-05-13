@@ -41,7 +41,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     //int cullingQueryInedxEnd;
     int hizQueryIndexStart = 0;
     int hizQueryIndexEnd = 0;
-    //Singleton<MVulkanEngine>::instance().ResetTimeStampQueryPool();
+    Singleton<MVulkanEngine>::instance().ResetTimeStampQueryPool();
 
     auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
     auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
@@ -193,7 +193,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
 
     computeList.Reset();
     computeList.Begin();
-    Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
+    //Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
     //computeList.ResetQueryPool();
 
     Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
@@ -210,11 +210,16 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     computeQueue.SubmitCommands(1, &submitInfo, nullptr);
     computeQueue.WaitForQueueComplete();
 
+    //auto queryResults = Singleton<MVulkanEngine>::instance().GetTimeStampQueryResults(0, 2 * m_queryIndex);
+    //auto timestampPeriod = Singleton<MVulkanEngine>::instance().GetTimeStampPeriod();
+    //cullingTime = (queryResults[2 * cullingQueryIndex + 1] - queryResults[2 * cullingQueryIndex]) * timestampPeriod;
+
     //numTotalInstances = numInstances;
     numDrawInstances = *(uint32_t*)m_numIndirectDrawBuffer->GetMappedData();
 
     graphicsList.Reset();
     graphicsList.Begin();
+    //Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(graphicsList);
 
     shadowmapQueryIndex = m_queryIndex;
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
@@ -263,14 +268,19 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     m_prevView = m_camera->GetViewMatrix();
     m_prevProj = m_camera->GetProjMatrix();
 
-    auto queryResults = Singleton<MVulkanEngine>::instance().GetTimeStampQueryResults(2 * m_queryIndex);
+    auto queryResults = Singleton<MVulkanEngine>::instance().GetTimeStampQueryResults(0, 2 * m_queryIndex);
 
     auto timestampPeriod = Singleton<MVulkanEngine>::instance().GetTimeStampPeriod();
-    gbufferTime = (queryResults[2 * gbufferQueryIndex + 1] - queryResults[2 * gbufferQueryIndex]) * timestampPeriod;
-    shadowmapTime = (queryResults[2 * shadowmapQueryIndex + 1] - queryResults[2 * shadowmapQueryIndex]) * timestampPeriod;
-    shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod;
-    cullingTime = (queryResults[2 * cullingQueryIndex + 1] - queryResults[2 * cullingQueryIndex]) * timestampPeriod;
-    hizTime = (queryResults[2 * hizQueryIndexEnd + 1] - queryResults[2 * hizQueryIndexStart]) * timestampPeriod;
+    //spdlog::info("cullingQueryIndex:{0}", cullingQueryIndex);
+    //spdlog::info("gbufferQueryIndex:{0}", gbufferQueryIndex);
+    //spdlog::info("shadowmapQueryIndex:{0}", shadowmapQueryIndex);
+    //spdlog::info("shadingQueryIndex:{0}", shadingQueryIndex);
+    //spdlog::info("hizQueryIndexEnd:{0}", hizQueryIndexEnd);
+    cullingTime = (queryResults[2 * cullingQueryIndex + 1] - queryResults[2 * cullingQueryIndex]) * timestampPeriod / 1000000.f;
+    gbufferTime = (queryResults[2 * gbufferQueryIndex + 1] - queryResults[2 * gbufferQueryIndex]) * timestampPeriod / 1000000.f;
+    shadowmapTime = (queryResults[2 * shadowmapQueryIndex + 1] - queryResults[2 * shadowmapQueryIndex]) * timestampPeriod / 1000000.f;
+    shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod / 1000000.f;
+    hizTime = (queryResults[2 * hizQueryIndexEnd + 1] - queryResults[2 * hizQueryIndexStart]) * timestampPeriod / 1000000.f;
 }
 
 void PBR::RecreateSwapchainAndRenderPasses()
@@ -1013,8 +1023,8 @@ void DRUI::RenderContext() {
     ImGui::Combo("outputContext", &outputContext, OutputBufferContents, IM_ARRAYSIZE(OutputBufferContents));
 
     auto app = (PBR*)(this->m_app);
-    //auto camera = app->GetMainCamera();
-    auto camera = app->GetLightCamera();
+    auto camera = app->GetMainCamera();
+    //auto camera = app->GetLightCamera();
     auto& cameraPosition = camera->GetPositionRef();
     auto& cameraDirection = camera->GetDirectionRef();
 
@@ -1028,11 +1038,11 @@ void DRUI::RenderContext() {
     auto numDrawInstances = ((PBR*)(this->m_app))->numDrawInstances;
     ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
 
-    ImGui::Text("culling time: %f ms", ((PBR*)(this->m_app))->cullingTime);
-    ImGui::Text("shadowmap time: %f ms", ((PBR*)(this->m_app))->shadowmapTime);
-    ImGui::Text("gbuffer time: %f ms", ((PBR*)(this->m_app))->gbufferTime);
-    ImGui::Text("shading time: %f ms", ((PBR*)(this->m_app))->shadingTime);
-    ImGui::Text("hiz time: %f ms", ((PBR*)(this->m_app))->hizTime);
+    ImGui::Text("culling time: %.3f ms", ((PBR*)(this->m_app))->cullingTime);
+    ImGui::Text("shadowmap time: %.3f ms", ((PBR*)(this->m_app))->shadowmapTime);
+    ImGui::Text("gbuffer time: %.3f ms", ((PBR*)(this->m_app))->gbufferTime);
+    ImGui::Text("shading time: %.3f ms", ((PBR*)(this->m_app))->shadingTime);
+    ImGui::Text("hiz time: %.3f ms", ((PBR*)(this->m_app))->hizTime);
 
     ImGui::End();
 }

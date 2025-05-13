@@ -21,7 +21,6 @@ class Light;
 
 #define NOT_DO_HIZ 0
 #define DO_HIZ_MODE_0 1
-#define DO_HIZ_MODE_1 2
 
 class PBR: public MRenderApplication {
 public:

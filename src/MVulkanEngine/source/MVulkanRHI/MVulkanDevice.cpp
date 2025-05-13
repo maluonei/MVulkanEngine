@@ -218,12 +218,18 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     deviceFeatures.multiDrawIndirect = VK_TRUE;
     deviceFeatures.fragmentStoresAndAtomics = VK_TRUE;
     deviceFeatures.geometryShader = VK_TRUE;
+    //deviceFeatures.hostQueryReset = VK_TRUE;
+
+    VkPhysicalDeviceHostQueryResetFeatures hostQueryResetFeatures = {};
+    hostQueryResetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
+    hostQueryResetFeatures.hostQueryReset = VK_TRUE;
+    hostQueryResetFeatures.pNext = &descriptorIndexingFeatures;
 
     VkPhysicalDeviceComputeShaderDerivativesFeaturesNV physicalDeviceComputeShaderDerivativesFeatures{};
     physicalDeviceComputeShaderDerivativesFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_NV;
     physicalDeviceComputeShaderDerivativesFeatures.computeDerivativeGroupQuads = VK_TRUE;
     physicalDeviceComputeShaderDerivativesFeatures.computeDerivativeGroupLinear = VK_TRUE;
-    physicalDeviceComputeShaderDerivativesFeatures.pNext = &descriptorIndexingFeatures;
+    physicalDeviceComputeShaderDerivativesFeatures.pNext = &hostQueryResetFeatures;
 
     VkPhysicalDeviceFeatures2 deviceFeatures2{};
     deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;

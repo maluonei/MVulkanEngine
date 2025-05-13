@@ -12,6 +12,7 @@ public:
 	void Reset(uint32_t        firstQuery,
 				uint32_t        queryCount);
 	std::vector<uint64_t> GetQueryResults(int numQuerys);
+	std::vector<uint64_t> GetQueryResults(int startQuery, int numQuerys);
 private:
 	VkDevice	m_device;
 	VkQueryPool m_queryPool;

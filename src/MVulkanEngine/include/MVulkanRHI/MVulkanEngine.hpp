@@ -232,6 +232,17 @@ public:
         uint32_t indirectCount,
         std::string eventName, bool flipY = true);
 
+    void RecordCommandBuffer(
+        uint32_t frameIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<StorageBuffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName, int queryIndex, bool flipY = true);
+
     void RecordCommandBuffer2(
         uint32_t frameIndex, 
         std::shared_ptr<DynamicRenderPass> renderPass,
@@ -289,6 +300,7 @@ public:
     void CmdResetTimeStampQueryPool(MVulkanCommandList cmd);
     const float GetTimeStampPeriod() const;
     std::vector<uint64_t> GetTimeStampQueryResults(int numQuerys);
+    std::vector<uint64_t> GetTimeStampQueryResults(int startQuery, int numQuerys);
 private: 
     void initVulkan();
     //void initUIRenderer();
@@ -371,6 +383,20 @@ private:
         std::shared_ptr<StorageBuffer> indirectBuffer,
         uint32_t indirectCount,
         std::string eventName,
+        bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        //MGraphicsCommandList commandList,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<StorageBuffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName,
+        int queryIndex,
         bool flipY = true);
 
     void prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo, uint32_t currentFrame);
