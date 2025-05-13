@@ -68,6 +68,7 @@ void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
+            m_timestampPeriod = deviceProperties.limits.timestampPeriod;
             alignment = deviceProperties.limits.minUniformBufferOffsetAlignment;
 
             spdlog::info("picked gpu is {0}", deviceProperties.deviceName);
@@ -380,6 +381,11 @@ VkFormat MVulkanDevice::FindDepthFormat()
 void MVulkanDevice::WaitIdle()
 {
     vkDeviceWaitIdle(m_logicalDevice);
+}
+
+const float MVulkanDevice::GetTimestampPeriod() const
+{
+    return m_timestampPeriod;
 }
 
 VkFormat MVulkanDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

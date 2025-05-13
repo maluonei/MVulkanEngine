@@ -7,6 +7,11 @@ class MVulkanQueryPool {
 public:
 	void Create(MVulkanDevice device, VkQueryType queryType);
 	VkQueryPool Get();
+
+	void Reset();
+	void Reset(uint32_t        firstQuery,
+				uint32_t        queryCount);
+	std::vector<uint64_t> GetQueryResults(int numQuerys);
 private:
 	VkDevice	m_device;
 	VkQueryPool m_queryPool;

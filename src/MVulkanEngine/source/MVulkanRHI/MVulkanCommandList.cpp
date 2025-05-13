@@ -270,6 +270,11 @@ void MVulkanCommandList::Clean()
     //vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
+void MVulkanCommandList::ResetQueryPool(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount)
+{
+    vkCmdResetQueryPool(m_commandBuffer, queryPool, firstQuery, queryCount);
+}
+
 void MVulkanCommandList::WriteTimeStamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, int queryIndex)
 {
     vkCmdWriteTimestamp(m_commandBuffer, pipelineStage, queryPool, queryIndex);

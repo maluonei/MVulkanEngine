@@ -79,6 +79,9 @@ public:
 	void Create(VkDevice device, const MVulkanCommandListCreateInfo& info);
 	void Clean();
 
+	void ResetQueryPool(VkQueryPool             queryPool,
+		uint32_t        firstQuery,
+		uint32_t        queryCount);
 	void WriteTimeStamp(VkPipelineStageFlagBits pipelineStage,
 						VkQueryPool             queryPool,
 						int						queryIndex);

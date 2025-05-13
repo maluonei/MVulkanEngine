@@ -16,3 +16,30 @@ VkQueryPool MVulkanQueryPool::Get()
 {
 	return m_queryPool;
 }
+
+void MVulkanQueryPool::Reset()
+{
+	vkResetQueryPool(m_device, m_queryPool, 0, 1024);
+}
+
+void MVulkanQueryPool::Reset(uint32_t firstQuery, uint32_t queryCount)
+{
+	vkResetQueryPool(m_device, m_queryPool, firstQuery, queryCount);
+}
+
+std::vector<uint64_t> MVulkanQueryPool::GetQueryResults(int numQuerys)
+{
+	std::vector<uint64_t> results(numQuerys);
+
+	vkGetQueryPoolResults(
+		m_device,
+		m_queryPool,
+		0, 2,
+		numQuerys * sizeof(uint64_t),
+		results.data(),
+		sizeof(uint64_t),
+		VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
+	);
+
+	return results;
+}

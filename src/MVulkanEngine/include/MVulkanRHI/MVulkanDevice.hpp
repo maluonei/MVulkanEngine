@@ -66,6 +66,8 @@ public:
     const inline bool SupportRayTracing() const {
         return m_supportRayTracing;
     }
+
+    const float GetTimestampPeriod() const;
 private:
     VkPhysicalDevice        m_physicalDevice;
     VkDevice                m_logicalDevice;
@@ -79,6 +81,7 @@ private:
     VkQueue                 m_presentQueue;
 
     uint32_t                alignment = 0;
+    float                   m_timestampPeriod = 0.f;
     bool                    m_supportRayTracing = false;
     bool                    m_supportMeshShader = false;
 

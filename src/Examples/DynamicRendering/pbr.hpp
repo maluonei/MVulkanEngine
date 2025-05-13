@@ -46,6 +46,12 @@ public:
 
 	int numDrawInstances = 0;
 	int numTotalInstances = 0;
+
+	float gbufferTime = 0.f;
+	float shadowmapTime = 0.f;
+	float shadingTime = 0.f;
+	float cullingTime = 0.f;
+	float hizTime = 0.f;
 	//int m_outputContext = 0;
 private:
 	void loadScene();
@@ -125,6 +131,8 @@ private:
 
 	glm::mat4					m_prevView;
 	glm::mat4					m_prevProj;
+
+	int							m_queryIndex = 0;
 };
 
 class DRUI :public UIRenderer {

@@ -14,6 +14,7 @@
 #include "MVulkanCommand.hpp"
 #include "MVulkanBuffer.hpp"
 #include "MVulkanSampler.hpp"
+#include "MVulkanQueryPool.hpp"
 #include "MVulkanAttachmentBuffer.hpp"
 #include "Shaders/ShaderResourceMap.hpp"
 #include "Shaders/ShaderModule.hpp"
@@ -216,6 +217,17 @@ public:
         RenderingInfo& renderingInfo,
         std::shared_ptr<Buffer> vertexBuffer,
         std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName, int queryIndex, bool flipY = true);
+
+    void RecordCommandBuffer(
+        uint32_t frameIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
         std::shared_ptr<StorageBuffer> indirectBuffer,
         uint32_t indirectCount,
         std::string eventName, bool flipY = true);
@@ -237,6 +249,9 @@ public:
 
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
+
+    void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
 
     void RecordMeshShaderCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
@@ -269,6 +284,11 @@ public:
     const MVulkanSwapchain GetSwapchain() { return m_swapChain; }
 
     void InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer, MRenderApplication* app);
+
+    void ResetTimeStampQueryPool();
+    void CmdResetTimeStampQueryPool(MVulkanCommandList cmd);
+    const float GetTimeStampPeriod() const;
+    std::vector<uint64_t> GetTimeStampQueryResults(int numQuerys);
 private: 
     void initVulkan();
     //void initUIRenderer();
@@ -278,6 +298,7 @@ private:
     void createDevice();
     void createSurface();
     void createSwapChain();
+    void createQueryPools();
 
     //void createUIRenderPass();
 
@@ -333,6 +354,20 @@ private:
         RenderingInfo& renderingInfo,
         std::shared_ptr<Buffer> vertexBuffer,
         std::shared_ptr<Buffer> indexBuffer,
+        std::shared_ptr<Buffer> indirectBuffer,
+        uint32_t indirectCount,
+        std::string eventName,
+        int queryIndex,
+        bool flipY = true);
+
+    void recordCommandBuffer(
+        uint32_t imageIndex,
+        std::shared_ptr<RenderPass> renderPass,
+        //MGraphicsCommandList commandList,
+        uint32_t currentFrame,
+        RenderingInfo& renderingInfo,
+        std::shared_ptr<Buffer> vertexBuffer,
+        std::shared_ptr<Buffer> indexBuffer,
         std::shared_ptr<StorageBuffer> indirectBuffer,
         uint32_t indirectCount,
         std::string eventName,
@@ -359,6 +394,10 @@ private:
 
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
+
+    void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
+
 
     void recordMeshShaderCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
@@ -401,6 +440,7 @@ private:
     MVulkanInstance         m_instance;
     MVulkanDevice           m_device;
     MVulkanSwapchain        m_swapChain;
+    MVulkanQueryPool        m_timestampQueryPool;
 
     MVulkanDescriptorSetAllocator m_allocator;
 

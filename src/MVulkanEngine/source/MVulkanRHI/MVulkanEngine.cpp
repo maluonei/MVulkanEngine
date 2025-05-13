@@ -375,8 +375,15 @@ void MVulkanEngine::RecordCommandBuffer(
     std::shared_ptr<Buffer> indexBuffer,
     std::shared_ptr<Buffer> indirectBuffer,
     uint32_t indirectCount,
-    std::string eventName, bool flipY) {
+    std::string eventName, bool flipY) 
+{
     recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, flipY);
+}
+
+void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, int queryIndex, bool flipY)
+{
+    recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, queryIndex, flipY);
+
 }
 
 void MVulkanEngine::RecordCommandBuffer(
@@ -416,6 +423,11 @@ void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName)
 {
     recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ, eventName);
+}
+
+void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)
+{
+    recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ, eventName, queryIndex);
 }
 
 void MVulkanEngine::RecordMeshShaderCommandBuffer(
@@ -588,6 +600,8 @@ void MVulkanEngine::initVulkan()
     
     createDescriptorSetAllocator();
 
+    createQueryPools();
+
     //createUIRenderPass();
     createPlaceHolderTexture();
 }
@@ -605,6 +619,24 @@ void MVulkanEngine::InitUIRenderer(std::shared_ptr<UIRenderer> uiRenderer, MRend
     );
 
     uiRenderer->InitImgui(m_graphicsQueue);
+}
+
+void MVulkanEngine::ResetTimeStampQueryPool()
+{
+    m_timestampQueryPool.Reset();
+}
+
+void MVulkanEngine::CmdResetTimeStampQueryPool(MVulkanCommandList cmd)
+{
+    cmd.ResetQueryPool(m_timestampQueryPool.Get(), 0, 1024);
+}
+
+const float MVulkanEngine::GetTimeStampPeriod() const {
+    return m_device.GetTimestampPeriod();
+}
+
+std::vector<uint64_t> MVulkanEngine::GetTimeStampQueryResults(int numQuerys) {
+    return m_timestampQueryPool.GetQueryResults(numQuerys);
 }
 
 //void MVulkanEngine::initUIRenderer()
@@ -643,6 +675,11 @@ void MVulkanEngine::createSurface()
 void MVulkanEngine::createSwapChain()
 {
     m_swapChain.Create(m_device, m_window->GetWindow(), m_surface);
+}
+
+void MVulkanEngine::createQueryPools()
+{
+    m_timestampQueryPool.Create(m_device, VK_QUERY_TYPE_TIMESTAMP);
 }
 
 //void MVulkanEngine::createUIRenderPass()
@@ -1465,6 +1502,67 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     }
 }
 
+void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, uint32_t _currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, int queryIndex, bool flipY)
+{
+    auto& commandList = m_graphicsLists[_currentFrame];
+
+    commandList.BeginDebugLabel(eventName);
+
+    auto extent = renderingInfo.extent;
+    auto offset = renderingInfo.offset;
+
+    prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
+    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+
+    commandList.BeginRendering(renderingInfo);
+
+    commandList.BindPipeline(renderPass->GetPipeline().Get());
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.width = (float)extent.width;
+    if (flipY) {
+        viewport.y = (float)extent.height;
+        viewport.height = -(float)extent.height;
+    }
+    else {
+        viewport.y = 0.f;
+        viewport.height = (float)extent.height;
+    }
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandList.SetViewport(0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = extent;
+    commandList.SetScissor(0, 1, &scissor);
+
+    //renderPass->LoadCBV(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = renderPass->GetDescriptorSets(imageIndex);
+    commandList.BindDescriptorSet(renderPass->GetPipeline().GetLayout(), descriptorSets);
+
+    VkBuffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
+    VkDeviceSize offsets[] = { 0 };
+
+    commandList.BindVertexBuffers(0, 1, vertexBuffers, offsets);
+    commandList.BindIndexBuffers(0, 1, indexBuffer->GetBuffer(), offsets);
+
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+    commandList.DrawIndexedIndirectCommand(indirectBuffer->GetBuffer(), 0, indirectCount, sizeof(VkDrawIndexedIndirectCommand));
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
+
+    commandList.EndRendering();
+
+    commandList.EndDebugLabel();
+
+    //use swapchain Image
+    if (renderingInfo.colorAttachments[0].texture == nullptr) {
+        swapchainImage2Present(imageIndex, _currentFrame);
+    }
+}
+
 void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, uint32_t _currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<StorageBuffer> indirectBuffer, uint32_t indirectCount, std::string eventName, bool flipY)
 {
     auto& commandList = m_graphicsLists[_currentFrame];
@@ -1672,6 +1770,27 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), descriptorSets);
 
     m_computeList.Dispatch(groupCountX, groupCountY, groupCountZ);
+
+    m_computeList.EndDebugLabel();
+}
+
+void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)
+{
+    m_computeList.BeginDebugLabel(eventName);
+
+    computePass->PrepareResourcesForShaderRead();
+
+    m_computeList.BindPipeline(computePass->GetPipeline().Get());
+
+    computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = computePass->GetDescriptorSets();
+    m_computeList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), descriptorSets);
+
+    m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+    m_computeList.Dispatch(groupCountX, groupCountY, groupCountZ);
+    m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
 
     m_computeList.EndDebugLabel();
 }
