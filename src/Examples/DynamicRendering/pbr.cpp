@@ -1069,14 +1069,16 @@ void DRUI::RenderContext() {
     ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
 
     ImGui::Checkbox("showPassTime", &showPassTime);
-    ImGui::Text("culling time: %.3f ms", ((PBR*)(this->m_app))->cullingTime);
-    ImGui::Text("shadowmap time: %.3f ms", ((PBR*)(this->m_app))->shadowmapTime);
-    ImGui::Text("gbuffer time: %.3f ms", ((PBR*)(this->m_app))->gbufferTime);
-    ImGui::Text("shading time: %.3f ms", ((PBR*)(this->m_app))->shadingTime);
-    ImGui::Text("hiz time: %.3f ms", ((PBR*)(this->m_app))->hizTime);
-    auto hizTimes = ((PBR*)(this->m_app))->hizTimes;
-    for(auto i = 0; i < hizTimes.size(); i++){
-        ImGui::Text("hiz layer %d time: %.3f ms", i, ((PBR*)(this->m_app))->hizTimes[i]);
+    if (showPassTime) {
+        ImGui::Text("culling time: %.3f ms", ((PBR*)(this->m_app))->cullingTime);
+        ImGui::Text("shadowmap time: %.3f ms", ((PBR*)(this->m_app))->shadowmapTime);
+        ImGui::Text("gbuffer time: %.3f ms", ((PBR*)(this->m_app))->gbufferTime);
+        ImGui::Text("shading time: %.3f ms", ((PBR*)(this->m_app))->shadingTime);
+        ImGui::Text("hiz time: %.3f ms", ((PBR*)(this->m_app))->hizTime);
+        auto hizTimes = ((PBR*)(this->m_app))->hizTimes;
+        for (auto i = 0; i < hizTimes.size(); i++) {
+            ImGui::Text("hiz layer %d time: %.3f ms", i, ((PBR*)(this->m_app))->hizTimes[i]);
+        }
     }
     //ImGui::InputInt("Hiz Layer:", &hizLayer, 1, 0);
 
