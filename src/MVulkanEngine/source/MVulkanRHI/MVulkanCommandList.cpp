@@ -32,6 +32,9 @@ void MVulkanCommandList::End()
 void MVulkanCommandList::Reset()
 {
     //vkResetCommandBuffer(commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    //m_fence.WaitForSignal();
+    //m_fence.Reset();
+    
     vkResetCommandBuffer(m_commandBuffer, 0);
 }
 
@@ -263,6 +266,9 @@ void MVulkanCommandList::Create(VkDevice device, const MVulkanCommandListCreateI
     if (vkAllocateCommandBuffers(m_device, &buffer_alloc_info, &m_commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("fail to create commandBuffer");
     }
+
+    m_fence.Create(m_device);
+    //m_fence.Reset();
 }
 
 void MVulkanCommandList::Clean()
@@ -308,6 +314,11 @@ void MVulkanCommandList::EndDebugLabel()
     if (vkCmdEndDebugUtilsLabelEXT) {
         vkCmdEndDebugUtilsLabelEXT(m_commandBuffer);
     }
+}
+
+MVulkanFence MVulkanCommandList::GetFence()
+{
+    return m_fence;
 }
 
 

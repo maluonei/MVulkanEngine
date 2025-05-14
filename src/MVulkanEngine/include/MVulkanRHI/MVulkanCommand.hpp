@@ -6,6 +6,7 @@
 #include <vector>
 #include "MVulkanDevice.hpp"
 #include "MVulkanDescriptor.hpp"
+#include "MVulkanSyncObject.hpp"
 
 #include "map"
 
@@ -93,6 +94,7 @@ public:
 		return m_commandBuffer;
 	};
 
+	MVulkanFence GetFence();
 protected:
 	VkPipelineBindPoint  m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	//void endSingleTimeCommands(VkDevice device);
@@ -100,6 +102,8 @@ protected:
 	VkCommandPool		 m_commandPool;
 	VkCommandBuffer      m_commandBuffer;
 	VkCommandBufferLevel m_level;
+
+	MVulkanFence		m_fence;
 };
 
 class MGraphicsCommandList :public MVulkanCommandList {

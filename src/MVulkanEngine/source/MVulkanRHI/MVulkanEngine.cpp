@@ -61,7 +61,7 @@ void MVulkanEngine::Clean()
         m_imageAvailableSemaphores[i].Clean();
         m_finalRenderFinishedSemaphores[i].Clean();
         m_uiRenderFinishedSemaphores[i].Clean();
-        m_inFlightFences[i].Clean();
+        //m_inFlightFences[i].Clean();
     }
 
     m_swapChain.Clean();
@@ -321,14 +321,99 @@ void MVulkanEngine::SubmitGraphicsCommands(
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores3;
 
-    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_inFlightFences[currentFrame].GetFence());
-    m_graphicsQueue.WaitForQueueComplete();
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_graphicsLists[currentFrame].GetFence().GetFence());
+    //m_graphicsQueue.WaitForQueueComplete();
 
     //VkSemaphore transferSignalSemaphores3[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
-    vkDeviceWaitIdle(m_device.GetDevice());
+    //vkDeviceWaitIdle(m_device.GetDevice());
     //present(m_swapChain.GetPtr(), currentFrame, &imageIndex, recreateSwapchain);
     //present(m_swapChain.GetPtr(), transferSignalSemaphores3, &imageIndex, recreateSwapchain);
+}
+
+void MVulkanEngine::SubmitGraphicsCommands(
+    uint32_t imageIndex, uint32_t currentFrame,
+    std::vector<MVulkanSemaphore> waitSemaphores,
+    std::vector<VkPipelineStageFlags> waitSemaphoreStages,
+    std::vector<MVulkanSemaphore> signalSemaphores)
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    std::vector<VkSemaphore> _waitSemaphores(waitSemaphores.size()+1);
+    for (auto i = 0; i < waitSemaphores.size(); i++) {
+        _waitSemaphores[i] = waitSemaphores[i].GetSemaphore();
+    }
+    _waitSemaphores[waitSemaphores.size()] = m_imageAvailableSemaphores[currentFrame].GetSemaphore();
+    
+    std::vector<VkPipelineStageFlags> _waitSemaphoreStages(waitSemaphoreStages.size() + 1);
+    for (auto i = 0; i < waitSemaphoreStages.size(); i++) {
+        _waitSemaphoreStages[i] = waitSemaphoreStages[i];
+    }
+    _waitSemaphoreStages[waitSemaphores.size()] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    std::vector<VkSemaphore> _signalSemaphores(signalSemaphores.size() + 1);
+    for (auto i = 0; i < signalSemaphores.size(); i++) {
+        _signalSemaphores[i] = signalSemaphores[i].GetSemaphore();
+    }
+    _signalSemaphores[signalSemaphores.size()] = m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore();
+
+    submitInfo.waitSemaphoreCount = _waitSemaphores.size();
+    submitInfo.pWaitSemaphores = _waitSemaphores.data();
+    submitInfo.pWaitDstStageMask = _waitSemaphoreStages.data();
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_graphicsLists[currentFrame].GetBuffer();
+
+    submitInfo.signalSemaphoreCount = _signalSemaphores.size();
+    submitInfo.pSignalSemaphores = _signalSemaphores.data();
+
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, m_graphicsLists[currentFrame].GetFence().GetFence());
+    //m_graphicsQueue.WaitForQueueComplete();
+
+    //vkDeviceWaitIdle(m_device.GetDevice());
+}
+
+void MVulkanEngine::SubmitCommands(
+    MVulkanCommandList commandList,
+    MVulkanCommandQueue queue, 
+    std::vector<MVulkanSemaphore> waitSemaphores, 
+    std::vector<VkPipelineStageFlags> waitSemaphoreStages, 
+    std::vector<MVulkanSemaphore> signalSemaphores)
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    std::vector<VkSemaphore> _waitSemaphores(waitSemaphores.size());
+    for (auto i = 0; i < waitSemaphores.size(); i++) {
+        _waitSemaphores[i] = waitSemaphores[i].GetSemaphore();
+    }
+
+    std::vector<VkPipelineStageFlags> _waitSemaphoreStages(waitSemaphoreStages.size());
+    for (auto i = 0; i < waitSemaphoreStages.size(); i++) {
+        _waitSemaphoreStages[i] = waitSemaphoreStages[i];
+    }
+
+    std::vector<VkSemaphore> _signalSemaphores(signalSemaphores.size());
+    for (auto i = 0; i < signalSemaphores.size(); i++) {
+        _signalSemaphores[i] = signalSemaphores[i].GetSemaphore();
+    }
+
+    submitInfo.waitSemaphoreCount = _waitSemaphores.size();
+    submitInfo.pWaitSemaphores = _waitSemaphores.data();
+    submitInfo.pWaitDstStageMask = _waitSemaphoreStages.data();
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandList.GetBuffer();
+
+
+    submitInfo.signalSemaphoreCount = _signalSemaphores.size();
+    submitInfo.pSignalSemaphores = _signalSemaphores.data();
+
+    queue.SubmitCommands(1, &submitInfo, commandList.GetFence().GetFence());
+    //queue.WaitForQueueComplete();
+
+    //vkDeviceWaitIdle(m_device.GetDevice());
 }
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 
@@ -552,6 +637,8 @@ void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t im
 
     auto graphicsList = m_graphicsLists[currentFrame];
 
+    graphicsList.GetFence().WaitForSignal();
+    graphicsList.GetFence().Reset();
     graphicsList.Reset();
     graphicsList.Begin();
 
@@ -594,7 +681,7 @@ void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t im
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pWaitDstStageMask = &waitStage,  // 必须指定
 
-    m_graphicsQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+    m_graphicsQueue.SubmitCommands(1, &submitInfo, graphicsList.GetFence().GetFence());
     m_graphicsQueue.WaitForQueueComplete();
 
     //m_uiRenderer.RenderFrame();
@@ -838,13 +925,13 @@ void MVulkanEngine::createSyncObjects()
     m_imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_uiRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
-    m_inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    //m_inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
     for (size_t i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
         m_imageAvailableSemaphores[i].Create(m_device.GetDevice());
         m_finalRenderFinishedSemaphores[i].Create(m_device.GetDevice());
         m_uiRenderFinishedSemaphores[i].Create(m_device.GetDevice());
-        m_inFlightFences[i].Create(m_device.GetDevice());
+        //m_inFlightFences[i].Create(m_device.GetDevice());
     }
 }
 

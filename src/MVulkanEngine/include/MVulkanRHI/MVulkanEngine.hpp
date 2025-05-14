@@ -165,12 +165,27 @@ public:
 
     VkResult AcquireNextSwapchainImage(uint32_t& imageIndex, uint32_t currentFrame);
 
-    inline MVulkanFence GetInFlightFence(uint32_t index) const { return m_inFlightFences[index]; }
+    inline MVulkanFence GetInFlightFence(uint32_t index) { return m_graphicsLists[index].GetFence(); }
     inline MVulkanSemaphore GetImageAvilableSemaphore(uint32_t index)const { return m_imageAvailableSemaphores[index]; }
     inline MVulkanSemaphore GetFinalRenderFinishedSemaphoresSemaphore(uint32_t index)const { return m_finalRenderFinishedSemaphores[index]; }
 
     //void SubmitCommands();
     void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame);
+
+    void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame,
+        std::vector<MVulkanSemaphore> waitSemaphores,
+        std::vector<VkPipelineStageFlags> waitSemaphoreStages,
+        std::vector<MVulkanSemaphore> signalSemaphores
+    );
+
+    void SubmitCommands(
+        MVulkanCommandList commandList,
+        MVulkanCommandQueue queue,
+        std::vector<MVulkanSemaphore> waitSemaphores,
+        std::vector<VkPipelineStageFlags> waitSemaphoreStages,
+        std::vector<MVulkanSemaphore> signalSemaphores
+    );
+    //void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);
 
@@ -490,7 +505,7 @@ private:
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;
     std::vector<MVulkanSemaphore> m_uiRenderFinishedSemaphores;
-    std::vector<MVulkanFence> m_inFlightFences;
+    //std::vector<MVulkanFence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
     std::shared_ptr<Camera> m_camera = nullptr;

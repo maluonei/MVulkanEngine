@@ -104,9 +104,9 @@ void MRenderApplication::renderLoop()
 void MRenderApplication::drawFrame()
 {
     //spdlog::info("currentFrame:{0}", currentFrame);
-    auto fence = Singleton<MVulkanEngine>::instance().GetInFlightFence(m_currentFrame);
-
-    fence.WaitForSignal();
+    //auto fence = Singleton<MVulkanEngine>::instance().GetInFlightFence(m_currentFrame);
+    //
+    //fence.WaitForSignal();
 
     uint32_t imageIndex;
     VkResult result = Singleton<MVulkanEngine>::instance().AcquireNextSwapchainImage(imageIndex, m_currentFrame);
@@ -119,7 +119,7 @@ void MRenderApplication::drawFrame()
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    fence.Reset();
+    //fence.Reset();
 
     ComputeAndDraw(imageIndex);
 

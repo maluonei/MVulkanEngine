@@ -7,6 +7,7 @@
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
 #include "MVulkanRHI/MVulkanBuffer.hpp"
+#include "MVulkanRHI/MVulkanSyncObject.hpp"
 #include "Hiz.hpp"
 
 const uint16_t WIDTH = 1280;
@@ -51,6 +52,7 @@ public:
 	float shadingTime = 0.f;
 	float cullingTime = 0.f;
 	float hizTime = 0.f;
+	std::vector<float> hizTimes;
 	//int m_outputContext = 0;
 private:
 	void loadScene();
@@ -72,6 +74,8 @@ private:
 
 	void loadShaders();
 	void createStorageBuffers();
+
+	void createSyncObjs();
 
 
 	//void ImageLayoutToShaderRead(int currentFrame);
@@ -132,6 +136,9 @@ private:
 	glm::mat4					m_prevProj;
 
 	int							m_queryIndex = 0;
+
+	MVulkanSemaphore			m_cullingSemaphore;
+	MVulkanSemaphore			m_shadingSemaphore;
 };
 
 class DRUI :public UIRenderer {
@@ -147,6 +154,8 @@ public:
 	int hizMode = NOT_DO_HIZ;
 	//int showMotionVector = 0;
 	int outputContext = 0;
+	bool showPassTime = 0;
+	//int hizLayer = 1;
 };
 
 

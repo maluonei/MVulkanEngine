@@ -55,7 +55,7 @@ std::vector<uint64_t> MVulkanQueryPool::GetQueryResults(int startQuery, int numQ
 		numQuerys * sizeof(uint64_t),
 		results.data(),
 		sizeof(uint64_t),
-		VK_QUERY_RESULT_64_BIT
+		VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
 	));
 
 	return results;
