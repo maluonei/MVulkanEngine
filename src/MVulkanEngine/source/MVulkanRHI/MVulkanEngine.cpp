@@ -650,7 +650,7 @@ void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulka
     graphicsList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
 
-void MVulkanEngine::TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+void MVulkanEngine::TransitionImageLayout2(MVulkanCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
     list.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
@@ -1106,7 +1106,8 @@ void MVulkanEngine::CreateBuffer(std::shared_ptr<Buffer> buffer, const void* dat
 void  MVulkanEngine::CreateColorAttachmentImage(
     std::shared_ptr<MVulkanTexture> texture,
     VkExtent2D extent,
-    VkFormat format
+    VkFormat format,
+    int numMips
 ) {
     //texture = std::make_shared<MVulkanTexture>();
     
@@ -1122,7 +1123,7 @@ void  MVulkanEngine::CreateColorAttachmentImage(
     viewInfo.format = imageInfo.format;
     viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.baseMipLevel = 0;
-    viewInfo.levelCount = 1;
+    viewInfo.levelCount = numMips;
     viewInfo.baseArrayLayer = 0;
     viewInfo.layerCount = 1;
 
@@ -1133,7 +1134,8 @@ void  MVulkanEngine::CreateColorAttachmentImage(
 void  MVulkanEngine::CreateDepthAttachmentImage(
     std::shared_ptr<MVulkanTexture> texture,
     VkExtent2D extent,
-    VkFormat format
+    VkFormat format,
+    int numMips
 ) {
     //texture = std::make_shared<MVulkanTexture>();
 
@@ -1149,13 +1151,14 @@ void  MVulkanEngine::CreateDepthAttachmentImage(
     viewInfo.format = imageInfo.format;
     viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
     viewInfo.baseMipLevel = 0;
-    viewInfo.levelCount = 1;
+    viewInfo.levelCount = numMips;
     viewInfo.baseArrayLayer = 0;
     viewInfo.layerCount = 1;
 
     //CreateImage(texture, imageInfo, viewInfo);
     CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
+
 
 void MVulkanEngine::CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout)
 {
@@ -1227,6 +1230,92 @@ void MVulkanEngine::LoadTextureData(std::shared_ptr<MVulkanTexture> texture, voi
 
     m_transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
     m_transferQueue.WaitForQueueComplete();
+}
+
+void MVulkanEngine::CopyImage(
+    MVulkanCommandList commandList,
+    std::shared_ptr<MVulkanTexture> dst, 
+    std::shared_ptr<MVulkanTexture> src, 
+    MVulkanImageCopyInfo copyInfo)
+{
+    TextureState transferSrcState, transferDstState;
+    transferSrcState.m_state = ETextureState::TRANSFER_SRC;
+    transferDstState.m_state = ETextureState::TRANSFER_DST;
+
+    //auto srcOriginState = src->
+
+    dst->TransferTextureState(commandList, transferDstState);
+    src->TransferTextureState(commandList, transferSrcState);
+
+    commandList.CopyImage(src->GetImage(), dst->GetImage(), copyInfo);
+}
+
+void MVulkanEngine::CopyImage(MVulkanCommandList commandList, std::vector<std::shared_ptr<MVulkanTexture>> dsts, std::vector<std::shared_ptr<MVulkanTexture>> srcs, std::vector<MVulkanImageCopyInfo> copyInfos)
+{
+    TextureState transferSrcState, transferDstState;
+    transferSrcState.m_state = ETextureState::TRANSFER_SRC;
+    transferDstState.m_state = ETextureState::TRANSFER_DST;
+
+    //auto srcOriginState = src->
+    auto numTextures = dsts.size();
+
+    for (auto i = 0; i < numTextures; i++) {
+        dsts[i]->TransferTextureState(commandList, transferDstState);
+        srcs[i]->TransferTextureState(commandList, transferSrcState);
+    }
+
+    for (auto i = 0; i < numTextures; i++) {
+        commandList.CopyImage(srcs[i]->GetImage(), dsts[i]->GetImage(), copyInfos[i]);
+    }
+}
+
+void MVulkanEngine::CopyImage2(MVulkanCommandList commandList, std::vector<std::shared_ptr<MVulkanTexture>> dsts, std::vector<std::shared_ptr<MVulkanTexture>> srcs, std::vector<MVulkanImageCopyInfo> copyInfos)
+{
+    TextureState transferSrcState, transferDstState;
+    transferSrcState.m_state = ETextureState::TRANSFER_SRC;
+    transferDstState.m_state = ETextureState::TRANSFER_DST;
+
+    //auto srcOriginState = src->
+    auto numTextures = dsts.size();
+
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+
+    VkPipelineStageFlags srcStage, dstStage;
+
+    for (auto i = 0; i < numTextures; i++) {
+        MVulkanImageMemoryBarrier dstBarrier, srcBarrier;
+
+        if (dsts[i]->TransferTextureStateGetBarrier(transferDstState, dstBarrier, srcStage, dstStage)) {
+            barriers.push_back(dstBarrier);
+        }
+        
+        //if (srcs[i]->TransferTextureStateGetBarrier(transferSrcState, srcBarrier)) {
+        //    barriers.push_back(srcBarrier);
+        //}
+    }
+
+    TransitionImageLayout2(commandList, barriers, srcStage, dstStage);
+
+    barriers.clear();
+
+    for (auto i = 0; i < numTextures; i++) {
+        MVulkanImageMemoryBarrier dstBarrier, srcBarrier;
+
+        //if (dsts[i]->TransferTextureStateGetBarrier(transferDstState, dstBarrier, srcStage, dstStage)) {
+        //    barriers.push_back(dstBarrier);
+        //}
+
+        if (srcs[i]->TransferTextureStateGetBarrier(transferSrcState, srcBarrier, srcStage, dstStage)) {
+            barriers.push_back(srcBarrier);
+        }
+    }
+
+    TransitionImageLayout2(commandList, barriers, srcStage, dstStage);
+
+
+    for (auto i = 0; i < numTextures; i++) {
+        commandList.CopyImage(srcs[i]->GetImage(), dsts[i]->GetImage(), copyInfos[i]);
+    }
 }
 
 void MVulkanEngine::CreateTextureFromImage(std::shared_ptr<MVulkanTexture> texture, fs::path imagePath)
@@ -1963,7 +2052,7 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
 {
     m_computeList.BeginDebugLabel(eventName);
 
-    computePass->PrepareResourcesForShaderRead();
+    computePass->PrepareResourcesForShaderRead(m_computeList);
 
     m_computeList.BindPipeline(computePass->GetPipeline().Get());
 
@@ -1982,7 +2071,9 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
 {
     m_computeList.BeginDebugLabel(eventName);
 
-    computePass->PrepareResourcesForShaderRead();
+    //m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+
+    computePass->PrepareResourcesForShaderRead(m_computeList);
 
     m_computeList.BindPipeline(computePass->GetPipeline().Get());
 

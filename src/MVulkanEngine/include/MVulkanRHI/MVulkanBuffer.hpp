@@ -291,12 +291,25 @@ public:
 	inline ImageCreateInfo GetImageInfo() const { return m_imageInfo; }
 
 	void TransferTextureState(int currentFrame, TextureState newState);
+	void TransferTextureState(MVulkanCommandList commandList, TextureState newState);
+
+	bool TransferTextureStateGetBarrier(
+		TextureState newState, 
+		MVulkanImageMemoryBarrier& barrier,
+		VkPipelineStageFlags& srcStage,
+		VkPipelineStageFlags& dstStage);
 
 	const bool MipMapGenerated() const;
 
 private:
 	void ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState);
+	void ChangeImageLayout(MVulkanCommandList commandList, TextureState oldState, TextureState newState);
 
+	MVulkanImageMemoryBarrier ChangeImageLayout(
+		TextureState oldState, 
+		TextureState newState,
+		VkPipelineStageFlags& srcStage,
+		VkPipelineStageFlags& dstStage);
 private:
 	ImageCreateInfo		m_imageInfo;
 	ImageViewCreateInfo m_viewInfo;

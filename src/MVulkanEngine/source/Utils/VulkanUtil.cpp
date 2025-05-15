@@ -94,6 +94,10 @@ VkImageLayout TextureState2ImageLayout(const ETextureState state)
             return VK_IMAGE_LAYOUT_GENERAL;
         case ETextureState::PRESENT:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        case ETextureState::TRANSFER_SRC:
+            return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        case ETextureState::TRANSFER_DST:
+            return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         case ETextureState::Undefined:
             return VK_IMAGE_LAYOUT_UNDEFINED;
     }
@@ -114,6 +118,10 @@ VkAccessFlagBits TextureState2AccessFlag(const ETextureState state)
         flag = VkAccessFlagBits(flag | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT);
     if(uint32_t(state) & uint32_t(ETextureState::PRESENT))
         flag = VkAccessFlagBits(flag | VK_ACCESS_NONE);
+    if (uint32_t(state) & uint32_t(ETextureState::TRANSFER_SRC))
+        flag = VkAccessFlagBits(flag | VK_ACCESS_TRANSFER_READ_BIT);
+    if (uint32_t(state) & uint32_t(ETextureState::TRANSFER_DST))
+        flag = VkAccessFlagBits(flag | VK_ACCESS_TRANSFER_WRITE_BIT);
         
     return flag;
 

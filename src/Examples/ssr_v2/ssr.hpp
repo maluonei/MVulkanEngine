@@ -77,6 +77,8 @@ private:
 
 	void createSyncObjs();
 
+	void copyHizToDepth();
+
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -139,7 +141,8 @@ private:
 
 	MVulkanSemaphore			m_cullingSemaphore;
 	MVulkanSemaphore			m_shadowMapSemaphore;
-	MVulkanSemaphore			m_hizSemaphore;
+	MVulkanSemaphore			m_genHizSemaphore;
+	MVulkanSemaphore			m_copyHizSemaphore;
 	MVulkanSemaphore			m_gbufferSemaphore;
 };
 
@@ -153,10 +156,11 @@ private:
 
 public:
 	int cullingMode = 0;
-	int hizMode = NOT_DO_HIZ;
+	int hizMode = DO_HIZ_MODE_0;
 	//int showMotionVector = 0;
 	int outputContext = 0;
 	bool showPassTime = 0;
+	bool copyHiz = true;
 	//int hizLayer = 1;
 };
 

@@ -66,14 +66,17 @@ public:
     void CreateColorAttachmentImage(
         std::shared_ptr<MVulkanTexture> texture,
         VkExtent2D extent,
-        VkFormat format
+        VkFormat format,
+        int numMips = 1
     );
 
     void CreateDepthAttachmentImage(
         std::shared_ptr<MVulkanTexture> texture,
         VkExtent2D extent,
-        VkFormat format
+        VkFormat format,
+        int numMips = 1
     );
+
 
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
@@ -83,6 +86,24 @@ public:
         VkOffset3D origin, VkExtent3D extent);
 
     void CreateTextureFromImage(std::shared_ptr<MVulkanTexture> texture, fs::path imagePath);
+
+    void CopyImage(
+        MVulkanCommandList commandList,
+        std::shared_ptr<MVulkanTexture> dst, 
+        std::shared_ptr<MVulkanTexture> src, 
+        MVulkanImageCopyInfo copyInfo);
+
+    void CopyImage(
+        MVulkanCommandList commandList,
+        std::vector<std::shared_ptr<MVulkanTexture>> dsts,
+        std::vector<std::shared_ptr<MVulkanTexture>> srcs,
+        std::vector<MVulkanImageCopyInfo> copyInfos);
+
+    void CopyImage2(
+        MVulkanCommandList commandList,
+        std::vector<std::shared_ptr<MVulkanTexture>> dsts,
+        std::vector<std::shared_ptr<MVulkanTexture>> srcs,
+        std::vector<MVulkanImageCopyInfo> copyInfos);
 
     template<class T>
     void CreateImage(std::shared_ptr<MVulkanTexture> texture, std::vector<MImage<T>*> images, bool calculateMipLevels = false) {
@@ -305,7 +326,7 @@ public:
     void TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
     void TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
-    void TransitionImageLayout2(MGraphicsCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+    void TransitionImageLayout2(MVulkanCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 
     void RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame);
 

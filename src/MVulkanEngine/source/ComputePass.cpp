@@ -453,6 +453,26 @@ void ComputePass::PrepareResourcesForShaderRead()
     }
 }
 
+void ComputePass::PrepareResourcesForShaderRead(MVulkanCommandList commandList)
+{
+    TextureState state;
+    state.m_stage = ShaderStageFlagBits::COMPUTE;
+
+    for (auto& it : m_cachedResources) {
+        auto resource = it.second;
+        auto key = it.first;
+        if (resource.m_textures.size() != 0) {
+            for (auto& texture : resource.m_textures) {
+                auto binding = m_bindings[key];
+                auto shaderStage = binding.binding.stageFlags;
+                state.m_stage = VkShaderStage2ShaderStage(shaderStage);
+                state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
+                texture->TransferTextureState(commandList, state);
+            }
+        }
+    }
+}
+
 void ComputePass::setShader(std::shared_ptr<ComputeShaderModule> shader)
 {
     m_shader = shader;

@@ -720,6 +720,30 @@ void MVulkanTexture::TransferTextureState(int currentFrame, TextureState newStat
     m_state = newState;
 }
 
+void MVulkanTexture::TransferTextureState(MVulkanCommandList commandList, TextureState newState)
+{
+    if (m_state.m_state == newState.m_state && m_state.m_stage == newState.m_stage)
+        return;
+
+    ChangeImageLayout(commandList, m_state, newState);
+    m_state = newState;
+}
+
+bool MVulkanTexture::TransferTextureStateGetBarrier(
+    TextureState newState,
+    MVulkanImageMemoryBarrier& barrier,
+    VkPipelineStageFlags& srcStage,
+    VkPipelineStageFlags& dstStage)
+{
+    if (m_state.m_state == newState.m_state && m_state.m_stage == newState.m_stage)
+        return false;
+
+    barrier = ChangeImageLayout(m_state, newState, srcStage, dstStage);
+    m_state = newState;
+    return true;
+}
+
+
 const bool MVulkanTexture::MipMapGenerated() const
 {
     return m_mipMapGenerated;
@@ -739,16 +763,70 @@ void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, 
     _barrier.dstAccessMask = TextureState2AccessFlag(newState.m_state);
     _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
     _barrier.newLayout = TextureState2ImageLayout(newState.m_state);    
-    _barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
+    //_barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
+    _barrier.baseMipLevel = 0;
+    _barrier.levelCount = GetImageInfo().mipLevels;
     _barrier.aspectMask = m_viewInfo.flag;
     barriers.push_back(_barrier);
 
     if (currentFrame < 0) {
-        Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, srcStage, dstStage);
+        spdlog::error("invalid currentFrame value:{0}", currentFrame);
+        //Singleton<MVulkanEngine>::instance().TransitionImageLayout(barriers, srcStage, dstStage);
     }
     else {
         Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, srcStage, dstStage);
     }
+}
+
+void MVulkanTexture::ChangeImageLayout(
+    MVulkanCommandList commandList,
+    TextureState oldState,
+    TextureState newState)
+{
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    MVulkanImageMemoryBarrier _barrier{};
+    VkPipelineStageFlags srcStage, dstStage;
+
+    srcStage = TextureState2PipelineStage(oldState);
+    dstStage = TextureState2PipelineStage(newState);
+
+    _barrier.image = m_image.GetImage();
+    _barrier.srcAccessMask = TextureState2AccessFlag(oldState.m_state);
+    _barrier.dstAccessMask = TextureState2AccessFlag(newState.m_state);
+    _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
+    _barrier.newLayout = TextureState2ImageLayout(newState.m_state);
+    _barrier.baseMipLevel = 0;
+    _barrier.levelCount = GetImageInfo().mipLevels;
+    //_barrier.levelCount = 1;
+    _barrier.aspectMask = m_viewInfo.flag;
+    barriers.push_back(_barrier);
+
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(commandList, barriers, srcStage, dstStage);
+}
+
+MVulkanImageMemoryBarrier MVulkanTexture::ChangeImageLayout(
+    TextureState oldState, 
+    TextureState newState,
+    VkPipelineStageFlags& srcStage,
+    VkPipelineStageFlags& dstStage)
+{
+    MVulkanImageMemoryBarrier _barrier{};
+    //VkPipelineStageFlags srcStage, dstStage;
+
+    srcStage = TextureState2PipelineStage(oldState);
+    dstStage = TextureState2PipelineStage(newState);
+
+    _barrier.image = m_image.GetImage();
+    _barrier.srcAccessMask = TextureState2AccessFlag(oldState.m_state);
+    _barrier.dstAccessMask = TextureState2AccessFlag(newState.m_state);
+    _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
+    _barrier.newLayout = TextureState2ImageLayout(newState.m_state);
+    _barrier.baseMipLevel = 0;
+    _barrier.levelCount = GetImageInfo().mipLevels;
+    //_barrier.levelCount = 1;
+    _barrier.aspectMask = m_viewInfo.flag;
+
+    return _barrier;
 }
 
 VkFormat ConvertGliFormatToVkFormat(gli::format format)

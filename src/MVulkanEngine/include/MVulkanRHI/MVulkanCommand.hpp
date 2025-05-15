@@ -44,6 +44,10 @@ struct MVulkanImageCopyInfo {
 	uint32_t layerCount = 1;
 
 	uint32_t dstArrayLayer = 0;
+
+	VkOffset3D srcOffset;
+	VkOffset3D dstOffset;
+	VkExtent3D extent;
 };
 
 class MVulkanCommandList {
@@ -67,7 +71,9 @@ public:
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, unsigned int depth, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkOffset3D origin, VkExtent3D extent, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
-	void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
+	//void CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo);
+	void CopyImage(VkImage srcImage, VkImage dstImage, MVulkanImageCopyInfo copyInfo);
+
 	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, uint32_t firstSet, uint32_t descriptorSetCount, VkDescriptorSet* set);
 	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, std::vector<MVulkanDescriptorSet> sets);
 	virtual void BindDescriptorSet(VkPipelineLayout pipelineLayout, std::unordered_map<int, MVulkanDescriptorSet> sets);

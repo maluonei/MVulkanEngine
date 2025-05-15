@@ -182,24 +182,22 @@ void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage,
     vkCmdCopyBufferToImage(m_commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, unsigned int width, unsigned int height, MVulkanImageCopyInfo copyInfo)
+void MVulkanCommandList::CopyImage(VkImage srcImage, VkImage dstImage, MVulkanImageCopyInfo copyInfo)
 {
     VkImageCopy copyRegion = {};
     copyRegion.srcSubresource.aspectMask = copyInfo.srcAspectMask;
     copyRegion.srcSubresource.mipLevel = copyInfo.srcMipLevel;
     copyRegion.srcSubresource.baseArrayLayer = copyInfo.srcArrayLayer;
     copyRegion.srcSubresource.layerCount = copyInfo.layerCount;
-    copyRegion.srcOffset = { 0, 0, 0 };
+    copyRegion.srcOffset = copyInfo.srcOffset;
 
     copyRegion.dstSubresource.aspectMask = copyInfo.dstAspectMask;
     copyRegion.dstSubresource.mipLevel = copyInfo.dstMipLevel;
     copyRegion.dstSubresource.baseArrayLayer = copyInfo.dstArrayLayer;
     copyRegion.dstSubresource.layerCount = copyInfo.layerCount;
-    copyRegion.dstOffset = { 0, 0, 0 };
+    copyRegion.dstOffset = copyInfo.dstOffset;
 
-    copyRegion.extent.width = width;    // ���ƵĿ���
-    copyRegion.extent.height = height;  // ���Ƶĸ߶�
-    copyRegion.extent.depth = 1;
+    copyRegion.extent = copyInfo.extent;
 
     vkCmdCopyImage(
         m_commandBuffer,

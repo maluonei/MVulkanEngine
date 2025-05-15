@@ -36,6 +36,7 @@ void SSR::SetUp()
 void SSR::ComputeAndDraw(uint32_t imageIndex)
 {
     auto hizMode = std::static_pointer_cast<SSRUI>(m_uiRenderer)->hizMode;
+    auto copyHiz = std::static_pointer_cast<SSRUI>(m_uiRenderer)->copyHiz;
 
     m_queryIndex = 0;
     int shadowmapQueryIndex = 0;
@@ -261,10 +262,26 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
             computeList.End();
 
-            std::vector<MVulkanSemaphore> waitSemaphores2(1, m_gbufferSemaphore);
-            std::vector<MVulkanSemaphore> signalSemaphores2(1, m_hizSemaphore);
-            std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+            if (copyHiz) {
+                std::vector<MVulkanSemaphore> waitSemaphores2(1, m_gbufferSemaphore);
+                std::vector<MVulkanSemaphore> signalSemaphores2(1, m_genHizSemaphore);
+                std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+            }
+            else {
+                std::vector<MVulkanSemaphore> waitSemaphores2(1, m_gbufferSemaphore);
+                std::vector<MVulkanSemaphore> signalSemaphores2(1, m_genHizSemaphore);
+                std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+
+            }
+        }
+    }
+
+    
+    if (hizMode == DO_HIZ_MODE_0) {
+        if (copyHiz) {
+            copyHizToDepth();
         }
     }
 
@@ -281,10 +298,23 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
 
         if (hizMode == DO_HIZ_MODE_0) {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_hizSemaphore);
-            std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
+            if (copyHiz) {
+                std::vector<MVulkanSemaphore> waitSemaphores1(0);
+                std::vector<MVulkanSemaphore> signalSemaphores1(0);
+                std::vector<VkPipelineStageFlags> waitFlags1(0);
+                Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
+            }
+            else {
+                std::vector<MVulkanSemaphore> waitSemaphores1(1, m_genHizSemaphore);
+                std::vector<MVulkanSemaphore> signalSemaphores1(0);
+                std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
+            }
+
+            //std::vector<MVulkanSemaphore> waitSemaphores1(0);
+            //std::vector<MVulkanSemaphore> signalSemaphores1(0);
+            //std::vector<VkPipelineStageFlags> waitFlags1(0);
+            //Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
         }
         else {
             std::vector<MVulkanSemaphore> waitSemaphores1(1, m_gbufferSemaphore);
@@ -593,6 +623,7 @@ void SSR::createTextures()
         //    gBuffer2, swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
         //);
 
+        //auto numHizLayers = m_hiz.hizRes.size();
         Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
             gBufferDepth, swapchainExtent, depthFormat
         );
@@ -607,7 +638,7 @@ void SSR::createTextures()
         ImageCreateInfo imageInfo;
         ImageViewCreateInfo viewInfo;
         imageInfo.arrayLength = 1;
-        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         imageInfo.format = depthFormat;
 
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -626,6 +657,15 @@ void SSR::createTextures()
             imageInfo.height = res.y;
 
             m_hizTextures[i] = std::make_shared<MVulkanTexture>();
+
+            if (i == 0) {
+                viewInfo.levelCount = hizLayers;
+                imageInfo.mipLevels = hizLayers;
+            }
+            else {
+                viewInfo.levelCount = 1;
+                imageInfo.mipLevels = 1;
+            }
             Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
         }
     }
@@ -731,9 +771,121 @@ void SSR::createStorageBuffers()
 void SSR::createSyncObjs()
 {
     m_cullingSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    m_hizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    m_genHizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    m_copyHizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
     m_gbufferSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
     m_shadowMapSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+}
+
+void SSR::copyHizToDepth()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+        auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+        
+        graphicsList.GetFence().WaitForSignal();
+        graphicsList.GetFence().Reset();
+        graphicsList.Reset();
+        graphicsList.Begin();
+        
+        auto numMips = m_hiz.hizRes.size();
+        //for (auto i = 1; i < numMips; i++) {
+        //    MVulkanImageCopyInfo copyInfo{};
+        //
+        //    copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        //    copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        //
+        //    copyInfo.srcMipLevel = 0;
+        //    copyInfo.dstMipLevel = i;
+        //
+        //    copyInfo.extent = { (uint32_t)m_hiz.hizRes[i].x, (uint32_t)m_hiz.hizRes[i].y, 1 };
+        //
+        //    Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
+        //}
+
+        std::vector<std::shared_ptr<MVulkanTexture>> srcs;
+        std::vector<std::shared_ptr<MVulkanTexture>> dsts;
+        std::vector<MVulkanImageCopyInfo> infos;
+        for (auto i = 1; i < numMips; i++) {
+            MVulkanImageCopyInfo copyInfo{};
+
+            copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+            copyInfo.srcMipLevel = 0;
+            copyInfo.dstMipLevel = i;
+
+            copyInfo.extent = { (uint32_t)m_hiz.hizRes[i].x, (uint32_t)m_hiz.hizRes[i].y, 1 };
+
+            srcs.push_back(m_hizTextures[i]);
+            dsts.push_back(m_hizTextures[0]);
+            infos.push_back(copyInfo);
+            //Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
+        }
+        //Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, dsts, srcs, infos);
+        Singleton<MVulkanEngine>::instance().CopyImage2(graphicsList, dsts, srcs, infos);
+
+        
+        graphicsList.End();
+        
+        std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
+        //std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
+        std::vector<MVulkanSemaphore> signalSemaphores(0);
+        std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        
+        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
+    }
+
+    //{
+    //    auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+    //    auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+    //
+    //    auto numMips = m_hiz.hizRes.size();
+    //    for (auto i = 1; i < numMips; i++) {
+    //        graphicsList.GetFence().WaitForSignal();
+    //        graphicsList.GetFence().Reset();
+    //        graphicsList.Reset();
+    //        graphicsList.Begin();
+    //
+    //        MVulkanImageCopyInfo copyInfo{};
+    //
+    //        copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //        copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //
+    //        copyInfo.srcMipLevel = 0;
+    //        copyInfo.dstMipLevel = i;
+    //
+    //        copyInfo.extent = { (uint32_t)m_hiz.hizRes[i].x, (uint32_t)m_hiz.hizRes[i].y, 1 };
+    //
+    //        Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
+    //    
+    //        graphicsList.End();
+    //
+    //        if (i == 1) {
+    //            std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
+    //            std::vector<MVulkanSemaphore> signalSemaphores(0);
+    //            std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    //            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
+    //        }
+    //        if (i == numMips - 1) {
+    //            std::vector<MVulkanSemaphore> waitSemaphores(0);
+    //            std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
+    //            std::vector<VkPipelineStageFlags> waitFlags(0);
+    //            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
+    //        }
+    //
+    //    }
+
+        //graphicsList.End();
+        //
+        //std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
+        //std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
+        //std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        //
+        //Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
+    //}
 }
 
 void SSR::initUIRenderer()
@@ -1067,6 +1219,8 @@ void SSRUI::RenderContext() {
     auto numTotalInstances = ((SSR*)(this->m_app))->numTotalInstances;
     auto numDrawInstances = ((SSR*)(this->m_app))->numDrawInstances;
     ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
+
+    ImGui::Checkbox("copyHiz", &copyHiz);
 
     ImGui::Checkbox("showPassTime", &showPassTime);
     if (showPassTime) {

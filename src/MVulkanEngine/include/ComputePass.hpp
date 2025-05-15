@@ -42,6 +42,7 @@ public:
 	void LoadStorageBuffer(uint32_t alignment);
 
 	void PrepareResourcesForShaderRead();
+	void PrepareResourcesForShaderRead(MVulkanCommandList commandList);
 
 private:
 	void setShader(std::shared_ptr<ComputeShaderModule> shader);

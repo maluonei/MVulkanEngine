@@ -201,7 +201,9 @@ enum class ETextureState : uint32_t {
     SRV = 1 << 3,
     UAV = 1 << 4,
     PRESENT = 1 << 5,
-    GENERAL = 1 << 6
+    GENERAL = 1 << 6,
+    TRANSFER_SRC = 1 << 7,
+    TRANSFER_DST = 1 << 8,
 };
 
 struct TextureState {
