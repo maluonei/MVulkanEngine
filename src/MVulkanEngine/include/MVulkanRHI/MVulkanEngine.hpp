@@ -185,6 +185,11 @@ public:
         std::vector<VkPipelineStageFlags> waitSemaphoreStages,
         std::vector<MVulkanSemaphore> signalSemaphores
     );
+
+    void SubmitCommands(
+        MVulkanCommandList commandList,
+        MVulkanCommandQueue queue
+    );
     //void SubmitGraphicsCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitComputeCommands(uint32_t imageIndex, uint32_t currentFrame);
     //void SubmitCommandsAndPresent(uint32_t imageIndex, uint32_t currentFrame, std::function<void()> recreateSwapchain);

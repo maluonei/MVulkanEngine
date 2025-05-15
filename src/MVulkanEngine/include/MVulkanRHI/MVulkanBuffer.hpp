@@ -57,6 +57,7 @@ public:
 	inline void* GetData()const { return m_mappedData; }
 
 	inline bool IsActive() const { return m_active; }
+	//inline bool IsEmpty() const { return m_active; }
 
 protected:
 	BufferCreateInfo	m_info;
@@ -64,11 +65,13 @@ protected:
 	void*				m_mappedData;
 	BufferType			m_type;
 	VkDeviceSize		m_bufferSize;
-	VkBuffer			m_buffer;
+	VkBuffer			m_buffer = nullptr;
 	VkBufferView		m_bufferView = nullptr;
 	VkDeviceMemory		m_bufferMemory;
 
 	VkDeviceAddress		m_deviceAddress;
+
+	//bool				m_isEmpty = false;
 	bool				m_active = false;
 };
 
@@ -254,64 +257,22 @@ public:
 	}
 
 
-	//void LoadData();
-	//void CreateAndLoadData(
-	//	MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, std::vector<MImage<T>*> imageDatas, uint32_t mipLevel = 0);
-
-
-	//template<typename T>
-	//void CreateAndLoadData(
-	//	MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, std::shared_ptr<MImage<T>> imageDatas, uint32_t mipLevel = 0)
-	//{
-	//	m_imageInfo = imageInfo;
-	//	m_viewInfo = viewInfo;
-	//	m_imageValid = true;
-	//
-	//	m_image.CreateImage(device, imageInfo);
-	//	m_image.CreateImageView(viewInfo);
-	//
-	//	MVulkanImageMemoryBarrier barrier{};
-	//	barrier.image = m_image.GetImage();
-	//	barrier.srcAccessMask = 0;
-	//	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	//	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	//	barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	//	barrier.levelCount = m_image.GetMipLevel();
-	//	barrier.baseArrayLayer = 0;
-	//	barrier.layerCount = imageDatas.size();
-	//
-	//	commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-	//	BufferCreateInfo binfo;
-	//	binfo.size = imageDatas.size() * imageInfo.width * imageInfo.height * 4;
-	//	binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	//
-	//	m_stagingBuffer.Create(device, binfo);
-	//	m_stagingBufferUsed = true;
-	//
-	//	for (auto layer = 0; layer < imageDatas.size(); layer++) {
-	//
-	//		uint32_t offset = layer * imageInfo.width * imageInfo.height * 4;
-	//		m_stagingBuffer.Map();
-	//		m_stagingBuffer.LoadData(imageDatas[layer]->GetData(), offset, imageInfo.width * imageInfo.height * 4);
-	//		m_stagingBuffer.UnMap();
-	//
-	//		commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(imageInfo.width), static_cast<uint32_t>(imageInfo.height), 1, offset, mipLevel, uint32_t(layer));
-	//
-	//	}
-	//
-	//	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-	//	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	//	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	//	commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-	//}
 
 	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, 
 		void* data, uint32_t size, uint32_t offset = 0);
+	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, int mip,
+		void* data, uint32_t size, uint32_t offset = 0);
 
+	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, int mip,
+		void* data, uint32_t size, uint32_t offset,
+		VkOffset3D origin, VkExtent3D extent);
 	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device,
 		void* data, uint32_t size, uint32_t offset,
 		VkOffset3D origin, VkExtent3D extent);
+
+	void LoadData(MVulkanCommandList* commandList, MVulkanDevice device, int mips,
+		std::vector<void*> datas, std::vector<uint32_t> size, //std::vector<uint32_t> offset,
+		std::vector<VkOffset3D> origin, std::vector<VkExtent3D> extent);
 
 	void Create(MVulkanCommandList* commandList, MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo, VkImageLayout layout);
 	void Create(MVulkanDevice device, ImageCreateInfo imageInfo, ImageViewCreateInfo viewInfo);
@@ -331,6 +292,8 @@ public:
 
 	void TransferTextureState(int currentFrame, TextureState newState);
 
+	const bool MipMapGenerated() const;
+
 private:
 	void ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState);
 
@@ -339,12 +302,14 @@ private:
 	ImageViewCreateInfo m_viewInfo;
 
 	uint32_t			m_mipLevels = 1;
+	bool				m_mipMapGenerated = false;
 
 	bool				m_imageValid = false;
 	MVulkanImage		m_image;
 	bool				m_stagingBufferUsed = false;
 	MVulkanBuffer		m_stagingBuffer;
 
+	//std::vector<>
 	TextureState		m_state;
 	//TextureAspact		m_aspect = TextureAspact::Color;
 };

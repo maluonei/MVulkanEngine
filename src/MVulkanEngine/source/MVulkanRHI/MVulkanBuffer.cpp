@@ -312,10 +312,10 @@ void MVulkanTexture::MLoadImage(
 {
     auto extension = imagePath.extension().string();
     if (extension == ".dds") {
-        //LoadKtx(commandList, device, imagePath);
-        gli::texture tex = gli::load(imagePath.string().c_str());
+        gli::texture2d tex(gli::load(imagePath.string().c_str()));//) = gli::texture2d(gli::load(imagePath.string().c_str()));
+        //gli::texture tex = gli::load(imagePath.string().c_str());
+        
         if (tex.empty()) {
-            //throw std::runtime_error("Failed to load DDS file");
             spdlog::error("Failed to load DDS file: {0}", imagePath.string().c_str());
         }
 
@@ -326,9 +326,10 @@ void MVulkanTexture::MLoadImage(
             spdlog::error("unknown VkFormat when creating texture from dds file");
         }
 
-        const glm::tvec3<uint32_t>& extent = tex.extent();
+        const glm::tvec3<uint32_t>& extent = tex[0].extent();
+        //const glm::tvec3<uint32_t>& extent = tex.extent();
         uint32_t mipLevels = static_cast<uint32_t>(tex.levels());
-        mipLevels = 1;
+        //mipLevels = 1;
 
         ImageCreateInfo imageInfo{};
         imageInfo.width = extent.x;
@@ -357,27 +358,43 @@ void MVulkanTexture::MLoadImage(
 
         this->Create(device, imageInfo, viewInfo);
 
+        std::vector<void*> datas(mipLevels);
+        std::vector<uint32_t> sizes(mipLevels);
+        std::vector<VkOffset3D> origins(mipLevels);
+        std::vector<VkExtent3D> extents(mipLevels);
+        
+        for (auto mip = 0; mip < mipLevels; mip++) {
+            datas[mip] = tex[mip].data();
+            sizes[mip] = tex[mip].size();
+            origins[mip] = { 0, 0, 0 };
+            extents[mip] = { static_cast<uint32_t>(tex[mip].extent().x), static_cast<uint32_t>(tex[mip].extent().y), 1 };
+        }
+        //for (auto mip = 0; mip < mipLevels; mip++) {
+        //    datas[mip] = tex.data();
+        //    sizes[mip] = tex.size();
+        //    origins[mip] = { 0, 0, 0 };
+        //    extents[mip] = { static_cast<uint32_t>(tex.extent().x), static_cast<uint32_t>(tex.extent().y), 1 };
+        //}
+        
+        commandList->GetFence().WaitForSignal();
+        commandList->GetFence().Reset();
         commandList->Reset();
         commandList->Begin();
-
-        LoadData(commandList, device, tex.data(), tex.size(), 0);
-        //tex.data(0);
-
+        LoadData(commandList, device, mipLevels, datas, sizes, origins, extents);
         commandList->End();
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandList->GetBuffer();
-
-        commandQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+        
+        Singleton<MVulkanEngine>::instance().SubmitCommands(*commandList, commandQueue);
         commandQueue.WaitForQueueComplete();
+        m_stagingBuffer.Clean();
+
+        m_mipMapGenerated = true;
     }
     else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg") {
         //LoadImageFile(commandList, device, imagePath);
         MImage<unsigned char> image;
         if (image.Load(imagePath)) {
-            int mipLevels = 1;
+            int mipLevels = image.MipLevels();
+            //int mipLevels = 1;
 
             ImageCreateInfo imageInfo{};
             imageInfo.width = image.Width();
@@ -404,21 +421,17 @@ void MVulkanTexture::MLoadImage(
             viewInfo.layerCount = 1;
             viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
+            commandList->GetFence().WaitForSignal();
+            commandList->GetFence().Reset();
             commandList->Reset();
             commandList->Begin();
-
             std::vector<MImage<unsigned char>*> images(1, &image);
             CreateAndLoadData(commandList, device, imageInfo, viewInfo, images);
-
             commandList->End();
 
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &commandList->GetBuffer();
-
-            commandQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+            Singleton<MVulkanEngine>::instance().SubmitCommands(*commandList, commandQueue);
             commandQueue.WaitForQueueComplete();
+            m_stagingBuffer.Clean();
         }
         else {
             spdlog::error("fail to load image: {0}", imagePath.string());
@@ -456,6 +469,9 @@ void MVulkanTexture::LoadData(
     binfo.size = size;
     binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
+    if (m_stagingBuffer.IsActive()) {
+        m_stagingBuffer.Clean();
+    }
     m_stagingBuffer.Create(device, binfo);
     m_stagingBufferUsed = true;
 
@@ -469,6 +485,111 @@ void MVulkanTexture::LoadData(
     commandList->CopyBufferToImage(m_stagingBuffer.GetBuffer(), m_image.GetImage(), static_cast<uint32_t>(m_imageInfo.width), static_cast<uint32_t>(m_imageInfo.height), static_cast<uint32_t>(m_imageInfo.depth), offset, 0, uint32_t(0));
 
     //}
+
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    m_state.m_state = ETextureState::SRV;
+    m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
+}
+
+void MVulkanTexture::LoadData(MVulkanCommandList* commandList, MVulkanDevice device, int mip, void* data, uint32_t size, uint32_t offset)
+{
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = m_image.GetImage();
+    barrier.srcAccessMask = TextureState2AccessFlag(m_state.m_state);
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = TextureState2ImageLayout(m_state.m_state);
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+    barrier.baseMipLevel = mip;
+    barrier.levelCount = 1;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    BufferCreateInfo binfo;
+    binfo.size = size;
+    binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    if (m_stagingBuffer.IsActive()) {
+        m_stagingBuffer.Clean();
+    }
+    m_stagingBuffer.Create(device, binfo);
+    m_stagingBufferUsed = true;
+
+    //for (auto layer = 0; layer < imageDatas.size(); layer++) {
+
+    //uint32_t offset = 0;
+    m_stagingBuffer.Map();
+    m_stagingBuffer.LoadData(data, offset, size);
+    m_stagingBuffer.UnMap();
+
+    commandList->CopyBufferToImage(
+        m_stagingBuffer.GetBuffer(), 
+        m_image.GetImage(), 
+        static_cast<uint32_t>(m_imageInfo.width), 
+        static_cast<uint32_t>(m_imageInfo.height),
+        static_cast<uint32_t>(m_imageInfo.depth), 
+        offset, 
+        0, 
+        uint32_t(0));
+
+    //}
+
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    m_state.m_state = ETextureState::SRV;
+    m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
+}
+
+void MVulkanTexture::LoadData(
+    MVulkanCommandList* commandList,
+    MVulkanDevice device, 
+    int mip, 
+    void* data,
+    uint32_t size,
+    uint32_t offset, 
+    VkOffset3D origin,
+    VkExtent3D extent)
+{
+    //todo 传入每一层的stage
+
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = m_image.GetImage();
+    barrier.srcAccessMask = TextureState2AccessFlag(m_state.m_state);
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = TextureState2ImageLayout(m_state.m_state);
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+    barrier.baseMipLevel = mip;
+    barrier.levelCount = 1;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    BufferCreateInfo binfo;
+    binfo.size = size;
+    binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    if (!m_stagingBuffer.IsActive()) {
+        m_stagingBuffer.Create(device, binfo);
+        m_stagingBufferUsed = true;
+    }
+
+    m_stagingBuffer.Map();
+    m_stagingBuffer.LoadData(data, offset, size);
+    m_stagingBuffer.UnMap();
+
+    commandList->CopyBufferToImage(
+        m_stagingBuffer.GetBuffer(), m_image.GetImage(),
+        origin, extent,
+        offset, mip, uint32_t(0));
 
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -524,6 +645,71 @@ void MVulkanTexture::LoadData(MVulkanCommandList* commandList, MVulkanDevice dev
     //m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
 }
 
+void MVulkanTexture::LoadData(
+    MVulkanCommandList* commandList, 
+    MVulkanDevice device, 
+    int mips, 
+    std::vector<void*> datas,
+    std::vector<uint32_t> sizes,
+    std::vector<VkOffset3D> origins,
+    std::vector<VkExtent3D> extents)
+{
+    //todo 传入每一层的stage
+    if (mips != sizes.size()) {
+        spdlog::error("mips != sizes.size()");
+    }
+
+    MVulkanImageMemoryBarrier barrier{};
+    barrier.image = m_image.GetImage();
+    barrier.srcAccessMask = TextureState2AccessFlag(m_state.m_state);
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.oldLayout = TextureState2ImageLayout(m_state.m_state);
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.baseArrayLayer = 0;
+    barrier.layerCount = 1;
+    barrier.baseMipLevel = 0;
+    barrier.levelCount = mips;
+
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    
+    uint32_t totalSize = 0;
+    for (auto i = 0; i < mips; i++) {
+        totalSize += sizes[i];
+    }
+    
+    BufferCreateInfo binfo;
+    binfo.size = totalSize;
+    binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    
+    if (!m_stagingBuffer.IsActive()) {
+        m_stagingBuffer.Create(device, binfo);
+        m_stagingBufferUsed = true;
+    }
+    
+    m_stagingBuffer.Map();
+    uint32_t totalOffset = 0;
+    for (auto i = 0; i < mips; i++) {
+        m_stagingBuffer.LoadData(datas[i], totalOffset, sizes[i]);
+
+        commandList->CopyBufferToImage(
+            m_stagingBuffer.GetBuffer(), m_image.GetImage(),
+            origins[i], extents[i],
+            totalOffset, i, uint32_t(0));
+
+        totalOffset += sizes[i];
+    }
+    m_stagingBuffer.UnMap();
+
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    m_state.m_state = ETextureState::SRV;
+    m_state.m_stage = ShaderStageFlagBits::FRAGMENT;
+}
+
 
 void MVulkanTexture::TransferTextureState(int currentFrame, TextureState newState)
 {
@@ -532,6 +718,11 @@ void MVulkanTexture::TransferTextureState(int currentFrame, TextureState newStat
 
     ChangeImageLayout(currentFrame, m_state, newState);
     m_state = newState;
+}
+
+const bool MVulkanTexture::MipMapGenerated() const
+{
+    return m_mipMapGenerated;
 }
 
 void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState)
@@ -550,13 +741,6 @@ void MVulkanTexture::ChangeImageLayout(int currentFrame, TextureState oldState, 
     _barrier.newLayout = TextureState2ImageLayout(newState.m_state);    
     _barrier.baseMipLevel = GetImageInfo().mipLevels - 1;
     _barrier.aspectMask = m_viewInfo.flag;
-    //if()
-    //if(newState.m_state==ETextureState::DepthAttachment || oldState.m_state==ETextureState::DepthAttachment)
-    //    _barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    //if (m_viewInfo.flag == VK_IMAGE_ASPECT_DEPTH_BIT) {
-    //
-    //}
-    //_barrier.aspectMask = ETextureState2VkImageAspectFlag(newState.m_state);
     barriers.push_back(_barrier);
 
     if (currentFrame < 0) {

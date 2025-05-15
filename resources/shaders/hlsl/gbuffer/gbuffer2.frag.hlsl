@@ -66,6 +66,17 @@ struct PSOutput
 
 //void packf32to16()
 
+float2 EncodeNormalOctahedron(float3 n)
+{
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    float2 enc = n.xy;
+    if (n.z < 0.0f)
+    {
+        enc = (1.0f - abs(enc.yx)) * float2(enc.x >= 0.0f ? 1.0f : -1.0f, enc.y >= 0.0f ? 1.0f : -1.0f);
+    }
+    return enc;
+}
+
 void pack(
     float3 normal,
     float3 position,
@@ -73,13 +84,16 @@ void pack(
     float3 albedo,
     float3 metallicAndRoughness,
     float3 motionVector,
+    uint instanceID,
     out uint4 gBuffer0,
     out uint4 gBuffer1
 ){
     float roughness = metallicAndRoughness.g;
     float metallic = metallicAndRoughness.b;
 
-    uint3 packedNormal = f32tof16(normal);
+    float2 octa =  EncodeNormalOctahedron(normal);
+    uint2 packedOcta = f32tof16(octa);
+    //uint3 packedNormal = f32tof16(normal);
     uint3 packedPosition = f32tof16(position);
     uint2 packedUv = f32tof16(uv);
     uint3 packedAlbedo = f32tof16(albedo);
@@ -87,8 +101,9 @@ void pack(
     uint packedRoughness = f32tof16(roughness);
     uint3 packedMotionVector = f32tof16(motionVector);
 
-    gBuffer0.x = ((packedNormal.x & 0xFFFF) << 16) | (packedNormal.y & 0xFFFF);
-    gBuffer0.y = ((packedNormal.z & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+    gBuffer0.x = ((packedOcta.x & 0xFFFF) << 16) | (packedOcta.y & 0xFFFF);
+    //gBuffer0.y = ((packedNormal.z & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+    gBuffer0.y = ((instanceID & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
     gBuffer0.z = ((packedPosition.y & 0xFFFF) << 16) | (packedPosition.z & 0xFFFF);
     gBuffer0.w = ((packedUv.x & 0xFFFF) << 16) | (packedUv.y & 0xFFFF);
 
@@ -102,13 +117,13 @@ PSOutput main(PSInput input)
 {
     PSOutput output;
 
-    float3x3 TBN = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
+    //float3x3 TBN = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
 
     int matId = materialIds[input.instanceID];
 
     int diffuseTextureIdx = materials[matId].diffuseTextureIdx;
     int metallicAndRoughnessTextureIdx = materials[matId].metallicAndRoughnessTextureIdx;
-    int normalTextureIdx = materials[matId].normalTextureIdx;
+    //int normalTextureIdx = materials[matId].normalTextureIdx;
 
 
     //int diffuseTextureIdx = texbuffer.tex[input.instanceID].diffuseTextureIdx;
@@ -154,8 +169,17 @@ PSOutput main(PSInput input)
 
     //motionVector = input.position.xyz - input.positionPreviousFrame.xyz;
 
-    pack(normal, position, uv, albedo, metallicAndRoughness, motionVector, output.gBuffer0, output.gBuffer1);
-    //output.gBuffer2.xyz = motionVector;
+    pack(
+        normal, 
+        position, 
+        uv, 
+        albedo, 
+        metallicAndRoughness, 
+        motionVector, 
+        input.instanceID,
+        output.gBuffer0, 
+        output.gBuffer1);
+    //output.gBuffer2.xyzw = float4(normal.xyz, 1.f);
     //output.gBuffer3.xyz = input.position.xyz / float3(gBufferInfoBuffer.WindowRes, 1.f);
     //output.gBuffer4.xyz = screenSpacePositionPrevFrame.xyz;
 

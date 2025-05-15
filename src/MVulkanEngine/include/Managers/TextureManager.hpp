@@ -24,6 +24,7 @@ public:
 	void Clean();
 
 	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextureVector();
+	std::vector<std::shared_ptr<MVulkanTexture>> GenerateUnmipedTextureVector();
 
 	std::vector<VkImageView> GenerateTextureViews();
 	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextures();

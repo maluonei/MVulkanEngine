@@ -431,6 +431,8 @@ void SceneLoader::processMaterials(const aiScene* aiscene, Scene* scene)
 
         scene->AddMaterial(mat);
     }
+
+    Singleton<TextureManager>::instance().GenerateTextureVector();
 }
 
 glm::mat4 AIMat2GLMMat(aiMatrix4x4 aiMat)

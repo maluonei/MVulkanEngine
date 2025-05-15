@@ -35,11 +35,24 @@ std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateTextureVect
     return textures;
 }
 
+std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateUnmipedTextureVector()
+{
+    std::vector<std::shared_ptr<MVulkanTexture>> _textures(0);
+    
+    for (auto item : m_textureMap) {
+        if (!item.second->MipMapGenerated()) {
+            _textures.push_back(item.second);
+        }
+    }
+
+    return _textures;
+}
+
 
 std::vector<VkImageView> TextureManager::GenerateTextureViews() {
     std::vector<VkImageView> views;
 
-    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    auto wholeTextures = GenerateTextureVector();
     auto wholeTextureSize = wholeTextures.size();
     
     if (wholeTextureSize == 0) {
@@ -59,7 +72,7 @@ std::vector<VkImageView> TextureManager::GenerateTextureViews() {
 std::vector<std::shared_ptr<MVulkanTexture>> TextureManager::GenerateTextures() {
     std::vector<std::shared_ptr<MVulkanTexture>> textures;
 
-    auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
+    auto wholeTextures = GenerateTextureVector();
     auto wholeTextureSize = wholeTextures.size();
 
     if (wholeTextureSize == 0) {

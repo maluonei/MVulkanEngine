@@ -87,6 +87,10 @@ void MVulkanEngine::GenerateMipMap(MVulkanTexture texture)
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
+    if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
+        throw std::runtime_error("texture image format does not support as blitting target!");
+    }
+
     m_generalGraphicList.Reset();
     m_generalGraphicList.Begin();
 
@@ -414,6 +418,26 @@ void MVulkanEngine::SubmitCommands(
     //queue.WaitForQueueComplete();
 
     //vkDeviceWaitIdle(m_device.GetDevice());
+}
+
+void MVulkanEngine::SubmitCommands(MVulkanCommandList commandList, MVulkanCommandQueue queue)
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandList.GetBuffer();
+
+
+    submitInfo.signalSemaphoreCount = 0;
+    submitInfo.pSignalSemaphores = nullptr;
+
+    queue.SubmitCommands(1, &submitInfo, commandList.GetFence().GetFence());
 }
 
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, 

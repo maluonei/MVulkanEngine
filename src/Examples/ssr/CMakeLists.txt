@@ -2,25 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 
 project(MVulkanEngine_SSR)
 
-# Ö¸¶¨ C++ ±ê×¼
+# Ö¸ï¿½ï¿½ C++ ï¿½ï¿½×¼
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(MVulkanEngine_SSR "main.cpp" "ssr.hpp" "ssr.cpp")
 
 #message(STATUS "MVulkanEngine_include: ${MVulkanEngine_include}")
-# Ìí¼Ó°üº¬Ä¿Â¼
+# ï¿½ï¿½ï¿½Ó°ï¿½ï¿½ï¿½Ä¿Â¼
 target_include_directories(MVulkanEngine_SSR PRIVATE ${MVulkanEngine_include})
 
-# ÉèÖÃ¿âµÄÂ·¾¶£¨¼ÙÉè Project1 µÄÊä³öÄ¿Â¼ÊÇ ../project1/build£©
+# ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Project1 ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ ../project1/buildï¿½ï¿½
 target_link_libraries(MVulkanEngine_SSR PRIVATE MVulkanEngine)
 
-set(GLFW_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/glfw/src/$<CONFIG>/$<IF:$<CONFIG:Debug>,glfw3d.dll,glfw3.dll>")
-set(ASSIMP_DLL_PATH "${CMAKE_BINARY_DIR}/3rdParty/assimp/bin/$<CONFIG>/$<IF:$<CONFIG:Debug>,assimp-vc143-mtd.dll,assimp-vc143-mt.dll>")
-
-add_custom_command(TARGET MVulkanEngine_SSR POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${GLFW_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_SSR>)
-
-add_custom_command(TARGET MVulkanEngine_SSR POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${ASSIMP_DLL_PATH} $<TARGET_FILE_DIR:MVulkanEngine_SSR>)
+copy_dlls(MVulkanEngine_SSR)

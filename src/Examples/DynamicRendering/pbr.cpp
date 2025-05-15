@@ -382,43 +382,45 @@ void PBR::loadScene()
 
     //split Image
     {
-        auto wholeTextures = Singleton<TextureManager>::instance().GenerateTextureVector();
-
-        auto& transferList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::TRANSFER);
-
-        transferList.Reset();
-        transferList.Begin();
-        std::vector<MVulkanImageMemoryBarrier> barriers(wholeTextures.size());
-        for (auto i = 0; i < wholeTextures.size(); i++) {
-            MVulkanImageMemoryBarrier barrier{};
-            barrier.image = wholeTextures[i]->GetImage();
-
-            barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.levelCount = wholeTextures[i]->GetImageInfo().mipLevels;
-
-            barriers[i] = barrier;
-        }
-
-        transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-
-        transferList.End();
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &transferList.GetBuffer();
-
-        auto& transferQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::TRANSFER);
-
-        transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-        transferQueue.WaitForQueueComplete();
-
-        for (auto item : wholeTextures) {
-            auto texture = item;
-            Singleton<MVulkanEngine>::instance().GenerateMipMap(*texture);
+        //auto wholeTextures2 = Singleton<TextureManager>::instance().GenerateTextureVector();
+        auto wholeTextures = Singleton<TextureManager>::instance().GenerateUnmipedTextureVector();
+        if (wholeTextures.size() > 0) {
+            auto& transferList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::TRANSFER);
+    
+            transferList.Reset();
+            transferList.Begin();
+            std::vector<MVulkanImageMemoryBarrier> barriers(wholeTextures.size());
+            for (auto i = 0; i < wholeTextures.size(); i++) {
+                MVulkanImageMemoryBarrier barrier{};
+                barrier.image = wholeTextures[i]->GetImage();
+    
+                barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                barrier.levelCount = wholeTextures[i]->GetImageInfo().mipLevels;
+    
+                barriers[i] = barrier;
+            }
+    
+            transferList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    
+            transferList.End();
+    
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &transferList.GetBuffer();
+    
+            auto& transferQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::TRANSFER);
+    
+            transferQueue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+            transferQueue.WaitForQueueComplete();
+    
+            for (auto item : wholeTextures) {
+                auto texture = item;
+                Singleton<MVulkanEngine>::instance().GenerateMipMap(*texture);
+            }
         }
     }
 
@@ -537,7 +539,7 @@ void PBR::createTextures()
     auto shadowMapExtent = shadowmapExtent;
 
     auto depthFormat = device.FindDepthFormat();
-    auto shadowMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+    auto shadowMapFormat = VK_FORMAT_R32G32B32A32_UINT;
 
     {
         shadowMap = std::make_shared<MVulkanTexture>();
@@ -763,7 +765,7 @@ void PBR::createGbufferPass()
             m_gbufferPass, shader);
 
         //std::vector<VkImageView> bufferTextureViews = Singleton<TextureManager>::instance().GenerateTextureViews();
-        std::vector<std::shared_ptr<MVulkanTexture>> bufferTextures = Singleton<TextureManager>::instance().GenerateTextures();
+        std::vector<std::shared_ptr<MVulkanTexture>> gbufferTextures = Singleton<TextureManager>::instance().GenerateTextures();
 
         std::vector<PassResources> resources;
         resources.push_back(
@@ -793,7 +795,7 @@ void PBR::createGbufferPass()
 
         resources.push_back(
             PassResources::SetSampledImageResource(
-                4, 0, bufferTextures));
+                4, 0, gbufferTextures));
         resources.push_back(
             PassResources::SetSamplerResource(
                 5, 0, m_linearSampler.GetSampler()));
@@ -808,7 +810,7 @@ void PBR::createShadowPass()
 
     {
         RenderPassCreateInfo info{};
-        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_UINT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         info.frambufferCount = 1;
         info.dynamicRender = 1;
