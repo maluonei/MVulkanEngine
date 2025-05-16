@@ -115,7 +115,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", 0, &lightBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", 0, &cameraBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", 0, &screenBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", m_currentFrame, &screenBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", 0, &outputContext, 0);
     }
 
@@ -135,7 +135,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         Singleton<ShaderResourceManager>::instance().LoadData("ssrBuffer", 0, &ssrBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("hizDimensionBuffer", 0, &hizDimensionBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("ssrConfigBuffer", 0, &ssrConfig, 0);
+        
+        Singleton<ShaderResourceManager>::instance().LoadData("ssrConfigBuffer", m_currentFrame, &ssrConfig, 0);
     }
 
     {
@@ -313,7 +314,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             //do ssr
             {
                 ssrQueryIndex = m_queryIndex;
-                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("SSR Pass"), m_queryIndex++);
+                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_ssrPass, (swapchainExtent.width+15)/16, (swapchainExtent.height+15)/16, 1, std::string("SSR Pass"), m_queryIndex++);
             }
 
             computeList.End();
@@ -332,18 +333,18 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.Begin();
 
         compositeQueryIndex = m_queryIndex;
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Composite Pass"), m_queryIndex++);
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, compositingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Composite Pass"), m_queryIndex++);
 
         graphicsList.End();
 
         if (doSSR) {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
+            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
             std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
         }
         else {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
+            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
             std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
@@ -721,13 +722,13 @@ void SSR::createTextures()
         ImageViewCreateInfo viewInfo;
         imageInfo.arrayLength = 1;
         imageInfo.usage =  VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-        imageInfo.format = depthFormat;
+        imageInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = imageInfo.format;
-        viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+        viewInfo.flag = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.baseMipLevel = 0;
-        viewInfo.levelCount = 1;
+
         viewInfo.baseArrayLayer = 0;
         viewInfo.layerCount = 1;
 
@@ -749,15 +750,15 @@ void SSR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "hlsl/shadow.vert.hlsl", "hlsl/shadow.frag.hlsl" });
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/pbr.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/pbr.frag.hlsl" });
     Singleton<ShaderManager>::instance().AddShader("SSR Shader", { "hlsl/ssr_v2/ssr.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Composite Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/composite.frag.hlsl" }, true);
 
-    Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" });
+    Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" });
+    Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" });
+    Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" });
+    Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" });
 }
 
 void SSR::createStorageBuffers()
@@ -856,7 +857,7 @@ void SSR::copyHizToDepth()
         //auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
         //auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
         
-        auto& computeList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::COMPUTE);
+        auto& computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
         //auto& computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
 
 

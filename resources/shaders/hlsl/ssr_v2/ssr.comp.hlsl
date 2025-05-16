@@ -204,6 +204,9 @@ void main(uint3 threadID : SV_DispatchThreadID)
         if (valid_hit)
             SSRRender[texCoord.xy] = float4(color, 1.f);
         else 
-            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 1.f);
+            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
+    }
+    else{
+        SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
     }
 }

@@ -150,10 +150,10 @@ PSOutput main(PSInput input)
     fragcolor.rgb = clamp(fragcolor.rgb, 0.0, 1.0);
 
     //sponza scene
-    if(instanceID==46){
-        output.color = float4(0.f, 0.f, 0.f, 1.f);
-        return output;
-    }
+    //if(instanceID==46){
+    //    output.color = float4(0.f, 0.f, 0.f, 1.f);
+    //    return output;
+    //}
 
     if(outputContent==OutputContent::Render){
         output.color = float4(fragcolor, 1.f);

@@ -212,7 +212,18 @@ void ShaderResourceManager::AddConstantBuffer(const std::string name, BufferCrea
     }
     else
     {
-        spdlog::warn("Constant Buffer Rename: {0}", name);
+        auto cbuffers = m_constantBuffers[name];
+        if (cbuffers.size()!= frameCount) {
+            for (int i = cbuffers.size(); i < frameCount; i++) {
+                MCBV mcbv;
+                mcbv.Create(device, info);
+                m_constantBuffers[name].emplace_back(mcbv);
+            }
+        }
+
+        else {
+            spdlog::warn("Constant Buffer Rename: {0}", name);
+        }
     }
 }
 
