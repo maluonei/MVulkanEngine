@@ -1,5 +1,6 @@
-#include "Common.h"
+//#include "Common.h"
 #include "shading.hlsli"
+#include "util.hlsli"
 
 [[vk::binding(0, 0)]]
 cbuffer lightBuffer : register(b0)
@@ -48,51 +49,6 @@ struct PSOutput
     float4 color : SV_Target0;
 };
 
-float3 DecodeNormalOctahedron(float2 enc)
-{
-    float3 n = float3(enc.xy, 1.0f - abs(enc.x) - abs(enc.y));
-    if (n.z < 0.0f)
-    {
-        n.xy = (1.0f - abs(n.yx)) * float2(n.x >= 0.0f ? 1.0f : -1.0f, n.y >= 0.0f ? 1.0f : -1.0f);
-    }
-    return normalize(n);
-}
-
-void Unpack(
-    uint4 gBuffer0,
-    uint4 gBuffer1,
-    out float3 normal,
-    out float3 position,
-    out float2 uv,
-    out float3 albedo,
-    out float metallic,
-    out float roughness,
-    out float3 motionVector,
-    out uint instanceID
-){
-    //uint2 unpackedNormal = uint2((gBuffer0.x & 0xFFFF0000) >> 16, gBuffer0.x & 0xFFFF);
-    uint2 unpackedOcta = uint2((gBuffer0.x & 0xFFFF0000) >> 16, gBuffer0.x & 0xFFFF);
-    uint3 unpackedPosition = uint3(gBuffer0.y & 0xFFFF, (gBuffer0.z & 0xFFFF0000) >> 16, gBuffer0.z & 0xFFFF);
-    uint2 unpackedUV = uint2((gBuffer0.w & 0xFFFF0000) >> 16, gBuffer0.w & 0xFFFF);
-
-    uint3 unpackedAlbedo = uint3((gBuffer1.x & 0xFFFF0000) >> 16, gBuffer1.x & 0xFFFF, (gBuffer1.y & 0xFFFF0000) >> 16);
-    uint unpackedMetallic = gBuffer1.y & 0xFFFF;
-    uint unpackedRoughness = (gBuffer1.z & 0xFFFF0000) >> 16;
-    uint3 unpackedMotionVector = uint3(gBuffer1.z & 0xFFFF, (gBuffer1.w & 0xFFFF0000) >> 16, gBuffer1.w & 0xFFFF);
-
-    float2 octa = f16tof32(unpackedOcta);
-    normal = DecodeNormalOctahedron(octa);
-    //normal.xy = f16tof32(unpackedNormal);
-    //normal.z = sqrt(1.f - dot(normal.xy, normal.xy));
-    position = f16tof32(unpackedPosition);
-    uv = f16tof32(unpackedUV);
-    albedo = f16tof32(unpackedAlbedo);
-    metallic = f16tof32(unpackedMetallic);
-    roughness = f16tof32(unpackedRoughness);
-    motionVector = f16tof32(unpackedMotionVector);
-    instanceID = (gBuffer0.y & 0xFFFF0000) >> 16;
-}
-
 
 PSOutput main(PSInput input)
 {
@@ -111,7 +67,7 @@ PSOutput main(PSInput input)
     float3 motionVector;
     uint instanceID;
 
-    Unpack(
+    UnpackGbuffer(
         gBufferValue0, 
         gBufferValue1, 
         fragNormal, 

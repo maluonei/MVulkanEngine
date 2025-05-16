@@ -1,4 +1,7 @@
-#pragma once
+//#pragma once
+#ifndef SDF_HLSLI
+#define SDF_HLSLI
+
 struct MDFStruct{
     RWTexture3D<float> SDFTexture;
     RWTexture3D<float4> albedoTexture;
@@ -188,3 +191,5 @@ bool RayMarchSDF(float3 position, float3 direction, MDFStruct mdf, int maxRaymar
 
     return false;
 } 
+
+#endif

@@ -1,5 +1,11 @@
-#pragma once
+//#pragma once
+
+#ifndef OCTAHEDRAL_HLSLI
+#define OCTAHEDRAL_HLSLI
+
+#ifndef PI 
 #define PI 3.14159265359
+#endif
 
 /**
  * Returns either -1 or 1 based on the sign of the input value.
@@ -70,3 +76,5 @@ float2 DDGIGetOctahedralCoordinates(float3 direction)
     }
     return uv;
 }
+
+#endif

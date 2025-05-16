@@ -1,4 +1,7 @@
-#pragma once
+//#pragma once
+#ifndef MDF_HLSLI
+#define MDF_HLSLI
+
 #include "MeshDistanceField.h"
 #include "SDF.hlsli"
 
@@ -287,3 +290,4 @@ void RayMarchingMDF2(
     }
 }
 
+#endif

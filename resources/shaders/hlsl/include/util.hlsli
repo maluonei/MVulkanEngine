@@ -1,4 +1,7 @@
-#pragma once
+//#pragma once
+#ifndef UTIL_HLSLI
+#define UTIL_HLSLI
+
 #include "common.h"
 
 float3x3 inverse(float3x3 m)
@@ -55,3 +58,101 @@ float3 GetPixelDirection(
 
     return normalize(pixelPos - cam.cameraPos);
 }
+
+float2 EncodeNormalOctahedron(float3 n)
+{
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    float2 enc = n.xy;
+    if (n.z < 0.0f)
+    {
+        enc = (1.0f - abs(enc.yx)) * float2(enc.x >= 0.0f ? 1.0f : -1.0f, enc.y >= 0.0f ? 1.0f : -1.0f);
+    }
+    return enc;
+}
+
+float3 DecodeNormalOctahedron(float2 enc)
+{
+    float3 n = float3(enc.xy, 1.0f - abs(enc.x) - abs(enc.y));
+    if (n.z < 0.0f)
+    {
+        n.xy = (1.0f - abs(n.yx)) * float2(n.x >= 0.0f ? 1.0f : -1.0f, n.y >= 0.0f ? 1.0f : -1.0f);
+    }
+    return normalize(n);
+}
+
+
+
+void PackGbuffer(
+    float3 normal,
+    float3 position,
+    float2 uv,
+    float3 albedo,
+    float3 metallicAndRoughness,
+    float3 motionVector,
+    uint instanceID,
+    out uint4 gBuffer0,
+    out uint4 gBuffer1
+){
+    float roughness = metallicAndRoughness.g;
+    float metallic = metallicAndRoughness.b;
+
+    float2 octa =  EncodeNormalOctahedron(normal);
+    uint2 packedOcta = f32tof16(octa);
+    //uint3 packedNormal = f32tof16(normal);
+    uint3 packedPosition = f32tof16(position);
+    uint2 packedUv = f32tof16(uv);
+    uint3 packedAlbedo = f32tof16(albedo);
+    uint packedMetallic = f32tof16(metallic);
+    uint packedRoughness = f32tof16(roughness);
+    uint3 packedMotionVector = f32tof16(motionVector);
+
+    gBuffer0.x = ((packedOcta.x & 0xFFFF) << 16) | (packedOcta.y & 0xFFFF);
+    //gBuffer0.y = ((packedNormal.z & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+    gBuffer0.y = ((instanceID & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+    gBuffer0.z = ((packedPosition.y & 0xFFFF) << 16) | (packedPosition.z & 0xFFFF);
+    gBuffer0.w = ((packedUv.x & 0xFFFF) << 16) | (packedUv.y & 0xFFFF);
+
+    gBuffer1.x = ((packedAlbedo.x & 0xFFFF) << 16) | (packedAlbedo.y & 0xFFFF);
+    gBuffer1.y = ((packedAlbedo.z & 0xFFFF) << 16) | (packedMetallic & 0xFFFF);
+    gBuffer1.z = ((packedRoughness & 0xFFFF) << 16) | (packedMotionVector.x & 0xFFFF);
+    gBuffer1.w = ((packedMotionVector.y & 0xFFFF) << 16) | (packedMotionVector.z & 0xFFFF);
+}
+
+
+void UnpackGbuffer(
+    uint4 gBuffer0,
+    uint4 gBuffer1,
+    out float3 normal,
+    out float3 position,
+    out float2 uv,
+    out float3 albedo,
+    out float metallic,
+    out float roughness,
+    out float3 motionVector,
+    out uint instanceID
+){
+    //uint2 unpackedNormal = uint2((gBuffer0.x & 0xFFFF0000) >> 16, gBuffer0.x & 0xFFFF);
+    uint2 unpackedOcta = uint2((gBuffer0.x & 0xFFFF0000) >> 16, gBuffer0.x & 0xFFFF);
+    uint3 unpackedPosition = uint3(gBuffer0.y & 0xFFFF, (gBuffer0.z & 0xFFFF0000) >> 16, gBuffer0.z & 0xFFFF);
+    uint2 unpackedUV = uint2((gBuffer0.w & 0xFFFF0000) >> 16, gBuffer0.w & 0xFFFF);
+
+    uint3 unpackedAlbedo = uint3((gBuffer1.x & 0xFFFF0000) >> 16, gBuffer1.x & 0xFFFF, (gBuffer1.y & 0xFFFF0000) >> 16);
+    uint unpackedMetallic = gBuffer1.y & 0xFFFF;
+    uint unpackedRoughness = (gBuffer1.z & 0xFFFF0000) >> 16;
+    uint3 unpackedMotionVector = uint3(gBuffer1.z & 0xFFFF, (gBuffer1.w & 0xFFFF0000) >> 16, gBuffer1.w & 0xFFFF);
+
+    float2 octa = f16tof32(unpackedOcta);
+    normal = DecodeNormalOctahedron(octa);
+    //normal.xy = f16tof32(unpackedNormal);
+    //normal.z = sqrt(1.f - dot(normal.xy, normal.xy));
+    position = f16tof32(unpackedPosition);
+    uv = f16tof32(unpackedUV);
+    albedo = f16tof32(unpackedAlbedo);
+    metallic = f16tof32(unpackedMetallic);
+    roughness = f16tof32(unpackedRoughness);
+    motionVector = f16tof32(unpackedMotionVector);
+    instanceID = (gBuffer0.y & 0xFFFF0000) >> 16;
+}
+
+
+#endif

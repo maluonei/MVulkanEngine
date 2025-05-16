@@ -1,4 +1,7 @@
-#pragma once
+//#pragma once
+#ifndef RAY_TRACING_CORE_HLSLI
+#define RAY_TRACING_CORE_HLSLI
+
 [[vk::binding(1, 0)]] RaytracingAccelerationStructure Tlas;
 [[vk::binding(2, 0)]] StructuredBuffer<float> VertexBuffer;
 [[vk::binding(3, 0)]] StructuredBuffer<int> IndexBuffer;
@@ -135,3 +138,5 @@ bool RayTracingAnyHit(in RayDesc rayDesc) {
 
   return false;
 }
+
+#endif

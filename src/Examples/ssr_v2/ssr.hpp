@@ -63,9 +63,12 @@ private:
 	void createLightCamera();
 
 	void createTextures();
+
 	void createGbufferPass();
 	void createShadowPass();
 	void createShadingPass();
+	void createSSRPass();
+	void createCompositePass();
 	void createFrustumCullingPass();
 	void createResetDidirectDrawBufferPass();
 	void createGenHizPass();
@@ -93,6 +96,8 @@ private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
+	std::shared_ptr<RenderPass> m_compositePass;
+	std::shared_ptr<ComputePass> m_ssrPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
 	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
 	std::shared_ptr<ComputePass> m_hizPass;
@@ -104,10 +109,12 @@ private:
 	std::shared_ptr<MVulkanTexture> shadowMapDepth;
 	std::shared_ptr<MVulkanTexture> gBuffer0;
 	std::shared_ptr<MVulkanTexture> gBuffer1;
-	std::shared_ptr<MVulkanTexture> gBuffer2;
+	//std::shared_ptr<MVulkanTexture> gBuffer2;
 	//std::shared_ptr<MVulkanTexture> gBuffer3;
 	//std::shared_ptr<MVulkanTexture> gBuffer4;
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
+	std::shared_ptr<MVulkanTexture> m_basicShadingTexture;
+	std::shared_ptr<MVulkanTexture> m_ssrTexture;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;

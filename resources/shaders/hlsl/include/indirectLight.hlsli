@@ -1,4 +1,7 @@
-#pragma once
+//#pragma once
+#ifndef INDIRECTLIGHT_HLSLI
+#define INDIRECTLIGHT_HLSLI
+
 #include "Octahedral.hlsli"
 
 #define PROBE_STATE_ACTIVE 0
@@ -311,3 +314,5 @@ IndirectLightingOutput CalculateIndirectLighting(
 
     return output;
 }
+
+#endif

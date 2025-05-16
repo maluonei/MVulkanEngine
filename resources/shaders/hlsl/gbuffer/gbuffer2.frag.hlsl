@@ -1,16 +1,5 @@
-// HLSL Shader
-//struct TexBuffer
-//{
-//    int diffuseTextureIdx;
-//    int metallicAndRoughnessTextureIdx;
-//    int matId;
-//    int normalTextureIdx;
-//
-//    float3 diffuseColor;
-//    int padding0;
-//};
-//#define SHARED_CODE_HLSL
-#include "Common.h"
+//#include "Common.h"
+#include "util.hlsli"
 
 [[vk::binding(1, 0)]]
 cbuffer vpBuffer_p : register(b1)
@@ -66,52 +55,52 @@ struct PSOutput
 
 //void packf32to16()
 
-float2 EncodeNormalOctahedron(float3 n)
-{
-    n /= (abs(n.x) + abs(n.y) + abs(n.z));
-    float2 enc = n.xy;
-    if (n.z < 0.0f)
-    {
-        enc = (1.0f - abs(enc.yx)) * float2(enc.x >= 0.0f ? 1.0f : -1.0f, enc.y >= 0.0f ? 1.0f : -1.0f);
-    }
-    return enc;
-}
-
-void pack(
-    float3 normal,
-    float3 position,
-    float2 uv,
-    float3 albedo,
-    float3 metallicAndRoughness,
-    float3 motionVector,
-    uint instanceID,
-    out uint4 gBuffer0,
-    out uint4 gBuffer1
-){
-    float roughness = metallicAndRoughness.g;
-    float metallic = metallicAndRoughness.b;
-
-    float2 octa =  EncodeNormalOctahedron(normal);
-    uint2 packedOcta = f32tof16(octa);
-    //uint3 packedNormal = f32tof16(normal);
-    uint3 packedPosition = f32tof16(position);
-    uint2 packedUv = f32tof16(uv);
-    uint3 packedAlbedo = f32tof16(albedo);
-    uint packedMetallic = f32tof16(metallic);
-    uint packedRoughness = f32tof16(roughness);
-    uint3 packedMotionVector = f32tof16(motionVector);
-
-    gBuffer0.x = ((packedOcta.x & 0xFFFF) << 16) | (packedOcta.y & 0xFFFF);
-    //gBuffer0.y = ((packedNormal.z & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
-    gBuffer0.y = ((instanceID & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
-    gBuffer0.z = ((packedPosition.y & 0xFFFF) << 16) | (packedPosition.z & 0xFFFF);
-    gBuffer0.w = ((packedUv.x & 0xFFFF) << 16) | (packedUv.y & 0xFFFF);
-
-    gBuffer1.x = ((packedAlbedo.x & 0xFFFF) << 16) | (packedAlbedo.y & 0xFFFF);
-    gBuffer1.y = ((packedAlbedo.z & 0xFFFF) << 16) | (packedMetallic & 0xFFFF);
-    gBuffer1.z = ((packedRoughness & 0xFFFF) << 16) | (packedMotionVector.x & 0xFFFF);
-    gBuffer1.w = ((packedMotionVector.y & 0xFFFF) << 16) | (packedMotionVector.z & 0xFFFF);
-}
+//float2 EncodeNormalOctahedron(float3 n)
+//{
+//    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+//    float2 enc = n.xy;
+//    if (n.z < 0.0f)
+//    {
+//        enc = (1.0f - abs(enc.yx)) * float2(enc.x >= 0.0f ? 1.0f : -1.0f, enc.y >= 0.0f ? 1.0f : -1.0f);
+//    }
+//    return enc;
+//}
+//
+//void pack(
+//    float3 normal,
+//    float3 position,
+//    float2 uv,
+//    float3 albedo,
+//    float3 metallicAndRoughness,
+//    float3 motionVector,
+//    uint instanceID,
+//    out uint4 gBuffer0,
+//    out uint4 gBuffer1
+//){
+//    float roughness = metallicAndRoughness.g;
+//    float metallic = metallicAndRoughness.b;
+//
+//    float2 octa =  EncodeNormalOctahedron(normal);
+//    uint2 packedOcta = f32tof16(octa);
+//    //uint3 packedNormal = f32tof16(normal);
+//    uint3 packedPosition = f32tof16(position);
+//    uint2 packedUv = f32tof16(uv);
+//    uint3 packedAlbedo = f32tof16(albedo);
+//    uint packedMetallic = f32tof16(metallic);
+//    uint packedRoughness = f32tof16(roughness);
+//    uint3 packedMotionVector = f32tof16(motionVector);
+//
+//    gBuffer0.x = ((packedOcta.x & 0xFFFF) << 16) | (packedOcta.y & 0xFFFF);
+//    //gBuffer0.y = ((packedNormal.z & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+//    gBuffer0.y = ((instanceID & 0xFFFF) << 16) | (packedPosition.x & 0xFFFF);
+//    gBuffer0.z = ((packedPosition.y & 0xFFFF) << 16) | (packedPosition.z & 0xFFFF);
+//    gBuffer0.w = ((packedUv.x & 0xFFFF) << 16) | (packedUv.y & 0xFFFF);
+//
+//    gBuffer1.x = ((packedAlbedo.x & 0xFFFF) << 16) | (packedAlbedo.y & 0xFFFF);
+//    gBuffer1.y = ((packedAlbedo.z & 0xFFFF) << 16) | (packedMetallic & 0xFFFF);
+//    gBuffer1.z = ((packedRoughness & 0xFFFF) << 16) | (packedMotionVector.x & 0xFFFF);
+//    gBuffer1.w = ((packedMotionVector.y & 0xFFFF) << 16) | (packedMotionVector.z & 0xFFFF);
+//}
 
 PSOutput main(PSInput input)
 {
@@ -169,7 +158,7 @@ PSOutput main(PSInput input)
 
     //motionVector = input.position.xyz - input.positionPreviousFrame.xyz;
 
-    pack(
+    PackGbuffer(
         normal, 
         position, 
         uv, 

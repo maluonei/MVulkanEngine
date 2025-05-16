@@ -1,5 +1,8 @@
-#pragma once
+//#pragma once
 //#include "common.h"
+
+#ifndef SHADING_HLSLI
+#define SHADING_HLSLI
 
 static const float2 poisson_points[49] =
 {
@@ -165,3 +168,5 @@ bool VisibleToLight(Texture2D<float> shadowMap, SamplerState sampler, float3 fra
     }
     return true;
 }
+
+#endif

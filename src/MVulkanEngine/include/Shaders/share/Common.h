@@ -1,4 +1,8 @@
 //#pragma once
+
+#ifndef SHARED_COMMON_H
+#define SHARED_COMMON_H
+
 #ifdef SHARED_CODE_HLSL
 #include "HLSLTypeAlise.h"
 #define PI 3.1415926535f
@@ -143,9 +147,19 @@ struct HizDimension {
     uint2 u_previousLevelDimensions;
 };
 
+struct HizDimensionBuffer{
+    uint2 hizDimensions[13];
+};
+
 struct HIZBuffer{
     int u_previousLevel; 
     uint2 u_previousLevelDimensions; 
     uint padding0;
 };
 
+struct SSRBuffer{
+    uint min_traversal_occupancy;
+    uint g_max_traversal_intersections;
+};
+
+#endif

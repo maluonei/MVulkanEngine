@@ -392,7 +392,8 @@ void SSR::CreateRenderPass()
     createGenHizPass();
     createResetHizBufferPass();
     createUpdateHizBufferPass();
-
+    createSSRPass();
+    createCompositePass();
 
     createLightCamera();
 }
@@ -577,6 +578,7 @@ void SSR::createTextures()
 
     auto depthFormat = device.FindDepthFormat();
     auto shadowMapFormat = VK_FORMAT_R32G32B32A32_UINT;
+    auto swapchainImageFormat = Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat();
 
     {
         shadowMap = std::make_shared<MVulkanTexture>();
@@ -626,6 +628,19 @@ void SSR::createTextures()
         //auto numHizLayers = m_hiz.hizRes.size();
         Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
             gBufferDepth, swapchainExtent, depthFormat
+        );
+    }
+
+    {
+        m_basicShadingTexture = std::make_shared<MVulkanTexture>();
+        m_ssrTexture = std::make_shared<MVulkanTexture>();
+
+        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+            m_basicShadingTexture, swapchainExtent, swapchainImageFormat
+        );
+
+        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+            m_ssrTexture, swapchainExtent, swapchainImageFormat
         );
     }
 
@@ -681,6 +696,8 @@ void SSR::loadShaders()
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/pbr.frag.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("SSR Shader", { "hlsl/ssr_v2/ssr.comp.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("Composite Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/composite.frag.hlsl" }, true);
 
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" }, true);
@@ -989,15 +1006,12 @@ void SSR::createShadingPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        std::vector<VkFormat> lightingPassFormats;
-        lightingPassFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-
-        //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
-        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        //info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.frambufferCount = 1;
         info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
         info.dynamicRender = 1;
@@ -1016,42 +1030,115 @@ void SSR::createShadingPass()
             shadowMapDepth
         };
 
+        //for (int i = 0; i < info.frambufferCount; i++) {
+        std::vector<PassResources> resources;
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "lightBuffer", 0, 0, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "cameraBuffer", 1, 0, 0));
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "screenBuffer", 2, 0, 0));
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                3, 0, gBuffer0));
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                4, 0, gBuffer1));
+        //resources.push_back(
+        //    PassResources::SetSampledImageResource(
+        //        8, 0, gBuffer2));
+        //
+        resources.push_back(
+            PassResources::SetSamplerResource(
+                6, 0, m_linearSampler.GetSampler()));
+
+        resources.push_back(
+            PassResources::SetSampledImageResource(
+                5, 0, shadowViews));
+
+        resources.push_back(
+            PassResources::SetBufferResource(
+                "intBuffer", 7, 0, 0));
+
+
+        m_lightingPass->UpdateDescriptorSetWrite(0, resources);
+        //}
+    }
+}
+
+void SSR::createSSRPass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+        m_ssrPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("SSR Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_ssrPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource("cameraBuffer", 0, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("vpBuffer", 1, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("hizDimensionBuffer", 2, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("ssrBuffer", 3, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("screenBuffer", 4, 0, 0));
+        resources.push_back(PassResources::SetSampledImageResource(5, 0, gBuffer0));
+        resources.push_back(PassResources::SetSampledImageResource(6, 0, gBuffer1));
+        resources.push_back(PassResources::SetSampledImageResource(7, 0, m_hizTextures[0]));
+        resources.push_back(PassResources::SetSampledImageResource(8, 0, m_basicShadingTexture));
+        resources.push_back(PassResources::SetStorageImageResource(9, 0, m_ssrTexture));
+        resources.push_back(PassResources::SetSamplerResource(10, 0, m_linearSampler.GetSampler()));
+
+        m_ssrPass->UpdateDescriptorSetWrite(resources);
+    }
+}
+
+void SSR::createCompositePass()
+{
+    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+    {
+
+        //RenderPassCreateInfo info{};
+        RenderPassCreateInfo info{};
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
+        //info.numFrameBuffers = 1;
+        info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
+        info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        info.dynamicRender = 1;
+        //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+
+        m_compositePass = std::make_shared<RenderPass>(device, info);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("Composite Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_compositePass, shader);
+
         for (int i = 0; i < info.frambufferCount; i++) {
             std::vector<PassResources> resources;
 
             resources.push_back(
                 PassResources::SetBufferResource(
-                    "lightBuffer", 0, 0, i));
-            resources.push_back(
-                PassResources::SetBufferResource(
-                    "cameraBuffer", 1, 0, i));
-            resources.push_back(
-                PassResources::SetBufferResource(
-                    "screenBuffer", 2, 0, i));
+                    "screenBuffer", 0, 0, i));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, gBuffer0));
+                    1, 0, m_basicShadingTexture));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    4, 0, gBuffer1));
-            //resources.push_back(
-            //    PassResources::SetSampledImageResource(
-            //        8, 0, gBuffer2));
-            //
-            resources.push_back(
-                PassResources::SetSamplerResource(
-                    6, 0, m_linearSampler.GetSampler()));
-
-            resources.push_back(
-                PassResources::SetSampledImageResource(
-                    5, 0, shadowViews));
-
-            resources.push_back(
-                PassResources::SetBufferResource(
-                    "intBuffer", 7, 0, i));
-
-
-            m_lightingPass->UpdateDescriptorSetWrite(i, resources);
+                    2, 0, m_ssrTexture));
+            
+            m_compositePass->UpdateDescriptorSetWrite(i, resources);
         }
     }
 }
