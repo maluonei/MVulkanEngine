@@ -1,3 +1,7 @@
+#ifndef MESHDISTANCEFIELD_H
+#define MESHDISTANCEFIELD_H
+
+
 #ifdef SHARED_CODE_HLSL
 #include "HLSLTypeAlise.h"
 #else
@@ -42,3 +46,5 @@ struct MeshDistanceFieldInput{
 //    int firstBrickIndex;
 //    int3 
 //};
+
+#endif

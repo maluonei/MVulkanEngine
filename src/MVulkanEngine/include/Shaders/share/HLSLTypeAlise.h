@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#pragma once
+#ifndef HLSLTYPEALISE_H
+#define HLSLTYPEALISE_H
 
 /*================================================================================================
 	HLSLTypeAliases.h: include this file in headers that are used in both C++ and HLSL
@@ -8,6 +9,7 @@
 =================================================================================================*/
 
 #ifndef SHARED_CODE_HLSL
+#pragma once
 #include<glm/glm.hpp>
 
 using int2 = glm::ivec2;
@@ -31,3 +33,4 @@ using float4x4 = glm::mat4;
 //using FLWCVector3 = TLargeWorldRenderPosition<float>;
 
 
+#endif

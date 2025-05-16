@@ -35,9 +35,11 @@ cbuffer screenBuffer : register(b4)
 [[vk::binding(6, 0)]]Texture2D<uint4> gBuffer1 : register(t1);
 [[vk::binding(7, 0)]]Texture2D<float> HIZ : register(t2);
 [[vk::binding(8, 0)]]Texture2D<float4> Render : register(t3);
-[[vk::binding(9, 0)]]RWTexture2D<float4> SSRRender : register(t4);
+[[vk::binding(9, 0)]]RWTexture2D<float4> SSRRender : register(u0);
 
 [[vk::binding(10, 0)]]SamplerState linearSampler : register(s0);
+
+#define FLOAT_MAX                          3.402823466e+38
 
 void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction, 
     int currentMipLevel,
@@ -144,10 +146,13 @@ float3 SSR_Trace(float3 origin, float3 direction,
 [numthreads(16, 16, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
+    if(threadID.x >= screenBuffer.WindowRes.x || threadID.y >= screenBuffer.WindowRes.y)
+        return;
+
     uint3 texCoord = uint3(threadID.xy, 0);
     
-    uint4 gBufferValue0 = gBuffer0.Load(coord);
-    uint4 gBufferValue1 = gBuffer1.Load(coord);
+    uint4 gBufferValue0 = gBuffer0.Load(texCoord);
+    uint4 gBufferValue1 = gBuffer1.Load(texCoord);
     //float4 gBufferValue2 = gBuffer2.Load(coord);
     float3 fragNormal;
     float3 fragPos;
@@ -197,8 +202,8 @@ void main(uint3 threadID : SV_DispatchThreadID)
             max_traversal_intersections, valid_hit);
 
         if (valid_hit)
-            SSRRender[texCoord].rgb = color;
+            SSRRender[texCoord.xy] = float4(color, 1.f);
         else 
-            SSRRender[texCoord].rgb = float3(0.f, 0.f, 0.f);
+            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 1.f);
     }
 }

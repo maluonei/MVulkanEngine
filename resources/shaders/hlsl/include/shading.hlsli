@@ -1,8 +1,9 @@
 //#pragma once
-//#include "common.h"
 
 #ifndef SHADING_HLSLI
 #define SHADING_HLSLI
+
+#include "common.h"
 
 static const float2 poisson_points[49] =
 {

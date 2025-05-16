@@ -51,8 +51,10 @@ public:
 	float shadowmapTime = 0.f;
 	float shadingTime = 0.f;
 	float cullingTime = 0.f;
+	float compositeTime = 0.f;
 	float hizTime = 0.f;
-	std::vector<float> hizTimes;
+	float ssrTime = 0.f;
+	//std::vector<float> hizTimes;
 	//int m_outputContext = 0;
 private:
 	void loadScene();
@@ -147,10 +149,12 @@ private:
 	int							m_queryIndex = 0;
 
 	MVulkanSemaphore			m_cullingSemaphore;
-	MVulkanSemaphore			m_shadowMapSemaphore;
-	MVulkanSemaphore			m_genHizSemaphore;
-	MVulkanSemaphore			m_copyHizSemaphore;
-	MVulkanSemaphore			m_gbufferSemaphore;
+	//MVulkanSemaphore			m_shadowMapSemaphore;
+	//MVulkanSemaphore			m_genHizSemaphore;
+	//MVulkanSemaphore			m_copyHizSemaphore;
+	//MVulkanSemaphore			m_gbufferSemaphore;
+	MVulkanSemaphore			m_basicShadingSemaphore;
+	MVulkanSemaphore			m_ssrSemaphore;
 };
 
 class SSRUI :public UIRenderer {
@@ -163,11 +167,12 @@ private:
 
 public:
 	int cullingMode = 0;
-	int hizMode = DO_HIZ_MODE_0;
+	//int hizMode = DO_HIZ_MODE_0;
 	//int showMotionVector = 0;
+	bool doSSR = 0;
 	int outputContext = 0;
 	bool showPassTime = 0;
-	bool copyHiz = true;
+	//bool copyHiz = true;
 	//int hizLayer = 1;
 };
 

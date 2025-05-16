@@ -18,6 +18,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Shaders/share/Common.h"
+#include "Shaders/share/SSR.h"
 
 void SSR::SetUp()
 {
@@ -35,8 +36,9 @@ void SSR::SetUp()
 
 void SSR::ComputeAndDraw(uint32_t imageIndex)
 {
-    auto hizMode = std::static_pointer_cast<SSRUI>(m_uiRenderer)->hizMode;
-    auto copyHiz = std::static_pointer_cast<SSRUI>(m_uiRenderer)->copyHiz;
+    //auto hizMode = std::static_pointer_cast<SSRUI>(m_uiRenderer)->hizMode;
+    //auto copyHiz = std::static_pointer_cast<SSRUI>(m_uiRenderer)->copyHiz;
+    auto doSSR = std::static_pointer_cast<SSRUI>(m_uiRenderer)->doSSR;
 
     m_queryIndex = 0;
     int shadowmapQueryIndex = 0;
@@ -46,6 +48,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
     //int cullingQueryInedxEnd;
     int hizQueryIndexStart = 0;
     int hizQueryIndexEnd = 0;
+    int ssrQueryIndex = 0;
+    int compositeQueryIndex = 0;
     std::vector<int> hizQueryIndex(0);
     //Singleton<MVulkanEngine>::instance().ResetTimeStampQueryPool();
 
@@ -109,11 +113,29 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         int outputContext = std::static_pointer_cast<SSRUI>(m_uiRenderer)->outputContext;
 
-        Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", imageIndex, &outputContext, 0);
-        //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+        Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", 0, &lightBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", 0, &cameraBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", 0, &screenBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", 0, &outputContext, 0);
+    }
+
+    {
+        HizDimensionBuffer hizDimensionBuffer;
+        auto hizLayers = m_hiz.hizRes.size();
+        for (auto i = 0; i < hizLayers; i++) {
+            hizDimensionBuffer.hizDimensions[i] = m_hiz.hizRes[i];
+        }
+
+        SSRBuffer ssrBuffer;
+        ssrBuffer.g_max_traversal_intersections = 60;
+        ssrBuffer.min_traversal_occupancy = 50;
+
+        SSRConfigBuffer ssrConfig;
+        ssrConfig.doSSR = doSSR ? 1 : 0;
+
+        Singleton<ShaderResourceManager>::instance().LoadData("ssrBuffer", 0, &ssrBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("hizDimensionBuffer", 0, &hizDimensionBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("ssrConfigBuffer", 0, &ssrConfig, 0);
     }
 
     {
@@ -132,7 +154,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
     }
 
-    RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo;
+    RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo, compositingRenderInfo;
     {
         gbufferRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
@@ -171,12 +193,29 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         shadingRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
+                .texture = m_basicShadingTexture,
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            }
+            );
+        shadingRenderInfo.depthAttachment = RenderingAttachment{
+                .texture = gBufferDepth,
+                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+                .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
+        };
+    }
+
+    {
+        auto swapChain = Singleton<MVulkanEngine>::instance().GetSwapchain();
+
+        compositingRenderInfo.colorAttachments.push_back(
+            RenderingAttachment{
                 .texture = nullptr,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 .view = swapChain.GetImageView(imageIndex),
             }
             );
-        shadingRenderInfo.depthAttachment = RenderingAttachment{
+        compositingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[imageIndex],
                 //.texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -187,6 +226,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
                 //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
     }
+
     gbufferRenderInfo.offset = { 0, 0 };
     gbufferRenderInfo.extent = swapchainExtent;
 
@@ -195,6 +235,9 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     shadingRenderInfo.offset = { 0, 0 };
     shadingRenderInfo.extent = swapchainExtent;
+
+    compositingRenderInfo.offset = { 0, 0 };
+    compositingRenderInfo.extent = swapchainExtent;
 
     {
         computeList.GetFence().WaitForSignal();
@@ -228,17 +271,18 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
         gbufferQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
+        shadingQueryIndex = m_queryIndex;
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
 
         graphicsList.End();
         std::vector<MVulkanSemaphore> waitSemaphores0(1, m_cullingSemaphore);
-        std::vector<MVulkanSemaphore> signalSemaphores0(1, m_gbufferSemaphore);
+        std::vector<MVulkanSemaphore> signalSemaphores0(1, m_basicShadingSemaphore);
         std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-        //Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
-        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
+       Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
     }
 
     {
-        if (hizMode == DO_HIZ_MODE_0) {
+        if (doSSR) {
             computeList.GetFence().WaitForSignal();
             computeList.GetFence().Reset();
             computeList.Reset();
@@ -247,7 +291,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             hizQueryIndexStart = m_queryIndex;
             auto numHizLayers = m_hiz.hizRes.size();
             hizQueryIndex.resize(numHizLayers);
-            hizTimes.resize(numHizLayers);
+            //hizTimes.resize(numHizLayers);
             for (auto layer = 0; layer < numHizLayers; layer++) {
                 hizQueryIndex[layer] = m_queryIndex;
                 if (layer == 0) {
@@ -260,28 +304,24 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             }
             hizQueryIndexEnd = m_queryIndex;
 
+            //copy hiz
+            //computeList
+            {
+                copyHizToDepth();
+            }
+
+            //do ssr
+            {
+                ssrQueryIndex = m_queryIndex;
+                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("SSR Pass"), m_queryIndex++);
+            }
+
             computeList.End();
 
-            if (copyHiz) {
-                std::vector<MVulkanSemaphore> waitSemaphores2(1, m_gbufferSemaphore);
-                std::vector<MVulkanSemaphore> signalSemaphores2(1, m_genHizSemaphore);
-                std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-                Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
-            }
-            else {
-                std::vector<MVulkanSemaphore> waitSemaphores2(1, m_gbufferSemaphore);
-                std::vector<MVulkanSemaphore> signalSemaphores2(1, m_genHizSemaphore);
-                std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-                Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
-
-            }
-        }
-    }
-
-    
-    if (hizMode == DO_HIZ_MODE_0) {
-        if (copyHiz) {
-            copyHizToDepth();
+            std::vector<MVulkanSemaphore> waitSemaphores2(1, m_basicShadingSemaphore);
+            std::vector<MVulkanSemaphore> signalSemaphores2(1, m_ssrSemaphore);
+            std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
         }
     }
 
@@ -291,33 +331,19 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.Reset();
         graphicsList.Begin();
 
-        shadingQueryIndex = m_queryIndex;
-        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
+        compositeQueryIndex = m_queryIndex;
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Composite Pass"), m_queryIndex++);
 
         graphicsList.End();
 
-
-        if (hizMode == DO_HIZ_MODE_0) {
-            if (copyHiz) {
-                std::vector<MVulkanSemaphore> waitSemaphores1(0);
-                std::vector<MVulkanSemaphore> signalSemaphores1(0);
-                std::vector<VkPipelineStageFlags> waitFlags1(0);
-                Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-            }
-            else {
-                std::vector<MVulkanSemaphore> waitSemaphores1(1, m_genHizSemaphore);
-                std::vector<MVulkanSemaphore> signalSemaphores1(0);
-                std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-                Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-            }
-
-            //std::vector<MVulkanSemaphore> waitSemaphores1(0);
-            //std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            //std::vector<VkPipelineStageFlags> waitFlags1(0);
-            //Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
+        if (doSSR) {
+            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
+            std::vector<MVulkanSemaphore> signalSemaphores1(0);
+            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
         }
         else {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_gbufferSemaphore);
+            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
             std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
@@ -338,14 +364,17 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         gbufferTime = (queryResults[2 * gbufferQueryIndex + 1] - queryResults[2 * gbufferQueryIndex]) * timestampPeriod / 1000000.f;
         shadowmapTime = (queryResults[2 * shadowmapQueryIndex + 1] - queryResults[2 * shadowmapQueryIndex]) * timestampPeriod / 1000000.f;
         shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod / 1000000.f;
-        if (hizMode == DO_HIZ_MODE_0) {
+        compositeTime = (queryResults[2 * compositeQueryIndex + 1] - queryResults[2 * compositeQueryIndex]) * timestampPeriod / 1000000.f;
+
+        if (doSSR) {
             hizTime = (queryResults[2 * hizQueryIndexEnd - 1] - queryResults[2 * hizQueryIndexStart]) * timestampPeriod / 1000000.f;
-            for (auto i = 0; i < hizQueryIndex.size(); i++) {
-                hizTimes[i] = (queryResults[2 * hizQueryIndex[i] + 3] - queryResults[2 * hizQueryIndex[i]]) * timestampPeriod / 1000000.f;
-            }
+            ssrTime = (queryResults[2 * ssrQueryIndex + 1] - queryResults[2 * ssrQueryIndex]) * timestampPeriod / 1000000.f;
+            
         }
         else {
             hizTime = 0.f;
+            ssrTime = 0.f;
+
         }
     }
     else {
@@ -354,6 +383,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         shadowmapTime = 0.f;
         shadingTime = 0.f;
         hizTime = 0.f;
+        ssrTime = 0.f;
+        compositeTime = 0.f;
     }
 }
 
@@ -633,15 +664,15 @@ void SSR::createTextures()
 
     {
         m_basicShadingTexture = std::make_shared<MVulkanTexture>();
-        m_ssrTexture = std::make_shared<MVulkanTexture>();
+        //m_ssrTexture = std::make_shared<MVulkanTexture>();
 
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_basicShadingTexture, swapchainExtent, swapchainImageFormat
         );
 
-        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-            m_ssrTexture, swapchainExtent, swapchainImageFormat
-        );
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    m_ssrTexture, swapchainExtent, swapchainImageFormat
+        //);
     }
 
     {
@@ -683,6 +714,29 @@ void SSR::createTextures()
             }
             Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
         }
+    }
+
+    {
+        ImageCreateInfo imageInfo;
+        ImageViewCreateInfo viewInfo;
+        imageInfo.arrayLength = 1;
+        imageInfo.usage =  VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+        imageInfo.format = depthFormat;
+
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = imageInfo.format;
+        viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+        viewInfo.baseMipLevel = 0;
+        viewInfo.levelCount = 1;
+        viewInfo.baseArrayLayer = 0;
+        viewInfo.layerCount = 1;
+
+        //auto depthFormat = device.FindDepthFormat();
+        imageInfo.width = swapchainExtent.width;
+        imageInfo.height = swapchainExtent.height;
+
+        m_ssrTexture = std::make_shared<MVulkanTexture>();
+        Singleton<MVulkanEngine>::instance().CreateImage(m_ssrTexture, imageInfo, viewInfo);
     }
 
 }
@@ -788,10 +842,10 @@ void SSR::createStorageBuffers()
 void SSR::createSyncObjs()
 {
     m_cullingSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    m_genHizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    m_copyHizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    m_gbufferSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
-    m_shadowMapSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    //m_genHizSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    m_ssrSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    m_basicShadingSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+    //m_shadowMapSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
 }
 
 void SSR::copyHizToDepth()
@@ -799,28 +853,20 @@ void SSR::copyHizToDepth()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-        auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
+        //auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
+        //auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
         
-        graphicsList.GetFence().WaitForSignal();
-        graphicsList.GetFence().Reset();
-        graphicsList.Reset();
-        graphicsList.Begin();
+        auto& computeList = Singleton<MVulkanEngine>::instance().GetCommandList(MQueueType::COMPUTE);
+        //auto& computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
+
+
+        //graphicsList.GetFence().WaitForSignal();
+        //graphicsList.GetFence().Reset();
+        //graphicsList.Reset();
+        //graphicsList.Begin();
         
         auto numMips = m_hiz.hizRes.size();
-        //for (auto i = 1; i < numMips; i++) {
-        //    MVulkanImageCopyInfo copyInfo{};
-        //
-        //    copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        //    copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        //
-        //    copyInfo.srcMipLevel = 0;
-        //    copyInfo.dstMipLevel = i;
-        //
-        //    copyInfo.extent = { (uint32_t)m_hiz.hizRes[i].x, (uint32_t)m_hiz.hizRes[i].y, 1 };
-        //
-        //    Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
-        //}
+
 
         std::vector<std::shared_ptr<MVulkanTexture>> srcs;
         std::vector<std::shared_ptr<MVulkanTexture>> dsts;
@@ -841,68 +887,17 @@ void SSR::copyHizToDepth()
             infos.push_back(copyInfo);
             //Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
         }
-        //Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, dsts, srcs, infos);
-        Singleton<MVulkanEngine>::instance().CopyImage2(graphicsList, dsts, srcs, infos);
+        Singleton<MVulkanEngine>::instance().CopyImage2(computeList, dsts, srcs, infos);
 
         
-        graphicsList.End();
-        
-        std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
-        //std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
-        std::vector<MVulkanSemaphore> signalSemaphores(0);
-        std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        
-        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
-    }
-
-    //{
-    //    auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-    //    auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-    //
-    //    auto numMips = m_hiz.hizRes.size();
-    //    for (auto i = 1; i < numMips; i++) {
-    //        graphicsList.GetFence().WaitForSignal();
-    //        graphicsList.GetFence().Reset();
-    //        graphicsList.Reset();
-    //        graphicsList.Begin();
-    //
-    //        MVulkanImageCopyInfo copyInfo{};
-    //
-    //        copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    //        copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    //
-    //        copyInfo.srcMipLevel = 0;
-    //        copyInfo.dstMipLevel = i;
-    //
-    //        copyInfo.extent = { (uint32_t)m_hiz.hizRes[i].x, (uint32_t)m_hiz.hizRes[i].y, 1 };
-    //
-    //        Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
-    //    
-    //        graphicsList.End();
-    //
-    //        if (i == 1) {
-    //            std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
-    //            std::vector<MVulkanSemaphore> signalSemaphores(0);
-    //            std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    //            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
-    //        }
-    //        if (i == numMips - 1) {
-    //            std::vector<MVulkanSemaphore> waitSemaphores(0);
-    //            std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
-    //            std::vector<VkPipelineStageFlags> waitFlags(0);
-    //            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
-    //        }
-    //
-    //    }
-
         //graphicsList.End();
-        //
+        
         //std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
-        //std::vector<MVulkanSemaphore> signalSemaphores(1, m_copyHizSemaphore);
+        //std::vector<MVulkanSemaphore> signalSemaphores(0);
         //std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
         //
         //Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
-    //}
+    }
 }
 
 void SSR::initUIRenderer()
@@ -1132,11 +1127,14 @@ void SSR::createCompositePass()
                 PassResources::SetBufferResource(
                     "screenBuffer", 0, 0, i));
             resources.push_back(
-                PassResources::SetSampledImageResource(
-                    1, 0, m_basicShadingTexture));
+                PassResources::SetBufferResource(
+                    "ssrConfigBuffer", 1, 0, i));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    2, 0, m_ssrTexture));
+                    2, 0, m_basicShadingTexture));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    3, 0, m_ssrTexture));
             
             m_compositePass->UpdateDescriptorSetWrite(i, resources);
         }
@@ -1285,8 +1283,8 @@ void SSRUI::RenderContext() {
     ImGui::RadioButton("cullingmode sphere", &cullingMode, CULLINGMODE_SPHERE); ImGui::SameLine();
     ImGui::RadioButton("cullingmode bbx", &cullingMode, CULLINGMODE_AABB);
 
-    ImGui::RadioButton("not do hiz", &hizMode, NOT_DO_HIZ); ImGui::SameLine();
-    ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0);// ImGui::SameLine();
+    //ImGui::RadioButton("not do hiz", &hizMode, NOT_DO_HIZ); ImGui::SameLine();
+    //ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0);// ImGui::SameLine();
     //ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
 
     ImGui::Combo("outputContext", &outputContext, OutputBufferContents, IM_ARRAYSIZE(OutputBufferContents));
@@ -1307,7 +1305,7 @@ void SSRUI::RenderContext() {
     auto numDrawInstances = ((SSR*)(this->m_app))->numDrawInstances;
     ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
 
-    ImGui::Checkbox("copyHiz", &copyHiz);
+    ImGui::Checkbox("doSSR", &doSSR);
 
     ImGui::Checkbox("showPassTime", &showPassTime);
     if (showPassTime) {
@@ -1316,10 +1314,12 @@ void SSRUI::RenderContext() {
         ImGui::Text("gbuffer time: %.3f ms", ((SSR*)(this->m_app))->gbufferTime);
         ImGui::Text("shading time: %.3f ms", ((SSR*)(this->m_app))->shadingTime);
         ImGui::Text("hiz time: %.3f ms", ((SSR*)(this->m_app))->hizTime);
-        auto hizTimes = ((SSR*)(this->m_app))->hizTimes;
-        for (auto i = 0; i < hizTimes.size(); i++) {
-            ImGui::Text("hiz layer %d time: %.3f ms", i, ((SSR*)(this->m_app))->hizTimes[i]);
-        }
+        ImGui::Text("ssr time: %.3f ms", ((SSR*)(this->m_app))->ssrTime);
+        ImGui::Text("composite time: %.3f ms", ((SSR*)(this->m_app))->compositeTime);
+        //auto hizTimes = ((SSR*)(this->m_app))->hizTimes;
+        //for (auto i = 0; i < hizTimes.size(); i++) {
+        //    ImGui::Text("hiz layer %d time: %.3f ms", i, ((SSR*)(this->m_app))->hizTimes[i]);
+        //}
     }
     //ImGui::InputInt("Hiz Layer:", &hizLayer, 1, 0);
 

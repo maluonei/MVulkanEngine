@@ -212,7 +212,7 @@ void ShaderResourceManager::AddConstantBuffer(const std::string name, BufferCrea
     }
     else
     {
-        spdlog::error("Constant Buffer Rename: {0}", name);
+        spdlog::warn("Constant Buffer Rename: {0}", name);
     }
 }
 

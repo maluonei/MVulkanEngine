@@ -5,10 +5,13 @@
 
 #ifdef SHARED_CODE_HLSL
 #include "HLSLTypeAlise.h"
-#define PI 3.1415926535f
 #else
 #pragma once
 #include "Shaders/share/HLSLTypeAlise.h"
+#endif
+
+#ifndef PI 
+#define PI 3.1415926535
 #endif
 
 #define MAX_LIGHTS 4
