@@ -169,7 +169,7 @@ public:
 	int cullingMode = 0;
 	//int hizMode = DO_HIZ_MODE_0;
 	//int showMotionVector = 0;
-	bool doSSR = 0;
+	bool doSSR = 1;
 	int outputContext = 0;
 	bool showPassTime = 0;
 	//bool copyHiz = true;

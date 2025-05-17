@@ -41,12 +41,16 @@ cbuffer screenBuffer : register(b4)
 
 #define FLOAT_MAX                          3.402823466e+38
 
+int GetMostDetailedMipLevel(){
+    return hiz.hizDimensions[0].z;
+}
+
 void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction, 
     int currentMipLevel,
     float2 floor_offset, float2 uv_offset, 
     out float3 position, out float current_t)
 {
-    float2 current_mip_resolution = hiz.hizDimensions[currentMipLevel];
+    float2 current_mip_resolution = (float2)hiz.hizDimensions[currentMipLevel].xy;
     float2 current_mip_resolution_inv = 1.0 / current_mip_resolution;
 
     float2 current_mip_position = current_mip_resolution * origin.xy;
@@ -66,7 +70,7 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
     int currentMipLevel,float2 floor_offset, float2 uv_offset, 
     float surface_z, inout float3 position, inout float current_t) 
 {
-    float2 current_mip_resolution = hiz.hizDimensions[currentMipLevel];
+    float2 current_mip_resolution = (float2)hiz.hizDimensions[currentMipLevel].xy;
     float2 current_mip_resolution_inv = 1.0 / current_mip_resolution;
 
     float2 current_mip_position = current_mip_resolution * position.xy;
@@ -85,7 +89,7 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 
     bool above_surface = surface_z > position.z;
 
-    bool skipped_tile = t_min != t.z && above_surface;
+    bool skipped_tile = (t_min != t.z) && above_surface;
 
     // Make sure to only advance the ray if we're still above the surface.
     current_t = above_surface ? t_min : current_t;
@@ -97,22 +101,28 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 }
 
 float LoadDepth(float2 uv, int mipLevel){
-    return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
+    return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
+    //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
+}
+
+float3 SampleRender(float2 uv){
+    return Render.Sample(linearSampler, float2(uv.x, 1.f-uv.y)).rgb;
 }
 
 float3 SSR_Trace(float3 origin, float3 direction,
     uint max_traversal_intersections, out bool valid_hit)
 {
     float3 color = float3(0.f, 0.f, 0.f);
-    const float3 inv_direction = select(direction != 0, 0.99999f / direction, FLOAT_MAX);
+    const float3 inv_direction = select(direction != 0, 0.99999999f / direction, FLOAT_MAX);
 
-    float2 uv_offset = 0.005 * exp2(0) / float2(screenBuffer.WindowRes.x, screenBuffer.WindowRes.y);
+    int mostDetailedMip = 0;
+    float2 uv_offset = 0.005 * exp2(mostDetailedMip) / float2(screenBuffer.WindowRes.x, screenBuffer.WindowRes.y);
     uv_offset = select(direction.xy < 0, -uv_offset, uv_offset);
 
     // Offset applied depending on current mip resolution to move the boundary to the left/right upper/lower border depending on ray direction.
     float2 floor_offset = select(direction.xy < 0, float2(0.f, 0.f), float2(1.f, 1.f));
 
-    int currentMipLevel = 0;
+    int currentMipLevel = mostDetailedMip;
 
     float current_t = 0.f;
     float3 position;
@@ -120,18 +130,30 @@ float3 SSR_Trace(float3 origin, float3 direction,
         currentMipLevel,
         floor_offset, uv_offset, position, current_t);
 
+    //valid_hit = true;
+    ////return float3(direction);
+    ////return float3(inv_direction);
+    //return float3(position.xy, 0.f);
+
     int i = 0;
     bool exit_due_to_low_occupancy = false;
 
-    while(i < max_traversal_intersections && currentMipLevel >=0){
-
+    while(i < max_traversal_intersections && currentMipLevel >= mostDetailedMip){
         float surface_z = LoadDepth(position.xy, currentMipLevel);
+
+        //valid_hit = true;
+        //return float3(surface_z, surface_z, surface_z);
 
         bool skipped_tile = AdvanceRay(origin, direction, inv_direction, 
             currentMipLevel, floor_offset, uv_offset, 
             surface_z, position, current_t);
+        
+        bool nextMipOutofRange = skipped_tile && (currentMipLevel >= GetMostDetailedMipLevel());
 
-        currentMipLevel += skipped_tile ? 1 : -1;
+        if(!nextMipOutofRange){
+            currentMipLevel += skipped_tile ? 1 : -1;
+        }
+
         ++i;
     }
 
@@ -139,8 +161,7 @@ float3 SSR_Trace(float3 origin, float3 direction,
     if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
         return float3(0.f, 0.f, 0.f);
     
-    float2 uv = float2(position.x, 1.f-position.y);
-    return Render.Sample(linearSampler, uv).rgb;
+    return SampleRender(position.xy);
 }
 
 [numthreads(16, 16, 1)]
@@ -181,7 +202,7 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
         float3 targetPosition = fragPos + reflectDir;
 
-        float4x4 viewProj = vp.Projection * vp.View;
+        float4x4 viewProj = mul(vp.Projection, vp.View);
 
         float4 startFrag = mul(viewProj, float4(fragPos, 1.f));
         startFrag.xyz   /= startFrag.w;
@@ -201,8 +222,9 @@ void main(uint3 threadID : SV_DispatchThreadID)
         float3 color = SSR_Trace(startFrag.xyz, screenDirection, 
             max_traversal_intersections, valid_hit);
 
-        if (valid_hit)
+        if (valid_hit){
             SSRRender[texCoord.xy] = float4(color, 1.f);
+        }
         else 
             SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
     }

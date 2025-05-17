@@ -647,12 +647,12 @@ void MVulkanEngine::TransitionImageLayout(MVulkanImageMemoryBarrier barrier, VkP
 void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
     auto graphicsList = m_graphicsLists[commandListId];
-    graphicsList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    graphicsList.TransitionImageLayout(barriers, sourceStage, destinationStage);
 }
 
 void MVulkanEngine::TransitionImageLayout2(MVulkanCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
-    list.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    list.TransitionImageLayout(barriers, sourceStage, destinationStage);
 }
 
 void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame)
@@ -1936,12 +1936,12 @@ void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& ren
                 barrier.layerCount = 1;
                 barrier.levelCount = 1;
                 barrier.srcAccessMask = 0;
-                barrier.dstAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
                 barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
                 barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
                 barriers.push_back(barrier);
             }
-            Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            Singleton<MVulkanEngine>::instance().TransitionImageLayout2(currentFrame, barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
     }
 

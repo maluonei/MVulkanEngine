@@ -151,7 +151,7 @@ struct HizDimension {
 };
 
 struct HizDimensionBuffer{
-    uint2 hizDimensions[13];
+    uint4 hizDimensions[13];
 };
 
 struct HIZBuffer{

@@ -107,6 +107,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         MCameraBuffer cameraBuffer{};
         cameraBuffer.cameraPos = m_camera->GetPosition();
+        cameraBuffer.cameraDir = m_camera->GetDirection();
 
         MScreenBuffer screenBuffer{};
         screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
@@ -123,8 +124,10 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         HizDimensionBuffer hizDimensionBuffer;
         auto hizLayers = m_hiz.hizRes.size();
         for (auto i = 0; i < hizLayers; i++) {
-            hizDimensionBuffer.hizDimensions[i] = m_hiz.hizRes[i];
+            hizDimensionBuffer.hizDimensions[i].x = m_hiz.hizRes[i].x;
+            hizDimensionBuffer.hizDimensions[i].y = m_hiz.hizRes[i].y;
         }
+        hizDimensionBuffer.hizDimensions[0].z = m_hiz.hizRes.size();
 
         SSRBuffer ssrBuffer;
         ssrBuffer.g_max_traversal_intersections = 60;
@@ -198,12 +201,13 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
             );
-        shadingRenderInfo.depthAttachment = RenderingAttachment{
-                .texture = gBufferDepth,
-                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-                .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
-        };
+        shadingRenderInfo.useDepth = false;
+        //shadingRenderInfo.depthAttachment = RenderingAttachment{
+        //        .texture = gBufferDepth,
+        //        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        //        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        //        .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
+        //};
     }
 
     {
@@ -218,7 +222,6 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             );
         compositingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[imageIndex],
-                //.texture = gBufferDepth,
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 //.view = nullptr,
                 //.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -278,9 +281,11 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.End();
         std::vector<MVulkanSemaphore> waitSemaphores0(1, m_cullingSemaphore);
         std::vector<MVulkanSemaphore> signalSemaphores0(1, m_basicShadingSemaphore);
-        std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-       Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
+        std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
     }
+
+    //graphicsQueue.WaitForQueueComplete();
 
     {
         if (doSSR) {
@@ -325,6 +330,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
         }
     }
+
+    //computeQueue.WaitForQueueComplete();
 
     {
         graphicsList.GetFence().WaitForSignal();
@@ -545,7 +552,7 @@ void SSR::createCamera()
     float fov = 60.f;
     float aspectRatio = (float)WIDTH / (float)HEIGHT;
     float zNear = 0.01f;
-    float zFar = 1000.f;
+    float zFar = 100.f;
 
     //m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar);
     //m_camera = std::make_shared<Camera>(position, direction, fov, aspectRatio, zNear, zFar, xMin, xMax, yMin, yMax, zMin, zMax);
@@ -612,6 +619,8 @@ void SSR::createTextures()
     auto shadowMapFormat = VK_FORMAT_R32G32B32A32_UINT;
     auto swapchainImageFormat = Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat();
 
+    auto renderingFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+
     {
         shadowMap = std::make_shared<MVulkanTexture>();
         shadowMapDepth = std::make_shared<MVulkanTexture>();
@@ -668,7 +677,7 @@ void SSR::createTextures()
         //m_ssrTexture = std::make_shared<MVulkanTexture>();
 
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-            m_basicShadingTexture, swapchainExtent, swapchainImageFormat
+            m_basicShadingTexture, swapchainExtent, renderingFormat
         );
 
         //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
@@ -722,7 +731,7 @@ void SSR::createTextures()
         ImageViewCreateInfo viewInfo;
         imageInfo.arrayLength = 1;
         imageInfo.usage =  VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-        imageInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+        imageInfo.format = renderingFormat;
 
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = imageInfo.format;
@@ -854,20 +863,9 @@ void SSR::copyHizToDepth()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        //auto& graphicsList = Singleton<MVulkanEngine>::instance().GetGraphicsList(m_currentFrame);
-        //auto& graphicsQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::GRAPHICS);
-        
         auto& computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
-        //auto& computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
 
-
-        //graphicsList.GetFence().WaitForSignal();
-        //graphicsList.GetFence().Reset();
-        //graphicsList.Reset();
-        //graphicsList.Begin();
-        
         auto numMips = m_hiz.hizRes.size();
-
 
         std::vector<std::shared_ptr<MVulkanTexture>> srcs;
         std::vector<std::shared_ptr<MVulkanTexture>> dsts;
@@ -886,18 +884,8 @@ void SSR::copyHizToDepth()
             srcs.push_back(m_hizTextures[i]);
             dsts.push_back(m_hizTextures[0]);
             infos.push_back(copyInfo);
-            //Singleton<MVulkanEngine>::instance().CopyImage(graphicsList, m_hizTextures[0], m_hizTextures[i], copyInfo);
         }
-        Singleton<MVulkanEngine>::instance().CopyImage2(computeList, dsts, srcs, infos);
-
-        
-        //graphicsList.End();
-        
-        //std::vector<MVulkanSemaphore> waitSemaphores(1, m_genHizSemaphore);
-        //std::vector<MVulkanSemaphore> signalSemaphores(0);
-        //std::vector<VkPipelineStageFlags> waitFlags(1, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        //
-        //Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores, waitFlags, signalSemaphores);
+        Singleton<MVulkanEngine>::instance().CopyImage2(computeList, dsts, srcs, infos);   
     }
 }
 
@@ -1003,8 +991,9 @@ void SSR::createShadingPass()
 
     {
         RenderPassCreateInfo info{};
-        info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
-        info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
         //info.numFrameBuffers = 1;
         //info.frambufferCount = Singleton<MVulkanEngine>::instance().GetSwapchainImageCount();
         info.frambufferCount = 1;
@@ -1012,6 +1001,7 @@ void SSR::createShadingPass()
         info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
         info.dynamicRender = 1;
         //info.depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+        info.useDepthBuffer = false;
 
         m_lightingPass = std::make_shared<RenderPass>(device, info);
 
