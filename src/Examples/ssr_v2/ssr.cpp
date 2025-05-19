@@ -130,7 +130,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         hizDimensionBuffer.hizDimensions[0].z = m_hiz.hizRes.size();
 
         SSRBuffer ssrBuffer;
-        ssrBuffer.g_max_traversal_intersections = 60;
+        ssrBuffer.g_max_traversal_intersections = 100;
         ssrBuffer.min_traversal_occupancy = 50;
 
         SSRConfigBuffer ssrConfig;
@@ -158,7 +158,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
     }
 
-    RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo, compositingRenderInfo;
+    RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo, compositingRenderInfo, ssrRenderInfo;
     {
         gbufferRenderInfo.colorAttachments.push_back(
             RenderingAttachment{
@@ -202,12 +202,18 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             }
             );
         shadingRenderInfo.useDepth = false;
-        //shadingRenderInfo.depthAttachment = RenderingAttachment{
-        //        .texture = gBufferDepth,
-        //        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        //        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-        //        .storeOp = VK_ATTACHMENT_STORE_OP_NONE,
-        //};
+    }
+
+    {
+        auto swapChain = Singleton<MVulkanEngine>::instance().GetSwapchain();
+
+        ssrRenderInfo.colorAttachments.push_back(
+            RenderingAttachment{
+                .texture = m_ssrTexture_frag,
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            }
+            );
+        ssrRenderInfo.useDepth = false;
     }
 
     {
@@ -223,11 +229,6 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         compositingRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = swapchainDepthViews[imageIndex],
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                //.view = nullptr,
-                //.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-                //.storeOp = VK_ATTACHMENT_STORE_OP_NONE,
-
-                //.view = swapchainDepthViews[imageIndex]->GetImageView(),
         };
     }
 
@@ -242,6 +243,9 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     compositingRenderInfo.offset = { 0, 0 };
     compositingRenderInfo.extent = swapchainExtent;
+
+    ssrRenderInfo.offset = { 0, 0 };
+    ssrRenderInfo.extent = swapchainExtent;
 
     {
         computeList.GetFence().WaitForSignal();
@@ -285,7 +289,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
     }
 
-    //graphicsQueue.WaitForQueueComplete();
+    graphicsQueue.WaitForQueueComplete();
 
     {
         if (doSSR) {
@@ -310,28 +314,80 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             }
             hizQueryIndexEnd = m_queryIndex;
 
+            
+            computeList.End();
+
+            std::vector<MVulkanSemaphore> _waitSemaphores2(1, m_basicShadingSemaphore);
+            std::vector<MVulkanSemaphore> _signalSemaphores2(0);
+            std::vector<VkPipelineStageFlags> _waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, _waitSemaphores2, _waitFlags2, _signalSemaphores2);
+
+            computeQueue.WaitForQueueComplete();
+
             //copy hiz
             //computeList
             {
+                computeList.GetFence().WaitForSignal();
+                computeList.GetFence().Reset();
+                computeList.Reset();
+                computeList.Begin();
+
                 copyHizToDepth();
+
+                computeList.End();
+
+                std::vector<MVulkanSemaphore> _waitSemaphores3(0);
+                std::vector<MVulkanSemaphore> _signalSemaphores3(1, m_ssrSemaphore);
+                std::vector<VkPipelineStageFlags> _waitFlags3(0);
+                Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, _waitSemaphores3, _waitFlags3, _signalSemaphores3);
+                computeQueue.WaitForQueueComplete();
             }
 
             //do ssr
-            {
-                ssrQueryIndex = m_queryIndex;
-                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_ssrPass, (swapchainExtent.width+15)/16, (swapchainExtent.height+15)/16, 1, std::string("SSR Pass"), m_queryIndex++);
-            }
+            //{
+            //    ssrQueryIndex = m_queryIndex;
+            //    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_ssrPass, (swapchainExtent.width+15)/16, (swapchainExtent.height+15)/16, 1, std::string("SSR Pass"), m_queryIndex++);
+            //}
 
-            computeList.End();
-
-            std::vector<MVulkanSemaphore> waitSemaphores2(1, m_basicShadingSemaphore);
-            std::vector<MVulkanSemaphore> signalSemaphores2(1, m_ssrSemaphore);
-            std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+            //computeList.End();
+            //
+            //std::vector<MVulkanSemaphore> waitSemaphores2(1, m_basicShadingSemaphore);
+            //std::vector<MVulkanSemaphore> signalSemaphores2(1, m_ssrSemaphore);
+            //std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            //Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
         }
     }
 
     //computeQueue.WaitForQueueComplete();
+
+    computeQueue.WaitForQueueComplete();
+    graphicsQueue.WaitForQueueComplete();
+
+    {
+        if (doSSR) {
+            graphicsList.GetFence().WaitForSignal();
+            graphicsList.GetFence().Reset();
+            graphicsList.Reset();
+            graphicsList.Begin();
+
+            //if (doSSR) {
+            ssrQueryIndex = m_queryIndex;
+            Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_ssrPass2, m_currentFrame, ssrRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("SSR Pass"), m_queryIndex++);
+            //}
+
+            //compositeQueryIndex = m_queryIndex;
+            //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, compositingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Composite Pass"), m_queryIndex++);
+
+            graphicsList.End();
+
+            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
+            std::vector<MVulkanSemaphore> signalSemaphores1(0);
+            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores1, waitFlags1, signalSemaphores1);
+        }
+    }
+
+    graphicsQueue.WaitForQueueComplete();
 
     {
         graphicsList.GetFence().WaitForSignal();
@@ -339,23 +395,31 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         graphicsList.Reset();
         graphicsList.Begin();
 
+        //if (doSSR) {
+        //    ssrQueryIndex = m_queryIndex;
+        //    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_ssrPass2, m_currentFrame, ssrRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("SSR Pass"), m_queryIndex++);
+        //}
+
         compositeQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(imageIndex, m_compositePass, m_currentFrame, compositingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Composite Pass"), m_queryIndex++);
 
         graphicsList.End();
 
-        if (doSSR) {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
+        //if (doSSR) {
+        //    std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
+        //    std::vector<MVulkanSemaphore> signalSemaphores1(0);
+        //    std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        //    Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
+        //}
+        //else {
+            //std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
+            //std::vector<MVulkanSemaphore> signalSemaphores1(0);
+            //std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            std::vector<MVulkanSemaphore> waitSemaphores1(0);
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            std::vector<VkPipelineStageFlags> waitFlags1(0);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-        }
-        else {
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
-            std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-        }
+        //}
     }
 
     m_prevView = m_camera->GetViewMatrix();
@@ -674,15 +738,15 @@ void SSR::createTextures()
 
     {
         m_basicShadingTexture = std::make_shared<MVulkanTexture>();
-        //m_ssrTexture = std::make_shared<MVulkanTexture>();
+        m_ssrTexture_frag = std::make_shared<MVulkanTexture>();
 
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_basicShadingTexture, swapchainExtent, renderingFormat
         );
 
-        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-        //    m_ssrTexture, swapchainExtent, swapchainImageFormat
-        //);
+        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+            m_ssrTexture_frag, swapchainExtent, VK_FORMAT_R32G32B32A32_SFLOAT
+        );
     }
 
     {
@@ -761,6 +825,7 @@ void SSR::loadShaders()
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/pbr.frag.hlsl" });
     Singleton<ShaderManager>::instance().AddShader("SSR Shader", { "hlsl/ssr_v2/ssr.comp.hlsl" }, true);
+    Singleton<ShaderManager>::instance().AddShader("SSR2 Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/ssr.frag.hlsl" });
     Singleton<ShaderManager>::instance().AddShader("Composite Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/ssr_v2/composite.frag.hlsl" }, true);
 
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" });
@@ -1085,6 +1150,40 @@ void SSR::createSSRPass()
 
         m_ssrPass->UpdateDescriptorSetWrite(resources);
     }
+
+    {
+        RenderPassCreateInfo info{};
+        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        info.frambufferCount = 1;
+        info.pipelineCreateInfo.depthTestEnable = VK_FALSE;
+        info.pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+        info.dynamicRender = 1;
+        info.useDepthBuffer = false;
+
+        m_ssrPass2 = std::make_shared<RenderPass>(device, info);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ShaderModule>("SSR2 Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateRenderPass(
+            m_ssrPass2, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource("cameraBuffer", 0, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("vpBuffer", 1, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("hizDimensionBuffer", 2, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("ssrBuffer", 3, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("screenBuffer", 4, 0, 0));
+        resources.push_back(PassResources::SetSampledImageResource(5, 0, gBuffer0));
+        resources.push_back(PassResources::SetSampledImageResource(6, 0, gBuffer1));
+        resources.push_back(PassResources::SetSampledImageResource(7, 0, m_hizTextures[0]));
+        resources.push_back(PassResources::SetSampledImageResource(8, 0, m_basicShadingTexture));
+        resources.push_back(PassResources::SetStorageImageResource(9, 0, m_ssrTexture));
+        resources.push_back(PassResources::SetSamplerResource(10, 0, m_linearSampler.GetSampler()));
+
+        m_ssrPass2->UpdateDescriptorSetWrite(0, resources);
+    }
 }
 
 void SSR::createCompositePass()
@@ -1123,9 +1222,12 @@ void SSR::createCompositePass()
             resources.push_back(
                 PassResources::SetSampledImageResource(
                     2, 0, m_basicShadingTexture));
+            //resources.push_back(
+            //    PassResources::SetSampledImageResource(
+            //        3, 0, m_ssrTexture));
             resources.push_back(
                 PassResources::SetSampledImageResource(
-                    3, 0, m_ssrTexture));
+                    3, 0, m_ssrTexture_frag));
             
             m_compositePass->UpdateDescriptorSetWrite(i, resources);
         }

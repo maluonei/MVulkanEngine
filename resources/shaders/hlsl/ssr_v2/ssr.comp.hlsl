@@ -41,8 +41,8 @@ cbuffer screenBuffer : register(b4)
 
 #define FLOAT_MAX                          3.402823466e+38
 
-int GetMostDetailedMipLevel(){
-    return hiz.hizDimensions[0].z;
+int GetMinMipLevel(){
+    return hiz.hizDimensions[0].z - 1;
 }
 
 void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction, 
@@ -107,10 +107,11 @@ float LoadDepth(float2 uv, int mipLevel){
 
 float3 SampleRender(float2 uv){
     return Render.Sample(linearSampler, float2(uv.x, 1.f-uv.y)).rgb;
+    //return Render.Sample(linearSampler, uv).rgb;
 }
 
 float3 SSR_Trace(float3 origin, float3 direction,
-    uint max_traversal_intersections, out bool valid_hit)
+    uint max_traversal_intersections, out bool valid_hit, out float depth)
 {
     float3 color = float3(0.f, 0.f, 0.f);
     const float3 inv_direction = select(direction != 0, 0.99999999f / direction, FLOAT_MAX);
@@ -135,8 +136,9 @@ float3 SSR_Trace(float3 origin, float3 direction,
     ////return float3(inv_direction);
     //return float3(position.xy, 0.f);
 
-    int i = 0;
+    uint i = 0;
     bool exit_due_to_low_occupancy = false;
+    uint minMipLevel = GetMinMipLevel();
 
     while(i < max_traversal_intersections && currentMipLevel >= mostDetailedMip){
         float surface_z = LoadDepth(position.xy, currentMipLevel);
@@ -148,7 +150,7 @@ float3 SSR_Trace(float3 origin, float3 direction,
             currentMipLevel, floor_offset, uv_offset, 
             surface_z, position, current_t);
         
-        bool nextMipOutofRange = skipped_tile && (currentMipLevel >= GetMostDetailedMipLevel());
+        bool nextMipOutofRange = skipped_tile && (currentMipLevel >= minMipLevel);
 
         if(!nextMipOutofRange){
             currentMipLevel += skipped_tile ? 1 : -1;
@@ -156,6 +158,8 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
         ++i;
     }
+
+    depth = i / float(max_traversal_intersections);
 
     valid_hit = (i <= max_traversal_intersections) && (currentMipLevel <=0);
     if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
@@ -219,14 +223,23 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
         bool valid_hit;
         uint max_traversal_intersections = ssrBuffer.g_max_traversal_intersections;
+        float depth; 
         float3 color = SSR_Trace(startFrag.xyz, screenDirection, 
-            max_traversal_intersections, valid_hit);
+            max_traversal_intersections, valid_hit, depth);
 
-        if (valid_hit){
-            SSRRender[texCoord.xy] = float4(color, 1.f);
-        }
-        else 
-            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
+        SSRRender[texCoord.xy] = float4(depth, depth, depth, 1.f);
+        //SSRRender[texCoord.xy] = float4(startFrag.xy, 0.f, 1.f);
+        //float3 render = SampleRender(startFrag.xy);
+        //float depth_ = LoadDepth(startFrag.xy, 0);
+        //SSRRender[texCoord.xy] = float4(depth_, depth_, depth_, 1.f);
+        //if (valid_hit){
+        //    SSRRender[texCoord.xy] = float4(color, 1.f);
+        //    //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
+        //}
+        //else{
+        //    SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
+        //    //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
+        //}
     }
     else{
         SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);

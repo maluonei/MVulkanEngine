@@ -99,6 +99,7 @@ private:
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<RenderPass> m_compositePass;
+	std::shared_ptr<RenderPass> m_ssrPass2;
 	std::shared_ptr<ComputePass> m_ssrPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
 	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
@@ -117,6 +118,7 @@ private:
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
 	std::shared_ptr<MVulkanTexture> m_basicShadingTexture;
 	std::shared_ptr<MVulkanTexture> m_ssrTexture;
+	std::shared_ptr<MVulkanTexture> m_ssrTexture_frag;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;

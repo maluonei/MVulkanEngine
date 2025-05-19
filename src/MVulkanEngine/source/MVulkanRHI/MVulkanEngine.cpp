@@ -354,7 +354,8 @@ void MVulkanEngine::SubmitGraphicsCommands(
     for (auto i = 0; i < waitSemaphoreStages.size(); i++) {
         _waitSemaphoreStages[i] = waitSemaphoreStages[i];
     }
-    _waitSemaphoreStages[waitSemaphores.size()] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //_waitSemaphoreStages[waitSemaphores.size()] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    _waitSemaphoreStages[waitSemaphores.size()] = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     std::vector<VkSemaphore> _signalSemaphores(signalSemaphores.size() + 1);
     for (auto i = 0; i < signalSemaphores.size(); i++) {
@@ -711,6 +712,40 @@ void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t im
     //m_uiRenderer.RenderFrame();
 }
 
+void MVulkanEngine::TransferSwapchainImageToPresent(uint32_t currentFrame, uint32_t imageIndex)
+{
+    auto graphicsList = m_graphicsLists[currentFrame];
+    auto graphicsQueue = m_graphicsQueue;
+
+    graphicsList.GetFence().WaitForSignal();
+    graphicsList.GetFence().Reset();
+    graphicsList.Reset();
+    graphicsList.Begin();
+
+    std::vector<MVulkanImageMemoryBarrier> barriers;
+    {
+        MVulkanImageMemoryBarrier barrier{};
+        barrier.image = Singleton<MVulkanEngine>::instance().GetSwapchain().GetImage(imageIndex);
+        barrier.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.baseArrayLayer = 0;
+        barrier.layerCount = 1;
+        barrier.levelCount = 1;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barriers.push_back(barrier);
+    }
+    Singleton<MVulkanEngine>::instance().TransitionImageLayout2(graphicsList, barriers, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+
+    graphicsList.End();
+
+    std::vector<MVulkanSemaphore> waitSemaphores0(1, m_uiRenderFinishedSemaphores[currentFrame]);
+    std::vector<MVulkanSemaphore> signalSemaphores0(1, m_presentReadySemaphores[currentFrame]);
+    std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
+}
+
 void MVulkanEngine::initVulkan()
 {
     createInstance();
@@ -949,12 +984,14 @@ void MVulkanEngine::createSyncObjects()
     m_imageAvailableSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_finalRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     m_uiRenderFinishedSemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
+    m_presentReadySemaphores.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     //m_inFlightFences.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
 
     for (size_t i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
         m_imageAvailableSemaphores[i].Create(m_device.GetDevice());
         m_finalRenderFinishedSemaphores[i].Create(m_device.GetDevice());
         m_uiRenderFinishedSemaphores[i].Create(m_device.GetDevice());
+        m_presentReadySemaphores[i].Create(m_device.GetDevice());
         //m_inFlightFences[i].Create(m_device.GetDevice());
     }
 }
@@ -1057,7 +1094,7 @@ void MVulkanEngine::transitionImageLayouts(
 void MVulkanEngine::Present(uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
 {
     //VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore(), m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore()};
-    VkSemaphore waitSemaphore[] = { m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore waitSemaphore[] = { m_presentReadySemaphores[currentFrame].GetSemaphore() };
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

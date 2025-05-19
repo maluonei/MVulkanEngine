@@ -787,8 +787,10 @@ void MVulkanTexture::ChangeImageLayout(
     MVulkanImageMemoryBarrier _barrier{};
     VkPipelineStageFlags srcStage, dstStage;
 
-    srcStage = TextureState2PipelineStage(oldState);
+    //srcStage = TextureState2PipelineStage(oldState);
     dstStage = TextureState2PipelineStage(newState);
+    srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
 
     _barrier.image = m_image.GetImage();
     _barrier.srcAccessMask = TextureState2AccessFlag(oldState.m_state);

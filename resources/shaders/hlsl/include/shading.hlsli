@@ -132,8 +132,12 @@ float PCF(
 {
     float occlusion = 0.f;
 
-    float4 shadowCoord = mul(biasMat, mul(light.shadowViewProj, float4(fragPos, 1.f)));
+    //float4 shadowCoord = mul(biasMat, mul(light.shadowViewProj, float4(fragPos, 1.f)));
+    //shadowCoord.xyz /= shadowCoord.w;
+    float4 shadowCoord = mul(light.shadowViewProj, float4(fragPos, 1.f));
     shadowCoord.xyz /= shadowCoord.w;
+    shadowCoord.xy = shadowCoord.xy * 0.5 + 0.5;
+    //shadowCoord = mul(shadowCoord)
     shadowCoord.y = 1.f - shadowCoord.y;
 
     float shadowDepth = shadowMap.Sample(sampler, shadowCoord.xy).r;

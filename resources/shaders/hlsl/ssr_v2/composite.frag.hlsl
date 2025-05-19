@@ -62,8 +62,9 @@ PSOutput main(PSInput input)
     float4 ssr = SSR.Load(coord);
 
     if(doSSR){
-        float a = ssr.a;
-        output.color = float4(render.rgb * (1-a) + ssr.rgb * a, 1.f);
+        //float a = ssr.a;
+        //output.color = float4(render.rgb * (1-a) + ssr.rgb * a, 1.f);
+        output.color = float4(ssr.rgb, 1.f);
     }
     else{
         output.color = render;

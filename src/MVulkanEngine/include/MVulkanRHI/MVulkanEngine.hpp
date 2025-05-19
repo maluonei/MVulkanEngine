@@ -330,6 +330,8 @@ public:
 
     void RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame);
 
+    void TransferSwapchainImageToPresent(uint32_t currentFrame, uint32_t imageIndex);
+
     void Present(
         uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain);
 
@@ -531,6 +533,7 @@ private:
     std::vector<MVulkanSemaphore> m_imageAvailableSemaphores;
     std::vector<MVulkanSemaphore> m_finalRenderFinishedSemaphores;
     std::vector<MVulkanSemaphore> m_uiRenderFinishedSemaphores;
+    std::vector<MVulkanSemaphore> m_presentReadySemaphores;
     //std::vector<MVulkanFence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
