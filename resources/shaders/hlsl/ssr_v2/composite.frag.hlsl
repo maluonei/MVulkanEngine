@@ -64,7 +64,7 @@ PSOutput main(PSInput input)
     if(doSSR){
         //float a = ssr.a;
         //output.color = float4(render.rgb * (1-a) + ssr.rgb * a, 1.f);
-        output.color = float4(ssr.rgb, 1.f);
+        output.color = float4(ssr.rgba);
     }
     else{
         output.color = render;

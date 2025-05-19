@@ -84,7 +84,7 @@ public:
 
 	std::shared_ptr<MeshShaderModule> GetMeshShader() const { return m_meshShader; }
 
-	void TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
+	//void TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList,VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	inline uint32_t GetFramebufferCount() { return m_info.frambufferCount; }
 	inline uint32_t GetAttachmentCount() { return m_frameBuffers[0].ColorAttachmentsCount(); }

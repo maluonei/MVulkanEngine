@@ -262,10 +262,20 @@ VkMemoryPropertyFlags BufferType2VkMemoryPropertyFlags(BufferType type) {
 
 VkDescriptorType DescriptorType2VkDescriptorType(DescriptorType type) {
     switch (type) {
-    case UNIFORM_BUFFER:
+    case DescriptorType::UNIFORM_BUFFER:
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    case COMBINED_IMAGE_SAMPLER:
+    case DescriptorType::STORAGE_BUFFER:
+        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case DescriptorType::COMBINED_IMAGE_SAMPLER:
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case DescriptorType::SEPERATE_IMAGE_SAMPLER:
+        return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case DescriptorType::STORAGE_IMAGE_SAMPLER:
+        return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case DescriptorType::SAMPLER:
+        return VK_DESCRIPTOR_TYPE_SAMPLER;
+    case DescriptorType::ACCLERATION_STRUCTURE:
+        return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     default:
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }

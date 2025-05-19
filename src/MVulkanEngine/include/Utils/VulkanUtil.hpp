@@ -183,10 +183,15 @@ enum class ShaderStageFlagBits {
     MESH
 };
 
-enum DescriptorType {
+enum class DescriptorType {
     UNIFORM_BUFFER = 0,
-    COMBINED_IMAGE_SAMPLER = 1,
-    DESCRIPORTYPE_NUM = 2
+    STORAGE_BUFFER = 1,
+    COMBINED_IMAGE_SAMPLER = 2,
+    SEPERATE_IMAGE_SAMPLER = 3,
+    STORAGE_IMAGE_SAMPLER = 4,
+    SAMPLER = 5,
+    ACCLERATION_STRUCTURE = 6,
+    DESCRIPORTYPE_NUM = 7
 };
 
 enum AttachmentType {

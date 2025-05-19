@@ -48,6 +48,7 @@ cbuffer screenBuffer : register(b4)
 [[vk::binding(5, 0)]]Texture2D<uint4> gBuffer0 : register(t0);
 [[vk::binding(6, 0)]]Texture2D<uint4> gBuffer1 : register(t1);
 [[vk::binding(7, 0)]]Texture2D<float> HIZ : register(t2);
+[[vk::binding(11, 0)]]Texture2D<float> HIZ2[13] : register(t10);
 [[vk::binding(8, 0)]]Texture2D<float4> Render : register(t3);
 [[vk::binding(9, 0)]]RWTexture2D<float4> SSRRender : register(u0);
 
@@ -128,10 +129,16 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
 //    return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
 //}
 
+//float SampleDepth(int2 uv, int mipLevel){
+//    //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
+//    //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
+//    return HIZ.Load(int3(uv, mipLevel));
+//}
+
 float SampleDepth(int2 uv, int mipLevel){
     //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
     //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
-    return HIZ.Load(int3(uv, mipLevel));
+    return HIZ2[mipLevel].Load(int3(uv, 0));
 }
 
 float3 SampleRender(float2 uv){
@@ -201,7 +208,7 @@ float3 SSR_Trace(float3 origin, float3 direction,
             txyz,
             _boundary_planes);
 
-        if(position.x<0.f || position.x>1.f || position.y<=0.f || position.y>=1.f){
+        if(position.x<0.f || position.x>1.f || position.y<0.f || position.y>1.f){
             valid_hit = false;
             return float3(0.f, 0.f, 0.f);
         }
@@ -220,8 +227,9 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
     depth = i / float(max_traversal_intersections);// * 20;
 
-    valid_hit = (i <= max_traversal_intersections) && (currentMipLevel <=0);
-    if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
+    //valid_hit = (i <= max_traversal_intersections) && (currentMipLevel < 0);
+    valid_hit = (i <= max_traversal_intersections);
+    if(position.x<0.f || position.x>1.f || position.y<0.f || position.y>1.f)
         return float3(0.f, 0.f, 0.f);
     
     return SampleRender(position.xy);
@@ -345,14 +353,19 @@ PSOutput main(PSInput input)
         //float3 render = SampleRender(startFrag.xy);
         //float depth_ = LoadDepth(startFrag.xy, 0);
         //SSRRender[texCoord.xy] = float4(depth_, depth_, depth_, 1.f);
-        if (valid_hit){
-            output.color = float4(color, 1.f);
-            //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
-        }
-        else{
-            output.color = float4(0.f, 0.f, 0.f, 0.f);
-            //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
-        }
+        
+        int2 hiz_res = hiz.hizDimensions[6].xy;
+        float depth0 = SampleDepth(screenSpaceStartPosition.xy * hiz_res, 6);
+        output.color = float4(color, 1.f) * 1e-10 + float4(depth0, depth0, depth0, 1.f);
+        //if (valid_hit){
+        //    output.color = float4(color, 1.f) * 1e-10 + float4(1.f, 0.f, 0.f, 1.f);
+        //    //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
+        //}
+        //else{
+        //    //output.color = float4(0.f, 0.f, 0.f, 0.f);
+        //    output.color = float4(0.f, 1.f, 0.f, 1.f);
+        //    //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
+        //}
     }
     else{
         output.color = float4(0.f, 0.f, 0.f, 0.f);

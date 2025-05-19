@@ -1096,6 +1096,7 @@ void MVulkanEngine::Present(uint32_t currentFrame, const uint32_t* imageIndex, s
     //VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore(), m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore()};
     VkSemaphore waitSemaphore[] = { m_presentReadySemaphores[currentFrame].GetSemaphore() };
 
+
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 

@@ -1117,37 +1117,37 @@ void RenderPass::SetUBO(uint8_t binding, void* data) {
     
 }
 
-void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    commandList.Reset();
-    commandList.Begin();
-
-    MVulkanImageMemoryBarrier barrier{};
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-
-    std::vector<MVulkanImageMemoryBarrier> barriers;
-
-    for (auto i = 0; i < m_frameBuffers.size(); i++) {
-        for (auto j = 0; j < m_frameBuffers[i].ColorAttachmentsCount(); j++) {
-            barrier.image = m_frameBuffers[i].GetImage(j);
-            barriers.push_back(barrier);
-        }
-    }
-
-    commandList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-    commandList.End();
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandList.GetBuffer();
-
-    queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
-    queue.WaitForQueueComplete();
-}
+//void RenderPass::TransitionFrameBufferImageLayout(MVulkanCommandQueue& queue, MGraphicsCommandList& commandList, VkImageLayout oldLayout, VkImageLayout newLayout) {
+//    commandList.Reset();
+//    commandList.Begin();
+//
+//    MVulkanImageMemoryBarrier barrier{};
+//    barrier.srcAccessMask = 0;
+//    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+//    barrier.oldLayout = oldLayout;
+//    barrier.newLayout = newLayout;
+//
+//    std::vector<MVulkanImageMemoryBarrier> barriers;
+//
+//    for (auto i = 0; i < m_frameBuffers.size(); i++) {
+//        for (auto j = 0; j < m_frameBuffers[i].ColorAttachmentsCount(); j++) {
+//            barrier.image = m_frameBuffers[i].GetImage(j);
+//            barriers.push_back(barrier);
+//        }
+//    }
+//
+//    commandList.TransitionImageLayout(barriers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+//
+//    commandList.End();
+//
+//    VkSubmitInfo submitInfo{};
+//    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//    submitInfo.commandBufferCount = 1;
+//    submitInfo.pCommandBuffers = &commandList.GetBuffer();
+//
+//    queue.SubmitCommands(1, &submitInfo, VK_NULL_HANDLE);
+//    queue.WaitForQueueComplete();
+//}
 
 void RenderPass::LoadCBV(uint32_t alignment) {
     if (m_shader != nullptr) {

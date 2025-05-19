@@ -125,7 +125,7 @@ void MRenderApplication::drawFrame()
 
     Singleton<MVulkanEngine>::instance().RenderUI(m_uiRenderer, imageIndex, m_currentFrame);
     
-    Singleton<MVulkanEngine>::instance().TransferSwapchainImageToPresent(m_currentFrame, imageIndex);
+    //Singleton<MVulkanEngine>::instance().TransferSwapchainImageToPresent(m_currentFrame, imageIndex);
 
     std::function<void()> recreateSwapchain = [this]() {
         this->RecreateSwapchainAndRenderPasses();

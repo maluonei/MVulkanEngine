@@ -130,7 +130,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         hizDimensionBuffer.hizDimensions[0].z = m_hiz.hizRes.size();
 
         SSRBuffer ssrBuffer;
-        ssrBuffer.g_max_traversal_intersections = 100;
+        ssrBuffer.g_max_traversal_intersections = 256;
         ssrBuffer.min_traversal_occupancy = 50;
 
         SSRConfigBuffer ssrConfig;
@@ -265,11 +265,32 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         std::vector<MVulkanSemaphore> signalSemaphores(1, m_cullingSemaphore);
         std::vector<VkPipelineStageFlags> waitFlags(0);
         Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores, waitFlags, signalSemaphores);
+
+        computeQueue.WaitForQueueComplete();
     }
     
     numDrawInstances = *(uint32_t*)m_numIndirectDrawBuffer->GetMappedData();
 
     {
+        //graphicsList.GetFence().WaitForSignal();
+        //graphicsList.GetFence().Reset();
+        //graphicsList.Reset();
+        //graphicsList.Begin();
+        //
+        //shadowmapQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+        //gbufferQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
+        //shadingQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
+        //
+        //graphicsList.End();
+        //std::vector<MVulkanSemaphore> waitSemaphores0(1, m_cullingSemaphore);
+        //std::vector<MVulkanSemaphore> signalSemaphores0(1, m_basicShadingSemaphore);
+        //std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        //Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
+        graphicsQueue.WaitForQueueComplete();
+
         graphicsList.GetFence().WaitForSignal();
         graphicsList.GetFence().Reset();
         graphicsList.Reset();
@@ -277,19 +298,60 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
         shadowmapQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+        //gbufferQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
+        //shadingQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
+
+        graphicsList.End();
+        std::vector<MVulkanSemaphore> waitSemaphores00(1, m_cullingSemaphore);
+        std::vector<MVulkanSemaphore> signalSemaphores00(0);
+        std::vector<VkPipelineStageFlags> waitFlags00(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores00, waitFlags00, signalSemaphores00);
+        graphicsQueue.WaitForQueueComplete();
+
+
+        graphicsList.GetFence().WaitForSignal();
+        graphicsList.GetFence().Reset();
+        graphicsList.Reset();
+        graphicsList.Begin();
+
+        //shadowmapQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
         gbufferQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
+        //shadingQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
+
+        graphicsList.End();
+        std::vector<MVulkanSemaphore> waitSemaphores01(0);
+        std::vector<MVulkanSemaphore> signalSemaphores01(0);
+        std::vector<VkPipelineStageFlags> waitFlags01(0);
+        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores01, waitFlags01, signalSemaphores01);
+        graphicsQueue.WaitForQueueComplete();
+
+        graphicsList.GetFence().WaitForSignal();
+        graphicsList.GetFence().Reset();
+        graphicsList.Reset();
+        graphicsList.Begin();
+
+        //shadowmapQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+        //gbufferQueryIndex = m_queryIndex;
+        //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
         shadingQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_lightingPass, m_currentFrame, shadingRenderInfo, m_squad->GetIndirectVertexBuffer(), m_squad->GetIndirectIndexBuffer(), m_squad->GetIndirectBuffer(), m_squad->GetIndirectDrawCommands().size(), std::string("Shading Pass"), m_queryIndex++);
 
         graphicsList.End();
-        std::vector<MVulkanSemaphore> waitSemaphores0(1, m_cullingSemaphore);
-        std::vector<MVulkanSemaphore> signalSemaphores0(1, m_basicShadingSemaphore);
-        std::vector<VkPipelineStageFlags> waitFlags0(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores0, waitFlags0, signalSemaphores0);
+        std::vector<MVulkanSemaphore> waitSemaphores02(0);
+        std::vector<MVulkanSemaphore> signalSemaphores02(1, m_basicShadingSemaphore);
+        std::vector<VkPipelineStageFlags> waitFlags02(0);
+        Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores02, waitFlags02, signalSemaphores02);
+        graphicsQueue.WaitForQueueComplete();
     }
 
-    graphicsQueue.WaitForQueueComplete();
+    //graphicsQueue.WaitForQueueComplete();
+    Singleton<MVulkanEngine>::instance().GetDevice().WaitIdle();
 
     {
         if (doSSR) {
@@ -337,10 +399,12 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
                 computeList.End();
 
                 std::vector<MVulkanSemaphore> _waitSemaphores3(0);
-                std::vector<MVulkanSemaphore> _signalSemaphores3(1, m_ssrSemaphore);
+                //std::vector<MVulkanSemaphore> _signalSemaphores3(1, m_ssrSemaphore);
+                std::vector<MVulkanSemaphore> _signalSemaphores3(0);
                 std::vector<VkPipelineStageFlags> _waitFlags3(0);
                 Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, _waitSemaphores3, _waitFlags3, _signalSemaphores3);
-                computeQueue.WaitForQueueComplete();
+                
+                //computeQueue.WaitForQueueComplete();
             }
 
             //do ssr
@@ -360,8 +424,10 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
     //computeQueue.WaitForQueueComplete();
 
-    computeQueue.WaitForQueueComplete();
-    graphicsQueue.WaitForQueueComplete();
+    //computeQueue.WaitForQueueComplete();
+    //graphicsQueue.WaitForQueueComplete();
+
+    Singleton<MVulkanEngine>::instance().GetDevice().WaitIdle();
 
     {
         if (doSSR) {
@@ -380,10 +446,14 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
 
             graphicsList.End();
 
-            std::vector<MVulkanSemaphore> waitSemaphores1(1, m_ssrSemaphore);
-            std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores1, waitFlags1, signalSemaphores1);
+            //std::vector<MVulkanSemaphore> waitSemaphores11(1, m_ssrSemaphore);
+            //std::vector<MVulkanSemaphore> signalSemaphores11(0);
+            //std::vector<VkPipelineStageFlags> waitFlags11(1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+            std::vector<MVulkanSemaphore> waitSemaphores11(0);
+            std::vector<MVulkanSemaphore> signalSemaphores11(0);
+            std::vector<VkPipelineStageFlags> waitFlags11(0);
+
+            Singleton<MVulkanEngine>::instance().SubmitCommands(graphicsList, graphicsQueue, waitSemaphores11, waitFlags11, signalSemaphores11);
         }
     }
 
@@ -419,7 +489,8 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
             std::vector<VkPipelineStageFlags> waitFlags1(0);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-        //}
+            graphicsQueue.WaitForQueueComplete();
+            //}
     }
 
     m_prevView = m_camera->GetViewMatrix();
@@ -1181,6 +1252,7 @@ void SSR::createSSRPass()
         resources.push_back(PassResources::SetSampledImageResource(8, 0, m_basicShadingTexture));
         resources.push_back(PassResources::SetStorageImageResource(9, 0, m_ssrTexture));
         resources.push_back(PassResources::SetSamplerResource(10, 0, m_linearSampler.GetSampler()));
+        resources.push_back(PassResources::SetStorageImageResource(11, 0, m_hizTextures));
 
         m_ssrPass2->UpdateDescriptorSetWrite(0, resources);
     }

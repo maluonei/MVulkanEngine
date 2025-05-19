@@ -159,10 +159,10 @@ void MVulkanDescriptorSetAllocator::Create(VkDevice device)
 {
     m_device = device;
 
-    std::vector<VkDescriptorPoolSize> poolSizes(DescriptorType::DESCRIPORTYPE_NUM);
-    for (int type = 0; type < DescriptorType::DESCRIPORTYPE_NUM; type++) {
+    std::vector<VkDescriptorPoolSize> poolSizes((int)DescriptorType::DESCRIPORTYPE_NUM);
+    for (int type = 0; type < (int)DescriptorType::DESCRIPORTYPE_NUM; type++) {
         poolSizes[type].type = DescriptorType2VkDescriptorType((DescriptorType)type);
-        poolSizes[type].descriptorCount = static_cast<uint32_t>(64);
+        poolSizes[type].descriptorCount = static_cast<uint32_t>(1024);
     }
 
     VkDescriptorPoolCreateInfo poolInfo{};

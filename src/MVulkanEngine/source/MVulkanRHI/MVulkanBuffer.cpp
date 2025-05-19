@@ -199,7 +199,15 @@ void MVulkanImage::CreateImage(MVulkanDevice device, ImageCreateInfo info)
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = info.usage;
     imageInfo.samples = info.samples;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    //imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+    imageInfo.queueFamilyIndexCount = 3;
+    uint32_t queueFamilyIndices[] = {
+        device.GetQueueFamilyIndices(QueueType::GRAPHICS_QUEUE),
+        device.GetQueueFamilyIndices(QueueType::COMPUTE_QUEUE),
+        device.GetQueueFamilyIndices(QueueType::TRANSFER_QUEUE),
+    };
+    imageInfo.pQueueFamilyIndices = queueFamilyIndices;
     imageInfo.flags = info.flag;
     // ���� image ��ʽ���ߴ��
     VK_CHECK_RESULT(vkCreateImage(device.GetDevice(), &imageInfo, nullptr, &m_image));
