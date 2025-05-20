@@ -48,6 +48,23 @@ uint32_t findQueueFamilies(VkPhysicalDevice device, std::vector<VkQueueFamilyPro
     return indices;
 }
 
+uint32_t findGeneralQueueFamilies(VkPhysicalDevice device, std::vector<VkQueueFamilyProperties>& queueFamilyProperties)
+{
+    uint32_t indices = -1;
+
+    int i = 0;
+    for (const auto& queueFamily : queueFamilyProperties) {
+        if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+            (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+            indices = i;
+        }
+
+        i++;
+    }
+
+    return indices;
+}
+
 void MVulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
 {
     uint32_t deviceCount = 0;
@@ -117,11 +134,18 @@ QueueFamilyIndices MVulkanDevice::QueryQueueFamilyIndices(VkPhysicalDevice devic
     auto graphicsIndices = findQueueFamilies(device, queueFamilies, QueueType::GRAPHICS_QUEUE);
     auto computeIndices = findQueueFamilies(device, queueFamilies, QueueType::COMPUTE_QUEUE);
     auto transferIndices = findQueueFamilies(device, queueFamilies, QueueType::TRANSFER_QUEUE);
+    auto generalIndices = findGeneralQueueFamilies(device, queueFamilies);
 
     QueueFamilyIndices indices;
     indices.graphicsFamily = graphicsIndices;
     indices.computeFamily = computeIndices;
     indices.transferFamily = transferIndices;
+    indices.generalFamily = generalIndices;
+
+    //spdlog::info("index0:{}:", graphicsIndices);
+    //spdlog::info("index1:{}:", computeIndices);
+    //spdlog::info("index2:{}:", transferIndices);
+    //spdlog::info("index3:{}:", generalIndices);
 
     uint32_t i = 0;
     for (const auto& queueFamily : queueFamilies) {
@@ -153,6 +177,7 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos(3, queueCreateInfo);
     queueCreateInfos[1].queueFamilyIndex = m_indices.computeFamily.value();
     queueCreateInfos[2].queueFamilyIndex = m_indices.transferFamily.value();
+    //queueCreateInfos[3].queueFamilyIndex = m_indices.generalFamily.value();
 
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR barycentricFeatures{};
     barycentricFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
@@ -272,11 +297,11 @@ void MVulkanDevice::createLogicalDevice(VkInstance instance, VkSurfaceKHR surfac
     //    throw std::runtime_error("failed to create logical device!");
     //}
 
-
     vkGetDeviceQueue(m_logicalDevice, m_indices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_logicalDevice, m_indices.computeFamily.value(), 0, &m_computeQueue);
     vkGetDeviceQueue(m_logicalDevice, m_indices.transferFamily.value(), 0, &m_transferQueue);
     vkGetDeviceQueue(m_logicalDevice, m_indices.presentFamily.value(), 0, &m_presentQueue);
+    vkGetDeviceQueue(m_logicalDevice, m_indices.generalFamily.value(), 0, &m_generalQueue);
 }
 
 std::vector<VkQueueFamilyProperties> MVulkanDevice::GetQueueFamilyProperties(VkPhysicalDevice device)
@@ -464,6 +489,7 @@ uint32_t MVulkanDevice::GetQueueFamilyIndices(QueueType type) {
     switch (type) {
     case GRAPHICS_QUEUE: return m_indices.graphicsFamily.value();
     case COMPUTE_QUEUE: return m_indices.computeFamily.value();
+    case GENERAL_QUEUE: return m_indices.generalFamily.value();
     case TRANSFER_QUEUE: return m_indices.transferFamily.value();
     case PRESENT_QUEUE:return m_indices.presentFamily.value();
     default:return -1;
@@ -477,6 +503,7 @@ VkQueue MVulkanDevice::GetQueue(QueueType type)
     case COMPUTE_QUEUE: return m_computeQueue;
     case TRANSFER_QUEUE: return m_transferQueue;
     case PRESENT_QUEUE: return m_presentQueue;
+    case GENERAL_QUEUE: return m_generalQueue;
     default: return m_graphicsQueue;
     }
 }

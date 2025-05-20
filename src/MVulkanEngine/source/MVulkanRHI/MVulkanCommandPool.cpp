@@ -9,7 +9,13 @@ void MVulkanCommandAllocator::Create(MVulkanDevice device)
     m_device = device.GetDevice();
 
     if (m_commandPools.size() == 0) {
-        QueueType queueTypes[] = { GRAPHICS_QUEUE, COMPUTE_QUEUE, TRANSFER_QUEUE, PRESENT_QUEUE };
+        QueueType queueTypes[] = {
+            GRAPHICS_QUEUE, 
+            COMPUTE_QUEUE, 
+            TRANSFER_QUEUE, 
+            PRESENT_QUEUE,
+            GENERAL_QUEUE
+        };
 
         for (auto queueType : queueTypes) {
             VkCommandPool commandPool;

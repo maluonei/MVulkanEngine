@@ -12,6 +12,7 @@ struct QueueFamilyIndices {
     std::optional<uint32_t> computeFamily;
     std::optional<uint32_t> transferFamily;
     std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> generalFamily;
 
     bool isComplete() {
         return graphicsFamily.has_value() && computeFamily.has_value() && transferFamily.has_value();
@@ -27,6 +28,9 @@ struct SwapChainSupportDetails {
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 uint32_t findQueueFamilies(VkPhysicalDevice device, std::vector<VkQueueFamilyProperties>& queueFamilyProperties, QueueType type);
+
+uint32_t findGeneralQueueFamilies(VkPhysicalDevice device, std::vector<VkQueueFamilyProperties>& queueFamilyProperties);
+
 
 class MVulkanDevice {
 public:
@@ -79,6 +83,7 @@ private:
     VkQueue                 m_computeQueue;
     VkQueue                 m_transferQueue;
     VkQueue                 m_presentQueue;
+    VkQueue                 m_generalQueue;
 
     uint32_t                alignment = 0;
     float                   m_timestampPeriod = 0.f;

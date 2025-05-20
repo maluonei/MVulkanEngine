@@ -153,6 +153,7 @@ enum QueueType {
     COMPUTE_QUEUE,
     TRANSFER_QUEUE,
     PRESENT_QUEUE,
+    GENERAL_QUEUE,
 };
 
 enum BufferType {

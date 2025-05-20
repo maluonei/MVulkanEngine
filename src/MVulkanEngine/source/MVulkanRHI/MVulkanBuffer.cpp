@@ -796,8 +796,14 @@ void MVulkanTexture::ChangeImageLayout(
     VkPipelineStageFlags srcStage, dstStage;
 
     //srcStage = TextureState2PipelineStage(oldState);
-    dstStage = TextureState2PipelineStage(newState);
+    //dstStage = TextureState2PipelineStage(newState);
+    TextureState _oldState;
+    _oldState.m_state = oldState.m_state;
+    _oldState.m_stage = newState.m_stage;
+    //srcStage = TextureState2PipelineStage(_oldState);
+    //dstStage = TextureState2PipelineStage(newState);
     srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 
     _barrier.image = m_image.GetImage();
@@ -833,6 +839,37 @@ MVulkanImageMemoryBarrier MVulkanTexture::ChangeImageLayout(
     _barrier.newLayout = TextureState2ImageLayout(newState.m_state);
     _barrier.baseMipLevel = 0;
     _barrier.levelCount = GetImageInfo().mipLevels;
+    //_barrier.levelCount = 1;
+    _barrier.aspectMask = m_viewInfo.flag;
+
+    return _barrier;
+}
+
+MVulkanImageMemoryBarrier MVulkanTexture::ChangeImageLayout(
+    TextureState oldState, 
+    TextureState newState, 
+    int baseMipLevel, 
+    int levelCount, 
+    int baseArrayLayer, 
+    int layerCount, 
+    VkPipelineStageFlags& srcStage, 
+    VkPipelineStageFlags& dstStage)
+{
+    MVulkanImageMemoryBarrier _barrier{};
+    //VkPipelineStageFlags srcStage, dstStage;
+
+    srcStage = TextureState2PipelineStage(oldState);
+    dstStage = TextureState2PipelineStage(newState);
+
+    _barrier.image = m_image.GetImage();
+    _barrier.srcAccessMask = TextureState2AccessFlag(oldState.m_state);
+    _barrier.dstAccessMask = TextureState2AccessFlag(newState.m_state);
+    _barrier.oldLayout = TextureState2ImageLayout(oldState.m_state);
+    _barrier.newLayout = TextureState2ImageLayout(newState.m_state);
+    _barrier.baseMipLevel = baseMipLevel;
+    _barrier.levelCount = levelCount;
+    _barrier.baseArrayLayer = baseArrayLayer;
+    _barrier.layerCount = layerCount;
     //_barrier.levelCount = 1;
     _barrier.aspectMask = m_viewInfo.flag;
 

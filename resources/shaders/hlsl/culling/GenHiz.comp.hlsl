@@ -22,8 +22,8 @@ void main(uint3 threadID : SV_DispatchThreadID)
         return;
     }
 
-    if(threadID.x>=hizBuffer.u_previousLevelDimensions.x/2 || threadID.y>=hizBuffer.u_previousLevelDimensions.y/2)
-        return;
+    //if(threadID.x>=hizBuffer.u_previousLevelDimensions.x/2 || threadID.y>=hizBuffer.u_previousLevelDimensions.y/2)
+    //    return;
 
     uint2 previousLayerTexCoord = texCoord * 2;
 

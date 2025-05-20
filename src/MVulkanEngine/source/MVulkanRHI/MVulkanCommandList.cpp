@@ -123,6 +123,32 @@ void MVulkanCommandList::TransitionImageLayout(MVulkanImageMemoryBarrier _barrie
     );
 }
 
+void MVulkanCommandList::TransitionBufferLayout(std::vector<VkBufferMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    vkCmdPipelineBarrier(
+        m_commandBuffer,
+        sourceStage,
+        destinationStage,
+        0,
+        0, nullptr,
+        _barrier.size(), _barrier.data(),
+        0, nullptr
+    );
+}
+
+void MVulkanCommandList::TransitionBufferLayout(VkBufferMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    vkCmdPipelineBarrier(
+        m_commandBuffer,
+        sourceStage,
+        destinationStage,
+        0,
+        0, nullptr,
+        1, &_barrier,
+        0, nullptr
+    );
+}
+
 //void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset, uint32_t mipLevel, uint32_t baseArrayLayer)
 ////void MVulkanCommandList::CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel, uint32_t baseArrayLayer)
 //{

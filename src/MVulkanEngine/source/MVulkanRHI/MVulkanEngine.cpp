@@ -175,7 +175,8 @@ MVulkanCommandQueue& MVulkanEngine::GetCommandQueue(MQueueType type)
     case MQueueType::PRESENT:
         return m_presentQueue;
     case MQueueType::COMPUTE:
-        return m_computeQueue;
+        //return m_computeQueue;
+        return m_generalQueue;
     }
 }
 
@@ -555,6 +556,11 @@ void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ, eventName, queryIndex);
 }
 
+void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)
+{
+    recordComputeCommandBuffer(computePass, commandList, groupCountX, groupCountY, groupCountZ, eventName, queryIndex);
+}
+
 void MVulkanEngine::RecordMeshShaderCommandBuffer(
     uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, 
     uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, bool flipY)
@@ -654,6 +660,17 @@ void MVulkanEngine::TransitionImageLayout2(int commandListId, std::vector<MVulka
 void MVulkanEngine::TransitionImageLayout2(MVulkanCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
 {
     list.TransitionImageLayout(barriers, sourceStage, destinationStage);
+}
+
+void MVulkanEngine::TransitionBufferLayout2(int commandListId, std::vector<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    auto graphicsList = m_graphicsLists[commandListId];
+    graphicsList.TransitionBufferLayout(barriers, sourceStage, destinationStage);
+}
+
+void MVulkanEngine::TransitionBufferLayout2(MVulkanCommandList list, std::vector<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage)
+{
+    list.TransitionBufferLayout(barriers, sourceStage, destinationStage);
 }
 
 void MVulkanEngine::RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame)
@@ -937,6 +954,7 @@ void MVulkanEngine::createCommandQueue()
     m_transferQueue.SetQueue(m_device.GetQueue(QueueType::TRANSFER_QUEUE));
     m_presentQueue.SetQueue(m_device.GetQueue(QueueType::PRESENT_QUEUE));
     m_computeQueue.SetQueue(m_device.GetQueue(QueueType::COMPUTE_QUEUE));
+    m_generalQueue.SetQueue(m_device.GetQueue(QueueType::GENERAL_QUEUE));
 }
 
 void MVulkanEngine::createCommandAllocator()
@@ -953,19 +971,15 @@ void MVulkanEngine::createCommandList()
 
     m_graphicsLists.resize(Singleton<GlobalConfig>::instance().GetMaxFramesInFlight());
     for (int i = 0; i < Singleton<GlobalConfig>::instance().GetMaxFramesInFlight(); i++) {
-        //m_graphicsLists[i].Create(m_device.GetDevice(), info);
         m_graphicsLists[i] = MGraphicsCommandList(m_device.GetDevice(), info);
     }
 
-    //m_generalGraphicList.Create(m_device.GetDevice(), info);
     m_generalGraphicList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     info.commandPool = m_commandAllocator.Get(QueueType::TRANSFER_QUEUE);
-    //m_transferList.Create(m_device.GetDevice(), info);
     m_transferList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     info.commandPool = m_commandAllocator.Get(QueueType::PRESENT_QUEUE);
-    //m_presentList.Create(m_device.GetDevice(), info);
     m_presentList = MGraphicsCommandList(m_device.GetDevice(), info);
 
     if (m_device.SupportRayTracing()) {
@@ -975,8 +989,10 @@ void MVulkanEngine::createCommandList()
 
     //m_computeList = MComputeCommandList();
     info.commandPool = m_commandAllocator.Get(QueueType::COMPUTE_QUEUE);
-    //m_computeList.Create(m_device.GetDevice(), info);
     m_computeList = MComputeCommandList(m_device.GetDevice(), info);
+
+    info.commandPool = m_commandAllocator.Get(QueueType::GENERAL_QUEUE);
+    m_generalList = MComputeCommandList(m_device.GetDevice(), info);
 }
 
 void MVulkanEngine::createSyncObjects()
@@ -1094,7 +1110,7 @@ void MVulkanEngine::transitionImageLayouts(
 void MVulkanEngine::Present(uint32_t currentFrame, const uint32_t* imageIndex, std::function<void()> recreateSwapchain)
 {
     //VkSemaphore waitSemaphore[] = { m_finalRenderFinishedSemaphores[currentFrame].GetSemaphore(), m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore()};
-    VkSemaphore waitSemaphore[] = { m_presentReadySemaphores[currentFrame].GetSemaphore() };
+    VkSemaphore waitSemaphore[] = { m_uiRenderFinishedSemaphores[currentFrame].GetSemaphore() };
 
 
     VkPresentInfoKHR presentInfo{};
@@ -2126,6 +2142,29 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
 
     m_computeList.EndDebugLabel();
+}
+
+void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)
+{
+    commandList.BeginDebugLabel(eventName);
+
+    //m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+
+    computePass->PrepareResourcesForShaderRead(commandList);
+
+    commandList.BindPipeline(computePass->GetPipeline().Get());
+
+    computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = computePass->GetDescriptorSets();
+    commandList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), descriptorSets);
+
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+    commandList.Dispatch(groupCountX, groupCountY, groupCountZ);
+    commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
+
+    commandList.EndDebugLabel();
 }
 
 void MVulkanEngine::recordMeshShaderCommandBuffer(uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, bool flipY)

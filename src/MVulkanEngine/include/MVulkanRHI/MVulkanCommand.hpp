@@ -67,6 +67,10 @@ public:
 
 	void TransitionImageLayout(std::vector<MVulkanImageMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
 	void TransitionImageLayout(MVulkanImageMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+	
+	void TransitionBufferLayout(std::vector<VkBufferMemoryBarrier> _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+	void TransitionBufferLayout(VkBufferMemoryBarrier _barrier, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t mipLevel=0, uint32_t baseArrayLayer=0);
 	//void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);
 	void CopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, unsigned int width, unsigned int height, unsigned int depth, uint32_t bufferOffset = 0, uint32_t mipLevel = 0, uint32_t baseArrayLayer = 0);

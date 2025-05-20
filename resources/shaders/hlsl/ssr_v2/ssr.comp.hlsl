@@ -66,9 +66,16 @@ void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction,
     position = origin + current_t * direction;
 }
 
-bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction, 
-    int currentMipLevel,float2 floor_offset, float2 uv_offset, 
-    float surface_z, inout float3 position, inout float current_t) 
+bool AdvanceRay(
+    float3 origin, 
+    float3 direction, 
+    float3 inv_direction, 
+    int currentMipLevel, 
+    float2 floor_offset, 
+    float2 uv_offset, 
+    float surface_z, 
+    inout float3 position, 
+    inout float current_t) 
 {
     float2 current_mip_resolution = (float2)hiz.hizDimensions[currentMipLevel].xy;
     float2 current_mip_resolution_inv = 1.0 / current_mip_resolution;
@@ -100,21 +107,26 @@ bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction,
     return skipped_tile;
 }
 
-float LoadDepth(float2 uv, int mipLevel){
-    return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
+float SampleDepth(int2 uv, int mipLevel){
+    //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
     //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
+    return HIZ.Load(int3(uv, mipLevel));
 }
 
 float3 SampleRender(float2 uv){
-    return Render.Sample(linearSampler, float2(uv.x, 1.f-uv.y)).rgb;
-    //return Render.Sample(linearSampler, uv).rgb;
+    //return Render.Sample(linearSampler, float2(uv.x, 1.f-uv.y)).rgb;
+    return Render.Sample(linearSampler, uv).rgb;
 }
 
-float3 SSR_Trace(float3 origin, float3 direction,
-    uint max_traversal_intersections, out bool valid_hit, out float depth)
+float3 SSR_Trace(
+    float3 origin, 
+    float3 direction,
+    uint max_traversal_intersections, 
+    out bool valid_hit, 
+    out float depth)
 {
     float3 color = float3(0.f, 0.f, 0.f);
-    const float3 inv_direction = select(direction != 0, 0.99999999f / direction, FLOAT_MAX);
+    const float3 inv_direction = select(direction != 0, 1.f / direction, FLOAT_MAX);
 
     int mostDetailedMip = 0;
     float2 uv_offset = 0.005 * exp2(mostDetailedMip) / float2(screenBuffer.WindowRes.x, screenBuffer.WindowRes.y);
@@ -127,29 +139,44 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
     float current_t = 0.f;
     float3 position;
-    InitialAdvanceRay(origin, direction, inv_direction, 
+    InitialAdvanceRay(
+        origin, 
+        direction, 
+        inv_direction, 
         currentMipLevel,
-        floor_offset, uv_offset, position, current_t);
-
-    //valid_hit = true;
-    ////return float3(direction);
-    ////return float3(inv_direction);
-    //return float3(position.xy, 0.f);
+        floor_offset, 
+        uv_offset, 
+        position, 
+        current_t);
 
     uint i = 0;
     bool exit_due_to_low_occupancy = false;
     uint minMipLevel = GetMinMipLevel();
 
     while(i < max_traversal_intersections && currentMipLevel >= mostDetailedMip){
-        float surface_z = LoadDepth(position.xy, currentMipLevel);
+        float2 current_mip_resolution = (float2)hiz.hizDimensions[currentMipLevel].xy;
+        float2 current_mip_position = position.xy * current_mip_resolution;
+        float surface_z = SampleDepth(current_mip_position, currentMipLevel);
 
         //valid_hit = true;
         //return float3(surface_z, surface_z, surface_z);
 
-        bool skipped_tile = AdvanceRay(origin, direction, inv_direction, 
-            currentMipLevel, floor_offset, uv_offset, 
-            surface_z, position, current_t);
-        
+        bool skipped_tile = AdvanceRay(
+            origin, 
+            direction, 
+            inv_direction, 
+            currentMipLevel, 
+            floor_offset, 
+            uv_offset, 
+            surface_z, 
+            position, 
+            current_t);
+
+        if(position.x<0.f || position.x>1.f || position.y<0.f || position.y>1.f){
+            valid_hit = false;
+            return float3(0.f, 0.f, 0.f);
+        }
+
         bool nextMipOutofRange = skipped_tile && (currentMipLevel >= minMipLevel);
 
         if(!nextMipOutofRange){
@@ -161,8 +188,8 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
     depth = i / float(max_traversal_intersections);
 
-    valid_hit = (i <= max_traversal_intersections) && (currentMipLevel <=0);
-    if(position.x<=0 || position.x>=0.999 || position.y<=0 || position.y>=0.999)
+    valid_hit = (i <= max_traversal_intersections);
+    if(position.x<0.f || position.x>1.f || position.y<0.f || position.y>1.f)
         return float3(0.f, 0.f, 0.f);
     
     return SampleRender(position.xy);
@@ -211,12 +238,14 @@ void main(uint3 threadID : SV_DispatchThreadID)
         float4 startFrag = mul(viewProj, float4(fragPos, 1.f));
         startFrag.xyz   /= startFrag.w;
         startFrag.xy     = startFrag.xy * 0.5 + 0.5;
+        startFrag.y      = 1.f - startFrag.y;
         //startFrag.xy     = startFrag.xy * texSize;
         
         float4 endFrag   = float4(targetPosition, 1.f);
         endFrag          = mul(viewProj, endFrag);
         endFrag.xyz     /= endFrag.w;
         endFrag.xy       = endFrag.xy * 0.5 + 0.5;
+        endFrag. y       = 1.f - endFrag.y;
         //endFrag.xy       = endFrag.xy * texSize;
 
         float3 screenDirection = normalize(endFrag.xyz - startFrag.xyz);
@@ -227,19 +256,15 @@ void main(uint3 threadID : SV_DispatchThreadID)
         float3 color = SSR_Trace(startFrag.xyz, screenDirection, 
             max_traversal_intersections, valid_hit, depth);
 
-        SSRRender[texCoord.xy] = float4(depth, depth, depth, 1.f);
-        //SSRRender[texCoord.xy] = float4(startFrag.xy, 0.f, 1.f);
-        //float3 render = SampleRender(startFrag.xy);
-        //float depth_ = LoadDepth(startFrag.xy, 0);
         //SSRRender[texCoord.xy] = float4(depth_, depth_, depth_, 1.f);
-        //if (valid_hit){
-        //    SSRRender[texCoord.xy] = float4(color, 1.f);
-        //    //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
-        //}
-        //else{
-        //    SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
-        //    //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
-        //}
+        if (valid_hit){
+            SSRRender[texCoord.xy] = float4(color, 1.f);
+            //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
+        }
+        else{
+            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
+            //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
+        }
     }
     else{
         SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);

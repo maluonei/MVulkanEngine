@@ -8,5 +8,5 @@ void main(uint3 threadID : SV_DispatchThreadID){
     int prevLevel = hizBuffers[0].u_previousLevel;
 
     hizBuffers[0].u_previousLevel = prevLevel + 1;
-    hizBuffers[0].u_previousLevelDimensions = HizDimensions[prevLevel + 1].u_previousLevelDimensions;
+    hizBuffers[0].u_previousLevelDimensions = HizDimensions[hizBuffers[0].u_previousLevel].u_previousLevelDimensions;
 }

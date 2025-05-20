@@ -83,7 +83,11 @@ private:
 	void createSyncObjs();
 
 	void copyHizToDepth();
-
+	//void addHizBarrierRead(int layer);
+	//void addHizBarrierWrite(int layer);
+	void addHizImageBarrier(int layer);
+	void addHizBufferReadBarrier();
+	void addHizBufferWriteBarrier();
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);

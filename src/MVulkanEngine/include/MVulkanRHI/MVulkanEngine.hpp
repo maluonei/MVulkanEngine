@@ -167,7 +167,10 @@ public:
 
     MVulkanCommandQueue& GetCommandQueue(MQueueType type);
     MGraphicsCommandList& GetCommandList(MQueueType type);
-    inline MComputeCommandList& GetComputeCommandList() { return m_computeList; }
+    inline MComputeCommandList& GetComputeCommandList() { 
+        //return m_computeList;
+        return m_generalList;
+    }
     inline MRaytracingCommandList& GetRaytracingCommandList(){return m_raytracingList;}
     MGraphicsCommandList& GetGraphicsList(int i);
 
@@ -305,6 +308,10 @@ public:
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
 
+    void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
+
+
     void RecordMeshShaderCommandBuffer(
         uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame,
         uint32_t groupCountX,
@@ -327,6 +334,10 @@ public:
 
     void TransitionImageLayout2(int commandListId, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
     void TransitionImageLayout2(MVulkanCommandList list, std::vector<MVulkanImageMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+
+    void TransitionBufferLayout2(int commandListId, std::vector<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+    void TransitionBufferLayout2(MVulkanCommandList list, std::vector<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage);
+
 
     void RenderUI(std::shared_ptr<UIRenderer> uirenderer, uint32_t imageIndex, uint32_t currentFrame);
 
@@ -467,6 +478,9 @@ private:
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
 
+    void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
+
 
     void recordMeshShaderCommandBuffer(
         uint32_t imageIndex, std::shared_ptr<RenderPass> renderPass, MGraphicsCommandList commandList,
@@ -518,6 +532,7 @@ private:
     MVulkanCommandQueue     m_presentQueue;
     MVulkanCommandQueue     m_transferQueue;
     MVulkanCommandQueue     m_computeQueue;
+    MVulkanCommandQueue     m_generalQueue;
     MVulkanCommandAllocator m_commandAllocator;
 
     std::vector<MGraphicsCommandList> m_graphicsLists;
@@ -525,6 +540,7 @@ private:
     MGraphicsCommandList    m_presentList;
     MGraphicsCommandList    m_transferList;
     MComputeCommandList     m_computeList;
+    MComputeCommandList     m_generalList;
     MRaytracingCommandList  m_raytracingList;
 
     //std::shared_ptr<MVulkanRenderPass> m_uiRenderPass = nullptr;

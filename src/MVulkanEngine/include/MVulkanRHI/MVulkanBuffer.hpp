@@ -310,6 +310,16 @@ private:
 		TextureState newState,
 		VkPipelineStageFlags& srcStage,
 		VkPipelineStageFlags& dstStage);
+
+	MVulkanImageMemoryBarrier ChangeImageLayout(
+		TextureState oldState,
+		TextureState newState,
+		int baseMipLevel,
+		int levelCount,
+		int baseArrayLayer,
+		int layerCount,
+		VkPipelineStageFlags& srcStage,
+		VkPipelineStageFlags& dstStage);
 private:
 	ImageCreateInfo		m_imageInfo;
 	ImageViewCreateInfo m_viewInfo;

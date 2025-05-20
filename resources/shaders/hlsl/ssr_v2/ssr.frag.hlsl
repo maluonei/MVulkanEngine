@@ -82,7 +82,10 @@ void InitialAdvanceRay(float3 origin, float3 direction, float3 inv_direction,
     position = origin + current_t * direction;
 }
 
-bool AdvanceRay(float3 origin, float3 direction, float3 inv_direction, 
+bool AdvanceRay(
+    float3 origin, 
+    float3 direction, 
+    float3 inv_direction, 
     int currentMipLevel,
     float2 floor_offset, 
     float2 uv_offset, 
@@ -146,7 +149,9 @@ float3 SampleRender(float2 uv){
     return Render.Sample(linearSampler, uv).rgb;
 }
 
-float3 SSR_Trace(float3 origin, float3 direction,
+float3 SSR_Trace(
+    float3 origin, 
+    float3 direction,
     uint max_traversal_intersections, 
     out bool valid_hit, 
     out float depth, 
@@ -170,7 +175,8 @@ float3 SSR_Trace(float3 origin, float3 direction,
 
     float current_t = 0.f;
     float3 position;
-    InitialAdvanceRay(origin,
+    InitialAdvanceRay(
+        origin,
         direction, 
         inv_direction, 
         currentMipLevel,
@@ -287,31 +293,31 @@ PSOutput main(PSInput input)
         float4x4 viewProj = mul(vp.Projection, vp.View);
 
         //float4 worldSpaceStartPos = float4(fragPos, 1.f);
-        float4 viewSpaceStartPos = mul(vp.View, float4(fragPos, 1.f));
-        float3 viewSpaceRayDirection = normalize(viewSpaceStartPos.xyz);
-        float3 viewSpaceNormal = normalize(mul(vp.View, float4(fragNormal, 0.f)).xyz);
-        float3 viewSpaceReflectDirection = reflect(viewSpaceRayDirection, viewSpaceNormal);
-        float3 screenSpaceStartPosition = ProjectionPosition(vp.Projection, viewSpaceStartPos.xyz);
-        float3 screenSpaceEndPosition = ProjectionPosition(vp.Projection, viewSpaceStartPos.xyz + viewSpaceReflectDirection);
-        float3 screenSpaceDirection = normalize(screenSpaceEndPosition - screenSpaceStartPosition);
+        //float4 viewSpaceStartPos = mul(vp.View, float4(fragPos, 1.f));
+        //float3 viewSpaceRayDirection = normalize(viewSpaceStartPos.xyz);
+        //float3 viewSpaceNormal = normalize(mul(vp.View, float4(fragNormal, 0.f)).xyz);
+        //float3 viewSpaceReflectDirection = reflect(viewSpaceRayDirection, viewSpaceNormal);
+        //float3 screenSpaceStartPosition = ProjectionPosition(vp.Projection, viewSpaceStartPos.xyz);
+        //float3 screenSpaceEndPosition = ProjectionPosition(vp.Projection, viewSpaceStartPos.xyz + viewSpaceReflectDirection);
+        //float3 screenSpaceDirection = normalize(screenSpaceEndPosition - screenSpaceStartPosition);
 
-        //float4 startFrag = float4(fragPos, 1.f);
-        //startFrag        = mul(viewProj, startFrag);
-        ////startFrag.xy     = startFrag.xy * 0.5 + 0.5;
-        //startFrag.xyz   /= startFrag.w;
+        float4 startFrag = float4(fragPos, 1.f);
+        startFrag        = mul(viewProj, startFrag);
         //startFrag.xy     = startFrag.xy * 0.5 + 0.5;
-        //startFrag.y      = 1.f - startFrag.y;
-        ////startFrag.xy     = startFrag.xy * texSize;
-        //
-        //float4 endFrag   = float4(targetPosition, 1.f);
-        //endFrag          = mul(viewProj, endFrag);
-        ////endFrag.xy       = endFrag.xy * 0.5 + 0.5;
-        //endFrag.xyz     /= endFrag.w;
+        startFrag.xyz   /= startFrag.w;
+        startFrag.xy     = startFrag.xy * 0.5 + 0.5;
+        startFrag.y      = 1.f - startFrag.y;
+        //startFrag.xy     = startFrag.xy * texSize;
+        
+        float4 endFrag   = float4(targetPosition, 1.f);
+        endFrag          = mul(viewProj, endFrag);
         //endFrag.xy       = endFrag.xy * 0.5 + 0.5;
-        //endFrag.y        = 1.f - endFrag.y;
-        ////endFrag.xy       = endFrag.xy * texSize;
+        endFrag.xyz     /= endFrag.w;
+        endFrag.xy       = endFrag.xy * 0.5 + 0.5;
+        endFrag.y        = 1.f - endFrag.y;
+        //endFrag.xy       = endFrag.xy * texSize;
 
-        //float3 screenSpaceDirection = normalize(endFrag.xyz - startFrag.xyz);
+        float3 screenSpaceDirection = normalize(endFrag.xyz - startFrag.xyz);
         //float uv_z = LoadDepth(input.texCoord, 0);
         //float3 screen_xyz = float3(input.texCoord.x, input.texCoord.y, uv_z);
 
@@ -325,7 +331,16 @@ PSOutput main(PSInput input)
         float _t;
         float3 txyz, _boundary_planes;
 
-        float3 color = SSR_Trace(screenSpaceStartPosition.xyz, screenSpaceDirection, 
+        //float3 color = SSR_Trace(screenSpaceStartPosition.xyz, screenSpaceDirection, 
+        //    max_traversal_intersections, 
+        //    valid_hit, 
+        //    depth, 
+        //    initialOnSurface,
+        //    finalPosition,
+        //    _t,
+        //    txyz,
+        //    _boundary_planes);
+        float3 color = SSR_Trace(startFrag.xyz, screenSpaceDirection, 
             max_traversal_intersections, 
             valid_hit, 
             depth, 
@@ -335,37 +350,21 @@ PSOutput main(PSInput input)
             txyz,
             _boundary_planes);
 
-        //float3 p0 = startFrag.xyz;
-        //float3 p1;
-        //p1.xy = p0.xy + float2(0.02f, 0.02f);
-        //p1.z = LoadDepth(p1.xy, 0);
+        //int _layer = 8;
+        //float2 res = (float2)hiz.hizDimensions[_layer];
+        //float _depth0 = SampleDepth(startFrag.xy, _layer);
+        //output.color = float4(_depth0, _depth0, _depth0, 0.f);
+        //return output;
 
-        //output.color = float4(depth, depth, depth, 1.f);
-        //output.color = float4(p1 - p0, 1.f);
-        //if(initialOnSurface){
-        //    output.color = float4(1.f, 0.f, 0.f, 1.f);
-        //}
-        //else{
-        //    output.color = float4(0.f, 1.f, 0.f, 1.f);
-        //}
-        //output.color = float4(screenSpaceDirection, 1.f);
-        //SSRRender[texCoord.xy] = float4(startFrag.xy, 0.f, 1.f);
-        //float3 render = SampleRender(startFrag.xy);
-        //float depth_ = LoadDepth(startFrag.xy, 0);
-        //SSRRender[texCoord.xy] = float4(depth_, depth_, depth_, 1.f);
-        
-        int2 hiz_res = hiz.hizDimensions[6].xy;
-        float depth0 = SampleDepth(screenSpaceStartPosition.xy * hiz_res, 6);
-        output.color = float4(color, 1.f) * 1e-10 + float4(depth0, depth0, depth0, 1.f);
-        //if (valid_hit){
-        //    output.color = float4(color, 1.f) * 1e-10 + float4(1.f, 0.f, 0.f, 1.f);
-        //    //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
-        //}
-        //else{
-        //    //output.color = float4(0.f, 0.f, 0.f, 0.f);
-        //    output.color = float4(0.f, 1.f, 0.f, 1.f);
-        //    //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
-        //}
+        if (valid_hit){
+            output.color = float4(color, 1.f);// * 1e-10 + float4(1.f, 0.f, 0.f, 1.f);
+            //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
+        }
+        else{
+            output.color = float4(0.f, 0.f, 0.f, 0.f);
+            //output.color = float4(0.f, 1.f, 0.f, 1.f);
+            //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
+        }
     }
     else{
         output.color = float4(0.f, 0.f, 0.f, 0.f);
