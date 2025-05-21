@@ -277,7 +277,6 @@ void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
 	auto numHizLayers = m_hizRes.size();
 
 	for (auto layer = 0; layer < m_numHizLayers; layer++) {
-		//hizQueryIndex[layer] = queryIndex;
 		addHizBufferWriteBarrier();
 		if (layer == 0) {
 			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, commandList, 1, 1, 1, std::string("ResetHizBuffer Pass"), queryIndex++);
