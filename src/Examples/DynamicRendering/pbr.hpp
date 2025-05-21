@@ -76,7 +76,7 @@ private:
 	void createStorageBuffers();
 
 	void createSyncObjs();
-
+	void initHiz();
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -93,9 +93,9 @@ private:
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
 	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
-	std::shared_ptr<ComputePass> m_hizPass;
-	std::shared_ptr<ComputePass> m_updateHizBufferPass;
-	std::shared_ptr<ComputePass> m_resetHizBufferPass;
+	//std::shared_ptr<ComputePass> m_hizPass;
+	//std::shared_ptr<ComputePass> m_updateHizBufferPass;
+	//std::shared_ptr<ComputePass> m_resetHizBufferPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;
@@ -107,13 +107,13 @@ private:
 	//std::shared_ptr<MVulkanTexture> gBuffer4;
 	std::shared_ptr<MVulkanTexture> gBufferDepth;
 
-	std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
+	//std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
 	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_numIndirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
-	std::shared_ptr<StorageBuffer> m_hizBuffer;
-	std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
+	//std::shared_ptr<StorageBuffer> m_hizBuffer;
+	//std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
 	std::shared_ptr<StorageBuffer> m_modelBuffer;
 	std::shared_ptr<StorageBuffer> m_materialBuffer;
 	std::shared_ptr<StorageBuffer> m_materialIdBuffer;

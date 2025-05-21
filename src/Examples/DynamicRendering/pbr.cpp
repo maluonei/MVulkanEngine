@@ -31,6 +31,8 @@ void PBR::SetUp()
 
     loadScene();
     createStorageBuffers(); 
+
+    initHiz();
 }
 
 void PBR::ComputeAndDraw(uint32_t imageIndex)
@@ -202,10 +204,10 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     computeList.Begin();
     Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
 
-    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
+    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
     auto numInstances = m_scene->GetIndirectDrawCommands().size();
     cullingQueryIndex = m_queryIndex;
-    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, numInstances, 1, 1, std::string("FrustumCulling Pass"), m_queryIndex++);
+    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, computeList, numInstances, 1, 1, std::string("FrustumCulling Pass"), m_queryIndex++);
 
     computeList.End();
 
@@ -250,21 +252,24 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         computeList.Reset();
         computeList.Begin();
     
-        hizQueryIndexStart = m_queryIndex;
-        auto numHizLayers = m_hiz.hizRes.size();
-        hizQueryIndex.resize(numHizLayers);
-        hizTimes.resize(numHizLayers);
-        for (auto layer = 0; layer < numHizLayers; layer++) {
-            hizQueryIndex[layer] = m_queryIndex;
-            if (layer == 0) {
-                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"), m_queryIndex++);
-            }
-            else {
-                Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("UpdateHizBuffer Pass"), m_queryIndex++);
-            }
-            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_hizPass, (m_hiz.hizRes[layer].x + 15) / 16, (m_hiz.hizRes[layer].y + 15) / 16, 1, std::string("GenHiz Pass"), m_queryIndex++);
-        }
-        hizQueryIndexEnd = m_queryIndex;
+        //hizQueryIndexStart = m_queryIndex;
+        //auto numHizLayers = m_hiz.hizRes.size();
+        //hizQueryIndex.resize(numHizLayers);
+        //hizTimes.resize(numHizLayers);
+        //for (auto layer = 0; layer < numHizLayers; layer++) {
+        //    hizQueryIndex[layer] = m_queryIndex;
+        //    if (layer == 0) {
+        //        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, 1, 1, 1, std::string("ResetHizBuffer Pass"), m_queryIndex++);
+        //    }
+        //    else {
+        //        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, 1, 1, 1, std::string("UpdateHizBuffer Pass"), m_queryIndex++);
+        //    }
+        //    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_hizPass, (m_hiz.hizRes[layer].x + 15) / 16, (m_hiz.hizRes[layer].y + 15) / 16, 1, std::string("GenHiz Pass"), m_queryIndex++);
+        //}
+        //hizQueryIndexEnd = m_queryIndex;
+        m_hiz.Generate(computeList, m_queryIndex);
+        hizQueryIndexStart = m_hiz.GetHizQueryIndexStart();
+        hizQueryIndexEnd = m_hiz.GetHizQueryIndexEnd();
     
         computeList.End();
 
@@ -290,9 +295,9 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod / 1000000.f;
         if (hizMode == DO_HIZ_MODE_0) {
             hizTime = (queryResults[2 * hizQueryIndexEnd - 1] - queryResults[2 * hizQueryIndexStart]) * timestampPeriod / 1000000.f;
-            for (auto i = 0; i < hizQueryIndex.size(); i++) {
-                hizTimes[i] = (queryResults[2 * hizQueryIndex[i] + 3] - queryResults[2 * hizQueryIndex[i]]) * timestampPeriod / 1000000.f;
-            }
+            //for (auto i = 0; i < hizQueryIndex.size(); i++) {
+            //    hizTimes[i] = (queryResults[2 * hizQueryIndex[i] + 3] - queryResults[2 * hizQueryIndex[i]]) * timestampPeriod / 1000000.f;
+            //}
         }
         else {
             hizTime = 0.f;
@@ -339,9 +344,9 @@ void PBR::CreateRenderPass()
     createShadingPass();
     createResetDidirectDrawBufferPass();
     createFrustumCullingPass();
-    createGenHizPass();
-    createResetHizBufferPass();
-    createUpdateHizBufferPass();
+    //createGenHizPass();
+    //createResetHizBufferPass();
+    //createUpdateHizBufferPass();
     
 
     createLightCamera();
@@ -604,37 +609,37 @@ void PBR::createTextures()
         );
     }
 
-    {
-        m_hiz.UpdateHizRes(glm::ivec2(swapchainExtent.width, swapchainExtent.height));
-        auto hizLayers = m_hiz.hizRes.size();
-        m_hizTextures.resize(hizLayers);
-        auto depthFormat = device.FindDepthFormat();
-
-        ImageCreateInfo imageInfo;
-        ImageViewCreateInfo viewInfo;
-        imageInfo.arrayLength = 1;
-        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        imageInfo.format = depthFormat;
-
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = imageInfo.format;
-        viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
-        viewInfo.baseMipLevel = 0;
-        viewInfo.levelCount = 1;
-        viewInfo.baseArrayLayer = 0;
-        viewInfo.layerCount = 1;
-
-        for (auto i = 0; i < hizLayers; i++) {
-            auto res = m_hiz.hizRes[i];
-            
-            //auto depthFormat = device.FindDepthFormat();
-            imageInfo.width = res.x;
-            imageInfo.height = res.y;
-
-            m_hizTextures[i] = std::make_shared<MVulkanTexture>();
-            Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
-        }
-    }
+    //{
+    //    m_hiz.UpdateHizRes(glm::ivec2(swapchainExtent.width, swapchainExtent.height));
+    //    auto hizLayers = m_hiz.hizRes.size();
+    //    m_hizTextures.resize(hizLayers);
+    //    auto depthFormat = device.FindDepthFormat();
+    //
+    //    ImageCreateInfo imageInfo;
+    //    ImageViewCreateInfo viewInfo;
+    //    imageInfo.arrayLength = 1;
+    //    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    //    imageInfo.format = depthFormat;
+    //
+    //    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    //    viewInfo.format = imageInfo.format;
+    //    viewInfo.flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+    //    viewInfo.baseMipLevel = 0;
+    //    viewInfo.levelCount = 1;
+    //    viewInfo.baseArrayLayer = 0;
+    //    viewInfo.layerCount = 1;
+    //
+    //    for (auto i = 0; i < hizLayers; i++) {
+    //        auto res = m_hiz.hizRes[i];
+    //        
+    //        //auto depthFormat = device.FindDepthFormat();
+    //        imageInfo.width = res.x;
+    //        imageInfo.height = res.y;
+    //
+    //        m_hizTextures[i] = std::make_shared<MVulkanTexture>();
+    //        Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
+    //    }
+    //}
 
 }
 
@@ -648,9 +653,9 @@ void PBR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" }, true);
-    Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" }, true);
 }
 
 void PBR::createStorageBuffers()
@@ -683,18 +688,18 @@ void PBR::createStorageBuffers()
         info.size = sizeof(InstanceBound) * bounds.size();
         m_instanceBoundsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, bounds.data());
     
-        std::vector<HizDimension> hizDimensions(m_hiz.hizRes.size());
-        for (int i = 0; i < hizDimensions.size(); i++) {
-            hizDimensions[i].u_previousLevelDimensions = m_hiz.hizRes[i];
-        }
-
-        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        info.size = sizeof(HizDimension) * hizDimensions.size();
-        m_hizDimensionsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, hizDimensions.data());
-
-        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        info.size = sizeof(HIZBuffer);
-        m_hizBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+        //std::vector<HizDimension> hizDimensions(m_hiz.hizRes.size());
+        //for (int i = 0; i < hizDimensions.size(); i++) {
+        //    hizDimensions[i].u_previousLevelDimensions = m_hiz.hizRes[i];
+        //}
+        //
+        //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        //info.size = sizeof(HizDimension) * hizDimensions.size();
+        //m_hizDimensionsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, hizDimensions.data());
+        //
+        //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        //info.size = sizeof(HIZBuffer);
+        //m_hizBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
 
         //std::vector<glm::mat4> models(m_scene->GetIndirectDrawCommands().size());
         //for (auto i = 0; i < models.size(); i++) {
@@ -736,6 +741,16 @@ void PBR::createSyncObjs()
 {
     m_cullingSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
     m_shadingSemaphore.Create(Singleton<MVulkanEngine>::instance().GetDevice().GetDevice());
+}
+
+void PBR::initHiz()
+{
+    m_hiz = Hiz();
+
+    auto gbufferExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+    glm::ivec2 res = { gbufferExtent.width, gbufferExtent.height };
+
+    m_hiz.Init(res, gBufferDepth);
 }
 
 void PBR::initUIRenderer()
@@ -954,75 +969,75 @@ void PBR::createResetDidirectDrawBufferPass()
     }
 }
 
-void PBR::createGenHizPass()
-{
-    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-
-    {
-        m_hizPass = std::make_shared<ComputePass>(device);
-
-        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("GenHiz Shader");
-
-        Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_hizPass, shader);
-
-        std::vector<PassResources> resources;
-
-        //PassResources resource;
-        //resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
-        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
-        resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
-        resources.push_back(PassResources::SetStorageImageResource(2, 0, m_hizTextures));
-
-        m_hizPass->UpdateDescriptorSetWrite(resources);
-    }
-}
-
-void PBR::createUpdateHizBufferPass()
-{
-    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-
-    {
-        m_updateHizBufferPass = std::make_shared<ComputePass>(device);
-
-        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("UpdateHizBuffer Shader");
-
-        Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_updateHizBufferPass, shader);
-
-        std::vector<PassResources> resources;
-
-        //PassResources resource;
-        //resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
-        //resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
-        //resources.push_back(PassResources::SetStorageImageResource(2, 0, m_hizTextures));
-        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizDimensionsBuffer));
-        resources.push_back(PassResources::SetBufferResource(1, 0, m_hizBuffer));
-
-        m_updateHizBufferPass->UpdateDescriptorSetWrite(resources);
-    }
-}
-
-void PBR::createResetHizBufferPass()
-{
-    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-
-    {
-        m_resetHizBufferPass = std::make_shared<ComputePass>(device);
-
-        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetHizBuffer Shader");
-
-        Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_resetHizBufferPass, shader);
-
-        std::vector<PassResources> resources;
-
-        //PassResources resource;
-        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
-
-        m_resetHizBufferPass->UpdateDescriptorSetWrite(resources);
-    }
-}
+//void PBR::createGenHizPass()
+//{
+//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+//
+//    {
+//        m_hizPass = std::make_shared<ComputePass>(device);
+//
+//        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("GenHiz Shader");
+//
+//        Singleton<MVulkanEngine>::instance().CreateComputePass(
+//            m_hizPass, shader);
+//
+//        std::vector<PassResources> resources;
+//
+//        //PassResources resource;
+//        //resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
+//        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
+//        resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
+//        resources.push_back(PassResources::SetStorageImageResource(2, 0, m_hizTextures));
+//
+//        m_hizPass->UpdateDescriptorSetWrite(resources);
+//    }
+//}
+//
+//void PBR::createUpdateHizBufferPass()
+//{
+//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+//
+//    {
+//        m_updateHizBufferPass = std::make_shared<ComputePass>(device);
+//
+//        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("UpdateHizBuffer Shader");
+//
+//        Singleton<MVulkanEngine>::instance().CreateComputePass(
+//            m_updateHizBufferPass, shader);
+//
+//        std::vector<PassResources> resources;
+//
+//        //PassResources resource;
+//        //resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
+//        //resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
+//        //resources.push_back(PassResources::SetStorageImageResource(2, 0, m_hizTextures));
+//        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizDimensionsBuffer));
+//        resources.push_back(PassResources::SetBufferResource(1, 0, m_hizBuffer));
+//
+//        m_updateHizBufferPass->UpdateDescriptorSetWrite(resources);
+//    }
+//}
+//
+//void PBR::createResetHizBufferPass()
+//{
+//    auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+//
+//    {
+//        m_resetHizBufferPass = std::make_shared<ComputePass>(device);
+//
+//        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetHizBuffer Shader");
+//
+//        Singleton<MVulkanEngine>::instance().CreateComputePass(
+//            m_resetHizBufferPass, shader);
+//
+//        std::vector<PassResources> resources;
+//
+//        //PassResources resource;
+//        resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
+//
+//        m_resetHizBufferPass->UpdateDescriptorSetWrite(resources);
+//    }
+//}
 
 
 static const char* OutputBufferContents[] = {
@@ -1077,10 +1092,10 @@ void DRUI::RenderContext() {
         ImGui::Text("gbuffer time: %.3f ms", ((PBR*)(this->m_app))->gbufferTime);
         ImGui::Text("shading time: %.3f ms", ((PBR*)(this->m_app))->shadingTime);
         ImGui::Text("hiz time: %.3f ms", ((PBR*)(this->m_app))->hizTime);
-        auto hizTimes = ((PBR*)(this->m_app))->hizTimes;
-        for (auto i = 0; i < hizTimes.size(); i++) {
-            ImGui::Text("hiz layer %d time: %.3f ms", i, ((PBR*)(this->m_app))->hizTimes[i]);
-        }
+        //auto hizTimes = ((PBR*)(this->m_app))->hizTimes;
+        //for (auto i = 0; i < hizTimes.size(); i++) {
+        //    ImGui::Text("hiz layer %d time: %.3f ms", i, ((PBR*)(this->m_app))->hizTimes[i]);
+        //}
     }
     //ImGui::InputInt("Hiz Layer:", &hizLayer, 1, 0);
 

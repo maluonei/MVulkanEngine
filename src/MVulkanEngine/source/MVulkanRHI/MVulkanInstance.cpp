@@ -111,7 +111,9 @@ std::vector<const char*> MVulkanInstance::getRequiredExtensions() {
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
     if (enableValidationLayers) {
+#ifdef _DEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
         //extensions.push_back("VK_LAYER_KHRONOS_validation");
     }
 

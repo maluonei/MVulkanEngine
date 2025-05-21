@@ -48,7 +48,7 @@ cbuffer screenBuffer : register(b4)
 [[vk::binding(5, 0)]]Texture2D<uint4> gBuffer0 : register(t0);
 [[vk::binding(6, 0)]]Texture2D<uint4> gBuffer1 : register(t1);
 [[vk::binding(7, 0)]]Texture2D<float> HIZ : register(t2);
-[[vk::binding(11, 0)]]Texture2D<float> HIZ2[13] : register(t10);
+//[[vk::binding(11, 0)]]Texture2D<float> HIZ2[13] : register(t10);
 [[vk::binding(8, 0)]]Texture2D<float4> Render : register(t3);
 [[vk::binding(9, 0)]]RWTexture2D<float4> SSRRender : register(u0);
 
@@ -91,9 +91,7 @@ bool AdvanceRay(
     float2 uv_offset, 
     float surface_z, 
     inout float3 position, 
-    inout float current_t,
-    inout float3 txyz,
-    inout float3 _boundary_planes) 
+    inout float current_t) 
 {
     float2 current_mip_resolution = (float2)hiz.hizDimensions[currentMipLevel].xy;
     float2 current_mip_resolution_inv = 1.0 / current_mip_resolution;
@@ -103,14 +101,14 @@ bool AdvanceRay(
     float2 xy_plane = floor(current_mip_position) + floor_offset;
     xy_plane = xy_plane * current_mip_resolution_inv + uv_offset;
     float3 boundary_planes = float3(xy_plane, surface_z);
-    _boundary_planes = boundary_planes;
+    //_boundary_planes = boundary_planes;
 
     // Intersect ray with the half box that is pointing away from the ray origin.
     // o + d * t = p' => t = (p' - o) / d
     float3 t = (boundary_planes - origin) * inv_direction;
 
     t.z = direction.z > 0 ? t.z : FLOAT_MAX;
-    txyz = t;
+    //txyz = t;
 
     float t_min = min(min(t.x, t.y), t.z);
 
@@ -132,17 +130,17 @@ bool AdvanceRay(
 //    return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
 //}
 
-//float SampleDepth(int2 uv, int mipLevel){
-//    //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
-//    //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
-//    return HIZ.Load(int3(uv, mipLevel));
-//}
-
 float SampleDepth(int2 uv, int mipLevel){
     //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
     //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
-    return HIZ2[mipLevel].Load(int3(uv, 0));
+    return HIZ.Load(int3(uv, mipLevel));
 }
+
+//float SampleDepth(int2 uv, int mipLevel){
+//    //return HIZ.SampleLevel(linearSampler, float2(uv.x, 1.f-uv.y), mipLevel).r;
+//    //return HIZ.SampleLevel(linearSampler, uv, mipLevel).r;
+//    return HIZ2[mipLevel].Load(int3(uv, 0));
+//}
 
 float3 SampleRender(float2 uv){
     //return Render.Sample(linearSampler, float2(uv.x, 1.f-uv.y)).rgb;
@@ -154,12 +152,7 @@ float3 SSR_Trace(
     float3 direction,
     uint max_traversal_intersections, 
     out bool valid_hit, 
-    out float depth, 
-    out bool initialOnSurface,
-    out float3 finalPosition,
-    out float _t,
-    out float3 txyz,
-    out float3 _boundary_planes)
+    out float depth)
 {
     float3 color = float3(0.f, 0.f, 0.f);
     const float3 inv_direction = select(direction != 0, 1.f / direction, FLOAT_MAX);
@@ -210,9 +203,7 @@ float3 SSR_Trace(
             uv_offset, 
             surface_z,
             position, 
-            current_t, 
-            txyz,
-            _boundary_planes);
+            current_t);
 
         if(position.x<0.f || position.x>1.f || position.y<0.f || position.y>1.f){
             valid_hit = false;
@@ -228,8 +219,8 @@ float3 SSR_Trace(
         ++i;
     }
 
-    finalPosition = position;
-    _t = current_t;
+    //finalPosition = position;
+    //_t = current_t;
 
     depth = i / float(max_traversal_intersections);// * 20;
 
@@ -343,12 +334,7 @@ PSOutput main(PSInput input)
         float3 color = SSR_Trace(startFrag.xyz, screenSpaceDirection, 
             max_traversal_intersections, 
             valid_hit, 
-            depth, 
-            initialOnSurface,
-            finalPosition,
-            _t,
-            txyz,
-            _boundary_planes);
+            depth);
 
         //int _layer = 8;
         //float2 res = (float2)hiz.hizDimensions[_layer];

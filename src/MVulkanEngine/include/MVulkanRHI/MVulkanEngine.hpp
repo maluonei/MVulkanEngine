@@ -309,6 +309,9 @@ public:
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
 
     void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
+
+    void RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
 
 
@@ -477,6 +480,9 @@ private:
 
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);
+
+    void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
+        uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName);
 
     void recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList,
         uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex);

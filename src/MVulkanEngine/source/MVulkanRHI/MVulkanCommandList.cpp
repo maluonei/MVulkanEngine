@@ -312,9 +312,10 @@ void MVulkanCommandList::WriteTimeStamp(VkPipelineStageFlagBits pipelineStage, V
 
 void MVulkanCommandList::BeginDebugLabel(const std::string& labelName, glm::vec3 rgb)
 {
+
+#ifdef _DEBUG
     auto vkCmdBeginDebugUtilsLabelEXT =
         (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(m_device, "vkCmdBeginDebugUtilsLabelEXT");
-
 
     if (vkCmdBeginDebugUtilsLabelEXT) {
         VkDebugUtilsLabelEXT labelInfo{};
@@ -327,16 +328,19 @@ void MVulkanCommandList::BeginDebugLabel(const std::string& labelName, glm::vec3
 
         vkCmdBeginDebugUtilsLabelEXT(m_commandBuffer, &labelInfo);
     }
+#endif
 }
 
 void MVulkanCommandList::EndDebugLabel()
 {
+#ifdef _DEBUG
     auto vkCmdEndDebugUtilsLabelEXT =
         (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(m_device, "vkCmdEndDebugUtilsLabelEXT");
 
     if (vkCmdEndDebugUtilsLabelEXT) {
         vkCmdEndDebugUtilsLabelEXT(m_commandBuffer);
     }
+#endif
 }
 
 MVulkanFence MVulkanCommandList::GetFence()

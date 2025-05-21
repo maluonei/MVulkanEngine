@@ -556,6 +556,11 @@ void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     recordComputeCommandBuffer(computePass, groupCountX, groupCountY, groupCountZ, eventName, queryIndex);
 }
 
+void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName)
+{
+    recordComputeCommandBuffer(computePass, commandList, groupCountX, groupCountY, groupCountZ, eventName);
+}
+
 void MVulkanEngine::RecordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)
 {
     recordComputeCommandBuffer(computePass, commandList, groupCountX, groupCountY, groupCountZ, eventName, queryIndex);
@@ -2142,6 +2147,29 @@ void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> comp
     m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
 
     m_computeList.EndDebugLabel();
+}
+
+void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName)
+{
+    commandList.BeginDebugLabel(eventName);
+
+    //m_computeList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+
+    computePass->PrepareResourcesForShaderRead(commandList);
+
+    commandList.BindPipeline(computePass->GetPipeline().Get());
+
+    computePass->LoadConstantBuffer(m_device.GetUniformBufferOffsetAlignment());
+    //computePass->LoadStorageBuffer(m_device.GetUniformBufferOffsetAlignment());
+
+    auto descriptorSets = computePass->GetDescriptorSets();
+    commandList.BindDescriptorSet(computePass->GetPipeline().GetLayout(), descriptorSets);
+
+    //commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex);
+    commandList.Dispatch(groupCountX, groupCountY, groupCountZ);
+    //commandList.WriteTimeStamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_timestampQueryPool.Get(), 2 * queryIndex + 1);
+
+    commandList.EndDebugLabel();
 }
 
 void MVulkanEngine::recordComputeCommandBuffer(std::shared_ptr<ComputePass> computePass, MComputeCommandList commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ, std::string eventName, int queryIndex)

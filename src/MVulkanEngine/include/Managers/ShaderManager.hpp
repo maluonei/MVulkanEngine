@@ -44,7 +44,7 @@ public:
         }
         else
         {
-            spdlog::error("shader name: {0} already in ShaderManager", name);
+            spdlog::warn("shader name: {0} already in ShaderManager", name);
         }
     }
 
