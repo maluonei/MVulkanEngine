@@ -433,25 +433,26 @@ void ComputePass::LoadStorageBuffer(uint32_t alignment)
     }
 }
 
-void ComputePass::PrepareResourcesForShaderRead()
-{
-    TextureState state;
-    state.m_stage = ShaderStageFlagBits::COMPUTE;
-
-    for (auto& it : m_cachedResources) {
-        auto resource = it.second;
-        auto key = it.first;
-        if (resource.m_textures.size() != 0) {
-            for (auto& texture : resource.m_textures) {
-                auto binding = m_bindings[key];
-                auto shaderStage = binding.binding.stageFlags;
-                state.m_stage = VkShaderStage2ShaderStage(shaderStage);
-                state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
-                texture->TransferTextureState(-1, state);
-            }
-        }
-    }
-}
+//void ComputePass::PrepareResourcesForShaderRead()
+//{
+//    TextureState state;
+//    state.m_stage = ShaderStageFlagBits::COMPUTE;
+//
+//    for (auto& it : m_cachedResources) {
+//        auto resource = it.second;
+//        auto key = it.first;
+//        if (resource.m_textures.size() != 0) {
+//            for (auto& texture : resource.m_textures) {
+//                auto binding = m_bindings[key];
+//                auto shaderStage = binding.binding.stageFlags;
+//                state.m_stage = VkShaderStage2ShaderStage(shaderStage);
+//                state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
+//                //texture->TransferTextureState(-1, state);
+//                texture.TransferTextureState(-1, state);
+//            }
+//        }
+//    }
+//}
 
 void ComputePass::PrepareResourcesForShaderRead(MVulkanCommandList commandList)
 {
@@ -467,7 +468,7 @@ void ComputePass::PrepareResourcesForShaderRead(MVulkanCommandList commandList)
                 auto shaderStage = binding.binding.stageFlags;
                 state.m_stage = VkShaderStage2ShaderStage(shaderStage);
                 state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
-                texture->TransferTextureState(commandList, state);
+                texture.TransferTextureState(commandList, state);
             }
         }
     }

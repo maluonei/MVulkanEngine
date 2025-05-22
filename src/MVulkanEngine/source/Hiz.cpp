@@ -1,5 +1,5 @@
 #include "Hiz.hpp"
-#include "MVulkanRHI/MVulkanBuffer.hpp"
+//#include "MVulkanRHI/MVulkanBuffer.hpp"
 #include "MVulkanRHI/MVulkanEngine.hpp"
 #include "Shaders/share/Common.h"
 #include "ComputePass.hpp"
@@ -32,8 +32,11 @@ void Hiz::updateHizRes(glm::ivec2 basicResolution)
 
 void Hiz::initHizTextures()
 {
-	m_hizTextures.clear();
-	m_hizTextures.resize(m_numHizLayers);
+	//m_hizTextures.clear();
+	//m_hizTextures.resize(m_numHizLayers);
+	if (m_hizTexture) {
+		m_hizTexture->Clean();
+	}
 
 	auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 	auto depthFormat = device.FindDepthFormat();
@@ -43,6 +46,10 @@ void Hiz::initHizTextures()
 	imageInfo.arrayLength = 1;
 	imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	imageInfo.format = depthFormat;
+	imageInfo.mipLevels = m_numHizLayers;
+	auto res = m_hizRes[0];
+	imageInfo.width = res.x;
+	imageInfo.height = res.y;
 
 	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = imageInfo.format;
@@ -51,26 +58,30 @@ void Hiz::initHizTextures()
 	viewInfo.levelCount = 1;
 	viewInfo.baseArrayLayer = 0;
 	viewInfo.layerCount = 1;
+	viewInfo.levelCount = m_numHizLayers;
 
-	for (auto i = 0; i < m_numHizLayers; i++) {
-		auto res = m_hizRes[i];
+	m_hizTexture = std::make_shared<MVulkanTexture>();
+	Singleton<MVulkanEngine>::instance().CreateImage(m_hizTexture, imageInfo, viewInfo);
 
-		//auto depthFormat = device.FindDepthFormat();
-		imageInfo.width = res.x;
-		imageInfo.height = res.y;
-
-		m_hizTextures[i] = std::make_shared<MVulkanTexture>();
-
-		if (i == 0) {
-			viewInfo.levelCount = m_numHizLayers;
-			imageInfo.mipLevels = m_numHizLayers;
-		}
-		else {
-			viewInfo.levelCount = 1;
-			imageInfo.mipLevels = 1;
-		}
-		Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
-	}
+	//for (auto i = 0; i < m_numHizLayers; i++) {
+	//	auto res = m_hizRes[i];
+	//
+	//	//auto depthFormat = device.FindDepthFormat();
+	//	imageInfo.width = res.x;
+	//	imageInfo.height = res.y;
+	//
+	//	m_hizTextures[i] = std::make_shared<MVulkanTexture>();
+	//
+	//	if (i == 0) {
+	//		viewInfo.levelCount = m_numHizLayers;
+	//		imageInfo.mipLevels = m_numHizLayers;
+	//	}
+	//	else {
+	//		viewInfo.levelCount = 1;
+	//		imageInfo.mipLevels = 1;
+	//	}
+	//	Singleton<MVulkanEngine>::instance().CreateImage(m_hizTextures[i], imageInfo, viewInfo);
+	//}
 }
 
 void Hiz::initHizBuffers()
@@ -166,7 +177,14 @@ void Hiz::initGenHizPass()
 		//resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
 		resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
 		//resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
-		resources.push_back(PassResources::SetStorageImageResource(2, 0, m_hizTextures));
+
+		TextureSubResource texture = {
+			.m_texture = m_hizTexture,
+			.m_mipLevel = 0,
+			.m_mipCount = m_numHizLayers
+		};
+
+		resources.push_back(PassResources::SetStorageImageResource(2, 0, texture));
 
 		m_genHizPass->UpdateDescriptorSetWrite(resources);
 	}
@@ -186,10 +204,11 @@ void Hiz::Clean()
 void Hiz::UpdateHiz(glm::ivec2 basicResolution)
 {
 	updateHizRes(basicResolution);
+	m_hizTexture->Clean();
 
-	for (auto i = 0; i < m_hizTextures.size(); i++) {
-		m_hizTextures[i]->Clean();
-	}
+	//for (auto i = 0; i < m_hizTextures.size(); i++) {
+	//	m_hizTextures[i]->Clean();
+	//}
 
 	
 }
@@ -204,14 +223,25 @@ const glm::ivec2 Hiz::GetHizRes(int layer) const
 	return m_hizRes[layer];
 }
 
-std::shared_ptr<MVulkanTexture> Hiz::GetHizTexture(int layer)
+std::shared_ptr<MVulkanTexture> Hiz::GetHizTexture()
 {
-	return m_hizTextures[layer];
+	return m_hizTexture;
 }
 
-std::vector<std::shared_ptr<MVulkanTexture>> Hiz::GetHizTextures()
+std::vector<TextureSubResource> Hiz::GetHizTextures()
 {
-	return m_hizTextures;
+	std::vector<TextureSubResource> textures;
+	textures.resize(m_numHizLayers);
+
+	for (auto i = 0; i < m_numHizLayers; i++) {
+		textures[i] = TextureSubResource{
+			.m_texture = m_hizTexture,
+			.m_mipLevel = i,
+			.m_mipCount = 1
+		};
+	}
+
+	return textures;
 }
 
 void Hiz::Init(glm::ivec2 basicResolution)
@@ -266,9 +296,9 @@ void Hiz::Generate(MComputeCommandList commandList)
 	}
 	
 	//copy hiz
-	{
-		copyHizToDepth();
-	}
+	//{
+	//	copyHizToDepth();
+	//}
 }
 
 void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
@@ -292,9 +322,46 @@ void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
 	hizQueryIndexEnd = queryIndex;
 
 	//copy hiz
-	{
-		copyHizToDepth();
+	//{
+	//	copyHizToDepth();
+	//}
+}
+
+void Hiz::Generate(
+	MVulkanCommandQueue commandQueue, 
+	MComputeCommandList commandList, 
+	int& queryIndex)
+{
+	hizQueryIndexStart = queryIndex;
+	auto numHizLayers = m_hizRes.size();
+
+	for (auto layer = 0; layer < m_numHizLayers; layer++) {
+		commandList.GetFence().WaitForSignal();
+		commandList.GetFence().Reset();
+		commandList.Reset();
+		commandList.Begin();
+
+		addHizBufferWriteBarrier();
+		if (layer == 0) {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, commandList, 1, 1, 1, std::string("ResetHizBuffer Pass"), queryIndex++);
+		}
+		else {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, commandList, 1, 1, 1, std::string("UpdateHizBuffer Pass"), queryIndex++);
+			addHizImageBarrier(layer);
+		}
+		addHizBufferReadBarrier();
+		Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_genHizPass, commandList, ((m_hizRes[layer].x + 15) / 16), ((m_hizRes[layer].y + 15) / 16), 1, std::string("GenHiz Pass"), queryIndex++);
+
+		commandList.End();
+
+		std::vector<MVulkanSemaphore> waitSemaphores2(0);
+		std::vector<MVulkanSemaphore> signalSemaphores2(0);
+		std::vector<VkPipelineStageFlags> waitFlags2(0);
+		Singleton<MVulkanEngine>::instance().SubmitCommands(commandList, commandQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+
+		commandQueue.WaitForQueueComplete();
 	}
+	hizQueryIndexEnd = queryIndex;
 }
 
 const int Hiz::GetHizQueryIndexStart() const
@@ -322,9 +389,9 @@ void Hiz::addHizImageBarrier(int layer)
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = m_hizTextures[layer - 1]->GetImage();  // 指 tex[1] 对应的 VkImage
+		barrier.image = m_hizTexture->GetImage();  // 指 tex[1] 对应的 VkImage
 		barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		barrier.baseMipLevel = 0;
+		barrier.baseMipLevel = layer - 1;
 		barrier.levelCount = 1;
 		barrier.baseArrayLayer = 0;
 		barrier.layerCount = 1;
@@ -332,8 +399,9 @@ void Hiz::addHizImageBarrier(int layer)
 
 		barrier.srcAccessMask = VK_ACCESS_NONE;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.image = m_hizTextures[layer]->GetImage();  // 指 tex[1] 对应的 VkImage
+		barrier.image = m_hizTexture->GetImage();  // 指 tex[1] 对应的 VkImage
 		barrier.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		barrier.baseMipLevel = layer;
 		barriers.push_back(barrier);
 
 		Singleton<MVulkanEngine>::instance().TransitionImageLayout2(computeList, barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
@@ -394,33 +462,33 @@ void Hiz::addHizBufferWriteBarrier()
 	}
 }
 
-void Hiz::copyHizToDepth()
-{
-	auto device = Singleton<MVulkanEngine>::instance().GetDevice();
-
-	{
-		auto& computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
-
-		auto numMips = m_hizRes.size();
-
-		std::vector<std::shared_ptr<MVulkanTexture>> srcs;
-		std::vector<std::shared_ptr<MVulkanTexture>> dsts;
-		std::vector<MVulkanImageCopyInfo> infos;
-		for (auto i = 1; i < numMips; i++) {
-			MVulkanImageCopyInfo copyInfo{};
-
-			copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-			copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-			copyInfo.srcMipLevel = 0;
-			copyInfo.dstMipLevel = i;
-
-			copyInfo.extent = { (uint32_t)m_hizRes[i].x, (uint32_t)m_hizRes[i].y, 1 };
-
-			srcs.push_back(m_hizTextures[i]);
-			dsts.push_back(m_hizTextures[0]);
-			infos.push_back(copyInfo);
-		}
-		Singleton<MVulkanEngine>::instance().CopyImage2(computeList, dsts, srcs, infos);
-	}
-}
+//void Hiz::copyHizToDepth()
+//{
+//	auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+//
+//	{
+//		auto& computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
+//
+//		auto numMips = m_hizRes.size();
+//
+//		std::vector<std::shared_ptr<MVulkanTexture>> srcs;
+//		std::vector<std::shared_ptr<MVulkanTexture>> dsts;
+//		std::vector<MVulkanImageCopyInfo> infos;
+//		for (auto i = 1; i < numMips; i++) {
+//			MVulkanImageCopyInfo copyInfo{};
+//
+//			copyInfo.srcAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+//			copyInfo.dstAspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+//
+//			copyInfo.srcMipLevel = 0;
+//			copyInfo.dstMipLevel = i;
+//
+//			copyInfo.extent = { (uint32_t)m_hizRes[i].x, (uint32_t)m_hizRes[i].y, 1 };
+//
+//			srcs.push_back(m_hizTextures[i]);
+//			dsts.push_back(m_hizTextures[0]);
+//			infos.push_back(copyInfo);
+//		}
+//		Singleton<MVulkanEngine>::instance().CopyImage2(computeList, dsts, srcs, infos);
+//	}
+//}

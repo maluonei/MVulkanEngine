@@ -305,7 +305,7 @@ void main(uint3 threadID : SV_DispatchThreadID)
             //SSRRender[texCoord.xy] = float4(1.f, 0.f, 0.f, 1.f);
         }
         else{
-            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 0.f);
+            SSRRender[texCoord.xy] = float4(0.f, 0.f, 0.f, 1.f);
             //SSRRender[texCoord.xy] = float4(0.f, 1.f, 0.f, 1.f);
         }
     }

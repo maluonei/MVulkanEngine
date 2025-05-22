@@ -166,6 +166,9 @@ struct ImageViewCreateInfo {
 	//VkImageSubresourceRange subresourceRange;
 };
 
+
+uint32_t EncodeViewKey(uint32_t _mip_level, uint32_t _mip_cnt);
+
 class MVulkanImage {
 public:
 	MVulkanImage() = default;
@@ -176,7 +179,9 @@ public:
 
 	inline VkImage GetImage()const { return m_image; }
 	inline VkDeviceMemory GetImageMemory() const { return m_imageMemory; }
-	inline VkImageView GetImageView()const { return m_view; }
+	//inline VkImageView GetImageView()const { return m_view; }
+	VkImageView GetImageView();
+	VkImageView GetImageView(uint32_t mip_level, uint32_t mip_count);
 
 	inline uint32_t GetMipLevel()const {
 		return m_mipLevel;
@@ -185,16 +190,22 @@ public:
 	static MVulkanImage CreateSwapchainImage(VkImage image, VkImageView view) {
 		MVulkanImage mImage;
 		mImage.m_image = image;
-		mImage.m_view = view;
+
+		uint32_t key = EncodeViewKey(0, 0);
+		mImage.m_views[key] = view;
 		return mImage;
 	}
 
 private:
+	ImageCreateInfo m_imageCreateInfo;
+	ImageViewCreateInfo m_viewCreateInfo;
+
 	VkDevice		m_device;
 	uint32_t		m_mipLevel = 1;
 	VkImage			m_image;
 	VkDeviceMemory	m_imageMemory;
-	VkImageView		m_view;
+	std::unordered_map<uint32_t, VkImageView> m_views;
+	//VkImageView		m_view;
 };
 
 //enum class TextureAspact {
@@ -254,6 +265,13 @@ public:
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		commandList->TransitionImageLayout(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	
+		m_mipLevels = m_image.GetMipLevel();
+		m_states.resize(m_mipLevels);
+		for (auto i = 0; i < m_mipLevels; i++) {
+			m_states[i].m_stage = ShaderStageFlagBits::FRAGMENT;
+			m_states[i].m_state = ETextureState::SRV;
+		}
 	}
 
 
@@ -284,18 +302,30 @@ public:
 		fs::path imagePath);
 	
 	inline VkImage GetImage() const { return m_image.GetImage(); }
-	inline VkImageView GetImageView() const { return m_image.GetImageView(); }
+	inline VkImageView GetImageView()  { return m_image.GetImageView(); }
+	VkImageView GetImageView(uint32_t mip_level, uint32_t mip_count);
 	inline VkDeviceMemory GetImageMemory() const { return m_image.GetImageMemory(); }
 
 	inline VkFormat GetFormat() const { return m_imageInfo.format; }
 	inline ImageCreateInfo GetImageInfo() const { return m_imageInfo; }
 
-	void TransferTextureState(int currentFrame, TextureState newState);
+	int GetMaxMipCount() const;
+
+	//void TransferTextureState(int currentFrame, TextureState newState);
+	//void TransferTextureState(int currentFrame, TextureState newState, int mipLevel);
 	void TransferTextureState(MVulkanCommandList commandList, TextureState newState);
+	void TransferTextureState(MVulkanCommandList commandList, TextureState newState, int mipLevel);
 
 	bool TransferTextureStateGetBarrier(
 		TextureState newState, 
 		MVulkanImageMemoryBarrier& barrier,
+		VkPipelineStageFlags& srcStage,
+		VkPipelineStageFlags& dstStage);
+
+	bool TransferTextureStateGetBarrier(
+		TextureState newState,
+		MVulkanImageMemoryBarrier& barrier,
+		int mipLevel,
 		VkPipelineStageFlags& srcStage,
 		VkPipelineStageFlags& dstStage);
 
@@ -304,6 +334,8 @@ public:
 private:
 	void ChangeImageLayout(int currentFrame, TextureState oldState, TextureState newState);
 	void ChangeImageLayout(MVulkanCommandList commandList, TextureState oldState, TextureState newState);
+	void ChangeImageLayout(MVulkanCommandList commandList, TextureState oldState, TextureState newState, int mipLevel);
+
 
 	MVulkanImageMemoryBarrier ChangeImageLayout(
 		TextureState oldState, 
@@ -333,8 +365,18 @@ private:
 	MVulkanBuffer		m_stagingBuffer;
 
 	//std::vector<>
-	TextureState		m_state;
+	//TextureState		m_state;
+	std::vector<TextureState> m_states;
 	//TextureAspact		m_aspect = TextureAspact::Color;
+};
+
+struct TextureSubResource {
+	std::shared_ptr<MVulkanTexture> m_texture;
+	int m_mipLevel = -1;
+	int m_mipCount = -1;
+
+	VkImageView GetImageView();
+	void TransferTextureState(MVulkanCommandList commandList, TextureState newState);
 };
 
 

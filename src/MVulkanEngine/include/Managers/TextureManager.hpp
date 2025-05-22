@@ -28,6 +28,7 @@ public:
 
 	std::vector<VkImageView> GenerateTextureViews();
 	std::vector<std::shared_ptr<MVulkanTexture>> GenerateTextures();
+	//std::vector<VkImageView> GenerateTextures();
 
 protected:
 	virtual void InitSingleton() {

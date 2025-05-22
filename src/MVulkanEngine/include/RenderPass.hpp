@@ -91,7 +91,8 @@ public:
 
 	inline RenderPassCreateInfo& GetRenderPassCreateInfo() { return m_info; }
 
-	void PrepareResourcesForShaderRead(int currentFrame);
+	//void PrepareResourcesForShaderRead(int currentFrame);
+	void PrepareResourcesForShaderRead(MVulkanCommandList commandList);
 private:
 	
 	void CreatePipeline(

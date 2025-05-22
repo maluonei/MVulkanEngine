@@ -10,6 +10,8 @@
 
 
 //VkDescriptorType ResourceTypeVkDescriptorType(const ResourceType type);
+//class StorageBuffer;
+//class MVulkanTexture;
 
 struct PassResources
 {
@@ -20,7 +22,8 @@ struct PassResources
 
 	std::vector<VkBuffer> m_buffers;
 	//std::vector<VkImageView> m_views;
-	std::vector<std::shared_ptr<MVulkanTexture>> m_textures;
+	//std::vector<VkImageView> m_views;
+	std::vector<TextureSubResource> m_textures;
 	std::vector<VkSampler> m_samplers;
 	std::vector<VkAccelerationStructureKHR*> m_accs;
 	int m_offset = 0;
@@ -46,21 +49,35 @@ struct PassResources
 
 	static PassResources SetSampledImageResource(
 		int binding, int set,
-		std::shared_ptr<MVulkanTexture> view
+		std::shared_ptr<MVulkanTexture> texture
 	);
 
 	static PassResources SetSampledImageResource(
-		int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views
+		int binding, int set,
+		TextureSubResource texture
+	);
+
+	static PassResources SetSampledImageResource(
+		int binding, int set, std::vector<TextureSubResource> textures
+	);
+
+	static PassResources SetSampledImageResource(
+		int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>> textures
 	);
 
 	static PassResources SetStorageImageResource(
 		int binding, int set,
-		std::shared_ptr<MVulkanTexture> view
+		std::shared_ptr<MVulkanTexture> texture
 	);
 
 	static PassResources SetStorageImageResource(
 		int binding, int set,
-		std::vector<std::shared_ptr<MVulkanTexture>>& views
+		TextureSubResource texture
+	);
+
+	static PassResources SetStorageImageResource(
+		int binding, int set,
+		std::vector<TextureSubResource> textures
 	);
 
 	static PassResources SetSamplerResource(
@@ -70,7 +87,7 @@ struct PassResources
 
 	static PassResources SetCombinedImageSamplerResource(
 		int binding, int set,
-		std::shared_ptr<MVulkanTexture> view, VkSampler sampler
+		TextureSubResource texture, VkSampler sampler
 	);
 
 	static PassResources SetCombinedImageSamplerResource(

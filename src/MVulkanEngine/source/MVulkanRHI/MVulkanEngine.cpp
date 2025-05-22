@@ -1215,6 +1215,7 @@ void  MVulkanEngine::CreateDepthAttachmentImage(
     viewInfo.layerCount = 1;
 
     //CreateImage(texture, imageInfo, viewInfo);
+
     CreateImage(texture, imageInfo, viewInfo, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
@@ -1732,7 +1733,7 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     auto offset = renderingInfo.offset;
 
     prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
-    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+    renderPass->PrepareResourcesForShaderRead(commandList);
 
     commandList.BeginRendering(renderingInfo);
 
@@ -1791,7 +1792,7 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     auto offset = renderingInfo.offset;
 
     prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
-    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+    renderPass->PrepareResourcesForShaderRead(commandList);
 
     commandList.BeginRendering(renderingInfo);
 
@@ -1852,7 +1853,7 @@ void MVulkanEngine::recordCommandBuffer(uint32_t imageIndex, std::shared_ptr<Ren
     auto offset = renderingInfo.offset;
 
     prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
-    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+    renderPass->PrepareResourcesForShaderRead(commandList);
 
     commandList.BeginRendering(renderingInfo);
 
@@ -1923,7 +1924,7 @@ void MVulkanEngine::recordCommandBuffer(
     auto offset = renderingInfo.offset;
 
     prepareRenderingInfo(imageIndex, renderingInfo, _currentFrame);
-    renderPass->PrepareResourcesForShaderRead(_currentFrame);
+    renderPass->PrepareResourcesForShaderRead(commandList);
 
     commandList.BeginRendering(renderingInfo);
 
@@ -1976,6 +1977,7 @@ void MVulkanEngine::recordCommandBuffer(
 
 void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& renderingInfo, uint32_t currentFrame)
 {
+    auto& commandList = m_graphicsLists[currentFrame];
     TextureState state;
     state.m_stage = ShaderStageFlagBits::FRAGMENT;
 
@@ -1983,7 +1985,7 @@ void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& ren
         if (attachment.texture != nullptr) {
             auto& texture = attachment.texture;
             state.m_state = ETextureState::ColorAttachment;
-            texture->TransferTextureState(currentFrame, state);
+            texture->TransferTextureState(commandList, state);
         }
         else {
             std::vector<MVulkanImageMemoryBarrier> barriers;
@@ -2008,7 +2010,7 @@ void MVulkanEngine::prepareRenderingInfo(uint32_t imageIndex, RenderingInfo& ren
         if (renderingInfo.depthAttachment.texture != nullptr) {
             auto& texture = renderingInfo.depthAttachment.texture;
             state.m_state = ETextureState::DepthAttachment;
-            texture->TransferTextureState(currentFrame, state);
+            texture->TransferTextureState(commandList, state);
         }
     }
 }

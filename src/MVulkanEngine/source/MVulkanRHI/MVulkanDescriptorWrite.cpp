@@ -1,5 +1,6 @@
 #include "MVulkanRHI/MVulkanDescriptorWrite.hpp"
 #include "Managers/ShaderManager.hpp"
+//#include "MVulkanRHI/MVulkanBuffer.hpp"
 
 
 PassResources PassResources::SetBufferResource(
@@ -70,26 +71,75 @@ PassResources PassResources::SetBufferResource(
 
 PassResources PassResources::SetSampledImageResource(
     int binding, int set,
-    std::shared_ptr<MVulkanTexture> view
+    std::shared_ptr<MVulkanTexture> texture
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_SampledImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+
+    resource.m_textures = { 
+        TextureSubResource{
+            .m_texture = texture,
+            .m_mipLevel = 0,
+            .m_mipCount = texture->GetMaxMipCount()}};
+
+    return resource;
+}
+
+PassResources PassResources::SetSampledImageResource(
+    int binding, int set,
+    TextureSubResource texture
 ) {
     PassResources resource;
     resource.m_type = ResourceType_SampledImage;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_textures = { view };
+    resource.m_textures = {
+        texture };
 
     return resource;
 }
 
-PassResources PassResources::SetSampledImageResource(int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views)
+PassResources PassResources::SetSampledImageResource(
+    int binding, 
+    int set, 
+    std::vector<TextureSubResource> textures)
 {
     PassResources resource;
     resource.m_type = ResourceType_SampledImage;
     resource.m_binding = binding;
     resource.m_set = set;
 
-    resource.m_textures = views;
+    resource.m_textures = textures;
+
+    return resource;
+}
+
+PassResources PassResources::SetSampledImageResource(
+    int binding,
+    int set,
+    std::vector<std::shared_ptr<MVulkanTexture>> textures)
+{
+    PassResources resource;
+    resource.m_type = ResourceType_SampledImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+
+    std::vector<TextureSubResource> texs;
+    
+    auto numTextures = textures.size();
+    for (auto i = 0; i < numTextures; i++) {
+        texs.push_back(
+            TextureSubResource{
+                .m_texture = textures[i],
+                .m_mipLevel = 0,
+                .m_mipCount = textures[i]->GetMaxMipCount() }
+        );
+    }
+
+    resource.m_textures = texs;
 
     return resource;
 }
@@ -97,26 +147,52 @@ PassResources PassResources::SetSampledImageResource(int binding, int set, std::
 
 PassResources PassResources::SetStorageImageResource(
     int binding, int set, 
-    std::shared_ptr<MVulkanTexture> view
+    TextureSubResource texture
 ) {
     PassResources resource;
     resource.m_type = ResourceType_StorageImage;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_textures = { view };
+    resource.m_textures = {texture };
+
+
+    //resource.m_views = { view };
 
     return resource;
 }
 
-PassResources PassResources::SetStorageImageResource(int binding, int set, std::vector<std::shared_ptr<MVulkanTexture>>& views)
+PassResources PassResources::SetStorageImageResource(
+    int binding, int set,
+    std::shared_ptr<MVulkanTexture> texture
+) {
+    PassResources resource;
+    resource.m_type = ResourceType_StorageImage;
+    resource.m_binding = binding;
+    resource.m_set = set;
+
+    resource.m_textures = {
+    TextureSubResource{
+        .m_texture = texture,
+        .m_mipLevel = 0,
+        .m_mipCount = texture->GetMaxMipCount()} };
+
+    return resource;
+}
+
+PassResources PassResources::SetStorageImageResource(
+    int binding,
+    int set, 
+    std::vector<TextureSubResource> textures)
 {
     PassResources resource;
     resource.m_type = ResourceType_StorageImage;
     resource.m_binding = binding;
     resource.m_set = set;
 
-    resource.m_textures = views;
+    resource.m_textures = textures;
+
+
 
     return resource;
 }
@@ -153,14 +229,14 @@ PassResources PassResources::SetCombinedImageSamplerResource(
 
 PassResources PassResources::SetCombinedImageSamplerResource(
     int binding, int set, 
-    std::shared_ptr<MVulkanTexture> view, VkSampler sampler
+    TextureSubResource texture, VkSampler sampler
 ) {
     PassResources resource;
     resource.m_type = ResourceType_CombinedImageSampler;
     resource.m_binding = binding;
     resource.m_set = set;
     
-    resource.m_textures = { view };
+    resource.m_textures = { texture };
     resource.m_samplers = { sampler };
 
     return resource;
@@ -294,8 +370,6 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
         descriptorWrite[i].dstBinding = static_cast<uint32_t>(resource.m_binding);
         descriptorWrite[i].dstArrayElement = 0;
         descriptorWrite[i].descriptorType = ResourceType2VkDescriptorType(resource.m_type);
-        //descriptorWrite[i].descriptorCount = resource.m_resourceCount;
-        //descriptorWrite[i].pImageInfo =
 
         std::vector<VkDescriptorBufferInfo> bufferInfos;
         std::vector<VkDescriptorImageInfo> imageInfos;
@@ -320,7 +394,7 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_textures[j]->GetImageView();
+                imageInfo.imageView = resource.m_textures[j].GetImageView();
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfos.emplace_back(imageInfo);
             }
@@ -332,7 +406,7 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_textures[j]->GetImageView();
+                imageInfo.imageView = resource.m_textures[j].GetImageView();
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
                 imageInfos.emplace_back(imageInfo);
             }
@@ -358,7 +432,7 @@ void MVulkanDescriptorSetWrite::Update(VkDevice device, VkDescriptorSet set, std
             descriptorWrite[i].descriptorCount = resource.m_textures.size();
             for (int j = 0; j < descriptorWrite[i].descriptorCount; j++) {
                 VkDescriptorImageInfo imageInfo{};
-                imageInfo.imageView = resource.m_textures[j]->GetImageView();
+                imageInfo.imageView = resource.m_textures[j].GetImageView();
                 imageInfo.sampler = resource.m_samplers[j];
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfos.emplace_back(imageInfo);

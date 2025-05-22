@@ -298,16 +298,16 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             computeList.GetFence().Reset();
             computeList.Reset();
             computeList.Begin();
-
+        
             m_hiz.Generate(computeList, m_queryIndex);
             hizQueryIndexStart = m_hiz.GetHizQueryIndexStart();
             hizQueryIndexEnd = m_hiz.GetHizQueryIndexEnd();
-
+        
             ssrQueryIndex = m_queryIndex;
             Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_ssrPass, computeList, (swapchainExtent.width + 15)/16, (swapchainExtent.height + 15) / 16, 1, std::string("SSR Pass"), m_queryIndex++);
-
+        
             computeList.End();
-
+        
             std::vector<MVulkanSemaphore> waitSemaphores2(1, m_basicShadingSemaphore);
             std::vector<MVulkanSemaphore> signalSemaphores2(1, m_ssrSemaphore);
             std::vector<VkPipelineStageFlags> waitFlags2(1, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
@@ -925,6 +925,10 @@ void SSR::createShadingPass()
             shadowMapDepth,
             shadowMapDepth
         };
+        //std::vector<VkImageView> shadowViews{
+        //    shadowMapDepth->GetImageView(),
+        //    shadowMapDepth->GetImageView()
+        //};
 
         //for (int i = 0; i < info.frambufferCount; i++) {
         std::vector<PassResources> resources;
@@ -989,7 +993,7 @@ void SSR::createSSRPass()
         resources.push_back(PassResources::SetSampledImageResource(5, 0, gBuffer0));
         resources.push_back(PassResources::SetSampledImageResource(6, 0, gBuffer1));
         //resources.push_back(PassResources::SetSampledImageResource(7, 0, m_hizTextures[0]));
-        resources.push_back(PassResources::SetSampledImageResource(7, 0, m_hiz.GetHizTexture(0)));
+        resources.push_back(PassResources::SetSampledImageResource(7, 0, m_hiz.GetHizTexture()));
         resources.push_back(PassResources::SetSampledImageResource(8, 0, m_basicShadingTexture));
         resources.push_back(PassResources::SetStorageImageResource(9, 0, m_ssrTexture));
         resources.push_back(PassResources::SetSamplerResource(10, 0, m_linearSampler.GetSampler()));

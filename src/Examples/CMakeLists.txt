@@ -4,7 +4,7 @@
 #add_subdirectory(pbr_packGbuffer)
 #add_subdirectory(ddgi)
 #add_subdirectory(ibl)
-add_subdirectory(ssr)
+#add_subdirectory(ssr)
 add_subdirectory(ssr_v2)
 ##add_subdirectory(rtao)
 #add_subdirectory(DDGI)

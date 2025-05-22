@@ -1084,11 +1084,31 @@ void RenderPass::SetMeshShader(std::shared_ptr<MeshShaderModule> meshShader)
     m_meshShader->Create(m_device.GetDevice());
 }
 
-void RenderPass::PrepareResourcesForShaderRead(int currentFrame)
+//void RenderPass::PrepareResourcesForShaderRead(int currentFrame)
+//{
+//    TextureState state;
+//    state.m_stage = ShaderStageFlagBits::FRAGMENT;
+//    
+//    for (auto& it : m_cachedResources) {
+//        auto resource = it.second;
+//        auto key = it.first;
+//        if (resource.m_textures.size() != 0) {
+//            for (auto& texture : resource.m_textures) {
+//                auto binding = m_bindings[key];
+//                auto shaderStage = binding.binding.stageFlags;
+//                state.m_stage = VkShaderStage2ShaderStage(shaderStage);
+//                state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
+//                texture->TransferTextureState(currentFrame, state);
+//            }
+//        }
+//    }
+//}
+
+void RenderPass::PrepareResourcesForShaderRead(MVulkanCommandList commandList)
 {
     TextureState state;
     state.m_stage = ShaderStageFlagBits::FRAGMENT;
-    
+
     for (auto& it : m_cachedResources) {
         auto resource = it.second;
         auto key = it.first;
@@ -1098,11 +1118,13 @@ void RenderPass::PrepareResourcesForShaderRead(int currentFrame)
                 auto shaderStage = binding.binding.stageFlags;
                 state.m_stage = VkShaderStage2ShaderStage(shaderStage);
                 state.m_state = VkDescriptorType2ETextureState(binding.binding.descriptorType);
-                texture->TransferTextureState(currentFrame, state);
+                texture.TransferTextureState(commandList, state);
             }
         }
     }
 }
+
+
 
 void RenderPass::updateResourceCache(ShaderResourceKey key, const PassResources& resources)
 {

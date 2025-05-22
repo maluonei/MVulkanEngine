@@ -41,7 +41,7 @@ public:
 	void LoadConstantBuffer(uint32_t alignment);
 	void LoadStorageBuffer(uint32_t alignment);
 
-	void PrepareResourcesForShaderRead();
+	//void PrepareResourcesForShaderRead();
 	void PrepareResourcesForShaderRead(MVulkanCommandList commandList);
 
 private:
