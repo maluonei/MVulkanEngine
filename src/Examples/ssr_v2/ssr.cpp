@@ -337,11 +337,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
             std::vector<MVulkanSemaphore> waitSemaphores1(1, m_basicShadingSemaphore);
             std::vector<MVulkanSemaphore> signalSemaphores1(0);
             std::vector<VkPipelineStageFlags> waitFlags1(1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            //std::vector<MVulkanSemaphore> waitSemaphores1(0);
-            //std::vector<MVulkanSemaphore> signalSemaphores1(0);
-            //std::vector<VkPipelineStageFlags> waitFlags1(0);
             Singleton<MVulkanEngine>::instance().SubmitGraphicsCommands(imageIndex, m_currentFrame, waitSemaphores1, waitFlags1, signalSemaphores1);
-            //graphicsQueue.WaitForQueueComplete();
         }
     }
 

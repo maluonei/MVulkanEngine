@@ -178,13 +178,22 @@ void Hiz::initGenHizPass()
 		resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
 		//resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
 
-		TextureSubResource texture = {
-			.m_texture = m_hizTexture,
-			.m_mipLevel = 0,
-			.m_mipCount = m_numHizLayers
-		};
+		//TextureSubResource texture = {
+		//	.m_texture = m_hizTexture,
+		//	.m_mipLevel = 0,
+		//	.m_mipCount = m_numHizLayers
+		//};
 
-		resources.push_back(PassResources::SetStorageImageResource(2, 0, texture));
+		std::vector<TextureSubResource> textures(m_numHizLayers);
+		for (auto i = 0; i < m_numHizLayers; i++) {
+			textures[i] = TextureSubResource{
+				.m_texture = m_hizTexture,
+				.m_mipLevel = i,
+				.m_mipCount = 1
+			};
+		}
+
+		resources.push_back(PassResources::SetStorageImageResource(2, 0, textures));
 
 		m_genHizPass->UpdateDescriptorSetWrite(resources);
 	}
