@@ -173,16 +173,7 @@ void Hiz::initGenHizPass()
 
 		std::vector<PassResources> resources;
 
-		//PassResources resource;
-		//resources.push_back(PassResources::SetBufferResource("hizBuffer", 0, 0, 0));
 		resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
-		//resources.push_back(PassResources::SetSampledImageResource(1, 0, gBufferDepth));
-
-		//TextureSubResource texture = {
-		//	.m_texture = m_hizTexture,
-		//	.m_mipLevel = 0,
-		//	.m_mipCount = m_numHizLayers
-		//};
 
 		std::vector<TextureSubResource> textures(m_numHizLayers);
 		for (auto i = 0; i < m_numHizLayers; i++) {
@@ -196,6 +187,32 @@ void Hiz::initGenHizPass()
 		resources.push_back(PassResources::SetStorageImageResource(2, 0, textures));
 
 		m_genHizPass->UpdateDescriptorSetWrite(resources);
+	}
+
+	{
+		m_genHizPass2 = std::make_shared<ComputePass>(device);
+
+		auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("GenHiz2 Shader");
+
+		Singleton<MVulkanEngine>::instance().CreateComputePass(
+			m_genHizPass2, shader);
+
+		std::vector<PassResources> resources;
+
+		resources.push_back(PassResources::SetBufferResource(0, 0, m_hizBuffer));
+
+		std::vector<TextureSubResource> textures(m_numHizLayers);
+		for (auto i = 0; i < m_numHizLayers; i++) {
+			textures[i] = TextureSubResource{
+				.m_texture = m_hizTexture,
+				.m_mipLevel = i,
+				.m_mipCount = 1
+			};
+		}
+
+		resources.push_back(PassResources::SetStorageImageResource(2, 0, textures));
+
+		m_genHizPass2->UpdateDescriptorSetWrite(resources);
 	}
 }
 
@@ -253,9 +270,15 @@ std::vector<TextureSubResource> Hiz::GetHizTextures()
 	return textures;
 }
 
+std::shared_ptr<StorageBuffer> Hiz::GetHizDimensionBuffer()
+{
+	return m_hizDimensionsBuffer;
+}
+
 void Hiz::Init(glm::ivec2 basicResolution)
 {
 	Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" });
+	Singleton<ShaderManager>::instance().AddShader("GenHiz2 Shader", { "hlsl/culling/GenHiz2.comp.hlsl" });
 	Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" });
 	Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" });
 
@@ -267,6 +290,7 @@ void Hiz::Init(glm::ivec2 basicResolution)
 
 void Hiz::Init(glm::ivec2 basicResolution, std::shared_ptr<MVulkanTexture> depth) {
 	Singleton<ShaderManager>::instance().AddShader("GenHiz Shader", { "hlsl/culling/GenHiz.comp.hlsl" });
+	Singleton<ShaderManager>::instance().AddShader("GenHiz2 Shader", { "hlsl/culling/GenHiz2.comp.hlsl" });
 	Singleton<ShaderManager>::instance().AddShader("UpdateHizBuffer Shader", { "hlsl/culling/UpdateHizBuffer.comp.hlsl" });
 	Singleton<ShaderManager>::instance().AddShader("ResetHizBuffer Shader", { "hlsl/culling/ResetHizBuffer.comp.hlsl" });
 	
@@ -285,6 +309,7 @@ void Hiz::SetSourceDepth(std::shared_ptr<MVulkanTexture> depth)
 	resources.push_back(PassResources::SetSampledImageResource(1, 0, depth));
 
 	m_genHizPass->UpdateDescriptorSetWrite(resources);
+	m_genHizPass2->UpdateDescriptorSetWrite(resources);
 }
 
 void Hiz::Generate(MComputeCommandList commandList)
@@ -303,11 +328,7 @@ void Hiz::Generate(MComputeCommandList commandList)
 		Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_genHizPass, commandList, ((m_hizRes[layer].x + 15) / 16), ((m_hizRes[layer].y + 15) / 16), 1, std::string("GenHiz Pass"));
 	
 	}
-	
-	//copy hiz
-	//{
-	//	copyHizToDepth();
-	//}
+
 }
 
 void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
@@ -329,11 +350,45 @@ void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
 
 	}
 	hizQueryIndexEnd = queryIndex;
+}
 
-	//copy hiz
-	//{
-	//	copyHizToDepth();
-	//}
+void Hiz::Generate2(MComputeCommandList commandList)
+{
+	//hizTimes.resize(numHizLayers);
+	for (auto layer = 0; layer < m_numHizLayers; layer++) {
+		addHizBufferWriteBarrier();
+		if (layer == 0) {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, commandList, 1, 1, 1, std::string("ResetHizBuffer Pass"));
+		}
+		else {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, commandList, 1, 1, 1, std::string("UpdateHizBuffer Pass"));
+			addHizImageBarrier(layer);
+		}
+		addHizBufferReadBarrier();
+		Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_genHizPass2, commandList, ((m_hizRes[layer].x + 15) / 16), ((m_hizRes[layer].y + 15) / 16), 1, std::string("GenHiz2 Pass"));
+
+	}
+}
+
+void Hiz::Generate2(MComputeCommandList commandList, int& queryIndex)
+{
+	hizQueryIndexStart = queryIndex;
+	auto numHizLayers = m_hizRes.size();
+
+	for (auto layer = 0; layer < m_numHizLayers; layer++) {
+		addHizBufferWriteBarrier();
+		if (layer == 0) {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetHizBufferPass, commandList, 1, 1, 1, std::string("ResetHizBuffer Pass"), queryIndex++);
+		}
+		else {
+			Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_updateHizBufferPass, commandList, 1, 1, 1, std::string("UpdateHizBuffer Pass"), queryIndex++);
+			addHizImageBarrier(layer);
+		}
+		addHizBufferReadBarrier();
+		Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_genHizPass2, commandList, ((m_hizRes[layer].x + 15) / 16), ((m_hizRes[layer].y + 15) / 16), 1, std::string("GenHiz2 Pass"), queryIndex++);
+
+	}
+	hizQueryIndexEnd = queryIndex;
 }
 
 void Hiz::Generate(

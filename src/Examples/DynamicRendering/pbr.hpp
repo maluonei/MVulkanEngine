@@ -51,6 +51,7 @@ public:
 	float shadowmapTime = 0.f;
 	float shadingTime = 0.f;
 	float cullingTime = 0.f;
+	float reprojectDepthTime = 0.f;
 	float hizTime = 0.f;
 	std::vector<float> hizTimes;
 	//int m_outputContext = 0;
@@ -67,6 +68,7 @@ private:
 	void createShadowPass();
 	void createShadingPass();
 	void createFrustumCullingPass();
+	void createReprojectDepthPass();
 	void createResetDidirectDrawBufferPass();
 	void createGenHizPass();
 	void createUpdateHizBufferPass();
@@ -77,6 +79,9 @@ private:
 
 	void createSyncObjs();
 	void initHiz();
+
+	std::shared_ptr<MVulkanTexture> getDepthCurrent();
+	std::shared_ptr<MVulkanTexture> getDepthPrev();
 
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
@@ -92,7 +97,9 @@ private:
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
+	std::shared_ptr<ComputePass> m_cullingPass;
 	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
+	std::shared_ptr<ComputePass> m_reprojectDepthPass;
 	//std::shared_ptr<ComputePass> m_hizPass;
 	//std::shared_ptr<ComputePass> m_updateHizBufferPass;
 	//std::shared_ptr<ComputePass> m_resetHizBufferPass;
@@ -105,7 +112,9 @@ private:
 	//std::shared_ptr<MVulkanTexture> gBuffer2;
 	//std::shared_ptr<MVulkanTexture> gBuffer3;
 	//std::shared_ptr<MVulkanTexture> gBuffer4;
-	std::shared_ptr<MVulkanTexture> gBufferDepth;
+	//std::shared_ptr<MVulkanTexture> gBufferDepthCurrent;
+	//std::shared_ptr<MVulkanTexture> gBufferDepthPrev;
+	std::shared_ptr<MVulkanTexture> gBufferDepth[2];
 
 	//std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
 	std::shared_ptr<StorageBuffer> m_instanceBoundsBuffer;
@@ -118,6 +127,8 @@ private:
 	std::shared_ptr<StorageBuffer> m_materialBuffer;
 	std::shared_ptr<StorageBuffer> m_materialIdBuffer;
 	std::shared_ptr<StorageBuffer> m_indirectInstanceBuffer;
+	//std::shared_ptr<StorageBuffer> m_depthDebugBuffer;
+	//std::shared_ptr<StorageBuffer> m_depthDebugBuffer1;
 
 	VkExtent2D shadowmapExtent = { 2048, 2048 };
 
@@ -136,6 +147,8 @@ private:
 	glm::mat4					m_prevProj;
 
 	int							m_queryIndex = 0;
+	int							m_depthIndex = 0;
+	bool						m_firstFrame = true;
 
 	MVulkanSemaphore			m_cullingSemaphore;
 	MVulkanSemaphore			m_shadingSemaphore;
@@ -150,8 +163,8 @@ private:
 	int a;
 
 public:
-	int cullingMode = 0;
-	int hizMode = NOT_DO_HIZ;
+	int cullingMode = 3;
+	int hizMode = DO_HIZ_MODE_0;
 	//int showMotionVector = 0;
 	int outputContext = 0;
 	bool showPassTime = 0;

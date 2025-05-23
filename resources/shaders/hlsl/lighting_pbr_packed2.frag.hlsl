@@ -35,6 +35,7 @@ cbuffer intBuffer : register(b3)
 //[[vk::binding(8, 0)]]Texture2D<float4> gBuffer2 : register(t2);
 [[vk::binding(5, 0)]]Texture2D<float> shadowMaps[2] : register(t4);
 [[vk::binding(6, 0)]]SamplerState linearSampler : register(s0);
+//[[vk::binding(8, 0)]]Texture2D<float4> depths : register(t10);
 
 struct PSInput
 {
@@ -47,6 +48,8 @@ struct PSInput
 struct PSOutput
 {
     float4 color : SV_Target0;
+    float4 debug0 : SV_Target1;
+    float4 debug1 : SV_Target2;
 };
 
 

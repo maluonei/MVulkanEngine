@@ -92,7 +92,7 @@ VSOutput main(VSInput input)
     output.position = screenSpacePosition;
 
     // Compute normal in world space
-    float3x3 normalMatrix = transpose(inverse((float3x3)mvp.Model));
+    float3x3 normalMatrix = transpose(m_inverse((float3x3)mvp.Model));
     output.normal = normalize(mul(normalMatrix, input.Normal));
 
     // Pass instance ID

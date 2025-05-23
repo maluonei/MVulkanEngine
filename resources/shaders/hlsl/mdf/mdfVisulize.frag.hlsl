@@ -104,7 +104,7 @@ PSOutput main(PSInput input)
             MDFAtlas, trilinerSampler, mdfGlobalBuffer.mdfAtlasDim, mdfInput, finalHit.volumeSpaceHitPosition
         );
         float3 volumeSpaceNormal = length(volumeSpaceGradient) > 0.f? volumeSpaceGradient : float3(0.f, 0.f, 0.f);
-        float3 worldSpaceNormal = normalize(mul(transpose(inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
+        float3 worldSpaceNormal = normalize(mul(transpose(m_inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
         //float3 worldSpaceNormal = normalize(mul(transpose(mdfInput.VolumeToWorld), volumeSpaceNormal));
  
         //if(finalHit.hitBoxButMiss){

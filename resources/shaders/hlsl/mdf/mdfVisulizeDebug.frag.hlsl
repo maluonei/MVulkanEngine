@@ -191,7 +191,7 @@ PSOutput main(PSInput input)
         else{
 
             float3 volumeSpaceNormal = length(volumeSpaceGradient) > 0.f? volumeSpaceGradient : float3(0.f, 0.f, 0.f);
-            worldSpaceNormal = normalize(mul(transpose(inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
+            worldSpaceNormal = normalize(mul(transpose(m_inverse((float3x3)mdfInput.WorldToVolume)), volumeSpaceNormal));
             //float3 worldSpaceNormal = normalize(mul(transpose(mdfInput.VolumeToWorld), volumeSpaceNormal));
 
             if(isnan(worldSpaceNormal.x) || isnan(worldSpaceNormal.y) || isnan(worldSpaceNormal.z)){

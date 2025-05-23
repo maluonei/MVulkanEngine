@@ -18,8 +18,9 @@ cbuffer vpBuffer : register(b0)
 };
 
 
-[[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> ModelBuffers : register(t0); 
-[[vk::binding(8, 0)]] StructuredBuffer<int> CulledIndirectInstances : register(t10); 
+[[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> ModelBuffers : register(t0);
+[[vk::binding(8, 0)]] StructuredBuffer<int> CulledIndirectInstances : register(t10);
+[[vk::binding(9, 0)]] StructuredBuffer<float4> InstanceDebugDepth : register(t11);
 
 //#define MVPBuffer ubo0
 //[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
@@ -44,6 +45,7 @@ struct VSOutput
     //float4 positionPreviousFrame : TEXCOORD3;
     float3 tangent : TEXCOORD1;
     float3 bitangent : TEXCOORD2;
+    float2 depth : TEXCOORD3;
 
     //float3x3 TBN : TEXCOORD1;
 };
@@ -53,6 +55,8 @@ VSOutput main(VSInput input)
     VSOutput output;
 
     int instanceIndex = CulledIndirectInstances[input.InstanceID];
+
+    output.depth = InstanceDebugDepth[instanceIndex];
 
     float4x4 Model = ModelBuffers[instanceIndex].Model;
 

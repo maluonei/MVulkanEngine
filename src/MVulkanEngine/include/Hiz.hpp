@@ -31,6 +31,7 @@ public:
 	//VkImageView GetHizTexture(int layer);
 	//std::vector<std::shared_ptr<MVulkanTexture>> GetHizTextures();
 	std::vector<TextureSubResource> GetHizTextures();
+	std::shared_ptr<StorageBuffer> GetHizDimensionBuffer();
 
 	void Init(glm::ivec2 basicResolution);
 	void Init(glm::ivec2 basicResolution, std::shared_ptr<MVulkanTexture> depth);
@@ -38,6 +39,9 @@ public:
 
 	void Generate(MComputeCommandList commandList);
 	void Generate(MComputeCommandList commandList, int& queryIndex);
+
+	void Generate2(MComputeCommandList commandList);
+	void Generate2(MComputeCommandList commandList, int& queryIndex);
 
 	void Generate(
 		MVulkanCommandQueue queue,
@@ -77,6 +81,7 @@ private:
 	std::shared_ptr<ComputePass> m_resetHizBufferPass;
 	std::shared_ptr<ComputePass> m_updateHizBufferPass;
 	std::shared_ptr<ComputePass> m_genHizPass;
+	std::shared_ptr<ComputePass> m_genHizPass2;
 };
 
 #endif // !HIZ_HPP
