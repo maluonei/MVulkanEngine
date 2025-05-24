@@ -154,7 +154,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         MSceneBuffer sceneBuffer;
         sceneBuffer.numInstances = m_scene->GetIndirectDrawCommands().size();
         sceneBuffer.targetIndex = 0;
-        sceneBuffer.cullingMode = std::static_pointer_cast<SSRUI>(m_uiRenderer)->cullingMode;
+        //sceneBuffer.cullingMode = std::static_pointer_cast<SSRUI>(m_uiRenderer)->cullingMode;
 
         Singleton<ShaderResourceManager>::instance().LoadData("FrustumBuffer", 0, &buffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
@@ -256,7 +256,7 @@ void SSR::ComputeAndDraw(uint32_t imageIndex)
         computeList.Begin();
         Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
 
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetIndirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
         auto numInstances = m_scene->GetIndirectDrawCommands().size();
         cullingQueryIndex = m_queryIndex;
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, computeList, numInstances, 1, 1, std::string("FrustumCulling Pass"), m_queryIndex++);
@@ -1116,19 +1116,19 @@ void SSR::createResetDidirectDrawBufferPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        m_resetDidirectDrawBufferPass = std::make_shared<ComputePass>(device);
+        m_resetIndirectDrawBufferPass = std::make_shared<ComputePass>(device);
 
         auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetIndirectDrawBuffer Shader");
 
         Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_resetDidirectDrawBufferPass, shader);
+            m_resetIndirectDrawBufferPass, shader);
 
         std::vector<PassResources> resources;
 
         //PassResources resource;
         resources.push_back(PassResources::SetBufferResource(0, 0, m_numIndirectDrawBuffer));
 
-        m_resetDidirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
+        m_resetIndirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
     }
 }
 

@@ -299,6 +299,7 @@ void Hiz::Init(glm::ivec2 basicResolution, std::shared_ptr<MVulkanTexture> depth
 	initHizBuffers();
 	initComputePass();
 	SetSourceDepth(depth);
+	SetSourceDepth2(depth);
 }
 
 
@@ -309,6 +310,16 @@ void Hiz::SetSourceDepth(std::shared_ptr<MVulkanTexture> depth)
 	resources.push_back(PassResources::SetSampledImageResource(1, 0, depth));
 
 	m_genHizPass->UpdateDescriptorSetWrite(resources);
+	//m_genHizPass2->UpdateDescriptorSetWrite(resources);
+}
+
+void Hiz::SetSourceDepth2(std::shared_ptr<MVulkanTexture> depth)
+{
+	std::vector<PassResources> resources;
+
+	resources.push_back(PassResources::SetSampledImageResource(1, 0, depth));
+
+	//m_genHizPass->UpdateDescriptorSetWrite(resources);
 	m_genHizPass2->UpdateDescriptorSetWrite(resources);
 }
 
@@ -333,6 +344,8 @@ void Hiz::Generate(MComputeCommandList commandList)
 
 void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
 {
+	commandList.BeginDebugLabel("Gen Hiz1");
+
 	hizQueryIndexStart = queryIndex;
 	auto numHizLayers = m_hizRes.size();
 
@@ -350,6 +363,8 @@ void Hiz::Generate(MComputeCommandList commandList, int& queryIndex)
 
 	}
 	hizQueryIndexEnd = queryIndex;
+
+	commandList.EndDebugLabel();
 }
 
 void Hiz::Generate2(MComputeCommandList commandList)
@@ -372,9 +387,10 @@ void Hiz::Generate2(MComputeCommandList commandList)
 
 void Hiz::Generate2(MComputeCommandList commandList, int& queryIndex)
 {
+	commandList.BeginDebugLabel("Gen Hiz2");
+
 	hizQueryIndexStart = queryIndex;
 	auto numHizLayers = m_hizRes.size();
-
 	for (auto layer = 0; layer < m_numHizLayers; layer++) {
 		addHizBufferWriteBarrier();
 		if (layer == 0) {
@@ -389,6 +405,8 @@ void Hiz::Generate2(MComputeCommandList commandList, int& queryIndex)
 
 	}
 	hizQueryIndexEnd = queryIndex;
+
+	commandList.EndDebugLabel();
 }
 
 void Hiz::Generate(

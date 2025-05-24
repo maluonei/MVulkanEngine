@@ -8,9 +8,9 @@ cbuffer FrustumBuffer : register(b0)
 };
 
 [[vk::binding(1, 0)]]
-cbuffer sceneBuffer : register(b1)
+cbuffer cullingBuffer : register(b1)
 {
-    MSceneBuffer scene;
+    MCullingBuffer culling;
 };
 
 [[vk::binding(2, 0)]]
@@ -24,17 +24,6 @@ cbuffer hizDimensionBuffer : register(b3)
 {
     HizDimensionBuffer hiz;
 };
-
-//struct DebugBounds {
-//    float3 pMin;
-//    float padding0;
-//    float3 pMax;
-//    float padding1;
-//    float3 pMin2;
-//    float padding2;
-//    float3 pMax2;
-//    float padding3;
-//};
 
 [[vk::binding(4, 0)]] StructuredBuffer<InstanceBound> InstanceBounds : register(t0);
 [[vk::binding(5, 0)]] StructuredBuffer<IndirectDrawArgs> DrawIndices : register(t1);
@@ -126,12 +115,6 @@ bool HizCulling(int instanceIndex) {
 
     float3 cornerNdcMin = float3(1.0f, 1.0f, 1.0f);
     float3 cornerNdcMax = float3(0.0f, 0.0f, 0.0f);
-    //float3 cornerNdcMin2 = float3(1.0f, 1.0f, 1.0f);
-    //float3 cornerNdcMax2 = float3(0.0f, 0.0f, 0.0f);
-
-    //float3 poses[8];
-
-    //float closerDepth = 1.f;
 
     for (int i = 0; i < 8; i++) {
         float3 pointPosition = bound.center + arrays[i] * bound.extent;
@@ -187,16 +170,81 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     int numInstances = originArgs.instanceCount;
     int firstInstance = originArgs.firstInstance;
 
+    bool doFrustumCulling = culling.doFrustumCulling > 0;
+    bool doHizCulling = culling.doHizCulling > 0;
+
+    bool doCulling = doFrustumCulling || doHizCulling;
+    if (!doCulling) {
+        CulledDrawIndices[DispatchThreadID.x] = DrawIndices[DispatchThreadID.x];
+        return;
+    }
+
     int unculledInstances = 0;
-    for (int i = 0; i < numInstances; i++) {
-        if (FrustumCulling(firstInstance + i, CULLINGMODE_AABB)) {
-            if (HizCulling(firstInstance + i)) {
-                CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
-                unculledInstances += 1;
-                InterlockedAdd(NumDrawInstances[0], 1);
+
+    if (doFrustumCulling && doHizCulling) {
+        for (int i = 0; i < numInstances; i++) {
+            if (FrustumCulling(firstInstance + i, culling.frustumCullingMode)) {
+                if (HizCulling(firstInstance + i)) {
+                    CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
+                    unculledInstances += 1;
+                    if (culling.cullingCountCalculate) {
+                        InterlockedAdd(NumDrawInstances[0], 1);
+                    }
+                }
             }
         }
     }
+    else if (doFrustumCulling) {
+        for (int i = 0; i < numInstances; i++) {
+            if (FrustumCulling(firstInstance + i, culling.frustumCullingMode)) {
+                CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
+                unculledInstances += 1;
+                if (culling.cullingCountCalculate) {
+                    InterlockedAdd(NumDrawInstances[0], 1);
+                }
+            }
+        }
+    }
+    else if (doHizCulling) {
+        for (int i = 0; i < numInstances; i++) {
+            if (HizCulling(firstInstance + i)) {
+                CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
+                unculledInstances += 1;
+                if (culling.cullingCountCalculate) {
+                    InterlockedAdd(NumDrawInstances[0], 1);
+                }
+            }
+        }
+    }
+    else {
+        if (culling.cullingCountCalculate) {
+            InterlockedAdd(NumDrawInstances[0], numInstances);
+        }
+
+        CulledDrawIndices[DispatchThreadID.x] = DrawIndices[DispatchThreadID.x];
+        return;
+    }
+
+    //for (int i = 0; i < numInstances; i++) {
+    //    bool frustumCullingResult = false;
+    //    bool hizCullingResult = false;
+    //    if (doFrustumCulling)
+    //    {
+    //        frustumCullingResult = FrustumCulling(firstInstance + i, culling.frustumCullingMode);
+    //    }
+    //    if (doHizCulling) {
+    //        if (frustumCullingResult)
+    //            hizCullingResult = HizCulling(firstInstance + i);
+    //    }
+//
+    //    if (frustumCullingResult && hizCullingResult) {
+    //        CulledIndirectInstances[firstInstance + unculledInstances] = firstInstance + i;
+    //        unculledInstances += 1;
+    //        if (culling.cullingCountCalculate) {
+    //            InterlockedAdd(NumDrawInstances[0], 1);
+    //        }
+    //    }
+    //}
 
     for(int i=unculledInstances;i<numInstances;i++){
         CulledIndirectInstances[firstInstance + i] = -1;

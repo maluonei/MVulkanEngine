@@ -204,27 +204,28 @@ void ShaderResourceManager::AddConstantBuffer(const std::string name, BufferCrea
 
     if (m_constantBuffers.find(name) == m_constantBuffers.end())
     {
-        for (int i = 0; i < frameCount; i++) {
-			MCBV mcbv;
-			mcbv.Create(device, info);
-            m_constantBuffers[name].emplace_back(mcbv);
-        }
+        //for (int i = 0; i < frameCount; i++) {
+		//	MCBV mcbv;
+		//	mcbv.Create(device, info);
+        //    m_constantBuffers[name].emplace_back(mcbv);
+        //}
+        m_constantBufferCreateInfos[name] = info;
     }
-    else
-    {
-        auto cbuffers = m_constantBuffers[name];
-        if (cbuffers.size()!= frameCount) {
-            for (int i = cbuffers.size(); i < frameCount; i++) {
-                MCBV mcbv;
-                mcbv.Create(device, info);
-                m_constantBuffers[name].emplace_back(mcbv);
-            }
-        }
-
-        else {
-            spdlog::warn("Constant Buffer Rename: {0}", name);
-        }
-    }
+    //else
+    //{
+    //    auto cbuffers = m_constantBuffers[name];
+    //    if (cbuffers.size()!= frameCount) {
+    //        for (int i = cbuffers.size(); i < frameCount; i++) {
+    //            MCBV mcbv;
+    //            mcbv.Create(device, info);
+    //            m_constantBuffers[name].emplace_back(mcbv);
+    //        }
+    //    }
+    //
+    //    else {
+    //        spdlog::warn("Constant Buffer Rename: {0}", name);
+    //    }
+    //}
 }
 
 void ShaderResourceManager::LoadData(const std::string name, int frameIndex, void* data, int offset)
@@ -236,7 +237,7 @@ void ShaderResourceManager::LoadData(const std::string name, int frameIndex, voi
     else
     {
         auto buffers = m_constantBuffers[name];
-        if (frameIndex > buffers.size())
+        if (frameIndex >= buffers.size())
         {
             spdlog::error("invalid index: {0}", frameIndex);
         }
@@ -247,16 +248,42 @@ void ShaderResourceManager::LoadData(const std::string name, int frameIndex, voi
 
 MCBV ShaderResourceManager::GetBuffer(const std::string name, int frameIndex)
 {
+    auto shaderResourceName = name;
+    return GetBuffer(name, shaderResourceName, frameIndex);
+}
+
+MCBV ShaderResourceManager::GetBuffer(const std::string name, const std::string shaderResourceName, int frameIndex)
+{
     if (m_constantBuffers.find(name) == m_constantBuffers.end())
     {
-        spdlog::error("Constant Buffer:{0} not found", name);
+        if (m_constantBufferCreateInfos.find(shaderResourceName) == m_constantBufferCreateInfos.end()) {
+            spdlog::error("Constant Buffer Info:{0} not found", shaderResourceName);
+        }
+        auto info = m_constantBufferCreateInfos[shaderResourceName];
+        auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+        for (auto i = 0; i <= frameIndex; i++) {
+            MCBV mcbv;
+            mcbv.Create(device, info);
+            m_constantBuffers[name].emplace_back(mcbv);
+        }
+
+        return m_constantBuffers[name][frameIndex];
     }
     else
     {
         auto& buffers = m_constantBuffers[name];
-        if (frameIndex > buffers.size())
+        if (frameIndex >= buffers.size())
         {
-            spdlog::error("invalid index: {0}", frameIndex);
+            auto info = m_constantBufferCreateInfos[shaderResourceName];
+            auto device = Singleton<MVulkanEngine>::instance().GetDevice();
+
+            for (auto i = buffers.size(); i <= frameIndex; i++) {
+                MCBV mcbv;
+                mcbv.Create(device, info);
+                m_constantBuffers[name].emplace_back(mcbv);
+            }
+            //spdlog::error("invalid index: {0}", frameIndex);
         }
 
         return buffers[frameIndex];

@@ -108,10 +108,16 @@ struct VPBuffer
 #define CULLINGMODE_AABB 2
 #define CULLINGMODE_NULL 0
 
+struct MCullingBuffer{
+    int doFrustumCulling;
+    int doHizCulling;
+    int frustumCullingMode;
+    int cullingCountCalculate;
+};
+
 struct MSceneBuffer{
     int numInstances;
     int targetIndex;
-    int cullingMode;
 };
 
 struct MDFGlobalBuffer{

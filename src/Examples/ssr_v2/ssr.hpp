@@ -90,7 +90,7 @@ private:
 	//std::shared_ptr<RenderPass> m_ssrPass2;
 	std::shared_ptr<ComputePass> m_ssrPass;
 	std::shared_ptr<ComputePass> m_frustumCullingPass;
-	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
+	std::shared_ptr<ComputePass> m_resetIndirectDrawBufferPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;

@@ -85,9 +85,11 @@ class ShaderResourceManager :public Singleton<ShaderResourceManager> {
 public:
 
     void AddConstantBuffer(const std::string name, BufferCreateInfo info, int frameCount = 1);
-    void LoadData(const std::string name, int frameIndex, void* data, int offset);
+    void LoadData(const std::string shaderResourceName, int frameIndex, void* data, int offset);
     MCBV GetBuffer(const std::string name, int frameIndex = 0);
+    MCBV GetBuffer(const std::string name, const std::string shaderResourceName, int frameIndex = 0);
 private:
+    std::unordered_map<std::string, BufferCreateInfo> m_constantBufferCreateInfos;
     std::unordered_map<std::string, std::vector<MCBV>> m_constantBuffers;
     virtual void InitSingleton();
 };

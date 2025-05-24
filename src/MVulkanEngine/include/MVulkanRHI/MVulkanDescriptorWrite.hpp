@@ -43,6 +43,11 @@ struct PassResources
 	);
 
 	static PassResources SetBufferResource(
+		std::string name, std::string shaderResourceName, 
+		int binding, int set, int frameIndex
+	);
+
+	static PassResources SetBufferResource(
 		int binding, int set,
 		std::shared_ptr<StorageBuffer> buffer
 	);

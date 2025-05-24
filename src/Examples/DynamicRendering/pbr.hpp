@@ -43,8 +43,9 @@ public:
 		return m_directionalLightCamera;
 	}
 
-
+	
 	int numDrawInstances = 0;
+	int numShadowmapDrawInstances = 0;
 	int numTotalInstances = 0;
 
 	float gbufferTime = 0.f;
@@ -83,6 +84,9 @@ private:
 	std::shared_ptr<MVulkanTexture> getDepthCurrent();
 	std::shared_ptr<MVulkanTexture> getDepthPrev();
 
+	std::shared_ptr<MVulkanTexture> getShadowDepthCurrent();
+	std::shared_ptr<MVulkanTexture> getShadowDepthPrev();
+
 	//void ImageLayoutToShaderRead(int currentFrame);
 	//void ImageLayoutToAttachment(int imageIndex, int currentFrame);
 	//void ImageLayoutToPresent(int imageIndex, int currentFrame);
@@ -96,24 +100,22 @@ private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_shadowPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
-	std::shared_ptr<ComputePass> m_frustumCullingPass;
+	//std::shared_ptr<ComputePass> m_frustumCullingPass;
 	std::shared_ptr<ComputePass> m_cullingPass;
-	std::shared_ptr<ComputePass> m_resetDidirectDrawBufferPass;
+	std::shared_ptr<ComputePass> m_shadowmapCullingPass;
+	std::shared_ptr<ComputePass> m_resetIndirectDrawBufferPass;
+	std::shared_ptr<ComputePass> m_resetShadowmapIndirectDrawBufferPass;
 	std::shared_ptr<ComputePass> m_reprojectDepthPass;
+	std::shared_ptr<ComputePass> m_reprojectShadowmapDepthPass;
 	//std::shared_ptr<ComputePass> m_hizPass;
 	//std::shared_ptr<ComputePass> m_updateHizBufferPass;
 	//std::shared_ptr<ComputePass> m_resetHizBufferPass;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> shadowMap;
-	std::shared_ptr<MVulkanTexture> shadowMapDepth;
+	std::shared_ptr<MVulkanTexture> shadowMapDepth[2];
 	std::shared_ptr<MVulkanTexture> gBuffer0;
 	std::shared_ptr<MVulkanTexture> gBuffer1;
-	//std::shared_ptr<MVulkanTexture> gBuffer2;
-	//std::shared_ptr<MVulkanTexture> gBuffer3;
-	//std::shared_ptr<MVulkanTexture> gBuffer4;
-	//std::shared_ptr<MVulkanTexture> gBufferDepthCurrent;
-	//std::shared_ptr<MVulkanTexture> gBufferDepthPrev;
 	std::shared_ptr<MVulkanTexture> gBufferDepth[2];
 
 	//std::vector<std::shared_ptr<MVulkanTexture>> m_hizTextures;
@@ -121,18 +123,23 @@ private:
 	std::shared_ptr<StorageBuffer> m_indirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_numIndirectDrawBuffer;
 	std::shared_ptr<StorageBuffer> m_culledIndirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_indirectInstanceBuffer;
+	std::shared_ptr<StorageBuffer> m_shadowmapIndirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_shadowmapNumIndirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_shadowmapCulledIndirectDrawBuffer;
+	std::shared_ptr<StorageBuffer> m_shadowmapIndirectInstanceBuffer;
 	//std::shared_ptr<StorageBuffer> m_hizBuffer;
 	//std::shared_ptr<StorageBuffer> m_hizDimensionsBuffer;
 	std::shared_ptr<StorageBuffer> m_modelBuffer;
 	std::shared_ptr<StorageBuffer> m_materialBuffer;
 	std::shared_ptr<StorageBuffer> m_materialIdBuffer;
-	std::shared_ptr<StorageBuffer> m_indirectInstanceBuffer;
 	//std::shared_ptr<StorageBuffer> m_depthDebugBuffer;
 	//std::shared_ptr<StorageBuffer> m_depthDebugBuffer1;
 
 	VkExtent2D shadowmapExtent = { 2048, 2048 };
 
 	Hiz							m_hiz;
+	Hiz							m_shadowmapHiz;
 	MVulkanSampler				m_linearSampler;
 
 	std::shared_ptr<Scene>		m_scene;
@@ -145,6 +152,8 @@ private:
 
 	glm::mat4					m_prevView;
 	glm::mat4					m_prevProj;
+	glm::mat4					m_prevShadowView;
+	glm::mat4					m_prevShadowProj;
 
 	int							m_queryIndex = 0;
 	int							m_depthIndex = 0;
@@ -163,12 +172,14 @@ private:
 	int a;
 
 public:
-	int cullingMode = 3;
-	int hizMode = DO_HIZ_MODE_0;
-	//int showMotionVector = 0;
+	int frustumCullingMode = 2;
+	bool doHizCulling = false;
+	//int hizMode = DO_HIZ_MODE_0;
 	int outputContext = 0;
 	bool showPassTime = 0;
-	//int hizLayer = 1;
+	bool cullShadowmap = true;
+	bool calculateDrawNums = false;
+	bool shadowmapCulling = false;
 };
 
 

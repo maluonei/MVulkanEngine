@@ -949,19 +949,18 @@ void RenderPass::CreatePipeline(MVulkanDescriptorSetAllocator& allocator)
         for (auto i = 0; i < descriptorSetLayoutBinding.size(); i++)
         {
             auto& binding = descriptorSetLayoutBinding[i];
-
+    
             if (binding.binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             {
                 BufferCreateInfo info;
                 info.arrayLength = binding.binding.descriptorCount;
                 info.size = binding.size;
-
+    
                 if (binding.name.substr(0, 5) == "type.")
                     binding.name = binding.name.substr(5);
-
+    
                 Singleton<ShaderResourceManager>::instance().AddConstantBuffer(binding.name, info, m_info.frambufferCount);
             }
-
         }
     }
 

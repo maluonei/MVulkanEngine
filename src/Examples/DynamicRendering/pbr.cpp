@@ -46,17 +46,27 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         resources.push_back(PassResources::SetStorageImageResource(4, 0, getDepthCurrent()));
         m_reprojectDepthPass->UpdateDescriptorSetWrite(resources);
     
-        m_hiz.SetSourceDepth(getDepthCurrent());
+        m_hiz.SetSourceDepth2(getDepthCurrent());
     }
-    //{
-    //    std::vector<PassResources> resources;
-    //    resources.push_back(PassResources::SetSampledImageResource(6, 0, m_hiz.GetHizTexture()));
-    //    m_cullingPass->UpdateDescriptorSetWrite(resources);
-    //}
 
+    {
+        std::vector<PassResources> resources;
+        resources.push_back(PassResources::SetSampledImageResource(3, 0, getShadowDepthPrev()));
+        resources.push_back(PassResources::SetStorageImageResource(4, 0, getShadowDepthCurrent()));
+        m_reprojectShadowmapDepthPass->UpdateDescriptorSetWrite(resources);
 
-    auto hizMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->hizMode;
-    auto cullingMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->cullingMode;
+        m_shadowmapHiz.SetSourceDepth2(getShadowDepthCurrent());
+    }
+
+    {
+        std::vector<PassResources> resources;
+        resources.push_back(PassResources::SetBufferResource("screenBuffer", 2, 0, imageIndex));
+        m_reprojectDepthPass->UpdateDescriptorSetWrite(resources);
+    }
+
+    auto frustumCullingMode = std::static_pointer_cast<DRUI>(m_uiRenderer)->frustumCullingMode;
+    auto doHizCulling = std::static_pointer_cast<DRUI>(m_uiRenderer)->doHizCulling;
+    auto cullShadowmap = std::static_pointer_cast<DRUI>(m_uiRenderer)->cullShadowmap;
 
     m_queryIndex = 0;
     int shadowmapQueryIndex = 0;
@@ -92,13 +102,23 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         vpBuffer_p.View = m_prevView;
         vpBuffer_p.Projection = m_prevProj;
         Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer_p", 0, &vpBuffer_p, 0);
+    }
+    {
+        VPBuffer vpBuffer{};
+        vpBuffer.View = m_directionalLightCamera->GetViewMatrix();
+        vpBuffer.Projection = m_directionalLightCamera->GetOrthoMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowmapVpBuffer", 0, &vpBuffer, 0);
 
+        VPBuffer vpBuffer_p{};
+        vpBuffer_p.View = m_prevShadowView;
+        vpBuffer_p.Projection = m_prevShadowProj;
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowmapVpBuffer_p", 0, &vpBuffer_p, 0);
+    }
+    {
         auto gbufferExtent = swapchainExtent;
         MScreenBuffer gBufferInfoBuffer{};
         gBufferInfoBuffer.WindowRes = int2(gbufferExtent.width, gbufferExtent.height);
-
         Singleton<ShaderResourceManager>::instance().LoadData("gBufferInfoBuffer", 0, &gBufferInfoBuffer, 0);
-
     }
 
     //prepare shadowPass ubo
@@ -137,6 +157,14 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
+    //prepare lightingPass ubo
+    {
+        MScreenBuffer screenBuffer{};
+        screenBuffer.WindowRes = int2(shadowmapExtent.width, shadowmapExtent.height);
+
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowmapScreenBuffer", 0, &screenBuffer, 0);
+    }
+
     {
         auto frustum = m_camera->GetFrustum();
         FrustumBuffer buffer;
@@ -144,13 +172,34 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             buffer.planes[i] = frustum.planes[i];
         }
 
-        MSceneBuffer sceneBuffer;
-        sceneBuffer.numInstances = m_scene->GetIndirectDrawCommands().size();
-        sceneBuffer.targetIndex = 0;
-        sceneBuffer.cullingMode = cullingMode;
+        //MSceneBuffer sceneBuffer;
+        //sceneBuffer.numInstances = m_scene->GetIndirectDrawCommands().size();
+        //sceneBuffer.targetIndex = 0;
+
+        MCullingBuffer cullingBuffer;
+        cullingBuffer.doFrustumCulling = frustumCullingMode > 0 ? 1 : 0;
+        cullingBuffer.doHizCulling = doHizCulling ? 1 : 0;
+        cullingBuffer.frustumCullingMode = frustumCullingMode;
+        cullingBuffer.cullingCountCalculate = std::static_pointer_cast<DRUI>(m_uiRenderer)->calculateDrawNums ? 1 : 0;
+
+        MCullingBuffer shadowmapCullingBuffer;
+        //if (m_firstFrame) {
+        //    shadowmapCullingBuffer.doFrustumCulling = 0;
+        //    shadowmapCullingBuffer.doHizCulling = 0;
+        //    shadowmapCullingBuffer.frustumCullingMode = 0;
+        //    shadowmapCullingBuffer.cullingCountCalculate = 0;
+        //}
+        //else {
+        shadowmapCullingBuffer.doFrustumCulling = 0;
+        shadowmapCullingBuffer.doHizCulling = 1;
+        shadowmapCullingBuffer.frustumCullingMode = 0;
+        shadowmapCullingBuffer.cullingCountCalculate = std::static_pointer_cast<DRUI>(m_uiRenderer)->calculateDrawNums ? 1 : 0;
+        //}
 
         Singleton<ShaderResourceManager>::instance().LoadData("FrustumBuffer", 0, &buffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
+        //Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cullingBuffer", 0, &cullingBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowmapCullingBuffer", 0, &shadowmapCullingBuffer, 0);
     }
 
     {
@@ -164,6 +213,19 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         hizDimensionBuffer.hizDimensions[0].z = hizLayers;
 
         Singleton<ShaderResourceManager>::instance().LoadData("hizDimensionBuffer", 0, &hizDimensionBuffer, 0);
+    }
+
+    {
+        HizDimensionBuffer shadowHizDimensionBuffer;
+        auto hizLayers = m_shadowmapHiz.GetHizLayers();
+        for (auto i = 0; i < hizLayers; i++) {
+            auto res = m_shadowmapHiz.GetHizRes(i);
+            shadowHizDimensionBuffer.hizDimensions[i].x = res.x;
+            shadowHizDimensionBuffer.hizDimensions[i].y = res.y;
+        }
+        shadowHizDimensionBuffer.hizDimensions[0].z = hizLayers;
+
+        Singleton<ShaderResourceManager>::instance().LoadData("shadowmapHizDimensionBuffer", 0, &shadowHizDimensionBuffer, 0);
     }
 
     RenderingInfo gbufferRenderInfo, shadowmapRenderInfo, shadingRenderInfo; 
@@ -216,7 +278,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             }
         );
         shadowmapRenderInfo.depthAttachment = RenderingAttachment{
-                .texture = shadowMapDepth,
+                .texture = getShadowDepthCurrent(),
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
     }
@@ -246,40 +308,53 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     shadingRenderInfo.offset = { 0, 0 };
     shadingRenderInfo.extent = swapchainExtent;
 
-    computeList.GetFence().WaitForSignal();
-    computeList.GetFence().Reset();
-    computeList.Reset();
-    computeList.Begin();
-    Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
+    //culling
+    {
+        computeList.GetFence().WaitForSignal();
+        computeList.GetFence().Reset();
+        computeList.Reset();
+        computeList.Begin();
+        Singleton<MVulkanEngine>::instance().CmdResetTimeStampQueryPool(computeList);
 
-    if (hizMode == DO_HIZ_MODE_0) {
-        reprojectDepthIndex = m_queryIndex;
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_reprojectDepthPass, computeList, (swapchainExtent.width + 15) / 16, (swapchainExtent.height + 15) / 16, 1, std::string("ReprojectDepth Pass"), m_queryIndex++);
+        if (doHizCulling || frustumCullingMode > 0) {
+            reprojectDepthIndex = m_queryIndex;
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_reprojectDepthPass, computeList, (swapchainExtent.width + 15) / 16, (swapchainExtent.height + 15) / 16, 1, std::string("ReprojectDepth Pass"), m_queryIndex++);
 
-        m_hiz.Generate2(computeList, m_queryIndex);
-        hizQueryIndexStart = m_hiz.GetHizQueryIndexStart();
-        hizQueryIndexEnd = m_hiz.GetHizQueryIndexEnd();
-    }
+            m_hiz.Generate2(computeList, m_queryIndex);
+            hizQueryIndexStart = m_hiz.GetHizQueryIndexStart();
+            hizQueryIndexEnd = m_hiz.GetHizQueryIndexEnd();
+        }
 
-    Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetDidirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
-    auto numInstances = m_scene->GetIndirectDrawCommands().size();
-    cullingQueryIndex = m_queryIndex;
-    
-    if (hizMode == DO_HIZ_MODE_0 && cullingMode == 3 && !m_firstFrame) {
-        //Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, computeList, numInstances, 1, 1, std::string("FrustumCulling Pass"), m_queryIndex++);
+        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetIndirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset NumIndirectDrawBuffer Pass"), m_queryIndex++);
+        auto numInstances = m_scene->GetIndirectDrawCommands().size();
+        cullingQueryIndex = m_queryIndex;
+
         Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_cullingPass, computeList, numInstances, 1, 1, std::string("Culling Pass"), m_queryIndex++);
-    }
-    else {
-        Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_frustumCullingPass, computeList, numInstances, 1, 1, std::string("FrustumCulling Pass"), m_queryIndex++);
-    }
-    computeList.End();
+        //computeList.End();
 
-    std::vector<MVulkanSemaphore> waitSemaphores2(0);
-    std::vector<MVulkanSemaphore> signalSemaphores2(1, m_cullingSemaphore);
-    std::vector<VkPipelineStageFlags> waitFlags2(0);
-    Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+        //shadowmap culling
+        if (cullShadowmap)
+        {
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_reprojectShadowmapDepthPass, computeList, (shadowmapExtent.width + 15) / 16, (shadowmapExtent.height + 15) / 16, 1, std::string("Reproject Shadowmap Depth Pass"), m_queryIndex++);
+
+            m_shadowmapHiz.Generate2(computeList, m_queryIndex);
+
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_resetShadowmapIndirectDrawBufferPass, computeList, 1, 1, 1, std::string("Reset Shadowmap NumIndirectDrawBuffer Pass"), m_queryIndex++);
+            auto numInstances = m_scene->GetIndirectDrawCommands().size();
+            Singleton<MVulkanEngine>::instance().RecordComputeCommandBuffer(m_shadowmapCullingPass, computeList, numInstances, 1, 1, std::string("Shadowmap Culling Pass"), m_queryIndex++);
+        }
+
+        computeList.End();
+
+        std::vector<MVulkanSemaphore> waitSemaphores2(0);
+        std::vector<MVulkanSemaphore> signalSemaphores2(1, m_cullingSemaphore);
+        std::vector<VkPipelineStageFlags> waitFlags2(0);
+        Singleton<MVulkanEngine>::instance().SubmitCommands(computeList, computeQueue, waitSemaphores2, waitFlags2, signalSemaphores2);
+    }
+
 
     numDrawInstances = *(uint32_t*)m_numIndirectDrawBuffer->GetMappedData();
+    numShadowmapDrawInstances = *(uint32_t*)m_shadowmapNumIndirectDrawBuffer->GetMappedData();
 
     graphicsList.GetFence().WaitForSignal();
     graphicsList.GetFence().Reset();
@@ -287,7 +362,11 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     graphicsList.Begin();
 
     shadowmapQueryIndex = m_queryIndex;
-    Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+    //Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+    if (cullShadowmap)
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_shadowmapCulledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
+    else
+        Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_shadowPass, m_currentFrame, shadowmapRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_scene->GetIndirectBuffer(), m_scene->GetIndirectDrawCommands().size(), std::string("Shadowmap Pass"), m_queryIndex++);
     gbufferQueryIndex = m_queryIndex;
     Singleton<MVulkanEngine>::instance().RecordCommandBuffer(0, m_gbufferPass, m_currentFrame, gbufferRenderInfo, m_scene->GetIndirectVertexBuffer(), m_scene->GetIndirectIndexBuffer(), m_culledIndirectDrawBuffer, m_scene->GetIndirectDrawCommands().size(), std::string("Gbuffer Pass"), m_queryIndex++);
     shadingQueryIndex = m_queryIndex;
@@ -303,6 +382,9 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
     m_prevView = m_camera->GetViewMatrix();
     m_prevProj = m_camera->GetProjMatrix();
 
+    m_prevShadowView = m_directionalLightCamera->GetViewMatrix();
+    m_prevShadowProj = m_directionalLightCamera->GetOrthoMatrix();
+
     //return;
     auto showPassTime = std::static_pointer_cast<DRUI>(m_uiRenderer)->showPassTime;
     if (showPassTime) {
@@ -313,8 +395,8 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         cullingTime = (queryResults[2 * cullingQueryIndex + 1] - queryResults[2 * cullingQueryIndex]) * timestampPeriod / 1000000.f;
         gbufferTime = (queryResults[2 * gbufferQueryIndex + 1] - queryResults[2 * gbufferQueryIndex]) * timestampPeriod / 1000000.f;
         shadowmapTime = (queryResults[2 * shadowmapQueryIndex + 1] - queryResults[2 * shadowmapQueryIndex]) * timestampPeriod / 1000000.f;
-         shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod / 1000000.f;
-        if (hizMode == DO_HIZ_MODE_0) {
+        shadingTime = (queryResults[2 * shadingQueryIndex + 1] - queryResults[2 * shadingQueryIndex]) * timestampPeriod / 1000000.f;
+        if (doHizCulling) {
             hizTime = (queryResults[2 * hizQueryIndexEnd - 1] - queryResults[2 * hizQueryIndexStart]) * timestampPeriod / 1000000.f;
             reprojectDepthTime = (queryResults[2 * reprojectDepthIndex + 1] - queryResults[2 * reprojectDepthIndex]) * timestampPeriod / 1000000.f;
         }
@@ -576,14 +658,19 @@ void PBR::createTextures()
 
     {
         shadowMap = std::make_shared<MVulkanTexture>();
-        shadowMapDepth = std::make_shared<MVulkanTexture>();
+        shadowMapDepth[0] = std::make_shared<MVulkanTexture>();
+        shadowMapDepth[1] = std::make_shared<MVulkanTexture>();
 
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             shadowMap, shadowMapExtent, shadowMapFormat
         );
 
         Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
-            shadowMapDepth, shadowMapExtent, depthFormat
+            shadowMapDepth[0], shadowMapExtent, depthFormat
+        );
+
+        Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
+            shadowMapDepth[1], shadowMapExtent, depthFormat
         );
     }
 
@@ -650,8 +737,9 @@ void PBR::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("Shadow Shader", { "hlsl/shadow.vert.hlsl", "hlsl/shadow.frag.hlsl" }, false);
     //Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed.frag.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/lighting_pbr.vert.hlsl", "hlsl/lighting_pbr_packed2.frag.hlsl" }, false);
-    Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, false);
+    //Singleton<ShaderManager>::instance().AddShader("FrustumCulling Shader", { "hlsl/culling/FrustumCulling.comp.hlsl" }, false);
     Singleton<ShaderManager>::instance().AddShader("Culling Shader", { "hlsl/culling/Culling.comp.hlsl" }, true);
+    //Singleton<ShaderManager>::instance().AddShader("ShadowmapCulling Shader", { "hlsl/culling/ShadowmapCulling.comp.hlsl" }, true);
     Singleton<ShaderManager>::instance().AddShader("ResetIndirectDrawBuffer Shader", { "hlsl/culling/ResetIndirectDrawBuffer.comp.hlsl" }, false);
 
     Singleton<ShaderManager>::instance().AddShader("ReprojectDepth Shader", { "hlsl/culling/ReprojectDepth.comp.hlsl" }, true);
@@ -676,7 +764,6 @@ void PBR::createStorageBuffers()
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
         info.arrayLength = 1;
         info.size = sizeof(IndirectDrawArgs) * indirectDrawCommands.size();
-
         m_indirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indirectDrawArgs.data());
 
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
@@ -686,24 +773,7 @@ void PBR::createStorageBuffers()
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(InstanceBound) * bounds.size();
         m_instanceBoundsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, bounds.data());
-    
-        //std::vector<HizDimension> hizDimensions(m_hiz.hizRes.size());
-        //for (int i = 0; i < hizDimensions.size(); i++) {
-        //    hizDimensions[i].u_previousLevelDimensions = m_hiz.hizRes[i];
-        //}
-        //
-        //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        //info.size = sizeof(HizDimension) * hizDimensions.size();
-        //m_hizDimensionsBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, hizDimensions.data());
-        //
-        //info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        //info.size = sizeof(HIZBuffer);
-        //m_hizBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
 
-        //std::vector<glm::mat4> models(m_scene->GetIndirectDrawCommands().size());
-        //for (auto i = 0; i < models.size(); i++) {
-        //    models[i] = glm::mat4(1.0f);
-        //}
         std::vector<glm::mat4> models = m_scene->GetTransforms();
         info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         info.size = sizeof(glm::mat4) * models.size();
@@ -734,13 +804,23 @@ void PBR::createStorageBuffers()
     
         numTotalInstances = numInstances;
 
-        //auto numIns = bounds.size();
-        ////std::vector<glm::vec2> debugDepth(numIns);
-        //info.size = sizeof(glm::vec4) * numIns;
-        //m_depthDebugBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
-        //
-        //info.size = sizeof(glm::vec4) * numIns * 4;
-        //m_depthDebugBuffer1 = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+        
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+        info.arrayLength = 1;
+        info.size = sizeof(IndirectDrawArgs) * indirectDrawCommands.size();
+        m_shadowmapIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indirectDrawArgs.data());
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+        m_shadowmapCulledIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(uint32_t);
+        m_shadowmapNumIndirectDrawBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info);
+
+        info.usage = VkBufferUsageFlagBits(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        info.size = sizeof(uint32_t) * indirectInstances.size();
+        m_shadowmapIndirectInstanceBuffer = Singleton<MVulkanEngine>::instance().CreateStorageBuffer(info, indirectInstances.data());
     }
 }
 
@@ -753,11 +833,14 @@ void PBR::createSyncObjs()
 void PBR::initHiz()
 {
     m_hiz = Hiz();
+    m_shadowmapHiz = Hiz();
 
     auto gbufferExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
     glm::ivec2 res = { gbufferExtent.width, gbufferExtent.height };
+    glm::ivec2 shadowmapRes = { shadowmapExtent.width, shadowmapExtent.height };
 
     m_hiz.Init(res, getDepthCurrent());
+    m_shadowmapHiz.Init(shadowmapRes, getShadowDepthCurrent());
 }
 
 std::shared_ptr<MVulkanTexture> PBR::getDepthCurrent()
@@ -768,6 +851,16 @@ std::shared_ptr<MVulkanTexture> PBR::getDepthCurrent()
 std::shared_ptr<MVulkanTexture> PBR::getDepthPrev()
 {
     return gBufferDepth[(m_depthIndex + 1) % 2];
+}
+
+std::shared_ptr<MVulkanTexture> PBR::getShadowDepthCurrent()
+{
+    return shadowMapDepth[m_depthIndex % 2];
+}
+
+std::shared_ptr<MVulkanTexture> PBR::getShadowDepthPrev()
+{
+    return shadowMapDepth[(m_depthIndex + 1) % 2];
 }
 
 void PBR::initUIRenderer()
@@ -897,8 +990,8 @@ void PBR::createShadingPass()
 
 
         std::vector<std::shared_ptr<MVulkanTexture>> shadowViews{
-            shadowMapDepth,
-            shadowMapDepth
+            getShadowDepthCurrent(),
+            getShadowDepthCurrent()
         };
 
         for (int i = 0; i < info.frambufferCount; i++) {
@@ -946,28 +1039,6 @@ void PBR::createFrustumCullingPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        m_frustumCullingPass = std::make_shared<ComputePass>(device);
-
-        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("FrustumCulling Shader");
-
-        Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_frustumCullingPass, shader);
-
-        std::vector<PassResources> resources;
-
-        //PassResources resource;
-        resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
-        resources.push_back(PassResources::SetBufferResource("sceneBuffer", 4, 0, 0));
-        resources.push_back(PassResources::SetBufferResource(1, 0, m_instanceBoundsBuffer));
-        resources.push_back(PassResources::SetBufferResource(2, 0, m_indirectDrawBuffer));
-        resources.push_back(PassResources::SetBufferResource(3, 0, m_culledIndirectDrawBuffer));
-        resources.push_back(PassResources::SetBufferResource(5, 0, m_numIndirectDrawBuffer));
-        resources.push_back(PassResources::SetBufferResource(6, 0, m_indirectInstanceBuffer));
-
-        m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
-    }
-
-    {
         m_cullingPass = std::make_shared<ComputePass>(device);
 
         auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("Culling Shader");
@@ -979,7 +1050,7 @@ void PBR::createFrustumCullingPass()
 
         //PassResources resource;
         resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
-        resources.push_back(PassResources::SetBufferResource("sceneBuffer", 1, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("cullingBuffer", 1, 0, 0));
         resources.push_back(PassResources::SetBufferResource("vpBuffer", 2, 0, 0));
         resources.push_back(PassResources::SetBufferResource("hizDimensionBuffer", 3, 0, 0));
         resources.push_back(PassResources::SetBufferResource(4, 0, m_instanceBoundsBuffer));
@@ -988,10 +1059,33 @@ void PBR::createFrustumCullingPass()
         resources.push_back(PassResources::SetBufferResource(7, 0, m_culledIndirectDrawBuffer));
         resources.push_back(PassResources::SetBufferResource(8, 0, m_indirectInstanceBuffer));
         resources.push_back(PassResources::SetBufferResource(9, 0, m_numIndirectDrawBuffer));
-        //resources.push_back(PassResources::SetBufferResource(10, 0, m_depthDebugBuffer));
-        //resources.push_back(PassResources::SetBufferResource(11, 0, m_depthDebugBuffer1));
 
         m_cullingPass->UpdateDescriptorSetWrite(resources);
+    }
+
+    {
+        m_shadowmapCullingPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("Culling Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_shadowmapCullingPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("shadowmapCullingBuffer", "cullingBuffer", 1, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("shadowmapVpBuffer", "vpBuffer", 2, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("shadowmapHizDimensionBuffer", "hizDimensionBuffer", 3, 0, 0));
+        resources.push_back(PassResources::SetBufferResource(4, 0, m_instanceBoundsBuffer));
+        resources.push_back(PassResources::SetBufferResource(5, 0, m_shadowmapIndirectDrawBuffer));
+        resources.push_back(PassResources::SetSampledImageResource(6, 0, m_shadowmapHiz.GetHizTexture()));
+        resources.push_back(PassResources::SetBufferResource(7, 0, m_shadowmapCulledIndirectDrawBuffer));
+        resources.push_back(PassResources::SetBufferResource(8, 0, m_shadowmapIndirectInstanceBuffer));
+        resources.push_back(PassResources::SetBufferResource(9, 0, m_shadowmapNumIndirectDrawBuffer));
+
+        m_shadowmapCullingPass->UpdateDescriptorSetWrite(resources);
     }
 }
 
@@ -1013,10 +1107,30 @@ void PBR::createReprojectDepthPass()
         resources.push_back(PassResources::SetBufferResource("vpBuffer", 0, 0, 0));
         resources.push_back(PassResources::SetBufferResource("vpBuffer_p", 1, 0, 0));
         resources.push_back(PassResources::SetBufferResource("screenBuffer", 2, 0, 0));
-        resources.push_back(PassResources::SetSampledImageResource(3, 0, getDepthPrev()));
-        resources.push_back(PassResources::SetStorageImageResource(4, 0, getDepthCurrent()));
+        //resources.push_back(PassResources::SetSampledImageResource(3, 0, getDepthPrev()));
+        //resources.push_back(PassResources::SetStorageImageResource(4, 0, getDepthCurrent()));
 
         m_reprojectDepthPass->UpdateDescriptorSetWrite(resources);
+    }
+
+    {
+        m_reprojectShadowmapDepthPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ReprojectDepth Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_reprojectShadowmapDepthPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource("shadowmapVpBuffer", "vpBuffer", 0, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("shadowmapVpBuffer_p", "vpBuffer_p", 1, 0, 0));
+        resources.push_back(PassResources::SetBufferResource("shadowmapScreenBuffer", "screenBuffer", 2, 0, 0));
+        //resources.push_back(PassResources::SetSampledImageResource(3, 0, get()));
+        //resources.push_back(PassResources::SetStorageImageResource(4, 0, getDepthCurrent()));
+
+        m_reprojectShadowmapDepthPass->UpdateDescriptorSetWrite(resources);
     }
 }
 
@@ -1025,19 +1139,35 @@ void PBR::createResetDidirectDrawBufferPass()
     auto device = Singleton<MVulkanEngine>::instance().GetDevice();
 
     {
-        m_resetDidirectDrawBufferPass = std::make_shared<ComputePass>(device);
+        m_resetIndirectDrawBufferPass = std::make_shared<ComputePass>(device);
 
         auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetIndirectDrawBuffer Shader");
 
         Singleton<MVulkanEngine>::instance().CreateComputePass(
-            m_resetDidirectDrawBufferPass, shader);
+            m_resetIndirectDrawBufferPass, shader);
 
         std::vector<PassResources> resources;
 
         //PassResources resource;
         resources.push_back(PassResources::SetBufferResource(0, 0, m_numIndirectDrawBuffer));
 
-        m_resetDidirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
+        m_resetIndirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
+    }
+
+    {
+        m_resetShadowmapIndirectDrawBufferPass = std::make_shared<ComputePass>(device);
+
+        auto shader = Singleton<ShaderManager>::instance().GetShader<ComputeShaderModule>("ResetIndirectDrawBuffer Shader");
+
+        Singleton<MVulkanEngine>::instance().CreateComputePass(
+            m_resetShadowmapIndirectDrawBufferPass, shader);
+
+        std::vector<PassResources> resources;
+
+        //PassResources resource;
+        resources.push_back(PassResources::SetBufferResource(0, 0, m_shadowmapNumIndirectDrawBuffer));
+
+        m_resetShadowmapIndirectDrawBufferPass->UpdateDescriptorSetWrite(resources);
     }
 }
 
@@ -1060,14 +1190,12 @@ void DRUI::RenderContext() {
     double fps = this->m_app->GetFPS();
     ImGui::Text("FPS: %.2f", fps);
 
-    ImGui::RadioButton("cullingmode null", &cullingMode, CULLINGMODE_NULL); ImGui::SameLine();
-    ImGui::RadioButton("cullingmode sphere", &cullingMode, CULLINGMODE_SPHERE); 
-    ImGui::RadioButton("cullingmode bbx", &cullingMode, CULLINGMODE_AABB); ImGui::SameLine();
-    ImGui::RadioButton("cullingmode bbx + hiz culling", &cullingMode, 3);
+    ImGui::RadioButton("frustum culling mode null", &frustumCullingMode, CULLINGMODE_NULL); ImGui::SameLine();
+    ImGui::RadioButton("frustum culling mode sphere", &frustumCullingMode, CULLINGMODE_SPHERE); ImGui::SameLine();
+    ImGui::RadioButton("frustum culling mode bbx", &frustumCullingMode, CULLINGMODE_AABB);
 
-    ImGui::RadioButton("not do hiz", &hizMode, NOT_DO_HIZ); ImGui::SameLine();
-    ImGui::RadioButton("hiz mode 0", &hizMode, DO_HIZ_MODE_0);// ImGui::SameLine();
-    //ImGui::RadioButton("hiz mode 1", &hizMode, DO_HIZ_MODE_1);
+    ImGui::Checkbox("do hiz culling", &doHizCulling);
+    ImGui::Checkbox("cull shadowmap", &cullShadowmap);
 
     ImGui::Combo("outputContext", &outputContext, OutputBufferContents, IM_ARRAYSIZE(OutputBufferContents));
 
@@ -1083,9 +1211,9 @@ void DRUI::RenderContext() {
     auto& cameraVelocity = Singleton<InputManager>::instance().m_cameraVelocity;
     ImGui::InputFloat("Camera Velocity:", &cameraVelocity, 0.001f, 0, "%.4f");
 
-    auto numTotalInstances = ((PBR*)(this->m_app))->numTotalInstances;
-    auto numDrawInstances = ((PBR*)(this->m_app))->numDrawInstances;
-    ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
+    //auto numTotalInstances = ((PBR*)(this->m_app))->numTotalInstances;
+    //auto numDrawInstances = ((PBR*)(this->m_app))->numDrawInstances;
+    //ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
 
     ImGui::Checkbox("showPassTime", &showPassTime);
     if (showPassTime) {
@@ -1101,8 +1229,15 @@ void DRUI::RenderContext() {
         //}
     }
 
-    ImGui::Text("drawCount: %d", ((PBR*)(this->m_app))->numDrawInstances);
-    //ImGui::InputInt("Hiz Layer:", &hizLayer, 1, 0);
+    ImGui::Checkbox("show instance draw count:", &calculateDrawNums);
+    if (calculateDrawNums) {
+        auto numTotalInstances = ((PBR*)(this->m_app))->numTotalInstances;
+        auto numDrawInstances = ((PBR*)(this->m_app))->numDrawInstances;
+        auto numShadowmapDrawInstances = ((PBR*)(this->m_app))->numShadowmapDrawInstances;
+        ImGui::Text("Total Instance Count: %d, Drawed Instance Count: %d", numTotalInstances, numDrawInstances);
+        ImGui::Text("Total Instance Count: %d, Shadowmap Drawed Instance Count: %d", numTotalInstances, numShadowmapDrawInstances);
+    }
+        //ImGui::InputInt("Hiz Layer:", &hizLayer, 1, 0);
 
     ImGui::End();
 }

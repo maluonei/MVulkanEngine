@@ -36,6 +36,7 @@ public:
 	void Init(glm::ivec2 basicResolution);
 	void Init(glm::ivec2 basicResolution, std::shared_ptr<MVulkanTexture> depth);
 	void SetSourceDepth(std::shared_ptr<MVulkanTexture> depth);
+	void SetSourceDepth2(std::shared_ptr<MVulkanTexture> depth);
 
 	void Generate(MComputeCommandList commandList);
 	void Generate(MComputeCommandList commandList, int& queryIndex);
