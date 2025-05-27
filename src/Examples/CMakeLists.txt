@@ -7,7 +7,7 @@
 #add_subdirectory(ssr)
 add_subdirectory(ssr_v2)
 ##add_subdirectory(rtao)
-#add_subdirectory(DDGI)
+add_subdirectory(DDGI)
 ##add_subdirectory(SDFGI)
 #add_subdirectory(Voxelization)
 ##add_subdirectory(ComputePipelineTest)
