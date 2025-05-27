@@ -73,6 +73,7 @@ private:
 	std::vector<std::vector<std::shared_ptr<MVulkanTexture>>> m_storageImages;
 
 	void updateResourceCache(ShaderResourceKey key, const PassResources& resources);
+	std::unordered_map<std::string, ShaderResourceKey> m_resourceKeys;
 	std::unordered_map<ShaderResourceKey, MVulkanDescriptorSetLayoutBinding> m_bindings;
 	std::unordered_map<ShaderResourceKey, PassResources> m_cachedResources;
 };

@@ -172,10 +172,6 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
             buffer.planes[i] = frustum.planes[i];
         }
 
-        //MSceneBuffer sceneBuffer;
-        //sceneBuffer.numInstances = m_scene->GetIndirectDrawCommands().size();
-        //sceneBuffer.targetIndex = 0;
-
         MCullingBuffer cullingBuffer;
         cullingBuffer.doFrustumCulling = frustumCullingMode > 0 ? 1 : 0;
         cullingBuffer.doHizCulling = doHizCulling ? 1 : 0;
@@ -183,18 +179,10 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         cullingBuffer.cullingCountCalculate = std::static_pointer_cast<DRUI>(m_uiRenderer)->calculateDrawNums ? 1 : 0;
 
         MCullingBuffer shadowmapCullingBuffer;
-        //if (m_firstFrame) {
-        //    shadowmapCullingBuffer.doFrustumCulling = 0;
-        //    shadowmapCullingBuffer.doHizCulling = 0;
-        //    shadowmapCullingBuffer.frustumCullingMode = 0;
-        //    shadowmapCullingBuffer.cullingCountCalculate = 0;
-        //}
-        //else {
         shadowmapCullingBuffer.doFrustumCulling = 0;
         shadowmapCullingBuffer.doHizCulling = 1;
         shadowmapCullingBuffer.frustumCullingMode = 0;
         shadowmapCullingBuffer.cullingCountCalculate = std::static_pointer_cast<DRUI>(m_uiRenderer)->calculateDrawNums ? 1 : 0;
-        //}
 
         Singleton<ShaderResourceManager>::instance().LoadData("FrustumBuffer", 0, &buffer, 0);
         //Singleton<ShaderResourceManager>::instance().LoadData("sceneBuffer", 0, &sceneBuffer, 0);
@@ -242,24 +230,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
         );
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer2,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer3,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
-        //gbufferRenderInfo.colorAttachments.push_back(
-        //    RenderingAttachment{
-        //        .texture = gBuffer4,
-        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //    }
-        //);
+
 
         gbufferRenderInfo.depthAttachment = RenderingAttachment{
                 .texture = getDepthCurrent(),
@@ -546,19 +517,6 @@ void PBR::loadScene()
     m_squad->GenerateIndirectDataAndBuffers();
     m_scene->GenerateIndirectDataAndBuffers();
 
-    //createStorageBuffers();
-    
-    //{
-    //    std::vector<PassResources> resources;
-    //
-    //    //PassResources resource;
-    //    //resources.push_back(PassResources::SetBufferResource("FrustumBuffer", 0, 0, 0));
-    //    resources.push_back(PassResources::SetBufferResource(0, 1, m_instanceBoundsBuffer));
-    //    resources.push_back(PassResources::SetBufferResource(0, 2, m_indirectDrawBuffer));
-    //    resources.push_back(PassResources::SetBufferResource(0, 3, m_culledIndirectDrawBuffer));
-    //
-    //    m_frustumCullingPass->UpdateDescriptorSetWrite(resources);
-    //}
 }
 
 void PBR::createLight()
@@ -911,12 +869,6 @@ void PBR::createGbufferPass()
         resources.push_back(
             PassResources::SetBufferResource(
                 8, 0, m_indirectInstanceBuffer));
-        //resources.push_back(
-        //    PassResources::SetBufferResource(
-        //        9, 0, m_depthDebugBuffer));
-        //resources.push_back(
-        //    PassResources::SetBufferResource(
-        //        "texBuffer", 3, 0));
         resources.push_back(
             PassResources::SetBufferResource(
                 "gBufferInfoBuffer", 6, 0, 0));

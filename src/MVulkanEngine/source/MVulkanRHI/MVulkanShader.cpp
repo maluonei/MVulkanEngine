@@ -234,7 +234,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
        
-        spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
+        uint32_t id = ub.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info(
+            "Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}, is_read_only:{4}, is_write_only:{5}",
+            ub.name, set, binding, size, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -256,7 +262,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
 
-        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", sb.name, set, binding, size);
+        uint32_t id = sb.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}, is_read_only:{4}, is_write_only:{5}", 
+            sb.name, set, binding, size, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -273,7 +284,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}", 
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -290,7 +306,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}", 
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -307,7 +328,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}", 
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -324,7 +350,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(sampler.id, spv::DecorationBinding);
 
-        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}", sampler.name, set, binding);
+        uint32_t id = sampler.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}", 
+            sampler.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -340,7 +371,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut()
         uint32_t set = m_compiler.get_decoration(as.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(as.id, spv::DecorationBinding);
 
-        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}", as.name, set, binding);
+        uint32_t id = as.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}", 
+            as.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -362,7 +398,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
     auto shader_stage = m_compiler.get_entry_points_and_stages();
     for (const auto& _stage : shader_stage) {
         switch (_stage.execution_model) {
-        case spv::ExecutionModel::ExecutionModelVertex:
+        case spv::ExecutionModelVertex:
             stage = ShaderStageFlagBits::VERTEX;
             break;
         case spv::ExecutionModelFragment:
@@ -387,7 +423,7 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         entryPointName = _stage.name;
     }
 
-
+ 
     for (const auto& ub : m_resources.uniform_buffers) {
         auto& type = m_compiler.get_type(ub.type_id);
         // ��ȡ Descriptor Set �Ͱ󶨵�
@@ -395,7 +431,14 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t binding = m_compiler.get_decoration(ub.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
 
-        spdlog::info("Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", ub.name, set, binding, size);
+        uint32_t id = ub.id;
+        bool is_readonly = m_compiler.has_decoration(ub.id, spv::DecorationNonWritable) ||
+                            m_compiler.has_decoration(type.self, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info(
+            "Uniform Buffer:{0}, Set:{1}, Binding:{2}, size:{3}, is_read_only:{4}, is_write_only:{5}",
+            ub.name, set, binding, size, is_readonly, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -417,7 +460,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t binding = m_compiler.get_decoration(sb.id, spv::DecorationBinding);
         size_t size = m_compiler.get_declared_struct_size(type);
 
-        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}", sb.name, set, binding, size);
+        uint32_t id = sb.id;
+        bool is_readonly = m_compiler.has_decoration(sb.id, spv::DecorationNonWritable) ||
+            m_compiler.has_decoration(type.self, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Storage Buffer:{0}, Set:{1}, Binding:{2}, size:{3}, is_read_only:{4}, is_write_only:{5}",
+            sb.name, set, binding, size, is_readonly, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -434,7 +483,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Sampled Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}",
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -451,7 +505,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Separate Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}",
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -468,7 +527,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t set = m_compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(image.id, spv::DecorationBinding);
 
-        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}", image.name, set, binding);
+        uint32_t id = image.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Storage Image:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}",
+            image.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -484,8 +548,13 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         auto& type = m_compiler.get_type(sampler.type_id);
         uint32_t set = m_compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(sampler.id, spv::DecorationBinding);
+        
+        uint32_t id = sampler.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
 
-        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}", sampler.name, set, binding);
+        spdlog::info("Separate Sampler:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}",
+            sampler.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
@@ -501,7 +570,12 @@ ShaderReflectorOut MVulkanShaderReflector::GenerateShaderReflactorOut2()
         uint32_t set = m_compiler.get_decoration(as.id, spv::DecorationDescriptorSet);
         uint32_t binding = m_compiler.get_decoration(as.id, spv::DecorationBinding);
 
-        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}", as.name, set, binding);
+        uint32_t id = as.id;
+        bool is_read_only = m_compiler.get_decoration(id, spv::DecorationNonWritable);
+        bool is_write_only = m_compiler.get_decoration(id, spv::DecorationNonReadable);
+
+        spdlog::info("Accelaration Structure:{0}, Set:{1}, Binding:{2}, is_read_only:{3}, is_write_only:{4}",
+            as.name, set, binding, is_read_only, is_write_only);
 
         uint32_t arrayLength = 1;
         if (!type.array.empty()) {
