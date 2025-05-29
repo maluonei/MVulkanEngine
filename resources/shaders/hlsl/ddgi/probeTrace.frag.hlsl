@@ -1,38 +1,39 @@
+#include "Common.h"
 #include "indirectLight.hlsli"
 #include "shading.hlsli"
 
-struct Tex{
-    int diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx;
-    int matId;
-    int padding2;
-}
-
-struct TexBuffer
-{
-    Tex tex[512];
-};
+//struct Tex{
+//    int diffuseTextureIdx;
+//    int metallicAndRoughnessTextureIdx;
+//    int matId;
+//    int padding2;
+//}
+//
+//struct TexBuffer
+//{
+//    Tex tex[512];
+//};
     
 
-struct GeometryInfo {
-  int vertexOffset;
-  int indexOffset;
-  int uvOffset;
-  int normalOffset;
-  int materialIdx;
-};
+//struct GeometryInfo {
+//  int vertexOffset;
+//  int indexOffset;
+//  int uvOffset;
+//  int normalOffset;
+//  int materialIdx;
+//};
 
-struct UniformBuffer2
-{
-    Light lights[4];
-
-    int    lightNum;
-    int    frameCount;
-    int    padding1;
-    float  t;
-
-    float4 probeRotateQuaternion;
-};
+//struct DDGILightBuffer
+//{
+//    Light lights[4];
+//
+//    int    lightNum;
+//    int    frameCount;
+//    int    padding1;
+//    float  t;
+//
+//    float4 probeRotateQuaternion;
+//};
 
 [[vk::binding(0, 0)]]
 cbuffer texBuffer : register(b0)
@@ -43,13 +44,13 @@ cbuffer texBuffer : register(b0)
 [[vk::binding(1, 0)]]
 cbuffer ProbeBuffer : register(b1)
 {
-    UniformBuffer1 ubo1;
+    DDGIBuffer ubo1;
 };
 
 [[vk::binding(2, 0)]]
 cbuffer LightBuffer : register(b2)
 {
-    UniformBuffer2 ubo2;
+    DDGILightBuffer ubo2;
 };
 
 [[vk::binding(3, 0)]] StructuredBuffer<float> VertexBuffer : register(t0);
@@ -57,7 +58,7 @@ cbuffer LightBuffer : register(b2)
 [[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
 [[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
 [[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] StructuredBuffer<Probe> probes : register(t5);
+[[vk::binding(8, 0)]] StructuredBuffer<DDGIProbe> probes : register(t5);
 [[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t6);
 [[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1031);   //[512, 64]
 [[vk::binding(11, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1032);   //[2048, 256]

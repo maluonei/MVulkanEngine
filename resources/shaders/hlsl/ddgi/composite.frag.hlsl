@@ -1,14 +1,9 @@
-struct UniformBuffer0{
-    int visulizeProbe;
-    int useAO;
-    int padding1;
-    int padding2;
-};
+#include "Common.h"
 
 [[vk::binding(0, 0)]]
-cbuffer ubo0 : register(b0) 
+cbuffer ddgiCompositeBuffer : register(b0) 
 {
-    UniformBuffer0 ubo0; 
+    DDGICompositeBuffer ubo0; 
 };
 
 

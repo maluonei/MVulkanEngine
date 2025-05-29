@@ -87,6 +87,15 @@ private:
 	std::shared_ptr<MVulkanTexture> gBuffer3 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBufferDepth = nullptr;
 
+	std::shared_ptr<MVulkanTexture> m_probePositions = nullptr;
+	std::shared_ptr<MVulkanTexture> m_probeDepth = nullptr;
+	std::shared_ptr<MVulkanTexture> m_probeRadiance = nullptr;
+
+	std::shared_ptr<MVulkanTexture> m_diTexture = nullptr;
+	std::shared_ptr<MVulkanTexture> m_giTexture = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_aoTexture = nullptr;
+	std::shared_ptr<MVulkanTexture> m_probeVisulizTexture = nullptr;
+
 	std::shared_ptr<StorageBuffer> m_probesDataBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_tlasVertexBuffer = nullptr;

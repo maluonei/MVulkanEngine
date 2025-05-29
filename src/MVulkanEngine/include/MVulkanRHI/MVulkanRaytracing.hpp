@@ -178,8 +178,15 @@ public:
     void Clean();
 
 private:
+    //void CreateBLAS(const std::shared_ptr<Mesh>& mesh, BLASBuildInfo& blasBuildInfo);
+
     void CreateBLAS(const std::shared_ptr<Mesh>& mesh, BLASBuildInfo& blasBuildInfo);
     void CreateTLAS(std::vector<Buffer> asBuffers, TLASBuildInfo& tlasBuildInfo);
+
+    void CreateTLAS(
+        const std::shared_ptr<Scene>& scene,
+        std::vector<Buffer> asBuffers, 
+        TLASBuildInfo& tlasBuildInfo);
 
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR>    m_buildInfos;
     std::vector<VkAccelerationStructureBuildRangeInfoKHR>       m_rangeInfos;

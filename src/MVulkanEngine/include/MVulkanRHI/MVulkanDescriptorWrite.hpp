@@ -95,7 +95,7 @@ struct PassResources
 		TextureSubResource texture, VkSampler sampler
 	);
 
-	static PassResources SetCombinedImageSamplerResource(
+	static PassResources SetAccelerationStructureResource(
 		int binding, int set,
 		VkAccelerationStructureKHR* accel
 	);

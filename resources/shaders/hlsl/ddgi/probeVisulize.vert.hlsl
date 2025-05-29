@@ -1,24 +1,24 @@
 //#include "indirectLight.hlsli"
-
+#include "Common.h"
 // HLSL Shader
-struct ModelBuffer
-{
-    float4x4 Model;
-};
-
-struct VPBuffer{
-    float4x4 View;
-    float4x4 Projection;
-};
-
-//struct UniformBuffer0{
-//    ModelBuffer models[512];
+//struct ModelBuffer
+//{
+//    float4x4 Model;
 //};
-
-struct UniformBuffer0{
-    VPBuffer vps;
-};
-
+//
+//struct VPBuffer{
+//    float4x4 View;
+//    float4x4 Projection;
+//};
+//
+////struct UniformBuffer0{
+////    ModelBuffer models[512];
+////};
+//
+//struct UniformBuffer0{
+//    VPBuffer vps;
+//};
+//
 //[[vk::binding(0, 0)]]
 //cbuffer ubo0 : register(b0)
 //{
@@ -26,9 +26,9 @@ struct UniformBuffer0{
 //};
 
 [[vk::binding(0, 0)]]
-cbuffer ubo0 : register(b0)
+cbuffer vpBuffer : register(b0)
 {
-    UniformBuffer0 ubo0;
+    VPBuffer vp;
 };
 
 
@@ -101,8 +101,8 @@ VSOutput main(VSInput input)
     output.worldPos = worldSpacePosition.xyz / worldSpacePosition.w;
 
     // Compute screen space position
-    float4 screenSpacePosition = mul(ubo0.vps.View, worldSpacePosition);
-    screenSpacePosition = mul(ubo0.vps.Projection, screenSpacePosition);
+    float4 screenSpacePosition = mul(vp.View, worldSpacePosition);
+    screenSpacePosition = mul(vp.Projection, screenSpacePosition);
     output.position = screenSpacePosition;
 
     // Compute normal in world space

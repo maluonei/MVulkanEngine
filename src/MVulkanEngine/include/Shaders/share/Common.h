@@ -171,4 +171,61 @@ struct SSRBuffer{
     uint g_max_traversal_intersections;
 };
 
+struct RTAOBuffer{
+    int resetAccumulatedBuffer;
+};
+
+struct DDGIBuffer
+{
+    //Probe probes[2040];
+    int3  probeDim;
+    int   raysPerProbe;
+
+    float3 probePos0;
+	float  minFrontFaceDistance;
+	float3 probePos1;
+	int	   probeRelocationEnabled;
+
+    int    reAccumulate;
+    float  maxRayDistance;
+    float    padding1;
+    float    padding2;
+};
+
+struct DDGIProbe{
+    float3 position;
+    int probeState;
+    float3 offset;
+    int moved;
+};
+
+struct GeometryInfo {
+  int vertexOffset;
+  int indexOffset;
+  int uvOffset;
+  int normalOffset;
+  int materialIdx;
+};
+
+
+struct DDGILightBuffer
+{
+    MLight lights[4];
+
+    int    lightNum;
+    int    frameCount;
+    int    padding1;
+    float  t;
+
+    float4 probeRotateQuaternion;
+};
+
+struct DDGICompositeBuffer{
+    int visulizeProbe;
+    int useAO;
+    int padding1;
+    int padding2;
+};
+
+
 #endif

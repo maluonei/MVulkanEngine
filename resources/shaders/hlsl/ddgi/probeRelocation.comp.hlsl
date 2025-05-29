@@ -1,18 +1,13 @@
+#include "Common.h"
 #include "indirectLight.hlsli"
 
-// HLSL Shader
-struct ModelBuffer
-{
-    float4x4 Model;
-};
-
 [[vk::binding(0, 0)]]
-cbuffer ubo1 : register(b0)
+cbuffer ddgiBuffer : register(b0)
 {
-    UniformBuffer1 ubo1;
+    DDGILightBuffer ubo1;
 };
   
-[[vk::binding(1, 0)]] RWStructuredBuffer<Probe> probes : register(u0);
+[[vk::binding(1, 0)]] RWStructuredBuffer<DDGIProbe> probes : register(u0);
 [[vk::binding(2, 0)]] RWStructuredBuffer<ModelBuffer> Models : register(u1);
 [[vk::binding(3, 0)]] Texture2D<float4> VolumeProbePosition : register(t2);
 [[vk::binding(4, 0)]] Texture2D<float4> VolumeProbeRadiance : register(t3);

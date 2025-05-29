@@ -174,9 +174,10 @@ public:
     inline auto GetNumVertices() const{return m_totalVertexs.size();}
     //inline auto GetNumMeshes() const { return m_meshMap.size(); }
     inline auto GetNumMeshes() const { return m_meshs.size(); }
+    //const int GetNumTotalInstances() const;
     //inline auto GetNumPrimInfos() const { return m_primInfos.size(); }
 
-    int GetTotalPrimInfos() const;
+    const int GetTotalPrimInfos() const;
 
     std::vector<glm::mat4> GetTransforms();
     std::vector<MaterialBuffer> GetMaterials();

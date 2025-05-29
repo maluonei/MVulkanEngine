@@ -1,12 +1,13 @@
+#include "Common.h"
 #include "indirectLight.hlsli"
 
 [[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+cbuffer ddgiBuffer : register(b1)
 {
-    UniformBuffer1 ubo1;
+    DDGIBuffer ddgiBuffer;
 };
 
-[[vk::binding(3, 0)]] StructuredBuffer<Probe> probes : register(t0);
+[[vk::binding(3, 0)]] StructuredBuffer<DDGIProbe> probes : register(t0);
 [[vk::binding(4, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t0); 
 [[vk::binding(5, 0)]] SamplerState linearSampler : register(s0);
 
@@ -33,11 +34,11 @@ PSOutput main(PSInput input)
         return output;
     }   
 
-    float2 radianceProbeResolutionInv = 1.f / float2(RadianceProbeResolution * ubo1.probeDim.x * ubo1.probeDim.y, RadianceProbeResolution * ubo1.probeDim.z);
+    float2 radianceProbeResolutionInv = 1.f / float2(RadianceProbeResolution * ddgiBuffer.probeDim.x * ddgiBuffer.probeDim.y, RadianceProbeResolution * ddgiBuffer.probeDim.z);
 
     int probeIndex = input.instanceID;
     //int2 probeBaseIndex = int2(probeIndex / 8, probeIndex % 8);
-    int2 probeBaseIndex = int2(probeIndex / ubo1.probeDim.z, probeIndex % ubo1.probeDim.z);
+    int2 probeBaseIndex = int2(probeIndex / ddgiBuffer.probeDim.z, probeIndex % ddgiBuffer.probeDim.z);
 
     float2 octahedralUVOfNormal = DDGIGetOctahedralCoordinates(input.normal);
     float2 baseUV = probeBaseIndex * float2(RadianceProbeResolution, RadianceProbeResolution) + float2(RadianceProbeResolution*0.5f, RadianceProbeResolution*0.5f);

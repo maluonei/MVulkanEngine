@@ -229,7 +229,7 @@ PassResources PassResources::SetSamplerResource(
     return resource;
 }
 
-PassResources PassResources::SetCombinedImageSamplerResource(
+PassResources PassResources::SetAccelerationStructureResource(
     int binding, int set, 
     VkAccelerationStructureKHR* accel
 ) {

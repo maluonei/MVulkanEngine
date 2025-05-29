@@ -1,26 +1,26 @@
 //#include "Octahedral.hlsli"
 #include "indirectLight.hlsli"
 
-struct UniformBuffer0{
-    float sharpness;
-    int padding0;
-    int padding1;
-    int padding2;
-};
-
-[[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
-{
-    UniformBuffer0 ubo0;
-}; 
+//struct UniformBuffer0{
+//    float sharpness;
+//    int padding0;
+//    int padding1;
+//    int padding2;
+//};
+//
+//[[vk::binding(0, 0)]]
+//cbuffer ubo : register(b0)
+//{
+//    UniformBuffer0 ubo0;
+//}; 
 
 [[vk::binding(1, 0)]]
-cbuffer ub1 : register(b1)
+cbuffer ddgiBuffer : register(b1)
 {
-    UniformBuffer1 ubo1;
+    DDGIBuffer ddgibuffer;
 };
 
-[[vk::binding(2, 0)]]StructuredBuffer<Probe> probes : register(t5);
+[[vk::binding(2, 0)]]StructuredBuffer<DDGIProbe> probes : register(t5);
 [[vk::binding(3, 0)]]Texture2D<float4> VolumeProbePosition : register(t0);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 [[vk::binding(4, 0)]]Texture2D<float4> VolumeProbeRadiance : register(t1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 [[vk::binding(5, 0)]]RWTexture2D<float4> VolumeProbeDatasRadiance  : register(u0);   //[probeDim.x * probeDim.y * 8, probeDim.z * 8]
@@ -74,7 +74,7 @@ bool CalculateRadiance(
         float3 irradiance = float3(0.f, 0.f, 0.f);
 
         float totalIradianceWeights = 0.f;
-        for(int i=0;i<ubo1.raysPerProbe;i++){
+        for(int i=0;i<ddgibuffer.raysPerProbe;i++){
             //float2 volumeProbePositionUV = float2(i, probeIndex) / float2(64.f - 1.f, 512.f - 1.f);
             int3 volumeProbePositionUV_Int = int3(i, probeIndex, 0);
         
@@ -146,7 +146,7 @@ bool CalculateDepth(
         //float totalIradianceWeights = 0.f;
         float totalDepthWeights = 0.f;
 
-        for(int i=0;i<ubo1.raysPerProbe;i++){
+        for(int i=0;i<ddgibuffer.raysPerProbe;i++){
             int3 volumeProbePositionUV_Int = int3(i, probeIndex, 0);
         
             //float3 radiance = RayRadiance[i];
@@ -243,10 +243,10 @@ void UpdateBorderPixelRadiance(
 }
 
 void LoadSharedMemory(int probeIndex, uint GroupIndex, int pixelsPerProbe){
-    int totalIterations = int(ceil(float(ubo1.raysPerProbe) / float(pixelsPerProbe)));
+    int totalIterations = int(ceil(float(ddgibuffer.raysPerProbe) / float(pixelsPerProbe)));
     for(int i=0;i<totalIterations;i++){
         int rayIndex = (GroupIndex * totalIterations) + i;
-        if (rayIndex >= ubo1.raysPerProbe) break;
+        if (rayIndex >= ddgibuffer.raysPerProbe) break;
  
         int3 volumeProbePositionUV_Int = int3(rayIndex, probeIndex, 0);
         float4 targetPositions = VolumeProbePosition.Load(volumeProbePositionUV_Int).rgba;
@@ -254,7 +254,7 @@ void LoadSharedMemory(int probeIndex, uint GroupIndex, int pixelsPerProbe){
     
         RayRadiance[rayIndex] = targetRadiances.rgb;
         RayDistance[rayIndex] = abs(targetRadiances.a);
-        RayDirection[rayIndex] = normalize(targetPositions.rgb - GetProbePosition(ubo1, probes[probeIndex]));
+        RayDirection[rayIndex] = normalize(targetPositions.rgb - GetProbePosition(ddgibuffer, probes[probeIndex]));
     }
     //GroupMemoryBarrierWithGroupSync();
 }
@@ -264,7 +264,7 @@ void LoadSharedMemory(int probeIndex, uint GroupIndex, int pixelsPerProbe){
 void main_radiance(  uint3 DispatchThreadID : SV_DispatchThreadID,
             uint  GroupIndex       : SV_GroupIndex)
 {
-    int probeIndex = CalculateProbeIndex(DispatchThreadID, RadianceProbeResolution, ubo1.probeDim);
+    int probeIndex = CalculateProbeIndex(DispatchThreadID, RadianceProbeResolution, ddgibuffer.probeDim);
 
     //if(DispatchThreadID.x==0 && DispatchThreadID.y==0){
     //    ProbeMoved = probes[probeIndex].moved;
@@ -278,7 +278,7 @@ void main_radiance(  uint3 DispatchThreadID : SV_DispatchThreadID,
 
     bool radianceIsCorner = false;
 
-    radianceIsCorner = !(CalculateRadiance(DispatchThreadID.xy, radianceProbeResolution, ubo1.probeDim));
+    radianceIsCorner = !(CalculateRadiance(DispatchThreadID.xy, radianceProbeResolution, ddgibuffer.probeDim));
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -291,7 +291,7 @@ void main_radiance(  uint3 DispatchThreadID : SV_DispatchThreadID,
 void main_depth(  uint3 DispatchThreadID : SV_DispatchThreadID,
             uint  GroupIndex       : SV_GroupIndex)
 {
-    int probeIndex = CalculateProbeIndex(DispatchThreadID, DepthProbeResolution, ubo1.probeDim);
+    int probeIndex = CalculateProbeIndex(DispatchThreadID, DepthProbeResolution, ddgibuffer.probeDim);
 
     //if(DispatchThreadID.x==0 && DispatchThreadID.y==0){
     //    ProbeMoved = probes[probeIndex].moved;
@@ -301,7 +301,7 @@ void main_depth(  uint3 DispatchThreadID : SV_DispatchThreadID,
 
     uint2 depthProbeResolution = uint2(DepthProbeResolution, DepthProbeResolution);
 
-    bool depthIsCorner = !(CalculateDepth(DispatchThreadID.xy, depthProbeResolution, ubo1.probeDim));
+    bool depthIsCorner = !(CalculateDepth(DispatchThreadID.xy, depthProbeResolution, ddgibuffer.probeDim));
     GroupMemoryBarrierWithGroupSync();
 
     if(depthIsCorner){

@@ -153,7 +153,7 @@ void PBR::ComputeAndDraw(uint32_t imageIndex)
         Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
         Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
-        Singleton<ShaderResourceManager>::instance().LoadData("intBuffer", imageIndex, &outputContext, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("outputContentBuffer", imageIndex, &outputContext, 0);
         //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
     }
 
@@ -636,9 +636,6 @@ void PBR::createTextures()
         swapchainDepthViews.resize(Singleton<MVulkanEngine>::instance().GetSwapchainImageCount());
 
         for (auto i = 0; i < swapchainDepthViews.size(); i++) {
-            //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-            //    shadowMap, shadowMapExtent, shadowMapFormat
-            //);
             swapchainDepthViews[i] = std::make_shared<MVulkanTexture>();
 
             Singleton<MVulkanEngine>::instance().CreateDepthAttachmentImage(
@@ -978,7 +975,7 @@ void PBR::createShadingPass()
 
             resources.push_back(
                 PassResources::SetBufferResource(
-                    "intBuffer", 7, 0, i));
+                    "outputContentBuffer", 7, 0, i));
 
 
             m_lightingPass->UpdateDescriptorSetWrite(i, resources);

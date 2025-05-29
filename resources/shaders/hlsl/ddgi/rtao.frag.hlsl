@@ -1,24 +1,33 @@
-struct UniformBuffer0
-{
-    int resetAccumulatedBuffer;
-    int gbufferWidth;
-    int gbufferHeight;
-    int padding0;
-};
+#include "Common.h"
+
+
+//struct UniformBuffer0
+//{
+//    int resetAccumulatedBuffer;
+//    int gbufferWidth;
+//    int gbufferHeight;
+//    int padding0;
+//};
 
 [[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
+cbuffer RtaoBuffer : register(b0)
 {
-    UniformBuffer0 ubo0;
+    RTAOBuffer rtao;
 }
 
-[[vk::binding(1, 0)]]Texture2D<float4> gBufferNormal : register(t0);
-[[vk::binding(2, 0)]]Texture2D<float4> gBufferPosition : register(t1);
-[[vk::binding(3, 0)]]RWTexture2D<float2> accumulatedBuffer : register(u0);
+[[vk::binding(1, 0)]]
+cbuffer ScreenBuffer : register(b1)
+{
+    MScreenBuffer screen;
+}
 
-[[vk::binding(4, 0)]]SamplerState linearSampler : register(s0);
+[[vk::binding(2, 0)]]Texture2D<float4> gBufferNormal : register(t0);
+[[vk::binding(3, 0)]]Texture2D<float4> gBufferPosition : register(t1);
+[[vk::binding(4, 0)]]RWTexture2D<float2> accumulatedBuffer : register(u0);
 
-[[vk::binding(5, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
+[[vk::binding(5, 0)]]SamplerState linearSampler : register(s0);
+
+[[vk::binding(6, 0)]]RaytracingAccelerationStructure Tlas : register(t4);
 
 
 struct PSInput
@@ -139,13 +148,13 @@ PSOutput main(PSInput input)
     
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
-    float2 accumulatedBufferValue = accumulatedBuffer.Load(int3(input.texCoord * int2(ubo0.gbufferWidth, ubo0.gbufferHeight), 0));
+    float2 accumulatedBufferValue = accumulatedBuffer.Load(int3(input.texCoord * screen.WindowRes, 0));
 
     float3 fragNormal = normalize(gBufferValue0.rgb);
     float3 fragPos = gBufferValue1.rgb;
 
-    float accumulatedAO = ubo0.resetAccumulatedBuffer==0? accumulatedBufferValue.x:0.f;
-    float accumulatedFrameCount = ubo0.resetAccumulatedBuffer==0? accumulatedBufferValue.y:0.f;
+    float accumulatedAO = rtao.resetAccumulatedBuffer == 0 ? accumulatedBufferValue.x : 0.f;
+    float accumulatedFrameCount = rtao.resetAccumulatedBuffer==0? accumulatedBufferValue.y:0.f;
     
     float3 fragcolor = float3(0.f, 0.f, 0.f);
 
@@ -154,8 +163,8 @@ PSOutput main(PSInput input)
 
     float ao = rtao(fragPos, fragNormal, input.texCoord, int(rayCount * accumulatedFrameCount), radius, rayCount);
     float finalAO = (accumulatedAO * accumulatedFrameCount + ao) / (accumulatedFrameCount+1);
-    
-    accumulatedBuffer[input.texCoord * int2(ubo0.gbufferWidth, ubo0.gbufferHeight)] = float2(finalAO, accumulatedFrameCount+1);
+
+    accumulatedBuffer[input.texCoord * int2(screen.WindowRes)] = float2(finalAO, accumulatedFrameCount+1);
     
     //output.color = float4(ao, ao, ao, 1.f);
     float3 aoColor = float3(finalAO, finalAO, finalAO); 

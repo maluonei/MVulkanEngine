@@ -2,50 +2,17 @@
 #ifndef INDIRECTLIGHT_HLSLI
 #define INDIRECTLIGHT_HLSLI
 
+#include "Common.h"
 #include "Octahedral.hlsli"
 
 #define PROBE_STATE_ACTIVE 0
 #define PROBE_STATE_INACTIVE 1
 
-struct Probe{
-    float3 position;
-    int probeState;
-    float3 offset;
-    int moved;
-
-    //float3 closestFrontfaceDirection;
-    //float closestFrontfaceDistance;
-    //float3 farthestFrontfaceDirection;
-    //float closestBackfaceDistance;
-};
-
-struct UniformBuffer1
-{
-    //Probe probes[2040];
-    int3  probeDim;
-    int   raysPerProbe;
-
-    float3 probePos0;
-	float  minFrontFaceDistance;
-	float3 probePos1;
-	int	   probeRelocationEnabled;
-
-    int    reAccumulate;
-    float    padding0;
-    float    padding1;
-    float    padding2;
-
-    //int   probeRelocationEnabled;
-    //int   padding1;
-    //int   padding2;
-    //int   padding3;
-};
-
 int GetProbeIndex(int3 pIndex, int3 probeScale){
     return pIndex.x * probeScale.y * probeScale.z + pIndex.y * probeScale.z + pIndex.z;
 }
 
-float3 GetProbePosition(UniformBuffer1 ubo1, Probe probe){
+float3 GetProbePosition(DDGIBuffer ubo1, DDGIProbe probe){
     if(ubo1.probeRelocationEnabled){
         return probe.position + probe.offset;
     }
@@ -99,8 +66,8 @@ struct IndirectLightingOutput{
 };
 
 IndirectLightingOutput CalculateIndirectLighting(
-    UniformBuffer1 ubo1,
-    StructuredBuffer<Probe> probes,
+    DDGIBuffer ubo1,
+    StructuredBuffer<DDGIProbe> probes,
     Texture2D<float4> VolumeProbeDatasRadiance,
     Texture2D<float4> VolumeProbeDatasDepth,
     SamplerState linearSampler,
@@ -208,8 +175,8 @@ IndirectLightingOutput CalculateIndirectLighting(
 }
 
 IndirectLightingOutput CalculateIndirectLighting(
-    UniformBuffer1 ubo1,
-    RWStructuredBuffer<Probe> probes,
+    DDGIBuffer ubo1,
+    RWStructuredBuffer<DDGIProbe> probes,
     Texture2D<float4> VolumeProbeDatasRadiance,
     Texture2D<float4> VolumeProbeDatasDepth,
     SamplerState linearSampler,

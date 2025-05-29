@@ -280,7 +280,7 @@ void Scene::GenerateMeshBuffers()
     }
 }
 
-int Scene::GetTotalPrimInfos() const
+const int Scene::GetTotalPrimInfos() const
 {
     int total = 0;
     auto numMeshs = m_primInfos.size();

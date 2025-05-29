@@ -315,3 +315,18 @@ bool ShaderResourceKey::operator<(const ShaderResourceKey& other) const {
 bool ShaderResourceKey::operator==(const ShaderResourceKey& other) const {
     return set == other.set && binding == other.binding;
 }
+
+VkTransformMatrixKHR GLMToVkTransformMatrixKHR(const glm::mat4& matrix) {
+    VkTransformMatrixKHR transform{};
+
+    // VkTransformMatrixKHR 是 row-major 的，存储前三行三列 + 1列偏移
+    // 即，transform.matrix[i][j] = matrix[j][i]
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col) {
+            transform.matrix[row][col] = matrix[col][row];
+        }
+        transform.matrix[row][3] = matrix[3][row]; // translation part
+    }
+
+    return transform;
+}

@@ -21,7 +21,7 @@ cbuffer screenBuffer : register(b2)
 }
 
 [[vk::binding(7, 0)]]
-cbuffer intBuffer : register(b3)
+cbuffer outputContentBuffer : register(b3)
 {
     //int outputMotionVector;
     OutputContent outputContent;

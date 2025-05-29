@@ -320,4 +320,6 @@ static uint32_t CalculateMipLevels(VkExtent2D extent) {
 }
 
 bool IsDepthFormat(VkFormat format);
+
+VkTransformMatrixKHR GLMToVkTransformMatrixKHR(const glm::mat4& matrix);
 #endif

@@ -1,25 +1,26 @@
+#include "Common.h"
 #include "indirectLight.hlsli"
 
-struct UniformBuffer0{
-    float maxRayDistance;
-    int padding1;
-    int padding2;
-    int padding3;
-};
-
-[[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
-{
-    UniformBuffer0 ubo0;
-}; 
+//struct UniformBuffer0{
+//    float maxRayDistance;
+//    int padding1;
+//    int padding2;
+//    int padding3;
+//};
+//
+//[[vk::binding(0, 0)]]
+//cbuffer ubo : register(b0)
+//{
+//    UniformBuffer0 ubo0;
+//}; 
 
 [[vk::binding(1, 0)]]
-cbuffer ub1 : register(b1)
+cbuffer ddgiBuffer : register(b1)
 {
-    UniformBuffer1 ubo1;
+    DDGIBuffer ubo1;
 };
 
-[[vk::binding(2, 0)]]RWStructuredBuffer<Probe> probes : register(u0);
+[[vk::binding(2, 0)]]RWStructuredBuffer<DDGIProbe> probes : register(u0);
 [[vk::binding(3, 0)]]Texture2D<float4> VolumeProbePosition : register(t0);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 [[vk::binding(4, 0)]]Texture2D<float4> VolumeProbeRadiance : register(t1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 [[vk::binding(5, 0)]]RWTexture2D<float4> TestTexture : register(u1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
@@ -53,8 +54,8 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     float3 probePosition = GetProbePosition(ubo1, probes[probeIndex]);
     float3 probeSpacing = (ubo1.probePos1 - ubo1.probePos0) / float3(ubo1.probeDim);
 
-    for(int i=0; i<numRays; i++){
-        if(hitDistances[i] > ubo0.maxRayDistance) continue;
+    for (int i = 0; i < numRays; i++) {
+        if (hitDistances[i] > ubo1.maxRayDistance) continue;
 
         int2 texcoord = int2(i, probeIndex);
         float3 hitPosition = VolumeProbePosition[texcoord].xyz;
