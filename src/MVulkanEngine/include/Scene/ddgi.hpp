@@ -42,13 +42,13 @@ struct UVBuffer {
 	inline int GetSize() const { return uv.size() * sizeof(glm::vec2); }
 };
 
-struct GeometryInfo {
-	int vertexOffset;
-	int indexOffset;
-	int uvOffset;
-	int normalOffset;
-	int materialIdx;
-};
+//struct GeometryInfo {
+//	int vertexOffset;
+//	int indexOffset;
+//	int uvOffset;
+//	int normalOffset;
+//	int materialIdx;
+//};
 
 struct InstanceOffset {
 	std::vector<GeometryInfo> geometryInfos;

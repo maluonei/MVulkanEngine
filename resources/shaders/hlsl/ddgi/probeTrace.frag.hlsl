@@ -42,9 +42,9 @@ cbuffer texBuffer : register(b0)
 };
 
 [[vk::binding(1, 0)]]
-cbuffer ProbeBuffer : register(b1)
+cbuffer ddgiBuffer : register(b1)
 {
-    DDGIBuffer ubo1;
+    DDGIBuffer ddgiBuffer;
 };
 
 [[vk::binding(2, 0)]]
@@ -290,7 +290,7 @@ float3 QuaternionRotate(float3 v, float4 q){
 
 PSOutput main(PSInput input)
 {
-    const int2 FullResolution = int2(ubo1.raysPerProbe, ubo1.probeDim.x * ubo1.probeDim.y * ubo1.probeDim.z);
+    const int2 FullResolution = int2(ddgiBuffer.raysPerProbe, ddgiBuffer.probeDim.x * ddgiBuffer.probeDim.y * ddgiBuffer.probeDim.z);
 
     int2 idx = int2(FullResolution * input.texCoord);
     int rayIndex = idx.x;
@@ -304,10 +304,10 @@ PSOutput main(PSInput input)
     
     RayDesc ray;
     ray.TMin = 0.f;
-    ray.TMax = 10000.f; 
-    ray.Origin = GetProbePosition(ubo1, probe); 
-    //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-    ray.Direction = SphericalFibonacci(rayIndex, ubo1.raysPerProbe);
+    ray.TMax = 10000.f;
+    ray.Origin = GetProbePosition(ddgiBuffer, probe);
+    // float3 randomDirection = SphericalFibonacci(rayIndex, 64);
+    ray.Direction = SphericalFibonacci(rayIndex, ddgiBuffer.raysPerProbe);
     ray.Direction = QuaternionRotate(ray.Direction, QuaternionConjugate(ubo2.probeRotateQuaternion));
 
     if(RayTracingClosestHit(ray, pathState)){
@@ -342,7 +342,7 @@ PSOutput main(PSInput input)
             float3 lightColor = ubo2.lights[i].color * ubo2.lights[i].intensity;
             float3 L = -ubo2.lights[i].direction;
             float3 V = -ray.Direction;
-            float3 N = output.normal;
+            float3 N = output.normal.rgb;
 
             diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
         }         
@@ -350,15 +350,15 @@ PSOutput main(PSInput input)
         //if(output.normal.w > 0.f && pathState.outside){ 
         //if(output.normal.w > 0.f){
         IndirectLightingOutput indirectLight = CalculateIndirectLighting(
-                    ubo1,
-                    probes,
-                    VolumeProbeDatasRadiance,  
-                    VolumeProbeDatasDepth, 
-                    linearSampler, 
-                    ubo1.probePos0,
-                    ubo1.probePos1,
-                    output.position, 
-                    output.normal); 
+            ddgiBuffer,
+            probes,
+            VolumeProbeDatasRadiance,
+            VolumeProbeDatasDepth,
+            linearSampler,
+            ddgiBuffer.probePos0,
+            ddgiBuffer.probePos1,
+            output.position, 
+            output.normal); 
         diffuse += indirectLight.radiance * output.albedo / PI;
         //}
     }

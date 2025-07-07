@@ -25,9 +25,7 @@ void MVulkanCommandAllocator::Create(MVulkanDevice device)
             poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolInfo.queueFamilyIndex = device.GetQueueFamilyIndices(queueType);
 
-            if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create command pool!");
-            }
+            VK_CHECK_RESULT(vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool));
 
             m_commandPools.insert({ queueType , commandPool });
         }

@@ -45,9 +45,6 @@ struct PSOutput
 {
     float4 directLight : SV_Target0;
     float4 indirectLight : SV_Target1;
-    //float4 depthProbeUV : SV_Target2;
-    //float4 radianceProbeUV : SV_Target3;
-    //float4 probeRadiance : SV_Target4;
 };
  
 bool RayTracingAnyHit(in RayDesc rayDesc) {

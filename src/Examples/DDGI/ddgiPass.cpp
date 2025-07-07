@@ -57,19 +57,99 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     auto computeList = Singleton<MVulkanEngine>::instance().GetComputeCommandList();
     auto computeQueue = Singleton<MVulkanEngine>::instance().GetCommandQueue(MQueueType::COMPUTE);
 
-    ////prepare gbufferPass ubo
-    //{
-    //    GbufferShader::UniformBufferObject0 ubo0{};
-    //    ubo0.Model = glm::mat4(1.f);
-    //    ubo0.View = m_camera->GetViewMatrix();
-    //    ubo0.Projection = m_camera->GetProjMatrix();
-    //    m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
-    //
-    //    GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
-    //    m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
-    //}
-    //
-    ////prepare probeTracingPass ubo
+    auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+
+    //prepare gbufferPass ubo
+    {
+        //GbufferShader::UniformBufferObject0 ubo0{};
+        //ubo0.Model = glm::mat4(1.f);
+        //ubo0.View = m_camera->GetViewMatrix();
+        //ubo0.Projection = m_camera->GetProjMatrix();
+        //m_gbufferPass->GetShader()->SetUBO(0, &ubo0);
+        //
+        //GbufferShader::UniformBufferObject1 ubo1 = GbufferShader::GetFromScene(m_scene);
+        //m_gbufferPass->GetShader()->SetUBO(1, &ubo1);
+
+        VPBuffer vpBuffer{};
+        vpBuffer.View = m_camera->GetViewMatrix();
+        vpBuffer.Projection = m_camera->GetProjMatrix();
+        Singleton<ShaderResourceManager>::instance().LoadData("vpBuffer", 0, &vpBuffer, 0);
+    
+        auto gbufferExtent = swapchainExtent;
+        MScreenBuffer gBufferInfoBuffer{};
+        gBufferInfoBuffer.WindowRes = int2(gbufferExtent.width, gbufferExtent.height);
+        Singleton<ShaderResourceManager>::instance().LoadData("gBufferInfoBuffer", 0, &gBufferInfoBuffer, 0);
+        
+        LightBuffer lightBuffer{};
+        lightBuffer.lightNum = 1;
+        lightBuffer.lights[0].direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
+        lightBuffer.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
+        lightBuffer.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
+        //lightBuffer.lights[0].shadowMapIndex = 0;
+        //lightBuffer.lights[0].shadowViewProj = m_directionalLightCamera->GetOrthoMatrix() * m_directionalLightCamera->GetViewMatrix();
+        //lightBuffer.lights[0].shadowCameraZnear = m_directionalLightCamera->GetZnear();
+        //lightBuffer.lights[0].shadowCameraZfar = m_directionalLightCamera->GetZfar();
+        //lightBuffer.lights[0].shadowmapResolution = int2(shadowmapExtent.width, shadowmapExtent.height);
+        
+        DDGILightBuffer ddgiLightBuffer{};
+        ddgiLightBuffer.lightNum = 1;
+        ddgiLightBuffer.lights[0].direction = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetDirection();
+        ddgiLightBuffer.lights[0].intensity = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetIntensity();
+        ddgiLightBuffer.lights[0].color = std::static_pointer_cast<DirectionalLight>(m_directionalLight)->GetColor();
+        auto now = std::chrono::system_clock::now();
+        auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()
+        ).count();
+        ddgiLightBuffer.t = (millis - m_start) / 1000.f;
+
+        m_volume->SetRandomRotation();
+        ddgiLightBuffer.probeRotateQuaternion = m_volume->GetQuaternion();
+
+        MCameraBuffer cameraBuffer{};
+        cameraBuffer.cameraPos = m_camera->GetPosition();
+
+        MScreenBuffer screenBuffer{};
+        screenBuffer.WindowRes = int2(swapchainExtent.width, swapchainExtent.height);
+
+        Singleton<ShaderResourceManager>::instance().LoadData("lightBuffer", imageIndex, &lightBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("ddgiLightBuffer", imageIndex, &ddgiLightBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("cameraBuffer", imageIndex, &cameraBuffer, 0);
+        Singleton<ShaderResourceManager>::instance().LoadData("screenBuffer", imageIndex, &screenBuffer, 0);
+        //Singleton<ShaderResourceManager>::instance().LoadData("outputContentBuffer", imageIndex, &outputContext, 0);
+        //m_lightingPass->GetShader()->SetUBO(0, &ubo0);
+    }
+
+    {
+        auto probeDim = m_volume->GetProbeDim();
+        DDGIBuffer ddgiBuffer{};
+
+        ddgiBuffer.probeDim = probeDim;
+        ddgiBuffer.raysPerProbe = m_raysPerProbe;
+        ddgiBuffer.probePos0 = m_volume->GetProbePosition(0, 0, 0);
+        ddgiBuffer.probePos1 = m_volume->GetProbePosition(probeDim.x - 1, probeDim.y - 1, probeDim.z - 1);
+        ddgiBuffer.minFrontFaceDistance = 0.3f;
+        ddgiBuffer.probeRelocationEnabled = 1;
+
+        ddgiBuffer.reAccumulate = 0;
+        ddgiBuffer.maxRayDistance = 1e+4f;
+
+        Singleton<ShaderResourceManager>::instance().LoadData("ddgiBuffer", 0, &ddgiBuffer, 0);
+    }
+
+    {
+        RTAOBuffer rtaoBuffer;
+        rtaoBuffer.resetAccumulatedBuffer = GetCameraMoved() ? 1 : 0;
+        Singleton<ShaderResourceManager>::instance().LoadData("RtaoBuffer", 0, &rtaoBuffer, 0);
+    }
+
+    {
+        DDGICompositeBuffer compositeBuffer{};
+        compositeBuffer.useAO = 1;
+        compositeBuffer.visulizeProbe = 0;
+        Singleton<ShaderResourceManager>::instance().LoadData("ddgiCompositeBuffer", 0, &compositeBuffer, 0);
+    }
+    
+    //prepare probeTracingPass ubo
     //{
     //    ProbeTracingShader::UniformBuffer0 ubo0{};
     //
@@ -117,8 +197,8 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
     //    
     //    m_probeTracingPass->GetShader()->SetUBO(2, &ubo2);
     //}
-    //
-    ////prepare probeBlendRadiancePass ubo
+    
+    //prepare probeBlendRadiancePass ubo
     //{
     //    ProbeBlendShader::UniformBuffer0 ubo0{};
     //    //ubo0.raysPerProbe = m_raysPerProbe;
@@ -180,7 +260,7 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
     //if (m_uniformBuffer1.reAccumulate == 1) {
     //}
-    auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
+    //auto swapchainExtent = Singleton<MVulkanEngine>::instance().GetSwapchainImageExtent();
 
     {
         VPBuffer vpBuffer{};
@@ -296,80 +376,80 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
 
 void DDGIApplication::RecreateSwapchainAndRenderPasses()
 {
-    if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
-        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
-
-        createTextures();
-
-        {
-            //m_rtaoPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_rtaoPass);
-
-            std::vector<std::vector<VkImageView>> rtaoViews(2);
-            for (auto i = 0; i < 2; i++) {
-                rtaoViews[i].resize(1);
-                rtaoViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
-            }
-
-            std::vector<VkSampler> samplers(1);
-            samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
-
-            std::vector<std::vector<VkImageView>> storageTextureViews(1);
-            storageTextureViews[0].resize(1, m_acculatedAOTexture->GetImageView());
-
-            auto tlas = m_rayTracing.GetTLAS();
-            std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
-
-            m_rtaoPass->UpdateDescriptorSetWrite(rtaoViews, storageTextureViews, samplers, accelerationStructures);
-        }
-
-        {
-            m_probeVisulizePass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
-            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_probeVisulizePass);
-        }
-
-        {
-            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
-
-            std::vector<std::vector<VkImageView>> views(6);
-            for (auto i = 0; i < 4; i++) {
-                views[i].resize(1);
-                views[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
-            }
-            views[4] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
-            views[5] = std::vector<VkImageView>(1, m_volumeProbeDatasDepth->GetImageView());
-
-            std::vector<VkSampler> samplers(1);
-            samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
-
-            auto tlas = m_rayTracing.GetTLAS();
-            std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
-
-            m_lightingPass->UpdateDescriptorSetWrite(views, samplers, accelerationStructures);
-        }
-
-        {
-            //m_compositePass->GetRenderPassCreateInfo().depthView = m_compositePass->GetFrameBuffer(0).GetDepthImageView();
-            Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_compositePass);
-
-            std::vector<std::vector<VkImageView>> views(4);
-            views[0].resize(1);
-            views[0][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(0);
-            views[1].resize(1);
-            views[1][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(1);
-            views[2].resize(1);
-            views[2][0] = m_rtaoPass->GetFrameBuffer(0).GetImageView(0);
-            views[3].resize(1);
-            views[3][0] = m_probeVisulizePass->GetFrameBuffer(0).GetImageView(0);
-
-            std::vector<VkSampler> samplers(1);
-            samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
-
-            std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
-
-            m_compositePass->UpdateDescriptorSetWrite(views, samplers, accelerationStructures);
-        }
-    }
+    //if (Singleton<MVulkanEngine>::instance().RecreateSwapchain()) {
+    //    Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_gbufferPass);
+    //
+    //    createTextures();
+    //
+    //    {
+    //        //m_rtaoPass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+    //        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_rtaoPass);
+    //
+    //        std::vector<std::vector<VkImageView>> rtaoViews(2);
+    //        for (auto i = 0; i < 2; i++) {
+    //            rtaoViews[i].resize(1);
+    //            rtaoViews[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
+    //        }
+    //
+    //        std::vector<VkSampler> samplers(1);
+    //        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
+    //
+    //        std::vector<std::vector<VkImageView>> storageTextureViews(1);
+    //        storageTextureViews[0].resize(1, m_acculatedAOTexture->GetImageView());
+    //
+    //        auto tlas = m_rayTracing.GetTLAS();
+    //        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
+    //
+    //        m_rtaoPass->UpdateDescriptorSetWrite(rtaoViews, storageTextureViews, samplers, accelerationStructures);
+    //    }
+    //
+    //    {
+    //        m_probeVisulizePass->GetRenderPassCreateInfo().depthView = m_gbufferPass->GetFrameBuffer(0).GetDepthImageView();
+    //        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_probeVisulizePass);
+    //    }
+    //
+    //    {
+    //        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_lightingPass);
+    //
+    //        std::vector<std::vector<VkImageView>> views(6);
+    //        for (auto i = 0; i < 4; i++) {
+    //            views[i].resize(1);
+    //            views[i][0] = m_gbufferPass->GetFrameBuffer(0).GetImageView(i);
+    //        }
+    //        views[4] = std::vector<VkImageView>(1, m_volumeProbeDatasRadiance->GetImageView());
+    //        views[5] = std::vector<VkImageView>(1, m_volumeProbeDatasDepth->GetImageView());
+    //
+    //        std::vector<VkSampler> samplers(1);
+    //        samplers[0] = m_linearSamplerWithoutAnisotropy.GetSampler();
+    //
+    //        auto tlas = m_rayTracing.GetTLAS();
+    //        std::vector<VkAccelerationStructureKHR> accelerationStructures(1, tlas);
+    //
+    //        m_lightingPass->UpdateDescriptorSetWrite(views, samplers, accelerationStructures);
+    //    }
+    //
+    //    {
+    //        //m_compositePass->GetRenderPassCreateInfo().depthView = m_compositePass->GetFrameBuffer(0).GetDepthImageView();
+    //        Singleton<MVulkanEngine>::instance().RecreateRenderPassFrameBuffer(m_compositePass);
+    //
+    //        std::vector<std::vector<VkImageView>> views(4);
+    //        views[0].resize(1);
+    //        views[0][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(0);
+    //        views[1].resize(1);
+    //        views[1][0] = m_lightingPass->GetFrameBuffer(0).GetImageView(1);
+    //        views[2].resize(1);
+    //        views[2][0] = m_rtaoPass->GetFrameBuffer(0).GetImageView(0);
+    //        views[3].resize(1);
+    //        views[3][0] = m_probeVisulizePass->GetFrameBuffer(0).GetImageView(0);
+    //
+    //        std::vector<VkSampler> samplers(1);
+    //        samplers[0] = m_linearSamplerWithAnisotropy.GetSampler();
+    //
+    //        std::vector<VkAccelerationStructureKHR> accelerationStructures(0);
+    //
+    //        m_compositePass->UpdateDescriptorSetWrite(views, samplers, accelerationStructures);
+    //    }
+    //}
 }
 
 void DDGIApplication::CreateRenderPass()
@@ -836,7 +916,7 @@ void DDGIApplication::createStorageBuffers()
         //auto meshNames = m_scene->GetMeshNames();
         //auto primitiveNum = m_scene->GetNumPrimInfos();
         auto numInstances = m_scene->GetTotalPrimInfos();
-        auto numMeshes = m_scene->GetNumMeshes();
+        //auto numMeshes = m_scene->GetNumMeshes();
 
         VertexBuffer   vertexBuffer;
         IndexBuffer    indexBuffer;
@@ -848,38 +928,46 @@ void DDGIApplication::createStorageBuffers()
         indexBuffer.index.resize(numIndices);
         normalBuffer.normal.resize(numVertices);
         uvBuffer.uv.resize(numVertices);
-        instanceOffsetBuffer.geometryInfos.resize(numMeshes);
+        instanceOffsetBuffer.geometryInfos.resize(numInstances);
         probeBuffer = probeBuffer;
 
         int vertexBufferIndex = 0;
         int indexBufferIndex = 0;
         int instanceBufferIndex = 0;
 
-        for (auto j = 0; j < primitiveNum;j++) {
-            auto mesh = m_scene->GetMesh(m_scene->m_primInfos[j].mesh_id);
-            auto meshVertexNum = mesh->vertices.size();
-            for (auto i = 0; i < meshVertexNum; i++) {
-                vertexBuffer.position[vertexBufferIndex + i] = mesh->vertices[i].position;
-                normalBuffer.normal[vertexBufferIndex + i] = mesh->vertices[i].normal;
-                uvBuffer.uv[vertexBufferIndex + i] = mesh->vertices[i].texcoord;
-            }
-            auto meshIndexNum = mesh->indices.size();
-            for (auto i = 0; i < meshIndexNum; i++) {
-                indexBuffer.index[indexBufferIndex + i] = mesh->indices[i];
-            }
+        auto numInstances = m_scene->GetTotalPrimInfos();
+        auto primInfos = m_scene->m_primInfos;
+        auto numMeshs = primInfos.size();
 
-            instanceOffsetBuffer.geometryInfos[instanceBufferIndex] =
-                GeometryInfo{
-                    .vertexOffset = vertexBufferIndex * 3,
-                    .indexOffset = indexBufferIndex,
-                    .uvOffset = vertexBufferIndex * 2,
-                    .normalOffset = vertexBufferIndex * 3,
-                    .materialIdx = int(m_scene->m_primInfos[j].material_id)
-            };
+        int instanceIndex = 0;
+        for (auto k = 0; k < numMeshs; k++) {
+            auto numMeshInstances = primInfos[k].size();
+            auto mesh = m_scene->GetMesh(primInfos[k][0].mesh_id);
+            for (auto j = 0; j < numMeshInstances; j++) {
+                auto meshVertexNum = mesh->vertices.size();
+                for (auto i = 0; i < meshVertexNum; i++) {
+                    vertexBuffer.position[vertexBufferIndex + i] = mesh->vertices[i].position;
+                    normalBuffer.normal[vertexBufferIndex + i] = mesh->vertices[i].normal;
+                    uvBuffer.uv[vertexBufferIndex + i] = mesh->vertices[i].texcoord;
+                }
+                auto meshIndexNum = mesh->indices.size();
+                for (auto i = 0; i < meshIndexNum; i++) {
+                    indexBuffer.index[indexBufferIndex + i] = mesh->indices[i];
+                }
 
-            vertexBufferIndex += meshVertexNum;
-            indexBufferIndex += meshIndexNum;
-            instanceBufferIndex += 1;
+                instanceOffsetBuffer.geometryInfos[instanceBufferIndex] =
+                    GeometryInfo{
+                        .vertexOffset = vertexBufferIndex * 3,
+                        .indexOffset = indexBufferIndex,
+                        .uvOffset = vertexBufferIndex * 2,
+                        .normalOffset = vertexBufferIndex * 3,
+                        .materialIdx = int(primInfos[k][j].material_id)
+                };
+
+                vertexBufferIndex += meshVertexNum;
+                indexBufferIndex += meshIndexNum;
+                instanceBufferIndex += 1;
+            }
         }
 
         vertexBufferCreateInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -1066,7 +1154,7 @@ void DDGIApplication::createLightingPass()
         lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         lightingPassFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-        RenderPassCreateInfo info{};
+        //RenderPassCreateInfo info{};
         //RenderPassCreateInfo info{};
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(Singleton<MVulkanEngine>::instance().GetSwapchainImageFormat());
@@ -1098,18 +1186,33 @@ void DDGIApplication::createLightingPass()
                 PassResources::SetBufferResource(
                     "screenBuffer", 2, 0, i));
             resources.push_back(
-                PassResources::SetSampledImageResource(
-                    3, 0, gBuffer0));
-            resources.push_back(
-                PassResources::SetSampledImageResource(
-                    4, 0, gBuffer1));
-            resources.push_back(
-                PassResources::SetSamplerResource(
-                    6, 0, m_linearSamplerWithAnisotropy.GetSampler()));
-
+                PassResources::SetBufferResource(
+                    "ddgiBuffer", 3, 0, i));
             resources.push_back(
                 PassResources::SetBufferResource(
-                    "outputContentBuffer", 7, 0, i));
+                    4, 0, m_probesDataBuffer));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    5, 0, gBuffer0));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    6, 0, gBuffer1));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    7, 0, m_volumeProbeDatasRadiance));
+            resources.push_back(
+                PassResources::SetSampledImageResource(
+                    8, 0, m_volumeProbeDatasDepth));
+            resources.push_back(
+                PassResources::SetSamplerResource(
+                    9, 0, m_linearSamplerWithAnisotropy.GetSampler()));
+            auto tlas = m_rayTracing.GetTLAS();
+            resources.push_back(
+                PassResources::SetAccelerationStructureResource(
+                    10, 0, &tlas));
+            //resources.push_back(
+            //    PassResources::SetBufferResource(
+            //        "outputContentBuffer", 7, 0, i));
 
 
             m_lightingPass->UpdateDescriptorSetWrite(i, resources);
@@ -1475,7 +1578,7 @@ void DDGIApplication::loadShaders()
     Singleton<ShaderManager>::instance().AddShader("GBuffer Shader", { "hlsl/gbuffer.vert.hlsl", "hlsl/gbuffer.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("ProbeTracing Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/probeTrace.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("RTAO Shader", { "hlsl/ddgi/fullscreen.vert.hlsl", "hlsl/ddgi/rtao.frag.hlsl", "main", "main" });
-    Singleton<ShaderManager>::instance().AddShader("Shading Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl", "main", "main" });
+    Singleton<ShaderManager>::instance().AddShader("Lighting Shader", { "hlsl/ddgi/fullScreen.vert.hlsl", "hlsl/ddgi/ddgiLighting.frag.hlsl", "main", "main" });
     Singleton<ShaderManager>::instance().AddShader("ProbeRelocation Shader", { "hlsl/ddgi/probeRelocation.comp.hlsl", "main" });
     Singleton<ShaderManager>::instance().AddShader("ProbeBlendingRadiance Shader", { "hlsl/ddgi/probeBlend.comp.hlsl", "main_radiance" });
     Singleton<ShaderManager>::instance().AddShader("ProbeBlendingDepth Shader", { "hlsl/ddgi/probeBlend.comp.hlsl", "main_depth" });
