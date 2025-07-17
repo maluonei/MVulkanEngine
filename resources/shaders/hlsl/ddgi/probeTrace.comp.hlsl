@@ -1,84 +1,60 @@
-#include "indirectLight.hlsl"
-
-struct TexBuffer
-{
-    int diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx;
-    int matId;
-    int padding2;
-};
-    
-struct UniformBuffer0
-{
-    TexBuffer texBuffer[512];
-};
-
-struct GeometryInfo {
-  int vertexOffset;
-  int indexOffset;
-  int uvOffset;
-  int normalOffset;
-  int materialIdx;
-};
-
-struct Light
-{
-    float3 direction;
-    float intensity;
-
-    float3 color;
-    int padding0;
-};
-
-struct UniformBuffer2
-{
-    Light lights[4];
-
-    float3 probePos0;
-    int    lightNum;
-    float3 probePos1;
-    int    frameCount;
-
-    int    rayCount;
-    int    probeCount;
-};
+#include "Common.h"
+#include "indirectLight.hlsli"
+#include "shading.hlsli"
+#include "util.hlsli"
 
 [[vk::binding(0, 0)]]
-cbuffer ubo : register(b0)
+cbuffer ddgiBuffer : register(b1)
 {
-    UniformBuffer0 ubo0;
+    DDGIBuffer ddgiBuffer;
 };
 
 [[vk::binding(1, 0)]]
-cbuffer ubo1 : register(b1)
+cbuffer ddgiLightBuffer : register(b2)
 {
-    UniformBuffer1 ubo1;
+    DDGILightBuffer ubo2;
 };
 
-[[vk::binding(2, 0)]]
-cbuffer ubo2 : register(b2)
+[[vk::binding(20, 0)]]
+cbuffer probeTraceDispatchDimBuffer : register(b3)
 {
-    UniformBuffer2 ubo2;
+    DispatchBuffer DispatchDim;
 };
 
-[[vk::binding(3, 0)]] StructuredBuffer<float> VertexBuffer : register(t0);
-[[vk::binding(4, 0)]] StructuredBuffer<int> IndexBuffer : register(t1);
-[[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
-[[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
-[[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
-[[vk::binding(8, 0)]] Texture2D<float4> textures[1024] : register(t5);
-[[vk::binding(9, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1030);   //[512, 64]
-[[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1031);   //[2048, 256]
-[[vk::binding(11, 0)]] Texture2D<float4> PositionMap  : register(t1030);   //[512, 64]
-[[vk::binding(12, 0)]] Texture2D<float4> NormalMap  : register(t1031);  
-[[vk::binding(13, 0)]] Texture2D<float4> AlbedoMap  : register(t1030);   //[512, 64]
-[[vk::binding(14, 0)]] Texture2D<float4> RadianceMap  : register(t1031);  
+[[vk::binding(2, 0)]] StructuredBuffer<float> VertexBuffer : register(t0);
+[[vk::binding(3, 0)]] StructuredBuffer<int> IndexBuffer : register(t1);
+[[vk::binding(4, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
+[[vk::binding(5, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
+[[vk::binding(6, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
+[[vk::binding(7, 0)]] StructuredBuffer<MaterialBuffer> materials : register(t5);
+[[vk::binding(8, 0)]] StructuredBuffer<DDGIProbe> probes : register(t6);
+[[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t7);
+[[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1035);   //[512, 64]
+[[vk::binding(11, 0)]] Texture2D<float4> VolumeProbeDatasDepth  : register(t1036);   //[2048, 256]
 
-[[vk::binding(15, 0)]] SamplerState linearSampler : register(s0);
+[[vk::binding(12, 0)]] SamplerState linearSampler : register(s0);
 
-[[vk::binding(16, 0)]] RaytracingAccelerationStructure Tlas : register(t1032);
+[[vk::binding(13, 0)]] RaytracingAccelerationStructure Tlas : register(t1037);
 
-//static const float PI = 3.14159265359f;
+[[vk::binding(14, 0)]] RWTexture2D<float4> PositionTexture : register(u0); 
+[[vk::binding(15, 0)]] RWTexture2D<float4> NormalTexture : register(u1); 
+[[vk::binding(16, 0)]] RWTexture2D<float4> AlbedoTexture : register(u2); 
+[[vk::binding(17, 0)]] RWTexture2D<float4> RadianceTexture : register(u3);
+
+//[[vk::binding(18, 0)]] StructuredBuffer<float4x4> TransformBuffer : register(t1035);
+[[vk::binding(18, 0)]] RWTexture2D<uint> MatIdTexture : register(u4);
+[[vk::binding(19, 0)]] RWTexture2D<float2> TexCoordTexture : register(u5);
+
+struct PSOutput
+{
+    float4 position;
+    float4 normal;
+    float4 albedo;
+    float4 radiance;
+    // float4 L : SV_Target4;
+    // float4 V : SV_Target5;
+    // float4 N : SV_Target6;
+};
 
 struct PathState {
   float3 position;
@@ -87,11 +63,13 @@ struct PathState {
   float3 metallicAndRoughness;
   //float3 rayDirection;
 
+  bool outside;
   float t;
   float2 uv;
 
   uint instanceID;
   uint primitiveID;
+  int matId;
 };
 
 bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
@@ -110,6 +88,21 @@ bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
   return false;
 }
 
+bool RayTracingAnyHit(in RayDesc rayDesc) {
+  uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+  RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
+
+  q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
+  q.Proceed();
+
+  if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+    return true;
+  }
+
+  return false;
+}
+
 bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
   uint rayFlags = RAY_FLAG_FORCE_OPAQUE;
 
@@ -120,14 +113,15 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
   //pathState.rayDirection = rayDesc.Direction;
 
+  pathState.t = 10000.f;
   if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
     pathState.t = q.CommittedRayT();
 
     uint instanceIndex = q.CommittedInstanceID();
-
+  
     uint ioffset = instanceOffset[instanceIndex].indexOffset;
     uint voffset = instanceOffset[instanceIndex].vertexOffset;
-
+ 
     uint primitiveIndex = q.CommittedPrimitiveIndex();
 
     pathState.instanceID = instanceIndex;
@@ -151,19 +145,23 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
     float3 e0 = v1 - v0;
     float3 e1 = v2 - v0;
 
+    bool outside = true;
     float3 normal = normalize(cross(e0, e1));
     if(dot(rayDesc.Direction, normal) > 0.f){
         normal = -normal;
-    }
+        outside = false;
+    } 
 
     int noffset = instanceOffset[instanceIndex].normalOffset;
 
     float2 barycentrics = q.CommittedTriangleBarycentrics();
     float w0 = 1.f - barycentrics.x - barycentrics.y;
-    float w1 = barycentrics.x;
+    float w1 = barycentrics.x;  
     float w2 = barycentrics.y;
 
     float3 position = w0 * v0 + w1 * v1 + w2 * v2;
+    float4 pos = float4(position, 1.f);
+    position = mul(instanceOffset[instanceIndex].transform, pos).xyz;
 
     if (noffset != -1) {
       float3 n0 = float3(NormalBuffer[noffset + v0Idx * 3],
@@ -177,8 +175,13 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
                          NormalBuffer[noffset + v2Idx * 3 + 2]);
 
       normal = normalize(w0 * n0 + w1 * n1 + w2 * n2);
+
+      float3x3 normalMatrix = transpose(inverse((float3x3)instanceOffset[instanceIndex].transform));
+      normal = normalize(mul(normalMatrix, normal));  
+
       if(dot(rayDesc.Direction, normal) > 0.f){
         normal = -normal;
+        outside = false;
       }
     }
 
@@ -198,12 +201,27 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
 
     //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
 
+    //float3x3 toWorld; 
+    //toWorld[0] = objToWorld[0].xyz;
+    //toWorld[1] = objToWorld[1].xyz;
+    //toWorld[2] = objToWorld[2].xyz;
+ 
+    //normal = mul(toWorld, normal);
+
+    // compute position
+    //position = mul(toWorld, position);
+    //position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
+    
     pathState.normal = normal;
     pathState.position = position;
-    
-    //int matId = instanceOffset[instanceIndex].materialIdx;
+    pathState.outside = outside;
 
-    int diffuseTextureIdx = ubo0.texBuffer[instanceIndex].diffuseTextureIdx;
+    int matId = instanceOffset[instanceIndex].materialIdx;
+    pathState.matId = matId;
+    int diffuseTextureIdx = materials[matId].diffuseTextureIdx;
+    int metallicAndRoughnessTextureIdx = materials[matId].metallicAndRoughnessTextureIdx;
+
+    //int diffuseTextureIdx = texBuffer.tex[instanceIndex].diffuseTextureIdx;
     if(diffuseTextureIdx != -1){
         pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
     }
@@ -211,39 +229,21 @@ bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
         pathState.albedo = float3(0.f, 0.f, 0.f);
     }
 
-    int metallicAndRoughnessTextureIdx = ubo0.texBuffer[instanceIndex].metallicAndRoughnessTextureIdx;
+    //int metallicAndRoughnessTextureIdx = texBuffer.tex[instanceIndex].metallicAndRoughnessTextureIdx;
     if(metallicAndRoughnessTextureIdx != -1){
         pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
     }
-    else{
+    else{  
         pathState.metallicAndRoughness = float3(0.f, 0.f, 0.f);
     }
 
-    pathState.uv = texCoords;
+    pathState.uv = barycentrics;
 
     return true;
   }
 
   return false;
-}
-
-float3 DirectDiffuseLighting(Light light, float3 position, float3 normal, float3 albedo){
-    float3 brdf = (albedo / (float)PI);
-    float ndotv = max(dot(normal, -light.direction), 0.f);
-    
-    RayDesc rayDesc;
-    rayDesc.Origin = position + normal * (1e-4);
-    rayDesc.Direction = -light.direction;
-    rayDesc.TMin = 0.f;
-    rayDesc.TMax = 1000.f;
-    float t;
-
-    bool visibility = (1-RayTracingAnyHit(rayDesc, t));
-
-    float3 lighting = light.color * light.intensity * (float)visibility * ndotv;
-
-    return (brdf * lighting);
-}
+} 
 
 float3 SphericalFibonacci(float index, float numSamples)
 {
@@ -255,76 +255,108 @@ float3 SphericalFibonacci(float index, float numSamples)
     return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
 }
 
-float3 SphericalFibonacci(float index, float numSamples, float t)
+float4 QuaternionConjugate(float4 q)
 {
-    const float b = (sqrt(5.f) * 0.5f + 0.5f) - 1.f + 100.f * t;
-    float phi = 2 * PI * frac(index * b);
-    float cosTheta = 1.f - (2.f * index + 1.f) * (1.f / numSamples);
-    float sinTheta = sqrt(saturate(1.f - (cosTheta * cosTheta)));
-
-    return float3((cos(phi) * sinTheta), (sin(phi) * sinTheta), cosTheta);
+    return float4(-q.xyz, q.w);
 }
 
-[numthreads(16, 16, 1)] 
-void main(uint3 DispatchThreadID : SV_DispatchThreadID)
+float3 QuaternionRotate(float3 v, float4 q){
+    float3 b = q.xyz;
+    float b2 = dot(b, b);
+    return normalize(v * (q.w * q.w - b2) + b * (dot(v, b) * 2.f) + cross(b, v) * (q.w * 2.f));
+}
+
+[numthreads(32, 32, 1)]
+void main(uint3 DispatchThreadID: SV_DispatchThreadID)
 {
-    //const int2 FullResolution = int2(144, 512);
+    if (DispatchThreadID.x >= DispatchDim.DispatchDim.x || DispatchThreadID.y >= DispatchDim.DispatchDim.y) return;
+
+    const int2 FullResolution = int2(ddgiBuffer.raysPerProbe, ddgiBuffer.probeDim.x * ddgiBuffer.probeDim.y * ddgiBuffer.probeDim.z);
 
     //int2 idx = int2(FullResolution * input.texCoord);
-    int rayIndex = DispatchThreadID.x;
-    int probeIndex = DispatchThreadID.y;
-    Probe probe = ubo1.probes[probeIndex];
- 
+    int2 idx = DispatchThreadID.xy;
+    int rayIndex = idx.x;
+    int probeIndex = idx.y;
+    DDGIProbe probe = probes[probeIndex];
+
     PSOutput output;
     output.albedo.w = 0.f;
     
     PathState pathState;
-    {
-        RayDesc ray;
-        ray.TMin = 0.f; 
-        ray.TMax = 1000.f;
-        ray.Origin = GetProbePosition(ubo1, probe); 
-        //float3 randomDirection = SphericalFibonacci(rayIndex, 64);
-        ray.Direction = SphericalFibonacci(rayIndex, ubo2.rayCount);
- 
-        if(RayTracingClosestHit(ray, pathState)){
-            output.position = float4(pathState.position, 1.f);
-            output.normal = float4(pathState.normal, 1.f);
-            output.albedo = float4(pathState.albedo, 1.f);
-        }
-        else{
-            output.position = float4(0.f, 0.f, 0.f, 0.f);
-            output.normal = float4(0.f, 0.f, 0.f, 0.f);
-            output.albedo = float4(0.f, 0.f, 0.f, 0.f);
-        }
+    
+    RayDesc ray;
+    ray.TMin = 0.f;
+    ray.TMax = 10000.f;
+    ray.Origin = GetProbePosition(ddgiBuffer, probe);
+    // float3 randomDirection = SphericalFibonacci(rayIndex, 64);
+    ray.Direction = SphericalFibonacci(rayIndex, ddgiBuffer.raysPerProbe);
+    ray.Direction = QuaternionRotate(ray.Direction, QuaternionConjugate(ubo2.probeRotateQuaternion));
+    ray.Direction = normalize(ray.Direction);
+
+    if(RayTracingClosestHit(ray, pathState)){
+        output.position = float4(pathState.position, 1.f);
+        output.normal = float4(pathState.normal, 1.f);
+        output.albedo = float4(pathState.albedo, 1.f);
+
+        //if(pathState.outside==false){
+        //    output.normal.a = -1.f;
+        //}
+    } 
+    else{ 
+        output.position = float4(ray.Origin + ray.Direction * 10000.f, 0.f);
+        output.normal = float4(0.f, 0.f, 0.f, 0.f);
+        output.albedo = float4(0.f, 0.f, 0.f, 0.f);
     }
 
+    //if(pathState.outside==false && rayIndex==0){
+    //    probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
+    //}
+    
+   
     float3 diffuse = float3(0.f, 0.f, 0.f);
-    for(int i=0;i<ubo2.lightNum;i++){
-        if(output.position.w > 0.f){
-            diffuse += DirectDiffuseLighting(
-                ubo2.lights[i], 
-                pathState.position, 
-                pathState.normal, 
-                pathState.albedo);
-        }
-    }
+    if(output.normal.w > 0.f){
+        for(int i=0;i<ubo2.lightNum;i++){
+            RayDesc _ray; 
+            _ray.Origin = output.position.rgb + output.normal.rgb * (1e-5);
+            _ray.Direction = normalize(-ubo2.lights[i].direction); 
+            _ray.TMin = 0.0f;   
+            _ray.TMax = 10000.f;     
+            bool hasHit = RayTracingAnyHit(_ray);  
+            float3 lightColor = ubo2.lights[i].color * ubo2.lights[i].intensity;
+            float3 L = -ubo2.lights[i].direction;
+            float3 V = -ray.Direction;
+            float3 N = output.normal.rgb;
 
-    if(output.position.w > 0.f){
-        diffuse += CalculateIndirectLighting(
-                    ubo1,
-                    VolumeProbeDatasRadiance, 
-                    VolumeProbeDatasDepth, 
-                    linearSampler,
-                    ubo2.probePos0,
-                    ubo2.probePos1,
-                    pathState.position, 
-                    pathState.normal,
-                    pathState.albedo);
+            diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
+        }         
+
+        //if(output.normal.w > 0.f && pathState.outside){ 
+        //if(output.normal.w > 0.f){
+        IndirectLightingOutput indirectLight = CalculateIndirectLighting(
+            ddgiBuffer,
+            probes,
+            VolumeProbeDatasRadiance,
+            VolumeProbeDatasDepth,
+            linearSampler,
+            ddgiBuffer.probePos0,
+            ddgiBuffer.probePos1,
+            output.position, 
+            output.normal); 
+        diffuse += indirectLight.radiance * output.albedo / PI;
+        //}
     }
 
     output.radiance = float4(diffuse, pathState.t);
+    if(pathState.outside==false){
+      output.radiance.a = -pathState.t;
+    }
 
-    return output;
+    //return output;
+    PositionTexture[idx] = output.position;
+    NormalTexture[idx] = output.normal;
+    AlbedoTexture[idx] = output.albedo;
+    RadianceTexture[idx] = output.radiance;
+    MatIdTexture[idx] = pathState.matId;
+    TexCoordTexture[idx] = pathState.uv;
 }
  

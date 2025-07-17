@@ -1,19 +1,6 @@
 //#include "Octahedral.hlsli"
 #include "indirectLight.hlsli"
 
-//struct UniformBuffer0{
-//    float sharpness;
-//    int padding0;
-//    int padding1;
-//    int padding2;
-//};
-//
-//[[vk::binding(0, 0)]]
-//cbuffer ubo : register(b0)
-//{
-//    UniformBuffer0 ubo0;
-//}; 
-
 [[vk::binding(1, 0)]]
 cbuffer ddgiBuffer : register(b1)
 {
@@ -90,7 +77,7 @@ bool CalculateRadiance(
 
             float cosTheta = max(0.f, dot(sphereDirection, direction));
             //if(cosTheta > 0.f){
-            float irradianceWeight = cosTheta * ubo0.sharpness;
+            float irradianceWeight = cosTheta * ddgibuffer.sharpness;
             //irradiance += targetRadiance * irradianceWeight;
             irradiance += radiance * irradianceWeight;
             totalIradianceWeights += irradianceWeight;
@@ -158,7 +145,7 @@ bool CalculateDepth(
             float cosTheta = max(0.f, dot(sphereDirection, direction));
 
             //if(cosTheta > 0.f){
-            float depthWeight = pow(cosTheta, ubo0.sharpness);
+            float depthWeight = pow(cosTheta, ddgibuffer.sharpness);
             depth += targetDepth * depthWeight;
             depthSquared += targetDepthSquared * depthWeight;
             totalDepthWeights += depthWeight;

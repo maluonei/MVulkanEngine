@@ -1,63 +1,26 @@
 #include "Common.h"
 #include "indirectLight.hlsli"
 #include "shading.hlsli"
-
-//struct Tex{
-//    int diffuseTextureIdx;
-//    int metallicAndRoughnessTextureIdx;
-//    int matId;
-//    int padding2;
-//}
-//
-//struct TexBuffer
-//{
-//    Tex tex[512];
-//};
-    
-
-//struct GeometryInfo {
-//  int vertexOffset;
-//  int indexOffset;
-//  int uvOffset;
-//  int normalOffset;
-//  int materialIdx;
-//};
-
-//struct DDGILightBuffer
-//{
-//    Light lights[4];
-//
-//    int    lightNum;
-//    int    frameCount;
-//    int    padding1;
-//    float  t;
-//
-//    float4 probeRotateQuaternion;
-//};
+#include "util.hlsli"
 
 [[vk::binding(0, 0)]]
-cbuffer texBuffer : register(b0)
-{
-    TexBuffer texBuffer;
-};
-
-[[vk::binding(1, 0)]]
 cbuffer ddgiBuffer : register(b1)
 {
     DDGIBuffer ddgiBuffer;
 };
 
-[[vk::binding(2, 0)]]
-cbuffer LightBuffer : register(b2)
+[[vk::binding(1, 0)]]
+cbuffer ddgiLightBuffer : register(b2)
 {
     DDGILightBuffer ubo2;
 };
 
-[[vk::binding(3, 0)]] StructuredBuffer<float> VertexBuffer : register(t0);
-[[vk::binding(4, 0)]] StructuredBuffer<int> IndexBuffer : register(t1);
-[[vk::binding(5, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
-[[vk::binding(6, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
-[[vk::binding(7, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
+[[vk::binding(2, 0)]] StructuredBuffer<float> VertexBuffer : register(t0);
+[[vk::binding(3, 0)]] StructuredBuffer<int> IndexBuffer : register(t1);
+[[vk::binding(4, 0)]] StructuredBuffer<float> NormalBuffer : register(t2);
+[[vk::binding(5, 0)]] StructuredBuffer<float> UVBuffer : register(t3);
+[[vk::binding(6, 0)]] StructuredBuffer<GeometryInfo> instanceOffset : register(t4);
+[[vk::binding(7, 0)]] StructuredBuffer<MaterialBuffer> materials : register(t1040);
 [[vk::binding(8, 0)]] StructuredBuffer<DDGIProbe> probes : register(t5);
 [[vk::binding(9, 0)]] Texture2D<float4> textures[1024] : register(t6);
 [[vk::binding(10, 0)]] Texture2D<float4> VolumeProbeDatasRadiance  : register(t1031);   //[512, 64]
@@ -89,18 +52,19 @@ struct PSOutput
 //static const float PI = 3.14159265359f;
 
 struct PathState {
-  float3 position;
-  float3 normal;
-  float3 albedo;
-  float3 metallicAndRoughness;
-  //float3 rayDirection;
+    float3 position;
+    float3 normal;
+    float3 albedo;
+    float3 metallicAndRoughness;
+    // float3 rayDirection;
 
-  bool outside;
-  float t;
-  float2 uv;
+    bool outside;
+    float t;
+    float2 uv;
 
-  uint instanceID;
-  uint primitiveID;
+    uint instanceID;
+    uint primitiveID;
+    int matId;
 };
 
 bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
@@ -135,137 +99,146 @@ bool RayTracingAnyHit(in RayDesc rayDesc) {
 }
 
 bool RayTracingClosestHit(inout RayDesc rayDesc, inout PathState pathState) {
-  uint rayFlags = RAY_FLAG_FORCE_OPAQUE;
+    uint rayFlags = RAY_FLAG_FORCE_OPAQUE;
 
-  RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
 
-  q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
-  q.Proceed();
+    q.TraceRayInline(Tlas, rayFlags, 0xFF, rayDesc);
+    q.Proceed();
 
-  //pathState.rayDirection = rayDesc.Direction;
+    // pathState.rayDirection = rayDesc.Direction;
 
-  pathState.t = 10000.f;
-  if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
-    pathState.t = q.CommittedRayT();
+    pathState.t = 10000.f;
+    if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+        pathState.t = q.CommittedRayT();
 
-    uint instanceIndex = q.CommittedInstanceID();
-  
-    uint ioffset = instanceOffset[instanceIndex].indexOffset;
-    uint voffset = instanceOffset[instanceIndex].vertexOffset;
- 
-    uint primitiveIndex = q.CommittedPrimitiveIndex();
+        uint instanceIndex = q.CommittedInstanceID();
 
-    pathState.instanceID = instanceIndex;
-    pathState.primitiveID = primitiveIndex;
+        uint ioffset = instanceOffset[instanceIndex].indexOffset;
+        uint voffset = instanceOffset[instanceIndex].vertexOffset;
 
-    uint v0Idx = IndexBuffer[ioffset + primitiveIndex * 3];
-    uint v1Idx = IndexBuffer[ioffset + primitiveIndex * 3 + 1];
-    uint v2Idx = IndexBuffer[ioffset + primitiveIndex * 3 + 2];
+        uint primitiveIndex = q.CommittedPrimitiveIndex();
 
-    float3 v0 = float3(VertexBuffer[voffset + v0Idx * 3],
-                       VertexBuffer[voffset + v0Idx * 3 + 1],
-                       VertexBuffer[voffset + v0Idx * 3 + 2]);
-    float3 v1 = float3(VertexBuffer[voffset + v1Idx * 3],
-                       VertexBuffer[voffset + v1Idx * 3 + 1],
-                       VertexBuffer[voffset + v1Idx * 3 + 2]);
-    float3 v2 = float3(VertexBuffer[voffset + v2Idx * 3],
-                       VertexBuffer[voffset + v2Idx * 3 + 1],
-                       VertexBuffer[voffset + v2Idx * 3 + 2]);
+        pathState.instanceID = instanceIndex;
+        pathState.primitiveID = primitiveIndex;
 
-    // compute normal
-    float3 e0 = v1 - v0;
-    float3 e1 = v2 - v0;
+        uint v0Idx = IndexBuffer[ioffset + primitiveIndex * 3];
+        uint v1Idx = IndexBuffer[ioffset + primitiveIndex * 3 + 1];
+        uint v2Idx = IndexBuffer[ioffset + primitiveIndex * 3 + 2];
 
-    bool outside = true;
-    float3 normal = normalize(cross(e0, e1));
-    if(dot(rayDesc.Direction, normal) > 0.f){
-        normal = -normal;
-        outside = false;
-    } 
+        float3 v0 = float3(VertexBuffer[voffset + v0Idx * 3],
+                           VertexBuffer[voffset + v0Idx * 3 + 1],
+                           VertexBuffer[voffset + v0Idx * 3 + 2]);
+        float3 v1 = float3(VertexBuffer[voffset + v1Idx * 3],
+                           VertexBuffer[voffset + v1Idx * 3 + 1],
+                           VertexBuffer[voffset + v1Idx * 3 + 2]);
+        float3 v2 = float3(VertexBuffer[voffset + v2Idx * 3],
+                           VertexBuffer[voffset + v2Idx * 3 + 1],
+                           VertexBuffer[voffset + v2Idx * 3 + 2]);
 
-    int noffset = instanceOffset[instanceIndex].normalOffset;
+        // compute normal
+        float3 e0 = v1 - v0;
+        float3 e1 = v2 - v0;
 
-    float2 barycentrics = q.CommittedTriangleBarycentrics();
-    float w0 = 1.f - barycentrics.x - barycentrics.y;
-    float w1 = barycentrics.x;  
-    float w2 = barycentrics.y;
+        bool outside = true;
+        float3 normal = normalize(cross(e0, e1));
+        if (dot(rayDesc.Direction, normal) > 0.f) {
+            normal = -normal;
+            outside = false;
+        }
 
-    float3 position = w0 * v0 + w1 * v1 + w2 * v2;
+        int noffset = instanceOffset[instanceIndex].normalOffset;
 
-    if (noffset != -1) {
-      float3 n0 = float3(NormalBuffer[noffset + v0Idx * 3],
-                         NormalBuffer[noffset + v0Idx * 3 + 1],
-                         NormalBuffer[noffset + v0Idx * 3 + 2]);
-      float3 n1 = float3(NormalBuffer[noffset + v1Idx * 3],
-                         NormalBuffer[noffset + v1Idx * 3 + 1],
-                         NormalBuffer[noffset + v1Idx * 3 + 2]);
-      float3 n2 = float3(NormalBuffer[noffset + v2Idx * 3],
-                         NormalBuffer[noffset + v2Idx * 3 + 1],
-                         NormalBuffer[noffset + v2Idx * 3 + 2]);
+        float2 barycentrics = q.CommittedTriangleBarycentrics();
+        float w0 = 1.f - barycentrics.x - barycentrics.y;
+        float w1 = barycentrics.x;
+        float w2 = barycentrics.y;
 
-      normal = normalize(w0 * n0 + w1 * n1 + w2 * n2);
-      if(dot(rayDesc.Direction, normal) > 0.f){
-        normal = -normal;
-        outside = false;
-      }
+        float3 position = w0 * v0 + w1 * v1 + w2 * v2;
+        float4 pos = float4(position, 1.f);
+        position = mul(instanceOffset[instanceIndex].transform, pos).xyz;
+
+        if (noffset != -1) {
+            float3 n0 = float3(NormalBuffer[noffset + v0Idx * 3],
+                               NormalBuffer[noffset + v0Idx * 3 + 1],
+                               NormalBuffer[noffset + v0Idx * 3 + 2]);
+            float3 n1 = float3(NormalBuffer[noffset + v1Idx * 3],
+                               NormalBuffer[noffset + v1Idx * 3 + 1],
+                               NormalBuffer[noffset + v1Idx * 3 + 2]);
+            float3 n2 = float3(NormalBuffer[noffset + v2Idx * 3],
+                               NormalBuffer[noffset + v2Idx * 3 + 1],
+                               NormalBuffer[noffset + v2Idx * 3 + 2]);
+
+            normal = normalize(w0 * n0 + w1 * n1 + w2 * n2);
+
+            float3x3 normalMatrix = transpose(inverse((float3x3)instanceOffset[instanceIndex].transform));
+            normal = normalize(mul(normalMatrix, normal));
+
+            if (dot(rayDesc.Direction, normal) > 0.f) {
+                normal = -normal;
+                outside = false;
+            }
+        }
+
+        // TODO
+        int uvOffset = instanceOffset[instanceIndex].uvOffset;
+        float2 texCoords = float2(0.f, 0.f);
+
+        if (uvOffset != -1) {
+            float2 uv0 = float2(UVBuffer[uvOffset + v0Idx * 2],
+                                UVBuffer[uvOffset + v0Idx * 2 + 1]);
+            float2 uv1 = float2(UVBuffer[uvOffset + v1Idx * 2],
+                                UVBuffer[uvOffset + v1Idx * 2 + 1]);
+            float2 uv2 = float2(UVBuffer[uvOffset + v2Idx * 2],
+                                UVBuffer[uvOffset + v2Idx * 2 + 1]);
+            texCoords = w0 * uv0 + w1 * uv1 + w2 * uv2;
+        }
+
+        // float3x4 objToWorld = q.CommittedObjectToWorld3x4();
+
+        // float3x3 toWorld;
+        // toWorld[0] = objToWorld[0].xyz;
+        // toWorld[1] = objToWorld[1].xyz;
+        // toWorld[2] = objToWorld[2].xyz;
+
+        // normal = mul(toWorld, normal);
+
+        // compute position
+        // position = mul(toWorld, position);
+        // position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
+
+        pathState.normal = normal;
+        pathState.position = position;
+        pathState.outside = outside;
+
+        int matId = instanceOffset[instanceIndex].materialIdx;
+        pathState.matId = matId;
+        int diffuseTextureIdx = materials[matId].diffuseTextureIdx;
+        int metallicAndRoughnessTextureIdx = materials[matId].metallicAndRoughnessTextureIdx;
+
+        // int diffuseTextureIdx = texBuffer.tex[instanceIndex].diffuseTextureIdx;
+        if (diffuseTextureIdx != -1) {
+            pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
+        }
+        else {
+            pathState.albedo = float3(0.f, 0.f, 0.f);
+        }
+
+        // int metallicAndRoughnessTextureIdx = texBuffer.tex[instanceIndex].metallicAndRoughnessTextureIdx;
+        if (metallicAndRoughnessTextureIdx != -1) {
+            pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
+        }
+        else {
+            pathState.metallicAndRoughness = float3(0.f, 0.f, 0.f);
+        }
+
+        pathState.uv = barycentrics;
+
+        return true;
     }
 
-    // TODO
-    int uvOffset = instanceOffset[instanceIndex].uvOffset;
-    float2 texCoords = float2(0.f, 0.f);
-
-    if (uvOffset != -1) {
-      float2 uv0 = float2(UVBuffer[uvOffset + v0Idx * 2],
-                          UVBuffer[uvOffset + v0Idx * 2 + 1]);
-      float2 uv1 = float2(UVBuffer[uvOffset + v1Idx * 2],
-                          UVBuffer[uvOffset + v1Idx * 2 + 1]);
-      float2 uv2 = float2(UVBuffer[uvOffset + v2Idx * 2],
-                          UVBuffer[uvOffset + v2Idx * 2 + 1]);
-      texCoords = w0 * uv0 + w1 * uv1 + w2 * uv2;
-    }
-
-    //float3x4 objToWorld = q.CommittedObjectToWorld3x4();
-
-    //float3x3 toWorld; 
-    //toWorld[0] = objToWorld[0].xyz;
-    //toWorld[1] = objToWorld[1].xyz;
-    //toWorld[2] = objToWorld[2].xyz;
- 
-    //normal = mul(toWorld, normal);
-
-    // compute position
-    //position = mul(toWorld, position);
-    //position += float3(objToWorld[0].w, objToWorld[1].w, objToWorld[2].w);
-    
-    pathState.normal = normal;
-    pathState.position = position;
-    pathState.outside = outside;
-     
-    //int matId = instanceOffset[instanceIndex].materialIdx;
-
-    int diffuseTextureIdx = texBuffer.texBuffer[instanceIndex].diffuseTextureIdx;
-    if(diffuseTextureIdx != -1){
-        pathState.albedo = textures[diffuseTextureIdx].Sample(linearSampler, texCoords).rgb;
-    }
-    else{
-        pathState.albedo = float3(0.f, 0.f, 0.f);
-    }
-
-    int metallicAndRoughnessTextureIdx = texBuffer.texBuffer[instanceIndex].metallicAndRoughnessTextureIdx;
-    if(metallicAndRoughnessTextureIdx != -1){
-        pathState.metallicAndRoughness = textures[metallicAndRoughnessTextureIdx].Sample(linearSampler, texCoords).rgb;
-    }
-    else{  
-        pathState.metallicAndRoughness = float3(0.f, 0.f, 0.f);
-    }
-
-    pathState.uv = texCoords;
-
-    return true;
-  }
-
-  return false;
-} 
+    return false;
+}
 
 float3 SphericalFibonacci(float index, float numSamples)
 {
@@ -295,7 +268,7 @@ PSOutput main(PSInput input)
     int2 idx = int2(FullResolution * input.texCoord);
     int rayIndex = idx.x;
     int probeIndex = idx.y;
-    Probe probe = probes[probeIndex];
+    DDGIProbe probe = probes[probeIndex];
 
     PSOutput output;
     output.albedo.w = 0.f;

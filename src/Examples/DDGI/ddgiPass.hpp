@@ -55,6 +55,8 @@ private:
 	void createProbeClassficationPass();
 	void createProbeVisulizePass();
 	void createCompositePass();
+	void createCompositeScenePass();
+	//void createRayQueryTestPass();
 
 	void changeTextureLayoutToRWTexture();
 	void changeRWTextureLayoutToTexture();
@@ -62,13 +64,19 @@ private:
     void transitionProbeVisulizeTextureLayoutToUndifined();
 
 	void loadShaders();
+	void createSyncObjs();
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
-	std::shared_ptr<RenderPass> m_probeTracingPass;
+	std::shared_ptr<RenderPass> m_probeTracingRenderPass;
+	//std::shared_ptr<ComputePass> m_probeTracingPass;
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<RenderPass> m_rtaoPass;
 	std::shared_ptr<RenderPass> m_probeVisulizePass;
 	std::shared_ptr<RenderPass> m_compositePass;
+
+	std::shared_ptr<RenderPass> m_compositeScenePass;
+	std::shared_ptr<RenderPass> m_finalPass;
+	//std::shared_ptr<RenderPass> m_testRayQueryPass;
 
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
 	std::shared_ptr<ComputePass> m_probeBlendingDepthPass;
@@ -85,19 +93,41 @@ private:
 	std::shared_ptr<MVulkanTexture> gBuffer1 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBuffer2 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBuffer3 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBuffer4 = nullptr;
+	std::shared_ptr<MVulkanTexture> gBuffer5 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBufferDepth = nullptr;
 
 	std::shared_ptr<MVulkanTexture> m_probePositions = nullptr;
+	std::shared_ptr<MVulkanTexture> m_probeNormals = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeDepth = nullptr;
+	std::shared_ptr<MVulkanTexture> m_probeAlbedo = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeRadiance = nullptr;
 
 	std::shared_ptr<MVulkanTexture> m_diTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_giTexture = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_aoTexture = nullptr;
+	std::shared_ptr<MVulkanTexture> m_aoTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeVisulizTexture = nullptr;
 
+	std::shared_ptr<MVulkanTexture> m_matIdTexture = nullptr;
+	std::shared_ptr<MVulkanTexture> m_texCoordsTexture = nullptr;
+
+	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture0 = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture1 = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture2 = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture3 = nullptr;
+
+	//std::shared_ptr<MVulkanTexture> m_probeTracingPosition = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_probeTracingNormal = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_probeTracingAlbedo = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_probeTracingRadiance = nullptr;
+
+	std::shared_ptr<MVulkanTexture> m_testRayQueryDepth = nullptr;
+
+	std::shared_ptr<StorageBuffer> m_modelBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_probesDataBuffer = nullptr;
-	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_probesModelBuffer = nullptr;	
+	std::shared_ptr<StorageBuffer> m_materialBuffer = nullptr;
+	std::shared_ptr<StorageBuffer> m_materialIdBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_tlasVertexBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_tlasIndexBuffer = nullptr;
 	std::shared_ptr<StorageBuffer> m_tlasNormalBuffer = nullptr;
@@ -132,7 +162,8 @@ private:
 	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
 	UniformBuffer1				m_uniformBuffer1;
 
-
+	MVulkanSemaphore			m_shadingSemaphore;
+	MVulkanSemaphore			m_ddgiSemephore;
 };
 
 

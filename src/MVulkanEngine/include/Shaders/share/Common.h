@@ -188,8 +188,8 @@ struct DDGIBuffer
 
     int    reAccumulate;
     float  maxRayDistance;
-    float    padding1;
-    float    padding2;
+    float  sharpness;
+    float  padding2;
 };
 
 struct DDGIProbe{
@@ -200,11 +200,17 @@ struct DDGIProbe{
 };
 
 struct GeometryInfo {
-  int vertexOffset;
-  int indexOffset;
-  int uvOffset;
-  int normalOffset;
-  int materialIdx;
+    float4x4 transform;
+
+    int vertexOffset;
+    int indexOffset;
+    int uvOffset;
+    int normalOffset;
+    int materialIdx;
+
+    int padding0;
+    int padding1;
+    int padding2;
 };
 
 
@@ -223,9 +229,19 @@ struct DDGILightBuffer
 struct DDGICompositeBuffer{
     int visulizeProbe;
     int useAO;
-    int padding1;
+    int visulizeMode;
     int padding2;
 };
 
+#define VisulizeDDGI_DI 0
+#define VisulizeDDGI_GI 1
+#define VisulizeDDGI_AO 2
+#define VisulizeDDGI_NOAO 3
+#define VisulizeDDGI_ALL 4
+
+
+struct DispatchBuffer{
+    int3 DispatchDim;
+};
 
 #endif

@@ -1,13 +1,5 @@
 #include "Common.h"
-
-
-//struct UniformBuffer0
-//{
-//    int resetAccumulatedBuffer;
-//    int gbufferWidth;
-//    int gbufferHeight;
-//    int padding0;
-//};
+#include "util.hlsli"
 
 [[vk::binding(0, 0)]]
 cbuffer RtaoBuffer : register(b0)
@@ -21,8 +13,8 @@ cbuffer screenBuffer : register(b1)
     MScreenBuffer screen;
 }
 
-[[vk::binding(2, 0)]]Texture2D<float4> gBufferNormal : register(t0);
-[[vk::binding(3, 0)]]Texture2D<float4> gBufferPosition : register(t1);
+[[vk::binding(2, 0)]] Texture2D<uint4> gBuffer0 : register(t0);
+[[vk::binding(3, 0)]] Texture2D<uint4> gBuffer1 : register(t1);
 [[vk::binding(4, 0)]]RWTexture2D<float2> accumulatedBuffer : register(u0);
 
 [[vk::binding(5, 0)]]SamplerState linearSampler : register(s0);
@@ -41,8 +33,6 @@ struct PSOutput
 {
     float4 color : SV_Target0;
 };
-
-//static const float PI = 3.14159265359f;
 
 bool RayTracingAnyHit(in RayDesc rayDesc, out float t) {
   uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
@@ -145,13 +135,37 @@ float rtao2(float3 position, float3 normal, float2 uv, int w, float radius, int 
 PSOutput main(PSInput input)
 {
     PSOutput output;
+
+    uint3 coord = uint3(uint2(input.texCoord * float2(screen.WindowRes.x, screen.WindowRes.y)), 0);
+    uint4 gBufferValue0 = gBuffer0.Load(coord);
+    uint4 gBufferValue1 = gBuffer1.Load(coord);
+    float3 fragNormal;
+    float3 fragPos;
+    float2 fragUV;
+    float3 fragAlbedo;
+    float metallic;
+    float roughness;
+    float3 motionVector;
+    uint instanceID;
+
+    UnpackGbuffer(
+        gBufferValue0,
+        gBufferValue1,
+        fragNormal,
+        fragPos,
+        fragUV,
+        fragAlbedo,
+        metallic,
+        roughness,
+        motionVector,
+        instanceID);
     
-    float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
-    float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
+    //float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
+    //float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float2 accumulatedBufferValue = accumulatedBuffer.Load(int3(input.texCoord * screen.WindowRes, 0));
 
-    float3 fragNormal = normalize(gBufferValue0.rgb);
-    float3 fragPos = gBufferValue1.rgb;
+    //float3 fragNormal = normalize(gBufferValue0.rgb);
+    //float3 fragPos = gBufferValue1.rgb;
 
     float accumulatedAO = rtao.resetAccumulatedBuffer == 0 ? accumulatedBufferValue.x : 0.f;
     float accumulatedFrameCount = rtao.resetAccumulatedBuffer==0? accumulatedBufferValue.y:0.f;

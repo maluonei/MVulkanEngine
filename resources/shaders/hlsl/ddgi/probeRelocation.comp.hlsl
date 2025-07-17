@@ -4,7 +4,7 @@
 [[vk::binding(0, 0)]]
 cbuffer ddgiBuffer : register(b0)
 {
-    DDGILightBuffer ubo1;
+    DDGIBuffer ubo1;
 };
   
 [[vk::binding(1, 0)]] RWStructuredBuffer<DDGIProbe> probes : register(u0);

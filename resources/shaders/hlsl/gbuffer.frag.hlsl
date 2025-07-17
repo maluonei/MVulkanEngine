@@ -51,9 +51,9 @@ PSOutput main(PSInput input)
 
     float3x3 TBN = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
 
-    int diffuseTextureIdx = ubo1[input.instanceID].diffuseTextureIdx;
-    int metallicAndRoughnessTextureIdx = ubo1[input.instanceID].metallicAndRoughnessTextureIdx;
-    int normalTextureIdx = ubo1[input.instanceID].normalTextureIdx;
+    int diffuseTextureIdx = ubo1.tex[input.instanceID].diffuseTextureIdx;
+    int metallicAndRoughnessTextureIdx = ubo1.tex[input.instanceID].metallicAndRoughnessTextureIdx;
+    int normalTextureIdx = ubo1.tex[input.instanceID].normalTextureIdx;
 
     // Output normal and position
     output.Normal = float4(input.normal, input.texCoord.x);
@@ -75,7 +75,7 @@ PSOutput main(PSInput input)
     else
     {
         //output.Albedo = float4(1.0, 1.0, 1.0, 1.0);
-        output.Albedo = float4(ubo1[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
+        output.Albedo = float4(ubo1.tex[input.instanceID].diffuseColor, 1.0); // Use diffuse color from UBO
     }
 
     // Sample metallic and roughness texture if valid, otherwise default values
@@ -90,7 +90,7 @@ PSOutput main(PSInput input)
     output.MetallicAndRoughness.a = 0.0; // Optional alpha channel
 
     // Output material ID
-    //output.MatId = uint4(ubo1[input.instanceID].matId, input.instanceID, 0, 0);
+    //output.MatId = uint4(ubo1.tex[input.instanceID].matId, input.instanceID, 0, 0);
 
     return output;
 }

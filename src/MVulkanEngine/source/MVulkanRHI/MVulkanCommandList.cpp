@@ -441,6 +441,12 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
             depthAttachments.clearValue.depthStencil = depthAttachment.depthStencil;
         }
     }
+    else {
+        depthAttachments.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachments.imageView = VK_NULL_HANDLE; // 不使用深度缓冲区
+        depthAttachments.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        depthAttachments.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    }
 
     VkRenderingInfo vrenderingInfo = {};
     vrenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -450,7 +456,7 @@ void MGraphicsCommandList::BeginRendering(RenderingInfo renderingInfo)
     vrenderingInfo.colorAttachmentCount = colorAttachments.size();
     vrenderingInfo.pColorAttachments = colorAttachments.data();
     if (renderingInfo.useDepth) {
-        vrenderingInfo.pDepthAttachment = &depthAttachments;
+      vrenderingInfo.pDepthAttachment = &depthAttachments;
     }
     else {
         vrenderingInfo.pDepthAttachment = nullptr;

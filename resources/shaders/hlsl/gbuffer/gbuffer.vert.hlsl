@@ -11,10 +11,6 @@ cbuffer vpBuffer : register(b0)
 
 
 [[vk::binding(2, 0)]] StructuredBuffer<ModelBuffer> ModelBuffers : register(t0); 
-[[vk::binding(8, 0)]] StructuredBuffer<int> CulledIndirectInstances : register(t10); 
-
-//#define MVPBuffer ubo0
-//[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
 
 struct VSInput
 {
@@ -44,7 +40,8 @@ VSOutput main(VSInput input)
 {
     VSOutput output;
 
-    int instanceIndex = CulledIndirectInstances[input.InstanceID];
+    // int instanceIndex = CulledIndirectInstances[input.InstanceID];
+    int instanceIndex = input.InstanceID;
 
     float4x4 Model = ModelBuffers[instanceIndex].Model;
 

@@ -1173,7 +1173,7 @@ void  MVulkanEngine::CreateColorAttachmentImage(
     ImageCreateInfo imageInfo;
     ImageViewCreateInfo viewInfo;
     imageInfo.arrayLength = 1;
-    imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     imageInfo.width = extent.width;
     imageInfo.height = extent.height;
     imageInfo.format = format;

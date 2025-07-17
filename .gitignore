@@ -25,6 +25,7 @@ Makefile
 *.so
 *.dylib
 *.github
+*.VSCodeCounter
 
 # ��ʽ���� 3rdParty/dxc/dxc.exe
 !3rdParty/

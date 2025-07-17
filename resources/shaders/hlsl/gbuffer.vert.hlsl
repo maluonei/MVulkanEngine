@@ -11,11 +11,12 @@
 //};
 
 [[vk::binding(0, 0)]]
-cbuffer mvpBuffer : register(b0)
+cbuffer vpBuffer : register(b0)
 {
-    MVPBuffer mvp;
+    VPBuffer vp;
 };
 
+[[vk::binding(4, 0)]] StructuredBuffer<ModelBuffer> ModelBuffers : register(t0); 
 //#define MVPBuffer ubo0
 //[[vk::binding(2, 0)]] Texture2D textures[1024] : register(t2);
 
@@ -49,7 +50,7 @@ float3x3 inverse(float3x3 m)
         m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
         m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
         
-    if (abs(det) < 1e-6)
+    if (abs(det) < 1e-12)
     {
         // �������ʽ�ӽ��㣬���󲻿���
         return (float3x3) 0;
@@ -77,22 +78,25 @@ VSOutput main(VSInput input)
 {
     VSOutput output;
 
+    int instanceIndex = input.InstanceID;
+    float4x4 Model = ModelBuffers[instanceIndex].Model;
+
     // Pass through texture coordinates
     output.texCoord = input.Coord;
 
     // Compute world space position
-    float4 worldSpacePosition = mul(mvp.Model, float4(input.Position, 1.0));
+    float4 worldSpacePosition = mul(Model, float4(input.Position, 1.0));
 
     // Calculate world position (divide by w to handle perspective divide)
     output.worldPos = worldSpacePosition.xyz / worldSpacePosition.w;
 
     // Compute screen space position
-    float4 screenSpacePosition = mul(mvp.View, worldSpacePosition);
-    screenSpacePosition = mul(mvp.Projection, screenSpacePosition);
+    float4 screenSpacePosition = mul(vp.View, worldSpacePosition);
+    screenSpacePosition = mul(vp.Projection, screenSpacePosition);
     output.position = screenSpacePosition;
 
     // Compute normal in world space
-    float3x3 normalMatrix = transpose(m_inverse((float3x3)mvp.Model));
+    float3x3 normalMatrix = transpose(inverse((float3x3)Model));
     output.normal = normalize(mul(normalMatrix, input.Normal));
 
     // Pass instance ID
@@ -102,16 +106,16 @@ VSOutput main(VSInput input)
     //if(dot(calculatedNormal, input.Normal) < 0.0)
     //    input.Tangent *= -1.f;
 
-    float4 tangent = mul(mvp.Model, float4(input.Tangent, 1.0));
-    //float4 bitangent = mul(mvp.Model, float4(input.Bitangent, 1.0));
+    float4 tangent = mul(Model, float4(input.Tangent, 1.0));
+    //float4 bitangent = mul(vp.Model, float4(input.Bitangent, 1.0));
     output.tangent = normalize(tangent.xyz / tangent.w);
     output.bitangent = cross(output.normal, output.tangent);
 
-    //float4 tangent = mul(mvp.Model, float4(input.Tangent, 1.0));
+    //float4 tangent = mul(vp.Model, float4(input.Tangent, 1.0));
     ////output.tangent = tangent.xyz;
     //output.tangent = normalize(tangent.xyz / tangent.w);
     //output.tangent = input.Tangent;
-    ////output.bitangent = normalize(mul(mvp.Model, float4(input.Bitangent, 1.0)));
+    ////output.bitangent = normalize(mul(vp.Model, float4(input.Bitangent, 1.0)));
     //output.bitangent = cross(output.normal, output.tangent);
     //float3 T = normalize(input.Tangent);
     //float3 B = normalize(input.Bitangent);

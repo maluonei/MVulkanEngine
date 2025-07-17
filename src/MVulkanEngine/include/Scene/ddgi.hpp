@@ -4,6 +4,7 @@
 //#include "MVulkanRHI/MVulkanBuffer.hpp"
 #include <vector>
 #include <glm/glm.hpp>
+#include "Shaders/share/Common.h"
 //#include "ddgiShader.hpp"
 
 //9.920306, 0.7, 3.9827316

@@ -154,14 +154,40 @@ void Scene::CalculateBB()
     m_bbx.pMin = glm::vec3(10000.f);
     m_bbx.pMax = glm::vec3(-10000.f);
 
-    for (auto mesh : m_meshs) {
-        m_bbx.pMin.x = std::min(mesh->m_box.pMin.x, m_bbx.pMin.x);
-        m_bbx.pMin.y = std::min(mesh->m_box.pMin.y, m_bbx.pMin.y);
-        m_bbx.pMin.z = std::min(mesh->m_box.pMin.z, m_bbx.pMin.z);
-        m_bbx.pMax.x = std::max(mesh->m_box.pMax.x, m_bbx.pMax.x);
-        m_bbx.pMax.y = std::max(mesh->m_box.pMax.y, m_bbx.pMax.y);
-        m_bbx.pMax.z = std::max(mesh->m_box.pMax.z, m_bbx.pMax.z);
+    auto primInfos = m_primInfos;
+    auto numMeshs = primInfos.size();
+
+    int instanceIndex = 0;
+    for (auto k = 0; k < numMeshs; k++) {
+        auto numMeshInstances = primInfos[k].size();
+        auto mesh = GetMesh(primInfos[k][0].mesh_id);
+        for (auto j = 0; j < numMeshInstances; j++) {
+            auto bbx = mesh->m_box;
+            auto transform = primInfos[k][j].transform;
+
+            glm::vec3 center = bbx.GetCenter();
+            glm::vec3 extent = bbx.GetExtent();
+
+            for (int _i = -1; _i <= 1; _i+=2) {
+                for (int _j = -1; _j <= 1; _j += 2) {
+                    for (int _k = -1; _k <= 1; _k += 2) {
+                        glm::vec3 transformedPos = transform * glm::vec4(center.x + _i * extent.x, center.y + _j * extent.y, center.z + _k * extent.z, 1.f);
+                        m_bbx.pMin = glm::min(m_bbx.pMin, transformedPos);
+                        m_bbx.pMax = glm::max(m_bbx.pMax, transformedPos);
+                    }
+                }   
+            }
+        }
     }
+
+    //for (auto mesh : m_meshs) {
+    //    m_bbx.pMin.x = std::min(mesh->m_box.pMin.x, m_bbx.pMin.x);
+    //    m_bbx.pMin.y = std::min(mesh->m_box.pMin.y, m_bbx.pMin.y);
+    //    m_bbx.pMin.z = std::min(mesh->m_box.pMin.z, m_bbx.pMin.z);
+    //    m_bbx.pMax.x = std::max(mesh->m_box.pMax.x, m_bbx.pMax.x);
+    //    m_bbx.pMax.y = std::max(mesh->m_box.pMax.y, m_bbx.pMax.y);
+    //    m_bbx.pMax.z = std::max(mesh->m_box.pMax.z, m_bbx.pMax.z);
+    //}
 }
 
 void Scene::AddScene(std::shared_ptr<Scene> scene, glm::mat4 transform)

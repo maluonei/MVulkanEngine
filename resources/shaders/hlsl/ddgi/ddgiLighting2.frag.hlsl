@@ -26,9 +26,9 @@ cbuffer ddgiBuffer : register(b1)
     DDGIBuffer ddgiBuffer;
 };
 
-[[vk::binding(4, 0)]] StructuredBuffer<Probe> probes : register(t7);
-[[vk::binding(5, 0)]] Texture2D<uint4> gBuffer0 : register(t0);
-[[vk::binding(6, 0)]] Texture2D<uint4> gBuffer1 : register(t1);
+[[vk::binding(4, 0)]] StructuredBuffer<DDGIProbe> probes : register(t7);
+[[vk::binding(5, 0)]] Texture2D<uint4>   gBuffer0 : register(t0);
+[[vk::binding(6, 0)]] Texture2D<uint4>   gBuffer1 : register(t1);
 [[vk::binding(7, 0)]]Texture2D<float4>   VolumeProbeDatasRadiance  : register(t4);   //[512, 64]
 [[vk::binding(8, 0)]]Texture2D<float4>   VolumeProbeDatasDepth  : register(t5);   //[2048, 256]
 [[vk::binding(9, 0)]]SamplerState        linearSampler : register(s0);
@@ -92,27 +92,15 @@ PSOutput main(PSInput input)
         roughness,
         motionVector,
         instanceID);
-     
-    //float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
-    //float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
-    //float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord); 
-    //float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);
- //
-    //float3 fragNormal = normalize(gBufferValue0.rgb);
-    //float3 fragPos = gBufferValue1.rgb;  
-    //float2 fragUV = float2(gBufferValue0.a, gBufferValue1.a);   
-    //float4 fragAlbedo = gBufferValue2.rgba;
-    //float metallic = gBufferValue3.b;
-    //float roughness = gBufferValue3.g;    
-     
+    
     float3 directLight = float3(0.f, 0.f, 0.f);
 
     for (int i = 0; i < lightBuffer.lightNum; i++)  
-    {  
+    {
         RayDesc ray;
-        ray.Origin = fragPos;
+        ray.Origin = fragPos + fragNormal * 2e-2;
         ray.Direction = normalize(-lightBuffer.lights[i].direction); 
-        ray.TMin = 0.001f;   
+        ray.TMin = 0.01f;   
         ray.TMax = 10000.f;     
   
         bool hasHit = RayTracingAnyHit(ray);
