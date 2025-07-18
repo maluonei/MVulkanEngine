@@ -1201,7 +1201,7 @@ void  MVulkanEngine::CreateDepthAttachmentImage(
     ImageCreateInfo imageInfo;
     ImageViewCreateInfo viewInfo;
     imageInfo.arrayLength = 1;
-    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     imageInfo.width = extent.width;
     imageInfo.height = extent.height;
     imageInfo.format = format;

@@ -8,7 +8,7 @@ cbuffer ddgiCompositeBuffer : register(b0)
 
 [[vk::binding(1, 0)]]Texture2D<float4>   DirectLight : register(t0);
 [[vk::binding(2, 0)]]Texture2D<float4>   IndirectLight : register(t1);
-[[vk::binding(3, 0)]]Texture2D<float4>   RTAO : register(t2);
+[[vk::binding(3, 0)]]Texture2D<float>    RTAO : register(t2);
 [[vk::binding(4, 0)]]SamplerState        linearSampler : register(s0);
 
 struct PSInput
@@ -26,41 +26,25 @@ struct PSOutput
 PSOutput main(PSInput input)
 {
     PSOutput output;
-     
-    float4 gBufferValue0 = DirectLight.Sample(linearSampler, input.texCoord);
-    float4 gBufferValue1 = IndirectLight.Sample(linearSampler, input.texCoord);
-    float4 gBufferValue2 = RTAO.Sample(linearSampler, input.texCoord);
 
-    float3 directLight = gBufferValue0.rgb;
-    float3 indirectLight = gBufferValue1.rgb;
-    float rtao = gBufferValue2.r;
+    float3 directLight = DirectLight.Sample(linearSampler, input.texCoord).rgb;
+    float3 indirectLight = IndirectLight.Sample(linearSampler, input.texCoord).rgb;
+    float rtao = RTAO.Sample(linearSampler, input.texCoord).r;
 
-    //if(ubo0.useAO == 0){
-    //    rtao = 1.f;
-    //}
-
-    //bool hasProbe = (gBufferValue3.a - 0.5f) < 1e-8;
     float3 finalColor;
-    //if(ubo0.visulizeProbe != 0)
-    //    finalColor = rtao * (directLight + indirectLight) * (1-hasProbe) + hasProbe * probeVisulize;
-    //else{
-    //    finalColor = rtao * (directLight + indirectLight);
-    //}
 
-    if (ubo0.visulizeProbe == VisulizeDDGI_DI)
+    if (ubo0.visulizeMode == VisulizeDDGI_DI)
         finalColor = directLight;
-    else if (ubo0.visulizeProbe == VisulizeDDGI_GI)
+    else if (ubo0.visulizeMode == VisulizeDDGI_GI)
         finalColor = indirectLight;
-    else if (ubo0.visulizeProbe == VisulizeDDGI_AO)
+    else if (ubo0.visulizeMode == VisulizeDDGI_AO)
         finalColor = float3(rtao, rtao, rtao);
-    else if (ubo0.visulizeProbe == VisulizeDDGI_NOAO)
+    else if (ubo0.visulizeMode == VisulizeDDGI_NOAO)
         finalColor = directLight + indirectLight;
     else
         finalColor = rtao * (directLight + indirectLight);
 
     output.color = float4(finalColor, 1.f);
-
-    //output.color = float4(1.f, 0.f, 0.f, 1.f);
     
     return output;
 }

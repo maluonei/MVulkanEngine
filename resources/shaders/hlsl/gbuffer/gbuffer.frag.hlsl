@@ -27,12 +27,16 @@ struct PSInput
 
 struct PSOutput
 {
-    [[vk::location(0)]] uint4 gBuffer0 : SV_TARGET0; // 16 bytes normalx, 16bytes normaly, 16bytes normalz, 16bytes positionx, 16bytes positiony, 16bytes positionz, 16bytes u, 16bytes v
-    [[vk::location(1)]] uint4 gBuffer1 : SV_TARGET1; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(0)]] uint4 gBuffer0 : SV_TARGET0; // 16 bytes normalx, 16bytes normaly, 16bytes normalz, 16bytes positionx, 16bytes positiony, 16bytes positionz, 16bytes u, 16bytes v
+    //[[vk::location(1)]] uint4 gBuffer1 : SV_TARGET1; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(2)]] float4 gBuffer2 : SV_TARGET2; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(3)]] float4 gBuffer3 : SV_TARGET3; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(4)]] float4 gBuffer4 : SV_TARGET4; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    //[[vk::location(5)]] float4 gBuffer5 : SV_TARGET5; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    [[vk::location(0)]] float4 gBuffer0 : SV_TARGET0; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
+    [[vk::location(1)]] float4 gBuffer1 : SV_TARGET1; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
     [[vk::location(2)]] float4 gBuffer2 : SV_TARGET2; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
     [[vk::location(3)]] float4 gBuffer3 : SV_TARGET3; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
-    [[vk::location(4)]] float4 gBuffer4 : SV_TARGET4; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
-    [[vk::location(5)]] float4 gBuffer5 : SV_TARGET5; // 16 bytes albedo r, 16bytes albedo g, 16bytes albedo b, 16bytes metallic, 16bytes roughness
 };
 
 
@@ -81,21 +85,21 @@ PSOutput main(PSInput input)
         metallicAndRoughness.rgb = float3(0.0, 0.5, 0.5);
     }
 
-    PackGbuffer(
-        normal, 
-        position, 
-        uv, 
-        albedo, 
-        metallicAndRoughness, 
-        motionVector, 
-        input.instanceID,
-        output.gBuffer0, 
-        output.gBuffer1);
+    //PackGbuffer(
+    //    normal, 
+    //    position, 
+    //    uv, 
+    //    albedo, 
+    //    metallicAndRoughness, 
+    //    motionVector, 
+    //    input.instanceID,
+    //    output.gBuffer0, 
+    //    output.gBuffer1);
 
-    output.gBuffer2.xyzw = float4(normal.xyz, 1.f);
-    output.gBuffer3.xyzw = float4(position.xyz, 1.f);
-    output.gBuffer4.xyzw = float4(uv, 0.f, 1.f);
-    output.gBuffer5.xyzw = float4(albedo, 1.f);
+    output.gBuffer0.xyzw = float4(normal.xyz, 1.f);
+    output.gBuffer1.xyzw = float4(position.xyz, 1.f);
+    output.gBuffer2.xyzw = float4(uv, 0.f, 1.f);
+    output.gBuffer3.xyzw = float4(albedo, 1.f);
 
     return output;
 }

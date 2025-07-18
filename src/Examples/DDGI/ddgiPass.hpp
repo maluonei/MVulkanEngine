@@ -1,7 +1,8 @@
 #ifndef DDGI_PASS_HPP
 #define DDGI_PASS_HPP
 
-#include <MRenderApplication.hpp>
+#include "MRenderApplication.hpp"
+#include "UIRenderer.hpp"
 #include <memory>
 #include <vector>
 #include "MVulkanRHI/MVulkanSampler.hpp"
@@ -9,7 +10,6 @@
 #include "MVulkanRHI/MVulkanRayTracing.hpp"
 #include "Shaders/ShaderModule.hpp"
 #include "Shaders/ddgiShader.hpp"
-
 
 class DDGIVolume;
 
@@ -27,7 +27,6 @@ class DDGIApplication : public MRenderApplication {
 public:
 	virtual void SetUp();
 	virtual void ComputeAndDraw(uint32_t imageIndex);
-	//virtual void UpdatePerFrame(uint32_t imageIndex);
 
 	virtual void RecreateSwapchainAndRenderPasses();
 	virtual void CreateRenderPass();
@@ -54,9 +53,7 @@ private:
 	void createProbeBlendingDepthPass();
 	void createProbeClassficationPass();
 	void createProbeVisulizePass();
-	void createCompositePass();
 	void createCompositeScenePass();
-	//void createRayQueryTestPass();
 
 	void changeTextureLayoutToRWTexture();
 	void changeRWTextureLayoutToTexture();
@@ -65,6 +62,9 @@ private:
 
 	void loadShaders();
 	void createSyncObjs();
+protected:
+	virtual void initUIRenderer();
+
 private:
 	std::shared_ptr<RenderPass> m_gbufferPass;
 	std::shared_ptr<RenderPass> m_probeTracingRenderPass;
@@ -72,11 +72,9 @@ private:
 	std::shared_ptr<RenderPass> m_lightingPass;
 	std::shared_ptr<RenderPass> m_rtaoPass;
 	std::shared_ptr<RenderPass> m_probeVisulizePass;
-	std::shared_ptr<RenderPass> m_compositePass;
 
 	std::shared_ptr<RenderPass> m_compositeScenePass;
 	std::shared_ptr<RenderPass> m_finalPass;
-	//std::shared_ptr<RenderPass> m_testRayQueryPass;
 
 	std::shared_ptr<ComputePass> m_probeBlendingRadiancePass;
 	std::shared_ptr<ComputePass> m_probeBlendingDepthPass;
@@ -93,8 +91,6 @@ private:
 	std::shared_ptr<MVulkanTexture> gBuffer1 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBuffer2 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBuffer3 = nullptr;
-	std::shared_ptr<MVulkanTexture> gBuffer4 = nullptr;
-	std::shared_ptr<MVulkanTexture> gBuffer5 = nullptr;
 	std::shared_ptr<MVulkanTexture> gBufferDepth = nullptr;
 
 	std::shared_ptr<MVulkanTexture> m_probePositions = nullptr;
@@ -110,16 +106,6 @@ private:
 
 	std::shared_ptr<MVulkanTexture> m_matIdTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_texCoordsTexture = nullptr;
-
-	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture0 = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture1 = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture2 = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_testRayQueryTexture3 = nullptr;
-
-	//std::shared_ptr<MVulkanTexture> m_probeTracingPosition = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_probeTracingNormal = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_probeTracingAlbedo = nullptr;
-	//std::shared_ptr<MVulkanTexture> m_probeTracingRadiance = nullptr;
 
 	std::shared_ptr<MVulkanTexture> m_testRayQueryDepth = nullptr;
 
@@ -151,20 +137,26 @@ private:
 
 	int							m_raysPerProbe = 64;
 	bool						m_sceneChange = true;
-	bool						m_probeClassfication = true;
 	bool						m_visualizeProbes = false;
-	bool						m_probeRelocationEnabled = true;
-	bool						m_addAO = true;
-	//glm::ivec3					m_probeDim = { 16, 16, 16 };
 	float						m_start = 0.f;
-	
-
-	DDGIProbeVisulizeShader::UniformBuffer0 m_ProbeVisulizeShaderUniformBuffer0;
-	UniformBuffer1				m_uniformBuffer1;
 
 	MVulkanSemaphore			m_shadingSemaphore;
 	MVulkanSemaphore			m_ddgiSemephore;
 };
+
+class DDGIUI :public UIRenderer {
+public:
+	virtual void  RenderContext();
+
+private:
+	bool shouleRenderUI = true;
+
+public:
+	bool m_probeClassfication;
+	bool m_probeRelocationEnabled;
+	int m_visulizeMode;
+};
+
 
 
 #endif // 
