@@ -42,8 +42,8 @@ struct PSOutput
 {
     float4 position : SV_Target0;
     float4 normal : SV_Target1;
-    float4 albedo : SV_Target2;
-    float4 radiance : SV_Target3;
+    //float4 albedo : SV_Target2;
+    float4 radiance : SV_Target2;
     //float4 L : SV_Target4;
     //float4 V : SV_Target5;
     //float4 N : SV_Target6;
@@ -271,7 +271,8 @@ PSOutput main(PSInput input)
     DDGIProbe probe = probes[probeIndex];
 
     PSOutput output;
-    output.albedo.w = 0.f;
+    float3 albedo;
+    //output.albedo.w = 0.f;
     
     PathState pathState;
     
@@ -286,7 +287,7 @@ PSOutput main(PSInput input)
     if(RayTracingClosestHit(ray, pathState)){
         output.position = float4(pathState.position, 1.f);
         output.normal = float4(pathState.normal, 1.f);
-        output.albedo = float4(pathState.albedo, 1.f);
+        albedo = float4(pathState.albedo, 1.f);
 
         //if(pathState.outside==false){
         //    output.normal.a = -1.f;
@@ -295,7 +296,7 @@ PSOutput main(PSInput input)
     else{ 
         output.position = float4(ray.Origin + ray.Direction * 10000.f, 0.f);
         output.normal = float4(0.f, 0.f, 0.f, 0.f);
-        output.albedo = float4(0.f, 0.f, 0.f, 0.f);
+        albedo = float4(0.f, 0.f, 0.f, 0.f);
     }
 
     //if(pathState.outside==false && rayIndex==0){
@@ -317,7 +318,7 @@ PSOutput main(PSInput input)
             float3 V = -ray.Direction;
             float3 N = output.normal.rgb;
 
-            diffuse += (1-hasHit) * BRDF(output.albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
+            diffuse += (1-hasHit) * BRDF(albedo, lightColor, L, V, N, pathState.metallicAndRoughness.b, pathState.metallicAndRoughness.g);
         }         
 
         //if(output.normal.w > 0.f && pathState.outside){ 
@@ -332,7 +333,7 @@ PSOutput main(PSInput input)
             ddgiBuffer.probePos1,
             output.position, 
             output.normal); 
-        diffuse += indirectLight.radiance * output.albedo / PI;
+        diffuse += indirectLight.radiance * albedo / PI;
         //}
     }
 

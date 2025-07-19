@@ -23,7 +23,7 @@ cbuffer ddgiBuffer : register(b1)
 [[vk::binding(2, 0)]]RWStructuredBuffer<DDGIProbe> probes : register(u0);
 [[vk::binding(3, 0)]]Texture2D<float4> VolumeProbePosition : register(t0);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 [[vk::binding(4, 0)]]Texture2D<float4> VolumeProbeRadiance : register(t1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
-[[vk::binding(5, 0)]]RWTexture2D<float4> TestTexture : register(u1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
+//[[vk::binding(5, 0)]]RWTexture2D<float4> TestTexture : register(u1);  //[raysPerProbe, probeDim.x*probeDim.y*probeDim.z]
 
 #define ProbeFixedRayBackfaceThreshold 0.1
 #define MaxPaysPerProbe 256
@@ -36,7 +36,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     int numRays = ubo1.raysPerProbe;
     int backfaceCount = 0;
 
-    TestTexture[uint2(probeIndex, 0)] = float4(0.f, 0.f, 0.f, 1.f);
+    //TestTexture[uint2(probeIndex, 0)] = float4(0.f, 0.f, 0.f, 1.f);
 
     float hitDistances[MaxPaysPerProbe];
     for(int i=0; i<numRays; i++){
@@ -47,7 +47,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 
     if((float)backfaceCount / (float)numRays > ProbeFixedRayBackfaceThreshold){
         probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
-        TestTexture[uint2(probeIndex, 0)] = float4(1.f, 0.f, 0.f, 1.f);
+        //TestTexture[uint2(probeIndex, 0)] = float4(1.f, 0.f, 0.f, 1.f);
         return;
     }  
   
@@ -97,6 +97,6 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     }
 
     probes[probeIndex].probeState = PROBE_STATE_INACTIVE;
-    TestTexture[uint2(probeIndex, 0)] = float4(1.f, 0.f, 0.f, 1.f);
+    //TestTexture[uint2(probeIndex, 0)] = float4(1.f, 0.f, 0.f, 1.f);
     //probes[5262].probeState = PROBE_STATE_INACTIVE;
 }

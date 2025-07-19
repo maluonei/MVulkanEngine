@@ -217,12 +217,12 @@ void DDGIApplication::ComputeAndDraw(uint32_t imageIndex)
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             }
             );
-        probeTracingInfo.colorAttachments.push_back(
-            RenderingAttachment{
-                .texture = m_probeAlbedo,
-                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            }
-            );
+        //probeTracingInfo.colorAttachments.push_back(
+        //    RenderingAttachment{
+        //        .texture = m_probeAlbedo,
+        //        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //    }
+        //    );
         probeTracingInfo.colorAttachments.push_back(
             RenderingAttachment{
                 .texture = m_probeRadiance,
@@ -983,7 +983,7 @@ void DDGIApplication::createTextures()
         m_aoTexture = std::make_shared<MVulkanTexture>();
         //m_acculatedAOTexture = std::make_shared<MVulkanTexture>();
         m_probeVisulizTexture = std::make_shared<MVulkanTexture>();
-        m_testTexture = std::make_shared<MVulkanTexture>();
+        //m_testTexture = std::make_shared<MVulkanTexture>();
 
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_diTexture, swapchainExtent, format
@@ -997,9 +997,9 @@ void DDGIApplication::createTextures()
             m_probeVisulizTexture, swapchainExtent, format
         );
 
-        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-            m_testTexture, swapchainExtent, format
-        );
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    m_testTexture, swapchainExtent, format
+        //);
 
         format = VK_FORMAT_R32_SFLOAT;
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
@@ -1014,7 +1014,7 @@ void DDGIApplication::createTextures()
         m_probePositions = std::make_shared<MVulkanTexture>();
         m_probeNormals = std::make_shared<MVulkanTexture>();
         m_probeDepth = std::make_shared<MVulkanTexture>();
-        m_probeAlbedo = std::make_shared<MVulkanTexture>();
+        //m_probeAlbedo = std::make_shared<MVulkanTexture>();
         m_probeRadiance = std::make_shared<MVulkanTexture>();
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_probePositions, extent, format
@@ -1022,9 +1022,9 @@ void DDGIApplication::createTextures()
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_probeNormals, extent, format
         );
-        Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
-            m_probeAlbedo, extent, format
-        );
+        //Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
+        //    m_probeAlbedo, extent, format
+        //);
         Singleton<MVulkanEngine>::instance().CreateColorAttachmentImage(
             m_probeRadiance, extent, format
         );
@@ -1378,7 +1378,7 @@ void DDGIApplication::createProbeTracingPass()
         RenderPassCreateInfo info{};
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-        info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+        //info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.colorAttachmentFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
         info.pipelineCreateInfo.depthAttachmentFormats = device.FindDepthFormat();
 
@@ -1647,7 +1647,7 @@ void DDGIApplication::createProbeClassficationPass()
     resources.push_back(PassResources::SetBufferResource(2, 0, m_probesDataBuffer));
     resources.push_back(PassResources::SetSampledImageResource(3, 0, m_probePositions));
     resources.push_back(PassResources::SetSampledImageResource(4, 0, m_probeRadiance));
-    resources.push_back(PassResources::SetStorageImageResource(5, 0, m_testTexture));
+    //resources.push_back(PassResources::SetStorageImageResource(5, 0, m_testTexture));
 
     m_probeClassficationPass->UpdateDescriptorSetWrite(resources);
 }

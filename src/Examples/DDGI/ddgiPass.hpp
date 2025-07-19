@@ -84,7 +84,7 @@ private:
 	std::shared_ptr<MVulkanTexture> m_acculatedAOTexture = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasRadiance = nullptr;
 	std::shared_ptr<MVulkanTexture> m_volumeProbeDatasDepth = nullptr;
-	std::shared_ptr<MVulkanTexture> m_testTexture = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_testTexture = nullptr;
 
 	std::vector<std::shared_ptr<MVulkanTexture>> swapchainDepthViews;
 	std::shared_ptr<MVulkanTexture> gBuffer0 = nullptr;
@@ -96,7 +96,7 @@ private:
 	std::shared_ptr<MVulkanTexture> m_probePositions = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeNormals = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeDepth = nullptr;
-	std::shared_ptr<MVulkanTexture> m_probeAlbedo = nullptr;
+	//std::shared_ptr<MVulkanTexture> m_probeAlbedo = nullptr;
 	std::shared_ptr<MVulkanTexture> m_probeRadiance = nullptr;
 
 	std::shared_ptr<MVulkanTexture> m_diTexture = nullptr;
