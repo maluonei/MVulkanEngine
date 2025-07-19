@@ -39,7 +39,7 @@ struct PSInput
 
 struct PSOutput
 {
-    float4 color : SV_Target0;
+    float color : SV_Target0;
 };
 
 //static const float PI = 3.14159265359f;
@@ -145,8 +145,10 @@ float rtao2(float3 position, float3 normal, float2 uv, int w, float radius, int 
 PSOutput main(PSInput input)
 {
     PSOutput output;
+    output.color = 0.f;
     
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
+    if(gBufferValue0.w == 0.f) return output;
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float2 accumulatedBufferValue = accumulatedBuffer.Load(int3(input.texCoord * screen.WindowRes, 0));
 
@@ -156,10 +158,10 @@ PSOutput main(PSInput input)
     float accumulatedAO = rtao.resetAccumulatedBuffer == 0 ? accumulatedBufferValue.x : 0.f;
     float accumulatedFrameCount = rtao.resetAccumulatedBuffer==0? accumulatedBufferValue.y:0.f;
     
-    float3 fragcolor = float3(0.f, 0.f, 0.f);
+    //float3 fragcolor = float3(0.f, 0.f, 0.f);
 
     float radius = 0.5f;
-    int rayCount = 4;
+    int rayCount = 1;
 
     float ao = Rtao(fragPos, fragNormal, input.texCoord, int(rayCount * accumulatedFrameCount), radius, rayCount);
     float finalAO = (accumulatedAO * accumulatedFrameCount + ao) / (accumulatedFrameCount+1);
@@ -167,10 +169,11 @@ PSOutput main(PSInput input)
     accumulatedBuffer[input.texCoord * int2(screen.WindowRes)] = float2(finalAO, accumulatedFrameCount+1);
     
     //output.color = float4(ao, ao, ao, 1.f);
-    float3 aoColor = float3(finalAO, finalAO, finalAO); 
+    float aoColor = finalAO; 
 
     //output.color = float4(finalAO * fragcolor, 1.f);
-    output.color = float4(aoColor + fragcolor * 0.00000000000001, 1.f);
+    //output.color = float4(aoColor + fragcolor * 0.00000000000001, 1.f);
+    output.color = aoColor;
     
     return output;
 } 

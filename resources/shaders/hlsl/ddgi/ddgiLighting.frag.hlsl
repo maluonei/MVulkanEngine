@@ -66,10 +66,13 @@ bool RayTracingAnyHit(in RayDesc rayDesc) {
 } 
  
 PSOutput main(PSInput input)
-{  
-    PSOutput output;  
-     
+{
+    PSOutput output;
+    output.directLight = float4(0.f, 0.f, 0.f, 1.f);
+    output.indirectLight = float4(0.f, 0.f, 0.f, 1.f);
+
     float4 gBufferValue0 = gBufferNormal.Sample(linearSampler, input.texCoord);
+    if (gBufferValue0.w == 0.f) return output;
     float4 gBufferValue1 = gBufferPosition.Sample(linearSampler, input.texCoord);
     float4 gBufferValue2 = gAlbedo.Sample(linearSampler, input.texCoord); 
     float4 gBufferValue3 = gMetallicAndRoughness.Sample(linearSampler, input.texCoord);

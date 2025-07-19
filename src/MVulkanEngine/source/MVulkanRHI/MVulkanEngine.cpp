@@ -494,7 +494,6 @@ void MVulkanEngine::RecordCommandBuffer(
 void MVulkanEngine::RecordCommandBuffer(uint32_t frameIndex, std::shared_ptr<RenderPass> renderPass, uint32_t currentFrame, RenderingInfo& renderingInfo, std::shared_ptr<Buffer> vertexBuffer, std::shared_ptr<Buffer> indexBuffer, std::shared_ptr<Buffer> indirectBuffer, uint32_t indirectCount, std::string eventName, int queryIndex, bool flipY)
 {
     recordCommandBuffer(frameIndex, renderPass, currentFrame, renderingInfo, vertexBuffer, indexBuffer, indirectBuffer, indirectCount, eventName, queryIndex, flipY);
-
 }
 
 void MVulkanEngine::RecordCommandBuffer(

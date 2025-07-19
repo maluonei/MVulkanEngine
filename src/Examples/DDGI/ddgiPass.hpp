@@ -139,9 +139,22 @@ private:
 	bool						m_sceneChange = true;
 	bool						m_visualizeProbes = false;
 	float						m_start = 0.f;
+	int							m_queryIndex = 0;
 
 	MVulkanSemaphore			m_shadingSemaphore;
 	MVulkanSemaphore			m_ddgiSemephore;
+
+public:
+	float                       m_gbufferTime;
+	float                       m_probeTracingTime;
+	float                       m_probeRelocationTime;
+	float                       m_probeClassficationTime;
+	float                       m_probeBlendRadianceTime;
+	float                       m_probeBlendDepthTime;
+	float                       m_lightingTime;
+	float                       m_rtaoTime;
+	float                       m_probeVisulizeTime;
+	float                       m_compositeTime;
 };
 
 class DDGIUI :public UIRenderer {
@@ -152,9 +165,10 @@ private:
 	bool shouleRenderUI = true;
 
 public:
-	bool m_probeClassfication;
-	bool m_probeRelocationEnabled;
-	int m_visulizeMode;
+	bool m_probeClassfication = true;
+	bool m_probeRelocationEnabled = true;
+	int m_visulizeMode = 4;
+	bool m_showPassTime = true;
 };
 
 
